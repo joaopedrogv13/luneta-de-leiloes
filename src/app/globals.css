@@ -84,6 +84,15 @@
     transform: translateX(-50%);
   }
 }
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(-6px);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
 @keyframes twinkle {
   0%,
   100% {
