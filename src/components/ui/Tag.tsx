@@ -1,7 +1,7 @@
 import { SEVERITY_LABEL, type Severity } from "@/content/tags";
 
 const STYLES: Record<Severity, string> = {
-  grave: "border-grave/55 bg-grave/12 text-grave",
+  grave: "border-grave/55 bg-grave/12 text-grave-texto",
   atencao: "border-aten/50 bg-aten/10 text-aten",
   positivo: "border-pos/50 bg-pos/10 text-pos",
   info: "border-nevoa/50 bg-nevoa/10 text-nevoa",

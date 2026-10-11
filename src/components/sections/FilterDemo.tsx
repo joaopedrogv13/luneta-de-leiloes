@@ -31,7 +31,7 @@ export function FilterDemo() {
   const ids = new Set(results.map((r) => r.id));
 
   return (
-    <div className="mt-10 grid overflow-hidden rounded-3xl border border-nevoa/15 bg-tinta sm:mt-16 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="mt-10 grid grid-cols-1 overflow-hidden rounded-3xl border border-nevoa/15 bg-tinta sm:mt-16 md:grid-cols-2">
       <div className="flex flex-col gap-6 p-5 sm:p-9">
         <fieldset>
           <legend className="text-[11px] font-semibold tracking-[0.14em] text-nevoa uppercase">Filtros</legend>

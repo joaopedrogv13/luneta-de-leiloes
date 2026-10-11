@@ -52,7 +52,18 @@ export function Seal({
         <circle cx="36" cy="36" r="34.5" fill="none" stroke="var(--nevoa)" strokeOpacity="0.6" strokeWidth="2" strokeDasharray="5 5" />
       )}
       {rings.map((r, i) => (
-        <circle key={r} data-ring={i} cx="36" cy="36" r={r} fill="none" stroke="#C9A24D" strokeWidth="2.5" />
+        <circle
+          key={r}
+          data-ring={i}
+          pathLength={1}
+          style={{ ["--r" as string]: i }}
+          cx="36"
+          cy="36"
+          r={r}
+          fill="none"
+          stroke="#C9A24D"
+          strokeWidth="2.5"
+        />
       ))}
       {ghost && nextRing !== undefined && (
         <circle

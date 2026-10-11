@@ -1,26 +1,9 @@
-"use client";
-
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { HERO } from "@/content/site";
 import { BrazilMap } from "@/components/ui/BrazilMap";
 import { RichText } from "@/components/ui/RichText";
 import { Seal } from "@/components/ui/Seal";
-import { BRAZIL_PINS } from "@/lib/brazil";
-
-// useLayoutEffect só no cliente (evita aviso no SSR).
-const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
-
-const ALVO_DESAGIO = 48;
-const [SP_X, SP_Y] = BRAZIL_PINS.sp;
-const SP_LEFT = `${(SP_X / 400) * 100}%`;
-const SP_TOP = `${(SP_Y / 400) * 100}%`;
-
-const BRASS = "linear-gradient(180deg,#F3DA8E 0%,#C9A24D 38%,#8C6B23 78%,#5A4414 100%)";
-const LENS_REST = "0 0 0 2px #5A4414, 0 30px 80px rgba(0,0,0,0.6)";
-const LENS_GLOW = "0 0 0 2px #5A4414, 0 0 90px 10px rgba(234,240,255,0.22), 0 0 160px 40px rgba(201,162,77,0.18)";
-const CTA_GLOW = "0 0 0 4px rgba(201,162,77,0.25), 0 0 44px rgba(201,162,77,0.55)";
+import { ALVO_DESAGIO, BRASS, LENS_GLOW } from "./constants";
+import { HeroMotion } from "./HeroMotion";
 
 /** Cartões desfocados ao fundo = os sites dos leiloeiros, cada um no seu canto. */
 const SITES = [
@@ -44,109 +27,11 @@ const SITES = [
  *              o deságio conta até 48% e aparece o selo.
  *   6. 88–100% Chamada: a lente solta brilho de luar e o botão "Ver planos" acende em latão.
  * Com prefers-reduced-motion (ou sem JS) nada disso roda: a seção tem 1 tela e já mostra o estado final.
+ * Esta marcação é renderizada no servidor; a animação vive na ilha cliente <HeroMotion />.
  */
 export function HeroScene() {
-  const root = useRef<HTMLElement>(null);
-
-  useIsoLayoutEffect(() => {
-    const el = root.current;
-    if (!el || !document.documentElement.classList.contains("motion")) return;
-    gsap.registerPlugin(ScrollTrigger);
-
-    const ctx = gsap.context(() => {
-      const q = gsap.utils.selector(el);
-      const stage = q("[data-h=stage]")[0] as HTMLElement;
-      const counter = q("[data-h=count]")[0] as HTMLElement;
-      const scope = q("[data-h=scope]");
-      const lens = q("[data-h=lens]");
-      const cta = q("[data-h=cta]");
-      const num = { v: 0 };
-      counter.textContent = "0";
-
-      // Posição "ao longe" da luneta, relativa ao centro da lente (recalculada no resize).
-      // No celular o texto ocupa o topo, então ela começa à direita e um pouco abaixo dele.
-      const narrow = () => stage.clientWidth < 640;
-      const farX = () => stage.clientWidth * (narrow() ? 0.24 : 0.26);
-      const farY = () => stage.clientHeight * (narrow() ? -0.02 : -0.22);
-      gsap.set(scope, { xPercent: -50, yPercent: -50, x: farX, y: farY, rotation: -32, scale: 0.38, opacity: 1 });
-      gsap.set(lens, { boxShadow: LENS_REST });
-
-      const tl = gsap.timeline({
-        defaults: { ease: "none" },
-        scrollTrigger: {
-          trigger: el,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: 0.6,
-          invalidateOnRefresh: true,
-        },
-      });
-
-      // 1 → 2 · aproximação
-      tl.to(q("[data-h=hint]"), { opacity: 0, y: 8, duration: 0.06 }, 0.02)
-        .to(scope, { x: 0, y: 0, scale: 1, ease: "power2.out", duration: 0.23 }, 0.12)
-        .to(q("[data-h=fog]"), { opacity: 0.55, scale: 1.25, duration: 0.23 }, 0.12)
-        .to(q("[data-h=sites]"), { opacity: 0.9, filter: "blur(6px)", duration: 0.15 }, 0.14)
-        .fromTo(q("[data-h=site]"), { y: -30 }, { y: 0, stagger: 0.03, duration: 0.2 }, 0.12)
-        // 2 → 3 · extensão: os tubos deslizam e a objetiva vira moldura
-        .to(q("[data-h=tube]"), { x: (i: number) => i * 18, stagger: 0.012, duration: 0.07, ease: "power1.out" }, 0.35)
-        .to(scope, { scale: 1.9, opacity: 0, duration: 0.1, ease: "power1.in" }, 0.42)
-        .to(lens, { scale: 1, opacity: 1, duration: 0.1, ease: "power2.out" }, 0.42)
-        .to(q("[data-h=fog]"), { opacity: 0.22, scale: 1.5, duration: 0.15 }, 0.35)
-        .to(q("[data-h=map]"), { opacity: 0.9, filter: "blur(2.5px)", duration: 0.08 }, 0.44)
-        // 3 → 4 · foco
-        .to(q("[data-h=map]"), { opacity: 1, filter: "blur(0px)", duration: 0.15 }, 0.52)
-        .to(q("[data-h=map] [data-pin]"), { opacity: 1, stagger: 0.012, duration: 0.04 }, 0.55)
-        .to(q("[data-h=sites]"), { opacity: 0.7, filter: "blur(0px)", duration: 0.15 }, 0.52)
-        .to(q("[data-h=fog]"), { opacity: 0.08, scale: 1.8, duration: 0.15 }, 0.52)
-        // 4 → 5 · mira travada
-        .to(q("[data-h=reticle]"), { opacity: 1, duration: 0.03 }, 0.7)
-        .fromTo(q("[data-h=reticle]"), { scale: 1.8 }, { scale: 1, duration: 0.05 }, 0.7)
-        .fromTo(q("[data-h=reticle]"), { left: "50%", top: "50%" }, { left: SP_LEFT, top: SP_TOP, ease: "back.out(1.4)", duration: 0.1 }, 0.72)
-        .fromTo(q("[data-h=reticle]"), { scale: 1.1 }, { scale: 1, duration: 0.02 }, 0.82)
-        .to(q("[data-h=card]"), { opacity: 1, y: 0, duration: 0.06, ease: "power2.out" }, 0.8)
-        .to(num, {
-          v: ALVO_DESAGIO,
-          duration: 0.08,
-          ease: "expo.out",
-          onUpdate: () => {
-            counter.textContent = String(Math.round(num.v));
-          },
-        }, 0.81)
-        // 5 → 6 · chamada
-        .to(lens, { boxShadow: LENS_GLOW, duration: 0.08 }, 0.88)
-        .to(cta, { boxShadow: CTA_GLOW, duration: 0.06 }, 0.9)
-        .to(cta, { scale: 1.03, yoyo: true, repeat: 1, duration: 0.025 }, 0.93)
-        .to({}, { duration: 0.02 }, 0.98);
-
-      // Hover (mouse): o mapa desloca 2–4px e o retículo acompanha com inércia; sair recentra.
-      if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
-        const lensEl = lens[0] as HTMLElement;
-        const mx = gsap.quickTo(q("[data-h=map]"), "x", { duration: 0.6, ease: "power3" });
-        const my = gsap.quickTo(q("[data-h=map]"), "y", { duration: 0.6, ease: "power3" });
-        const onMove = (e: PointerEvent) => {
-          const r = lensEl.getBoundingClientRect();
-          mx(((e.clientX - r.left) / r.width - 0.5) * 8);
-          my(((e.clientY - r.top) / r.height - 0.5) * 8);
-        };
-        const onLeave = () => {
-          mx(0);
-          my(0);
-        };
-        lensEl.addEventListener("pointermove", onMove);
-        lensEl.addEventListener("pointerleave", onLeave);
-        return () => {
-          lensEl.removeEventListener("pointermove", onMove);
-          lensEl.removeEventListener("pointerleave", onLeave);
-        };
-      }
-    }, el);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
-    <section ref={root} id="topo" aria-labelledby="hero-title" className="hero-track relative">
+    <section id="topo" aria-labelledby="hero-title" className="hero-track relative">
       <div data-h="stage" className="sticky top-0 h-svh overflow-hidden bg-noite [container-type:size]">
         {/* Céu: estrelas sutis e brilho de luar */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
@@ -323,6 +208,7 @@ export function HeroScene() {
           Role para mirar
         </div>
       </div>
+      <HeroMotion />
     </section>
   );
 }

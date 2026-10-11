@@ -15,7 +15,7 @@ function Marquee() {
   const row = (inLens: boolean) => (
     <div
       className={`flex w-max animate-marquee items-center gap-10 pl-10 whitespace-nowrap font-display text-[13px] font-semibold tracking-[0.14em] uppercase group-hover:[animation-play-state:paused] ${
-        inLens ? "text-luar" : "text-nevoa"
+        inLens ? "text-[#EAF0FF]" : "text-nevoa"
       }`}
     >
       {[0, 1].map((copy) => (

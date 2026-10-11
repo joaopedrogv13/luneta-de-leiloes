@@ -123,9 +123,9 @@ export function PlansTable() {
         })}
       </div>
 
-      <div data-reveal className="mt-12 overflow-x-auto rounded-3xl border border-nevoa/20">
+      <div data-reveal role="region" aria-labelledby="comparativo-planos" tabIndex={0} className="mt-12 overflow-x-auto rounded-3xl border border-nevoa/20">
         <table className="w-full min-w-[520px] border-collapse text-left text-sm">
-          <caption className="px-5 pt-6 pb-3 text-left font-display text-xl font-bold sm:px-7">Compare os planos</caption>
+          <caption id="comparativo-planos" className="px-5 pt-6 pb-3 text-left font-display text-xl font-bold sm:px-7">Compare os planos</caption>
           <thead>
             <tr className="border-b border-nevoa/20 text-xs tracking-[0.1em] text-nevoa uppercase">
               <th scope="col" className="px-5 py-3 font-semibold sm:px-7">

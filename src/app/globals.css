@@ -16,6 +16,9 @@
   --pos: #4ade9a;
   --aten: #e0b44c;
   --grave: #e5484d;
+  /* #E5484D em texto 12px sobre o fundo tingido da tag fica em 4,0:1; para texto usamos um vermelho-lacre
+     um pouco mais claro (5,3:1). Borda, fundo e ícone seguem no #E5484D do blueprint. */
+  --grave-texto: #f26b70;
   --noite-rgb: 7, 11, 22;
   --tinta-rgb: 15, 24, 48;
   --luar-rgb: 234, 240, 255;
@@ -33,6 +36,7 @@
   --pos: #0f6e4d;
   --aten: #7a5800;
   --grave: #b3242a;
+  --grave-texto: #b3242a;
   --noite-rgb: 243, 240, 232;
   --tinta-rgb: 255, 255, 255;
   --luar-rgb: 15, 24, 48;
@@ -54,6 +58,7 @@
   --color-pos: var(--pos);
   --color-aten: var(--aten);
   --color-grave: var(--grave);
+  --color-grave-texto: var(--grave-texto);
   --color-noite-fixa: #070b16;
 
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
@@ -341,9 +346,122 @@
 .motion [data-h="cta"] {
   box-shadow: 0 0 0 0 rgba(201, 162, 77, 0);
 }
+/* luneta pequena ao longe (o GSAP assume a partir daqui) */
 .motion [data-h="scope"] {
   opacity: 1;
+  transform: translate(-50%, -50%) translate(24cqw, -2cqh) rotate(-32deg) scale(0.38);
+}
+@media (min-width: 640px) {
+  .motion [data-h="scope"] {
+    transform: translate(-50%, -50%) translate(26cqw, -22cqh) rotate(-32deg) scale(0.38);
+  }
 }
 [data-h="scope"] {
   opacity: 0;
+}
+
+/* ============================================================
+   Animações de apoio (MotionLayer põe .is-in quando o bloco entra na tela).
+   Só valem com html.reveal-ready, que o JS liga; sem JS ou com menos movimento, tudo já aparece pronto.
+   ============================================================ */
+.reveal-ready [data-reveal] {
+  transition:
+    opacity 0.8s ease var(--stagger, 0ms),
+    transform 0.9s var(--ease-luneta) var(--stagger, 0ms),
+    translate 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.reveal-ready [data-reveal]:not(.is-in) {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+/* selos: anéis desenhados um a um (Promissor 1, Na Mira 2, Alvo 3) */
+.reveal-ready [data-seal-card] [data-ring] {
+  stroke-dasharray: 1;
+  transition: stroke-dashoffset 0.9s ease-in-out calc(0.35s + var(--r, 0) * 0.15s);
+}
+.reveal-ready [data-seal-card]:not(.is-in) [data-ring] {
+  stroke-dashoffset: 1;
+}
+
+/* bloco "Cuidado": o anel pulsa 2× e as tags entram em cascata */
+.reveal-ready [data-caution].is-in [data-caution-ring] {
+  animation: caution-pulse 0.5s ease-in-out 0.4s 2;
+}
+@keyframes caution-pulse {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+/* tags de risco surgem uma a uma */
+.reveal-ready :is([data-caution], [data-tags]) [data-tag] {
+  transition:
+    opacity 0.4s ease var(--tag-delay, 0s),
+    transform 0.4s ease var(--tag-delay, 0s);
+}
+.reveal-ready [data-caution]:not(.is-in) [data-tag],
+.reveal-ready [data-tags]:not(.is-in) [data-tag] {
+  opacity: 0;
+  transform: translateY(8px);
+}
+[data-caution] [data-tag]:nth-child(1),
+[data-tags] > li:nth-child(1) [data-tag] {
+  --tag-delay: 0.35s;
+}
+[data-caution] [data-tag]:nth-child(2),
+[data-tags] > li:nth-child(2) [data-tag] {
+  --tag-delay: 0.45s;
+}
+[data-caution] [data-tag]:nth-child(3),
+[data-tags] > li:nth-child(3) [data-tag] {
+  --tag-delay: 0.55s;
+}
+[data-tags] > li:nth-child(n + 4) [data-tag] {
+  --tag-delay: 0.65s;
+}
+
+/* praças: a seta se desenha e o e-mail de alerta desliza de baixo */
+.reveal-ready [data-draw-x] {
+  transition: transform 0.6s var(--ease-luneta) 0.3s;
+}
+.reveal-ready [data-draw-x]:not(.is-in) {
+  transform: scaleX(0);
+}
+.reveal-ready [data-slide-up] {
+  transition:
+    opacity 0.6s ease 0.4s,
+    transform 0.6s var(--ease-luneta) 0.4s;
+}
+.reveal-ready [data-slide-up]:not(.is-in) {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+/* botão da chamada final pulsa 1× ao entrar */
+.reveal-ready [data-pulse].is-in {
+  animation: cta-pulse 0.6s ease-in-out 0.7s 1;
+}
+@keyframes cta-pulse {
+  50% {
+    scale: 1.04;
+  }
+}
+
+/* brilho da chamada final cresce com a rolagem (onde houver scroll-driven animations) */
+@supports (animation-timeline: view()) {
+  .motion [data-final-glow] {
+    animation: glow-grow linear both;
+    animation-timeline: view();
+  }
+}
+@keyframes glow-grow {
+  from {
+    scale: 0.8;
+  }
+  to {
+    scale: 1.1;
+  }
 }

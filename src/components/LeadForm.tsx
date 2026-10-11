@@ -104,7 +104,7 @@ export function LeadForm() {
           {...props}
         />
         {err && (
-          <p id={`${id}-${name}-err`} className="mt-1.5 flex items-center gap-1.5 text-[13px] text-grave">
+          <p id={`${id}-${name}-err`} className="mt-1.5 flex items-center gap-1.5 text-[13px] text-grave-texto">
             <span aria-hidden="true">✕</span>
             {err}
           </p>
@@ -179,7 +179,7 @@ export function LeadForm() {
               </span>
             </label>
             {show("lgpd") && (
-              <p id={`${id}-lgpd-err`} className="mt-1.5 flex items-center gap-1.5 text-[13px] text-grave">
+              <p id={`${id}-lgpd-err`} className="mt-1.5 flex items-center gap-1.5 text-[13px] text-grave-texto">
                 <span aria-hidden="true">✕</span>
                 {errors.lgpd}
               </p>
