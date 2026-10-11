@@ -169,7 +169,7 @@ export const PLANS = {
       priceValue: 499,
       period: "/mês ou sob consulta",
       cta: "Falar sobre o Telescópio",
-      href: "#advogado",
+      href: "#comecar",
       featured: false,
     },
   ],

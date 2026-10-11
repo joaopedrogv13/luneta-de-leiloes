@@ -9,6 +9,7 @@ const fmt = (n: number, format?: string) => (format === "thousands" ? Math.round
 /**
  * Animações de apoio (todas leves), ligadas por atributos data-* nas seções server-side:
  *  - [data-reveal]        entrada suave: fade + y 24 → 0 (0.8s), uma vez, em lote (stagger 100ms).
+ *  - [data-tags]         as tags de risco do cartão surgem uma a uma (stagger 70ms).
  *  - [data-count-to]      números contam até o valor final ao entrar (opcional data-count-from).
  *  - [data-seal-card]     os anéis dos selos são "desenhados" um a um (stroke-dashoffset, stagger 150ms).
  *  - [data-caution]       o anel de atenção pulsa 2× e as tags surgem uma a uma.
@@ -33,6 +34,19 @@ export function MotionLayer() {
         onEnter: (batch) =>
           gsap.to(batch, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out", stagger: 0.1, overwrite: true, clearProps: "transform" }),
       });
+
+      // Tags de risco surgem uma a uma quando o cartão aparece
+      gsap.utils.toArray<HTMLElement>("[data-tags]").forEach((list) =>
+        gsap.from(list.children, {
+          opacity: 0,
+          y: 6,
+          duration: 0.4,
+          stagger: 0.07,
+          delay: 0.35,
+          ease: "power2.out",
+          scrollTrigger: { trigger: list, start: "top 92%", once: true },
+        }),
+      );
 
       // Contadores
       gsap.utils.toArray<HTMLElement>("[data-count-to]").forEach((el) => {

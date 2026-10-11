@@ -15,6 +15,11 @@ import { Lawyer } from "@/components/sections/Lawyer";
 import { Social } from "@/components/sections/Social";
 import { Faq } from "@/components/sections/Faq";
 import { FinalCta } from "@/components/sections/FinalCta";
+import { AuctionCard } from "@/components/AuctionCard";
+import { LeadForm } from "@/components/LeadForm";
+import { LensPreview } from "@/components/LensPreview";
+import { PlansTable } from "@/components/PlansTable";
+import { FEATURED_EXAMPLES } from "@/content/examples";
 
 /** Landing na ordem do blueprint (Passo 1 · Estrutura da página). */
 export default function Home() {
@@ -30,17 +35,31 @@ export default function Home() {
       <main id="conteudo">
         <HeroScene />
         <Problem />
-        <Solution />
+        <Solution>
+          <LensPreview />
+        </Solution>
         <Levels />
-        <Examples />
+        <Examples>
+          <ul className="mt-10 grid items-start gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURED_EXAMPLES.map((l) => (
+              <li key={l.id} data-reveal>
+                <AuctionCard listing={l} />
+              </li>
+            ))}
+          </ul>
+        </Examples>
         <Pracas />
         <Filters />
         <Stats />
-        <Plans />
+        <Plans>
+          <PlansTable />
+        </Plans>
         <Lawyer />
         <Social />
         <Faq />
-        <FinalCta />
+        <FinalCta>
+          <LeadForm />
+        </FinalCta>
       </main>
       <Footer />
       <MobileCtaBar />

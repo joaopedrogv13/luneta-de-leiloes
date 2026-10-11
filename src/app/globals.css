@@ -93,6 +93,16 @@
     transform: translateY(6px);
   }
 }
+@keyframes flip-in {
+  from {
+    transform: rotateY(90deg);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
 @keyframes twinkle {
   0%,
   100% {
