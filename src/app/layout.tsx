@@ -54,8 +54,9 @@ export const viewport: Viewport = {
   colorScheme: "dark light",
 };
 
-// Aplica o tema salvo antes da pintura, para não piscar ao recarregar no tema claro.
-const themeScript = `try{var t=localStorage.getItem("luneta-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+// Antes da pintura: marca html.motion (se o sistema não pede menos movimento) e aplica o tema salvo,
+// para a cena do hero começar na etapa 1 e o tema claro não piscar ao recarregar.
+const themeScript = `try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("motion");var t=localStorage.getItem("luneta-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

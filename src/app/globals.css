@@ -271,3 +271,60 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ============================================================
+   Hero · "a luneta chega ao alvo"
+   Sem JS ou com prefers-reduced-motion: a cena já aparece no estado final (mira travada).
+   Com movimento, o script do <head> põe html.motion e estas regras definem a etapa 1
+   (noite e névoa) antes da pintura; o GSAP ScrollTrigger avança as 6 etapas com a rolagem.
+   ============================================================ */
+.hero-track {
+  height: 100svh;
+}
+.motion .hero-track {
+  height: 150svh;
+}
+@media (min-width: 640px) {
+  .motion .hero-track {
+    height: 300vh;
+  }
+}
+.motion [data-h="sites"] {
+  opacity: 0;
+  filter: blur(8px);
+}
+.motion [data-h="lens"] {
+  opacity: 0;
+  transform: scale(0.15);
+}
+.motion [data-h="map"] {
+  opacity: 0;
+  filter: blur(6px);
+}
+.motion [data-h="map"] [data-pin] {
+  opacity: 0;
+}
+.motion [data-h="reticle"] {
+  opacity: 0;
+  left: 50%;
+  top: 50%;
+}
+.motion [data-h="card"] {
+  opacity: 0;
+  transform: translateY(24px);
+}
+/* Etapa 6 acende o botão; no estado final (sem movimento) ele já nasce aceso. */
+[data-h="cta"] {
+  box-shadow:
+    0 0 0 4px rgba(201, 162, 77, 0.25),
+    0 0 44px rgba(201, 162, 77, 0.55);
+}
+.motion [data-h="cta"] {
+  box-shadow: 0 0 0 0 rgba(201, 162, 77, 0);
+}
+.motion [data-h="scope"] {
+  opacity: 1;
+}
+[data-h="scope"] {
+  opacity: 0;
+}

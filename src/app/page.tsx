@@ -1,6 +1,7 @@
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { MobileCtaBar } from "@/components/MobileCtaBar";
+import { HeroScene } from "@/components/hero/HeroScene";
 
 export default function Home() {
   return (
@@ -13,9 +14,7 @@ export default function Home() {
       </a>
       <Nav />
       <main id="conteudo">
-        <section id="topo" className="flex min-h-svh items-center px-5 pt-16 sm:px-10">
-          <h1 className="font-display text-5xl font-bold tracking-tight">Luneta de Leilões</h1>
-        </section>
+        <HeroScene />
         {["como-funciona", "niveis", "planos", "advogado", "comecar"].map((id) => (
           <section key={id} id={id} className="section min-h-[60vh]" />
         ))}
