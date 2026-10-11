@@ -33,6 +33,9 @@ export const NAV_LINKS = [
   { href: "#advogado", label: "Falar com advogado" },
 ] as const;
 
+/** Demonstração da área de quem assina (sem login; exemplos fictícios). */
+export const SUBSCRIBER_AREA = { href: "/assinante", label: "Área do assinante" } as const;
+
 export const HERO = {
   titleStart: "Todos os leilões do Brasil. Na",
   titleEm: "mira",

@@ -299,43 +299,35 @@
 /* ============================================================
    Hero · "a luneta chega ao alvo"
    Sem JS ou com prefers-reduced-motion: a cena já aparece no estado final (mira travada).
-   Com movimento, o script do <head> põe html.motion e estas regras definem a etapa 1
-   (noite e névoa) antes da pintura; o GSAP ScrollTrigger avança as 6 etapas com a rolagem.
+   Com movimento, o script do <head> põe html.motion e estas regras desenham a etapa 1
+   (noite e névoa) antes da pintura; a primeira rolada dispara a intro inteira (HeroMotion, GSAP).
+   Só opacity e transform animam: desfoque e brilho são camadas prontas que trocam de opacidade.
    ============================================================ */
 .hero-track {
   height: 100svh;
 }
-.motion .hero-track {
-  height: 150svh;
-}
-@media (min-width: 640px) {
-  .motion .hero-track {
-    height: 300vh;
-  }
-}
-.motion [data-h="sites"] {
+.motion [data-h="sites-sharp"] [data-site],
+.motion [data-h="map"],
+.motion [data-h="map-sharp"],
+.motion [data-h="map"] [data-pin],
+.motion [data-h="reticle"],
+.motion [data-h="glow"] {
   opacity: 0;
-  filter: blur(8px);
+}
+.motion [data-h="map-soft"] {
+  opacity: 1;
 }
 .motion [data-h="lens"] {
   opacity: 0;
   transform: scale(0.15);
 }
-.motion [data-h="map"] {
-  opacity: 0;
-  filter: blur(6px);
-}
-.motion [data-h="map"] [data-pin] {
-  opacity: 0;
-}
-.motion [data-h="reticle"] {
-  opacity: 0;
-  left: 50%;
-  top: 50%;
-}
 .motion [data-h="card"] {
   opacity: 0;
   transform: translateY(24px);
+}
+/* camadas que se mexem na intro ganham composição própria (GPU) desde o início */
+.motion :is([data-h="fog"], [data-h="scope"], [data-h="lens"], [data-h="glow"], [data-h="map"], [data-h="map-soft"], [data-h="map-sharp"], [data-site], [data-h="card"]) {
+  will-change: transform, opacity;
 }
 /* Etapa 6 acende o botão; no estado final (sem movimento) ele já nasce aceso. */
 [data-h="cta"] {

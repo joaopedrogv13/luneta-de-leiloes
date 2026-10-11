@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { NAV_LINKS } from "@/content/site";
+import Link from "next/link";
+import { NAV_LINKS, SUBSCRIBER_AREA } from "@/content/site";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -29,8 +30,10 @@ export function Nav() {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 border-b backdrop-blur-md transition-[height,background-color,border-color] duration-300 ${
-        scrolled ? "h-14 border-nevoa/20 bg-noite/85" : "h-16 border-transparent bg-noite/70"
+      // No topo (sobre a cena animada do hero) a barra não desfoca o fundo: o desfoque seria refeito a cada
+      // quadro. Ele entra quando a página rola.
+      className={`fixed inset-x-0 top-0 z-50 border-b transition-[height,background-color,border-color] duration-300 ${
+        scrolled ? "h-14 border-nevoa/20 bg-noite/85 backdrop-blur-md" : "h-16 border-transparent bg-noite/75"
       }`}
     >
       <nav aria-label="Principal" className="mx-auto flex h-full max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-8">
@@ -57,6 +60,13 @@ export function Nav() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <Link
+            href={SUBSCRIBER_AREA.href}
+            className="hidden h-10 items-center gap-2 rounded-full border border-latao/60 px-4 text-[13px] font-semibold whitespace-nowrap text-latao-texto no-underline transition-colors hover:bg-latao/10 hover:text-luar lg:inline-flex"
+          >
+            <span aria-hidden="true" className="size-3 rounded-full border-[1.5px] border-current" />
+            {SUBSCRIBER_AREA.label}
+          </Link>
           <a href="#planos" className="btn-primary hidden !min-h-10 !px-4 !text-[13px] sm:inline-flex">
             Ver planos
           </a>
@@ -94,6 +104,16 @@ export function Nav() {
               </a>
             </li>
           ))}
+          <li>
+            <Link
+              href={SUBSCRIBER_AREA.href}
+              onClick={() => setOpen(false)}
+              className="mt-1 flex items-center justify-between border-t border-nevoa/15 py-3.5 text-base font-semibold text-latao-texto no-underline"
+            >
+              {SUBSCRIBER_AREA.label}
+              <span className="text-xs font-medium text-nevoa">demonstração →</span>
+            </Link>
+          </li>
         </ul>
       </div>
     </header>

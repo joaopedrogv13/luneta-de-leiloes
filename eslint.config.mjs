@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Handoff do Claude Design (protótipos HTML, não fazem parte do app).
     "project/**",
+    ".claude/**",
   ]),
 ]);
 

@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { SUBSCRIBER_AREA } from "@/content/site";
 
 type Mode = "lente" | "mao" | "luneta";
 const MODES: { id: Mode; label: string }[] = [
@@ -31,10 +33,11 @@ export function LensPreviewClient({ lente, luneta }: { lente: ReactNode; luneta:
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const coarse = matchMedia("(hover: none)").matches;
     let raf = 0;
+    let visible = false;
+    let w = el.clientWidth;
+    let h = el.clientHeight;
 
     const target = () => {
-      const w = el.clientWidth;
-      const h = el.clientHeight;
       // Posição de descanso: sobre o cartão do Alvo (centro no desktop, 2º cartão no celular).
       const restX = w * 0.5;
       const restY = w < 640 ? h * 0.72 : h * 0.42;
@@ -50,12 +53,7 @@ export function LensPreviewClient({ lente, luneta }: { lente: ReactNode; luneta:
       s.tr = mode === "luneta" ? Math.hypot(w, h) : mode === "lente" ? 0 : coarse || w < 640 ? 130 : R;
     };
 
-    const tick = () => {
-      target();
-      const k = reduce ? 1 : 0.12;
-      s.x += (s.tx - s.x) * k;
-      s.y += (s.ty - s.y) * k;
-      s.r += (s.tr - s.r) * (reduce ? 1 : 0.16);
+    const paint = () => {
       if (top.current) top.current.style.clipPath = `circle(${s.r.toFixed(1)}px at ${s.x.toFixed(1)}px ${s.y.toFixed(1)}px)`;
       if (ring.current) {
         const show = mode === "mao" && s.r > 8;
@@ -63,7 +61,27 @@ export function LensPreviewClient({ lente, luneta }: { lente: ReactNode; luneta:
         ring.current.style.transform = `translate(${s.x - s.r}px, ${s.y - s.r}px)`;
         ring.current.style.width = ring.current.style.height = `${Math.max(0, s.r * 2)}px`;
       }
-      raf = requestAnimationFrame(tick);
+    };
+
+    // O laço só roda enquanto a luneta se move; quando assenta, para (nada é redesenhado à toa).
+    const tick = () => {
+      raf = 0;
+      target();
+      const k = reduce ? 1 : 0.12;
+      s.x += (s.tx - s.x) * k;
+      s.y += (s.ty - s.y) * k;
+      s.r += (s.tr - s.r) * (reduce ? 1 : 0.16);
+      const settled = Math.abs(s.tx - s.x) < 0.3 && Math.abs(s.ty - s.y) < 0.3 && Math.abs(s.tr - s.r) < 0.3;
+      if (settled) {
+        s.x = s.tx;
+        s.y = s.ty;
+        s.r = s.tr;
+      }
+      paint();
+      if (!settled && visible) raf = requestAnimationFrame(tick);
+    };
+    const kick = () => {
+      if (visible && !raf) raf = requestAnimationFrame(tick);
     };
 
     const move = (e: PointerEvent) => {
@@ -72,24 +90,37 @@ export function LensPreviewClient({ lente, luneta }: { lente: ReactNode; luneta:
       s.tx = e.clientX - r.left;
       s.ty = e.clientY - r.top;
       s.inside = true;
+      kick();
     };
     // Ao sair com o mouse, a luneta volta devagar para o Alvo.
     const leave = (e: PointerEvent) => {
       if (e.pointerType === "mouse") s.inside = false;
+      kick();
     };
 
     // Só anima enquanto a prévia está na tela.
     const io = new IntersectionObserver(([en]) => {
-      cancelAnimationFrame(raf);
-      if (en.isIntersecting) raf = requestAnimationFrame(tick);
+      visible = en.isIntersecting;
+      if (visible) kick();
+      else {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    });
+    const ro = new ResizeObserver(() => {
+      w = el.clientWidth;
+      h = el.clientHeight;
+      kick();
     });
     io.observe(el);
+    ro.observe(el);
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerdown", move);
     el.addEventListener("pointerleave", leave);
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();
+      ro.disconnect();
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerdown", move);
       el.removeEventListener("pointerleave", leave);
@@ -161,10 +192,15 @@ export function LensPreviewClient({ lente, luneta }: { lente: ReactNode; luneta:
           {caption}
         </p>
       </div>
-      <p className="mt-4 max-w-[640px] text-sm leading-relaxed text-nevoa">
-        Fora do círculo, a visão do plano Lente: todos os leilões, fotos, mapa e filtros, com tags e selos desfocados. Dentro, a Luneta: cada
-        risco com ícone e texto, e os selos Promissor, Na Mira e Alvo.
-      </p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+        <p className="max-w-[640px] text-sm leading-relaxed text-nevoa">
+          Fora do círculo, a visão do plano Lente: todos os leilões, fotos, mapa e filtros, com tags e selos desfocados. Dentro, a Luneta:
+          cada risco com ícone e texto, e os selos Promissor, Na Mira e Alvo.
+        </p>
+        <Link href={SUBSCRIBER_AREA.href} className="btn-outline">
+          Abrir a demonstração completa →
+        </Link>
+      </div>
     </div>
   );
 }

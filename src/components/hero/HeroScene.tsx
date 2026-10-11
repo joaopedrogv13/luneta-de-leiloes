@@ -2,7 +2,7 @@ import { HERO } from "@/content/site";
 import { BrazilMap } from "@/components/ui/BrazilMap";
 import { RichText } from "@/components/ui/RichText";
 import { Seal } from "@/components/ui/Seal";
-import { ALVO_DESAGIO, BRASS, LENS_GLOW } from "./constants";
+import { ALVO_DESAGIO, BRASS, LENS_GLOW, LENS_SHADOW } from "./constants";
 import { HeroMotion } from "./HeroMotion";
 
 /** Cartões desfocados ao fundo = os sites dos leiloeiros, cada um no seu canto. */
@@ -16,18 +16,19 @@ const SITES = [
 /**
  * HERO · a luneta chega ao alvo.
  *
- * A cena fica presa na tela (position: sticky) enquanto a seção rola: ~3 telas no desktop e 1,5 no celular.
- * Um único timeline GSAP com ScrollTrigger (scrub) percorre as 6 etapas do blueprint (Passo 4):
- *   1. 0–12%   Noite e névoa: estrelas, névoa densa e uma luneta pequena ao longe. Título já visível.
- *   2. 12–35%  A luneta se aproxima: cresce e se alinha ao centro; a névoa abre; os sites dos leiloeiros
- *              aparecem desfocados ao fundo (com leve parallax).
- *   3. 35–50%  A luneta se estende: os tubos de latão deslizam e a objetiva vira a moldura circular.
- *   4. 50–70%  Foco: o mapa do Brasil entra em foco, os pins acendem e pulsam; os cartões ficam nítidos.
- *   5. 70–88%  Mira travada: o retículo desliza até o pin de São Paulo e trava; o cartão do Alvo abre,
- *              o deságio conta até 48% e aparece o selo.
- *   6. 88–100% Chamada: a lente solta brilho de luar e o botão "Ver planos" acende em latão.
- * Com prefers-reduced-motion (ou sem JS) nada disso roda: a seção tem 1 tela e já mostra o estado final.
- * Esta marcação é renderizada no servidor; a animação vive na ilha cliente <HeroMotion />.
+ * A cena ocupa uma tela. No topo da página, UMA rolada (dois dedos no trackpad, roda do mouse, deslizar no
+ * celular ou ↓/espaço) dispara a animação inteira, com tempo fixo (~2,5s), nas 6 etapas do blueprint (Passo 4):
+ *   1. Noite e névoa: estrelas, névoa densa e uma luneta pequena ao longe. Título já visível (estado inicial).
+ *   2. A luneta se aproxima: cresce e se alinha ao centro; a névoa abre; os sites dos leiloeiros
+ *      aparecem desfocados ao fundo (com leve parallax).
+ *   3. A luneta se estende: os tubos de latão deslizam e a objetiva vira a moldura circular.
+ *   4. Foco: o mapa do Brasil entra em foco, os pins acendem e pulsam; os cartões ficam nítidos.
+ *   5. Mira travada: o retículo desliza até o pin de São Paulo e trava; o cartão do Alvo abre,
+ *      o deságio conta até 48% e aparece o selo.
+ *   6. Chamada: a lente solta brilho de luar e o botão "Ver planos" acende em latão.
+ * Com prefers-reduced-motion (ou sem JS) nada disso roda: a cena já aparece no estado final.
+ * Esta marcação é renderizada no servidor; a animação (GSAP) vive na ilha cliente <HeroMotion />.
+ * Desfoques e brilhos têm camadas próprias (desfocada × nítida) para animar só opacidade e transform.
  */
 export function HeroScene() {
   return (
@@ -36,6 +37,7 @@ export function HeroScene() {
         {/* Céu: estrelas sutis e brilho de luar */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
           <div
+            data-h="stars"
             className="absolute inset-0 animate-twinkle"
             style={{
               backgroundImage: [
@@ -60,18 +62,22 @@ export function HeroScene() {
           />
           <div className="absolute -top-[18cqh] -right-[10cqw] size-[60cqw] rounded-full bg-[radial-gradient(circle,rgba(var(--luar-rgb),0.10),transparent_60%)]" />
 
-          {/* Sites dos leiloeiros (desfocados → nítidos) */}
+          {/* Sites dos leiloeiros: camada desfocada × camada nítida (troca de opacidade, sem animar filtro) */}
           <div data-h="sites" className="absolute inset-0 max-sm:hidden">
-            {SITES.map((s, i) => (
-              <div
-                key={i}
-                data-h="site"
-                className={`absolute rounded-lg border border-nevoa/25 bg-tinta p-2.5 ${s.pos}`}
-              >
-                <div className="h-2 w-3/5 rounded bg-nevoa/50" />
-                <div className="mt-2.5 h-1.5 w-[85%] rounded bg-nevoa/25" />
-                <div className="mt-1.5 h-1.5 w-[65%] rounded bg-nevoa/25" />
-                {s.bar && <div className={`mt-2.5 h-1.5 w-2/5 rounded ${s.bar}`} />}
+            {(["soft", "sharp"] as const).map((layer) => (
+              <div key={layer} data-h={`sites-${layer}`} className="absolute inset-0">
+                {SITES.map((s, i) => (
+                  <div
+                    key={i}
+                    data-site
+                    className={`absolute rounded-lg border border-nevoa/25 bg-tinta p-2.5 ${s.pos} ${layer === "soft" ? "opacity-0 blur-[6px]" : "opacity-70"}`}
+                  >
+                    <div className="h-2 w-3/5 rounded bg-nevoa/50" />
+                    <div className="mt-2.5 h-1.5 w-[85%] rounded bg-nevoa/25" />
+                    <div className="mt-1.5 h-1.5 w-[65%] rounded bg-nevoa/25" />
+                    {s.bar && <div className={`mt-2.5 h-1.5 w-2/5 rounded ${s.bar}`} />}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -79,7 +85,7 @@ export function HeroScene() {
           {/* Névoa */}
           <div
             data-h="fog"
-            className="absolute -inset-[20%] [html:not(.motion)_&]:opacity-[0.08]"
+            className="absolute -inset-[12%] [html:not(.motion)_&]:opacity-[0.08]"
             style={{
               background:
                 "radial-gradient(ellipse 50% 40% at 30% 60%,rgba(var(--fog-rgb),.55),transparent 70%),radial-gradient(ellipse 45% 35% at 70% 40%,rgba(var(--fog-rgb),.45),transparent 70%),radial-gradient(ellipse 60% 30% at 50% 85%,rgba(var(--fog-rgb),.5),transparent 70%),radial-gradient(ellipse 40% 50% at 85% 75%,rgba(var(--fog-rgb),.35),transparent 70%)",
@@ -117,13 +123,21 @@ export function HeroScene() {
           </div>
         </div>
 
+        {/* Brilho de luar da etapa 6: camada própria atrás da lente (anima só a opacidade) */}
+        <div
+          data-h="glow"
+          aria-hidden="true"
+          className="pointer-events-none absolute top-[71%] left-1/2 size-[min(78cqw,40cqh)] -translate-x-1/2 -translate-y-1/2 rounded-full sm:top-1/2 sm:left-[66%] sm:size-[min(52cqw,62cqh)]"
+          style={{ boxShadow: LENS_GLOW }}
+        />
+
         {/* Lente: moldura circular com anel de latão, mapa e retículo (fica noturna também no tema claro) */}
         <div
           data-h="lens"
           className="absolute top-[71%] left-1/2 size-[min(78cqw,40cqh)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border-[6px] border-latao sm:top-1/2 sm:left-[66%] sm:size-[min(52cqw,62cqh)]"
           style={{
             background: "radial-gradient(circle at 50% 45%,#16224A,#0F1830 60%,#0A1226 100%)",
-            boxShadow: LENS_GLOW,
+            boxShadow: LENS_SHADOW,
           }}
         >
           <div
@@ -133,7 +147,13 @@ export function HeroScene() {
           />
           <div aria-hidden="true" className="absolute inset-0 [background-size:11%_11%] [background-image:linear-gradient(rgba(142,155,181,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(142,155,181,.08)_1px,transparent_1px)]" />
           <div data-h="map" className="absolute inset-[7%]">
-            <BrazilMap variant="lens" highlight="sp" label="Mapa do Brasil com os leilões monitorados; a mira está travada em São Paulo" />
+            {/* mapa desfocado (estático) × mapa nítido: o foco é uma troca de opacidade */}
+            <div data-h="map-soft" aria-hidden="true" className="absolute inset-0 opacity-0 blur-[5px]">
+              <BrazilMap variant="lens" pins={[]} label="" />
+            </div>
+            <div data-h="map-sharp" className="absolute inset-0">
+              <BrazilMap variant="lens" highlight="sp" label="Mapa do Brasil com os leilões monitorados; a mira está travada em São Paulo" />
+            </div>
             <div
               data-h="reticle"
               aria-hidden="true"
@@ -151,7 +171,7 @@ export function HeroScene() {
         {/* Cartão do Alvo (exemplo fictício) */}
         <div
           data-h="card"
-          className="absolute bottom-3 left-1/2 z-[4] flex w-[min(360px,calc(100cqw-32px))] -translate-x-1/2 items-center gap-3 rounded-2xl border border-latao/45 bg-tinta/95 p-3 pr-4 shadow-[0_20px_60px_rgba(0,0,0,.5)] backdrop-blur-md sm:bottom-[8cqh] sm:left-[min(calc(66%+4cqw),calc(100cqw-376px))] sm:translate-x-0"
+          className="absolute bottom-3 left-1/2 z-[4] flex w-[min(360px,calc(100cqw-32px))] -translate-x-1/2 items-center gap-3 rounded-2xl border border-latao/45 bg-tinta p-3 pr-4 shadow-[0_20px_60px_rgba(0,0,0,.5)] sm:bottom-[8cqh] sm:left-[min(calc(66%+4cqw),calc(100cqw-376px))] sm:translate-x-0"
         >
           <div
             aria-hidden="true"
@@ -196,11 +216,11 @@ export function HeroScene() {
           </p>
         </div>
 
-        {/* Dica de rolagem (some na etapa 2) */}
+        {/* Dica de rolagem (some quando a intro começa) */}
         <div
           data-h="hint"
           aria-hidden="true"
-          className="absolute bottom-6 left-[6cqw] hidden items-center gap-2 text-[11px] font-semibold tracking-[0.16em] text-nevoa uppercase sm:flex [html:not(.motion)_&]:hidden"
+          className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2 text-[11px] font-semibold tracking-[0.16em] whitespace-nowrap text-nevoa uppercase sm:bottom-6 sm:left-[6cqw] sm:translate-x-0 [html:not(.motion)_&]:hidden"
         >
           <span className="relative h-8 w-5 rounded-full border border-nevoa/50">
             <span className="absolute top-1.5 left-1/2 h-1.5 w-[2px] -translate-x-1/2 animate-bounce rounded bg-latao" />
