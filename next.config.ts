@@ -11,7 +11,10 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     rules: {
+      // Tailwind só no CSS global. Sem o "condition", a regra também pegava os *.module.css e o
+      // `as: "*.css"` os transformava em CSS comum (as classes do módulo viravam `undefined`).
       "*.css": {
+        condition: { not: { path: /\.module\.css$/ } },
         loaders: ["@tailwindcss/turbopack"],
         as: "*.css",
       },

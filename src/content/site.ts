@@ -109,8 +109,10 @@ export const EXAMPLES = {
 
 export const PRACAS = {
   eyebrow: "Primeira e segunda praça",
-  title: ["O mesmo imóvel pode ficar mais", "barato", "na segunda praça."],
-  text: "Muitos leilões têm duas rodadas. Na primeira praça, o lance mínimo costuma ser mais alto. Se ninguém arremata, vem a segunda praça, geralmente com valor menor. No plano Luneta, você marca seus favoritos e recebe um e-mail assim que a praça mudar.",
+  title: ["O mesmo imóvel pode ficar", "até 50%", "mais barato na segunda praça."],
+  text: "Muitos leilões têm duas rodadas. Na primeira praça, o lance mínimo costuma partir do valor de avaliação. Se ninguém arremata, vem a segunda praça, e o mesmo imóvel pode sair por até metade desse valor.",
+  alert:
+    "Por isso, no plano Luneta, você marca seus casos favoritos e a gente avisa por e-mail assim que eles vão para a segunda praça. Você não perde o momento do lance.",
 } as const;
 
 export const FILTERS = {
@@ -226,7 +228,7 @@ export const FAQ = {
     },
     {
       q: "O que é primeira e segunda praça?",
-      a: "Muitos leilões têm duas rodadas. Na primeira praça, o lance mínimo costuma ser mais alto. Se ninguém arremata, vem a segunda praça, geralmente com valor menor.",
+      a: "Muitos leilões têm duas rodadas. Na primeira praça, o lance mínimo costuma partir do valor de avaliação. Se ninguém arremata, vem a segunda praça, em que o mesmo imóvel pode sair por até metade desse valor.",
     },
     {
       q: "Os leilões de todo o Brasil estão aqui?",
@@ -242,7 +244,7 @@ export const FAQ = {
     },
     {
       q: "Como recebo os alertas de mudança de praça?",
-      a: "No plano Luneta, marque o leilão como favorito. Assim que a praça mudar, você recebe um e-mail.",
+      a: "No plano Luneta, marque o leilão como favorito. Assim que ele for para a segunda praça, você recebe um e-mail com o novo lance mínimo e a data.",
     },
     {
       q: "Posso cancelar quando quiser?",
