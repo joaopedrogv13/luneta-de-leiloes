@@ -20,6 +20,7 @@ import { LeadForm } from "@/components/LeadForm";
 import { LensPreview } from "@/components/LensPreview";
 import { PlansTable } from "@/components/PlansTable";
 import { FEATURED_EXAMPLES } from "@/content/examples";
+import { JsonLd } from "@/components/JsonLd";
 
 /** Landing na ordem do blueprint (Passo 1 · Estrutura da página). */
 export default function Home() {
@@ -64,6 +65,7 @@ export default function Home() {
       <Footer />
       <MobileCtaBar />
       <MotionLayer />
+      <JsonLd />
     </>
   );
 }
