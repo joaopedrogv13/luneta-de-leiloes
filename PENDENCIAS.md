@@ -9,6 +9,15 @@ npm run build && npm start
 npm run lint
 ```
 
+### Publicar na Vercel (link para testar no PC e no celular)
+
+1. Em vercel.com, entre com a conta do GitHub → **Add New → Project** → importe `luneta-de-leiloes` → **Deploy**
+   (a Vercel detecta Next.js; não precisa mudar nada).
+2. Opcional: em **Settings → Environment Variables**, crie `NEXT_PUBLIC_SITE_URL` com o link gerado
+   (ex.: `https://luneta-de-leiloes.vercel.app`) e faça **Redeploy**, para canonical, Open Graph, sitemap e
+   JSON-LD apontarem para esse endereço enquanto o domínio final não existe.
+3. Cada `git push` na `main` publica de novo automaticamente.
+
 Todo o texto vem de `src/content/site.ts` (blueprint, Passo 3). Qualquer trecho entre colchetes, como `[X]`,
 aparece na página como **placeholder visível** (borda tracejada em latão). Para publicar, troque o colchete
 pelo valor real no arquivo de conteúdo.
