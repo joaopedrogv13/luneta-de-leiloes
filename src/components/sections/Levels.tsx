@@ -1,98 +1,71 @@
 import { LEVELS } from "@/content/site";
-import { TAG_CATEGORIES } from "@/content/tags";
-import { SectionHeading, Title } from "@/components/ui/Heading";
-import { Seal, type SealLevel } from "@/components/ui/Seal";
-import { Tag } from "@/components/ui/Tag";
+import { SEVERITY_ORDER } from "@/content/tags";
+import { Title } from "@/components/ui/Heading";
+import { CautionCard } from "@/components/niveis/CautionCard";
+import { SealTrail } from "@/components/niveis/SealTrail";
+import { TagExplorer } from "@/components/niveis/TagExplorer";
+import { SEVERITY_TONE, SeverityIcon } from "@/components/niveis/severity";
 
-/** Os 3 níveis de oportunidade (selos cumulativos) + o alerta de "Cuidado" + todas as tags por categoria. */
+/**
+ * "Tags de risco e selos", na ordem de venda:
+ *  1. Atenção: nem todo desconto é uma boa oportunidade.
+ *  2. Cartão "Cuidado" com a cena do −55% que esconde riscos (Lente × Luneta).
+ *  3. Frase-ponte: por isso, no plano Luneta, a gente separa os melhores casos.
+ *  4. Os três selos, do Promissor ao Alvo.
+ *  5. Tags de risco: os riscos escondidos, a legenda de cores e as 8 categorias que abrem, com explicação de cada tag.
+ *  6. Aviso: a classificação é uma análise, não substitui advogado.
+ */
 export function Levels() {
+  const T = LEVELS.tags;
   return (
     <section id="niveis" aria-labelledby="niveis-titulo" className="section bg-tinta">
       <div className="container-l">
-        <SectionHeading id="niveis-titulo" eyebrow={LEVELS.eyebrow} parts={LEVELS.title} />
-
-        <ol className="mt-10 grid gap-4 sm:mt-16 md:grid-cols-3">
-          {LEVELS.seals.map((s) => {
-            const alvo = s.level === 3;
-            return (
-              <li
-                key={s.name}
-                data-reveal
-                data-seal-card
-                className={`group card-on-tinta p-7 sm:p-8 ${alvo ? "!border-latao/50 shadow-[0_0_60px_rgba(var(--luar-rgb),.06)]" : ""}`}
-              >
-                <Seal level={s.level as SealLevel} size={72} ghost title={`Selo ${s.name}, ${s.rings}`} />
-                <p className="mt-6 text-[11px] font-semibold tracking-[0.16em] text-latao-texto uppercase">{s.rings}</p>
-                <h3 className="mt-2 font-display text-[28px] leading-tight font-bold tracking-[-0.02em]">{s.name}</h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-nevoa">{s.text}</p>
-              </li>
-            );
-          })}
-        </ol>
-
-        {/* Atenção · Cuidado: valoriza o plano Luneta */}
-        <div
-          data-reveal
-          data-caution
-          className="mt-4 grid grid-cols-[auto_minmax(0,1fr)] items-start gap-5 rounded-[20px] border border-aten/45 bg-noite p-6 shadow-[0_0_60px_rgba(224,180,76,.06)] transition-[border-color,box-shadow] duration-300 hover:border-aten/75 hover:shadow-[0_0_70px_rgba(224,180,76,.12)] sm:p-8"
-        >
-          <span
-            aria-hidden="true"
-            data-caution-ring
-            className="flex size-[52px] items-center justify-center rounded-full border-2 border-aten font-display text-2xl font-bold text-aten shadow-[0_0_22px_rgba(224,180,76,.25)]"
-          >
-            !
-          </span>
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold tracking-[0.16em] text-aten uppercase">{LEVELS.caution.eyebrow}</p>
-            <h3 className="mt-2 font-display text-[clamp(22px,2.4vw,30px)] leading-tight font-bold tracking-[-0.02em]">
-              <Title parts={LEVELS.caution.title} accentClass="text-aten" />
-            </h3>
-            <p className="mt-3 max-w-[720px] text-[15px] leading-relaxed text-nevoa">{LEVELS.caution.text}</p>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Tag label="Ocupado" severity="grave" />
-              <Tag label="Dívida passa ao arrematante" severity="grave" />
-              <Tag label="Leilão com recurso" severity="atencao" />
-              <span aria-hidden="true" className="mx-1 text-nevoa">
-                →
-              </span>
-              <a href="#planos" className="btn-primary !min-h-9 !px-3.5 !text-xs">
-                <Seal level={2} size={16} className="[&_circle]:stroke-[#070B16] [&_circle:last-child]:fill-[#070B16]" />
-                {LEVELS.caution.cta}
-              </a>
-            </div>
-          </div>
+        <div data-reveal>
+          <p className="eyebrow">{LEVELS.eyebrow}</p>
+          <p className="mt-5 inline-flex items-center gap-2.5 rounded-full border border-aten/45 bg-aten/10 py-1.5 pr-4 pl-1.5 text-[12px] leading-none font-semibold tracking-[0.16em] text-aten uppercase">
+            <span aria-hidden="true" className="flex size-6 items-center justify-center rounded-full bg-aten font-display text-[14px] font-bold tracking-normal text-noite">
+              !
+            </span>
+            {LEVELS.attention}
+          </p>
+          <h2 id="niveis-titulo" className="h2 mt-5 max-w-[860px]">
+            <Title parts={LEVELS.title} />
+          </h2>
         </div>
 
-        <p className="mt-8 max-w-[760px] text-[15px] leading-relaxed text-nevoa">{LEVELS.tagsNote}</p>
+        <CautionCard />
 
-        <details className="group/d mt-6 rounded-[20px] border border-nevoa/20 bg-noite">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-[20px] px-6 py-5 font-semibold [&::-webkit-details-marker]:hidden">
-            Ver todas as tags de risco, por categoria
-            <span
-              aria-hidden="true"
-              className="flex size-7 shrink-0 items-center justify-center rounded-full border border-latao/60 font-display text-lg text-latao-texto transition-transform group-open/d:rotate-45"
-            >
-              +
-            </span>
-          </summary>
-          <div className="grid gap-x-8 gap-y-6 px-6 pb-7 sm:grid-cols-2 lg:grid-cols-4">
-            {TAG_CATEGORIES.map((cat) => (
-              <div key={cat.name}>
-                <h3 className="eyebrow !text-[11px]">{cat.name}</h3>
-                <ul className="mt-3 flex flex-wrap gap-1.5">
-                  {cat.tags.map((t) => (
-                    <li key={t.label}>
-                      <Tag {...t} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+        <SealTrail />
+
+        {/* Tags de risco */}
+        <div className="mt-24 border-t border-nevoa/15 pt-16 sm:mt-32 sm:pt-24">
+          <div className="grid items-end gap-x-16 gap-y-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+            <div data-reveal>
+              <p className="eyebrow">{T.eyebrow}</p>
+              <h3 className="mt-5 font-display text-[clamp(30px,3.8vw,48px)] leading-[1.06] font-bold tracking-[-0.025em]">
+                <Title parts={T.title} accentClass="text-aten" />
+              </h3>
+              <p className="mt-5 max-w-[660px] text-base leading-relaxed text-nevoa sm:text-lg">{T.text}</p>
+            </div>
+            <ul data-reveal aria-label="Legenda das cores das tags" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              {SEVERITY_ORDER.map((s) => {
+                const tone = SEVERITY_TONE[s];
+                return (
+                  <li key={s} className="flex items-center gap-3 text-[14px] text-nevoa">
+                    <span className={`flex size-7 shrink-0 items-center justify-center rounded-full border ${tone.border} ${tone.bg} ${tone.text}`}>
+                      <SeverityIcon severity={s} size={12} />
+                    </span>
+                    {T.legend[s]}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-        </details>
 
-        <p className="mt-6 text-[13px] leading-relaxed text-nevoa">
+          <TagExplorer />
+        </div>
+
+        <p className="mt-10 text-[13px] leading-relaxed text-nevoa">
           <strong className="font-semibold text-luar">Importante:</strong> {LEVELS.disclaimer}
         </p>
       </div>

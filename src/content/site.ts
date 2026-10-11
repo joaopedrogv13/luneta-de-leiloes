@@ -68,7 +68,39 @@ export const SOLUTION = {
 
 export const LEVELS = {
   eyebrow: "Tags de risco e selos",
-  title: ["Nem todo desconto é uma boa oportunidade. A gente", "separa", "para você."],
+  attention: "Atenção",
+  title: ["Nem todo desconto é uma boa", "oportunidade", "."],
+  caution: {
+    eyebrow: "Cuidado",
+    title: ["O maior desconto costuma esconder o maior", "risco", "."],
+    text: "Muitos dos deságios mais altos vêm com ocupante, dívida que passa ao arrematante ou ação judicial em curso. Quase nada disso aparece no anúncio: está no edital e no processo.",
+    compare: [
+      { plan: "Plano Lente", text: "você vê o desconto." },
+      { plan: "Plano Luneta", text: "você vê o que ele esconde, antes do lance." },
+    ],
+    cta: "Visível no plano Luneta",
+    /** Exemplo fictício da animação: o deságio chama atenção e a varredura revela o que ele esconde. */
+    demo: {
+      title: "Apartamento 2 quartos",
+      place: "Niterói/RJ",
+      desagio: 55,
+      lance: "R$ 270.000",
+      lente: "Visão Lente",
+      luneta: "Visão Luneta",
+      hiddenLabel: "Por trás do desconto",
+      locked: "Tags visíveis no plano Luneta",
+      verdict: "desconto ≠ oportunidade",
+      /** `source`: onde o risco foi encontrado (aparece ao lado da tag em telas maiores). */
+      tags: [
+        { label: "Ocupado", severity: "grave", source: "no edital" },
+        { label: "Dívida passa ao arrematante", severity: "grave", source: "no edital" },
+        { label: "Ação judicial em curso", severity: "grave", source: "no processo" },
+        { label: "Leilão com recurso", severity: "atencao", source: "no processo" },
+      ],
+    },
+  },
+  bridge: ["Por isso, no plano Luneta, a gente separa os", "melhores", "casos para você."],
+  sealsNote: "Três selos, do Promissor ao Alvo. Cada nível soma um anel e mais um critério cumprido.",
   seals: [
     {
       level: 1,
@@ -89,14 +121,24 @@ export const LEVELS = {
       text: "Só os melhores. Soma documentação e processo limpos e praça favorável. Maior deságio, nenhum risco identificado.",
     },
   ],
-  caution: {
-    eyebrow: "Atenção",
-    title: ["Cuidado: o maior desconto costuma esconder o maior", "risco", "."],
-    text: "Muitos dos deságios mais altos vêm com ocupante, dívida que passa ao arrematante ou ação judicial em curso. No plano Lente você vê o desconto; no plano Luneta você vê o que ele esconde, antes do lance.",
-    cta: "Visível no plano Luneta",
+  tags: {
+    eyebrow: "Tags de risco",
+    title: ["Os riscos", "escondidos", "em cada leilão."],
+    text: "Ocupante que não sai, dívida que passa para quem arremata, processo que ainda corre, matrícula com pendência. Esses riscos normalmente estão no edital e no processo, não no anúncio. A Luneta lê cada caso e marca o que encontrou em tags, inclusive nos leilões sem selo.",
+    legend: {
+      grave: "Vermelho: risco grave",
+      atencao: "Amarelo: atenção",
+      positivo: "Verde: ponto positivo",
+      info: "Cinza: informativo",
+    },
+    hint: "Abra uma categoria e toque numa tag para entender o risco.",
+    openAll: "Abrir todas",
+    closeAll: "Fechar todas",
+    start: "Comece por aqui",
+    what: "O que é",
+    practice: "Na prática",
+    footer: "No plano Luneta, essa tag aparece em cada leilão em que for encontrada.",
   },
-  tagsNote:
-    "Além dos selos, cada leilão mostra tags de risco (ocupado, preço alto, dívidas, entre outras), inclusive os que não têm selo.",
   disclaimer:
     "A classificação é uma análise baseada nos dados dos editais e não substitui a avaliação de um advogado.",
 } as const;

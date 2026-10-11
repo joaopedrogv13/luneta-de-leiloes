@@ -33,6 +33,10 @@ function countUp(el: HTMLElement) {
  *  - [data-slide-up]   o e-mail de alerta desliza de baixo com atraso.
  *  - [data-pulse]      o botão pulsa 1× ao entrar.
  *  - [data-count-to]   números contam até o valor final (opcional data-count-from).
+ *  - [data-play]       cenas curtas com roteiro (ex. o cartão "Cuidado" em Tags de risco e selos): só ganham
+ *                      .is-in quando boa parte do bloco está à vista (60% dele, ou meia tela), para a cena não
+ *                      começar escondida no pé da tela. O estado inicial delas vem de html.motion (posto antes
+ *                      da pintura), então não há atalho "já está na tela": se estiver, a cena roda na hora.
  * O brilho da chamada final cresce com a rolagem via CSS scroll-driven animation.
  * O GSAP ScrollTrigger fica reservado para a cena do hero (HeroMotion).
  * Com prefers-reduced-motion nada disso roda: o HTML já está no estado final.
@@ -67,8 +71,23 @@ export function MotionLayer() {
     );
     els.forEach((el) => !el.classList.contains("is-in") && io.observe(el));
 
+    const playIo = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (!e.isIntersecting) return;
+          const seen = e.intersectionRatio >= 0.6 || e.intersectionRect.height >= window.innerHeight * 0.5;
+          if (!seen) return;
+          e.target.classList.add("is-in");
+          playIo.unobserve(e.target);
+        });
+      },
+      { threshold: [0, 0.2, 0.4, 0.6, 0.8, 1] },
+    );
+    document.querySelectorAll<HTMLElement>("[data-play]").forEach((el) => !el.classList.contains("is-in") && playIo.observe(el));
+
     return () => {
       io.disconnect();
+      playIo.disconnect();
       root.classList.remove("reveal-ready");
     };
   }, []);

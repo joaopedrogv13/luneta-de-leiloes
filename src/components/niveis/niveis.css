@@ -1,0 +1,393 @@
+/*
+ * Seção "Tags de risco e selos" (#niveis) · estilos próprios, todos com prefixo nv-.
+ *
+ * Por que CSS comum e não CSS Module: a regra turbopack.rules["*.css"] do next.config.ts (loader do
+ * Tailwind com as: "*.css") renomeia Foo.module.css para Foo.module.css.css, e o arquivo deixa de ser
+ * tratado como módulo (as classes chegam como undefined). Com o prefixo, nada vaza para o resto do site.
+ *
+ * Regras de movimento: só transform e opacity animam; o desfoque das tags da visão Lente é estático.
+ * Sem html.motion (prefers-reduced-motion) ou sem o MotionLayer, tudo aparece no estado final.
+ */
+
+/* ============================================================
+   Cena "Cuidado" · roteiro (segundos depois de .is-in, posto pelo MotionLayer em [data-play]):
+     0.15  o −55% verde pulsa e acende o brilho
+     0.70  a etiqueta troca de "Visão Lente" para "Visão Luneta"; some o aviso de tags travadas
+     0.85  a varredura de latão desce pelas tags (1.5 s, linear)
+     1.00 → 2.17  cada tag passa de desfocada a nítida, com um pulso na cor da gravidade (a cada 0.39 s),
+                  e ao lado aparece onde o risco estava ("no edital", "no processo")
+     2.45  o −55% perde o brilho e vira névoa
+     2.60  o risco vermelho atravessa o número
+     2.95  aparece "desconto ≠ oportunidade"
+   Estado padrão = estado final. O estado inicial só vale com html.motion, que o <head> põe antes
+   da pintura (sem piscar); a cena roda quando o bloco ganha .is-in.
+   ============================================================ */
+
+/* ---------- estado final (padrão) ---------- */
+.nv-view-lente,
+.nv-num-pos,
+.nv-glow,
+.nv-blurred,
+.nv-ping,
+.nv-lock,
+.nv-beam {
+  opacity: 0;
+}
+.nv-blurred {
+  filter: blur(4px);
+}
+.nv-strike {
+  transform-origin: left center;
+  transform: rotate(-9deg) scaleX(1);
+}
+.nv-trail {
+  background: linear-gradient(to top, rgba(201, 162, 77, 0.22), rgba(201, 162, 77, 0));
+}
+.nv-glow {
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--pos) 30%, transparent), transparent);
+}
+
+/* ---------- estado inicial (com movimento, antes de a cena começar) ---------- */
+.motion .nv-demo:not(.is-in) :is(.nv-view-lente, .nv-num-pos, .nv-blurred, .nv-lock) {
+  opacity: 1;
+}
+.motion .nv-demo:not(.is-in) .nv-view-luneta {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.motion .nv-demo:not(.is-in) .nv-num-fog {
+  opacity: 0;
+}
+.motion .nv-demo:not(.is-in) .nv-strike {
+  transform: rotate(-9deg) scaleX(0);
+}
+.motion .nv-demo:not(.is-in) .nv-verdict {
+  opacity: 0;
+  transform: translateY(6px) scale(0.96);
+}
+.motion .nv-demo:not(.is-in) .nv-sharp {
+  opacity: 0;
+  transform: scale(0.9);
+}
+.motion .nv-demo:not(.is-in) .nv-src {
+  opacity: 0;
+  transform: translateX(-6px);
+}
+
+/* ---------- transições (só com movimento) ---------- */
+.motion .nv-demo .nv-view-lente {
+  transition: opacity 0.3s ease 0.7s;
+}
+.motion .nv-demo .nv-view-luneta {
+  transition:
+    opacity 0.35s ease 0.75s,
+    transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) 0.75s;
+}
+.motion .nv-demo .nv-lock {
+  transition: opacity 0.35s ease 0.6s;
+}
+.motion .nv-demo .nv-blurred {
+  transition: opacity 0.3s ease calc(1s + var(--i, 0) * 0.39s);
+}
+.motion .nv-demo .nv-sharp {
+  transition:
+    opacity 0.3s ease calc(1s + var(--i, 0) * 0.39s),
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) calc(1s + var(--i, 0) * 0.39s);
+}
+.motion .nv-demo .nv-src {
+  transition:
+    opacity 0.35s ease calc(1.12s + var(--i, 0) * 0.39s),
+    transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) calc(1.12s + var(--i, 0) * 0.39s);
+}
+.motion .nv-demo :is(.nv-num-pos, .nv-num-fog) {
+  transition: opacity 0.6s ease 2.45s;
+}
+.motion .nv-demo .nv-strike {
+  transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1) 2.6s;
+}
+.motion .nv-demo .nv-verdict {
+  transition:
+    opacity 0.45s ease 2.95s,
+    transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 2.95s;
+}
+
+/* ---------- animações de um tiro (só com movimento, quando a cena começa) ---------- */
+.motion .nv-demo.is-in .nv-number {
+  animation: nv-num-pop 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s 1;
+}
+.motion .nv-demo.is-in .nv-glow {
+  animation: nv-glow 2.9s ease 0.1s 1 both;
+}
+.motion .nv-demo.is-in .nv-beam {
+  animation: nv-scan 1.5s linear 0.85s 1 both;
+}
+.motion .nv-demo.is-in .nv-ping {
+  animation: nv-ping 0.9s ease-out calc(1s + var(--i, 0) * 0.39s) 1 forwards;
+}
+
+@keyframes nv-num-pop {
+  40% {
+    transform: scale(1.06);
+  }
+}
+@keyframes nv-glow {
+  0% {
+    opacity: 0;
+  }
+  18%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes nv-scan {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  8%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+@keyframes nv-ping {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.16, 1.5);
+  }
+}
+
+/* anel "!" do Cuidado pulsa 2× quando o cartão entra ([data-reveal].is-in) */
+.reveal-ready .nv-caution.is-in .nv-ring {
+  animation: nv-ring-pulse 0.5s ease-in-out 0.5s 2;
+}
+@keyframes nv-ring-pulse {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+/* ============================================================
+   Frase-ponte: a linha de latão desce do cartão "Cuidado" até a frase (scaleY ao entrar).
+   ============================================================ */
+.nv-line {
+  background: linear-gradient(to bottom, rgba(201, 162, 77, 0), #c9a24d);
+  transform-origin: top center;
+}
+.reveal-ready .nv-bridge .nv-line {
+  transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s;
+}
+.reveal-ready .nv-bridge:not(.is-in) .nv-line {
+  transform: scaleY(0);
+}
+
+/* ============================================================
+   Categorias de tags (acordeões). Abrir: altura de 0fr a 1fr (grid-template-rows, curto e só no bloco
+   aberto) e as tags entram em cascata (opacity + transform). "Abrir todas" escalona com --cat-delay.
+   ============================================================ */
+.nv-panel {
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) var(--cat-delay, 0ms);
+}
+.nv-cat[data-open="true"] .nv-panel {
+  grid-template-rows: 1fr;
+}
+.nv-tag-item {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+.nv-cat[data-open="true"] .nv-tag-item {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.35s ease calc(var(--cat-delay, 0ms) + 120ms + var(--i, 0) * 65ms),
+    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--cat-delay, 0ms) + 120ms + var(--i, 0) * 65ms);
+}
+
+/* convite no primeiro cartão, até o primeiro clique: um anel de latão que se expande e some */
+.nv-invite {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .is-in > .nv-cat .nv-invite {
+    animation: nv-invite 2.8s ease-out 1.2s infinite;
+  }
+  .is-in > .nv-cat .nv-invite ~ h4 .nv-plus {
+    animation: nv-plus-nudge 2.8s ease-in-out 1.2s infinite;
+  }
+}
+@keyframes nv-invite {
+  0% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  25% {
+    opacity: 0.85;
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.035, 1.06);
+  }
+}
+@keyframes nv-plus-nudge {
+  0%,
+  30%,
+  100% {
+    transform: none;
+  }
+  15% {
+    transform: scale(1.14);
+  }
+}
+
+/* ============================================================
+   Pop-up de explicação ancorado na tag (portal no <body>); no celular, folha que sobe de baixo.
+   ============================================================ */
+.nv-pop {
+  position: absolute;
+  z-index: 45;
+  top: var(--top, 0px);
+  left: var(--left, 0px);
+  width: min(360px, calc(100vw - 32px));
+  transform-origin: var(--ax, 24px) 0;
+  animation: nv-pop-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.nv-pop[data-place="above"] {
+  transform-origin: var(--ax, 24px) 100%;
+}
+.nv-pop[data-state="closed"] {
+  pointer-events: none;
+  animation: nv-pop-out 0.16s ease-in both;
+}
+@keyframes nv-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes nv-pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/* seta que aponta para a tag (mesmo fundo e borda do pop-up) */
+.nv-arrow {
+  position: absolute;
+  top: -7px;
+  left: var(--ax, 24px);
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  background-color: inherit;
+  border: 1px solid;
+  border-color: inherit;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 3px;
+  transform: rotate(45deg);
+}
+.nv-pop[data-place="above"] .nv-arrow {
+  top: auto;
+  bottom: -7px;
+  border: 1px solid;
+  border-color: inherit;
+  border-top: 0;
+  border-left: 0;
+  border-radius: 0 0 3px 0;
+}
+.nv-handle {
+  display: none;
+}
+
+.nv-pop[data-mode="sheet"] {
+  position: fixed;
+  z-index: 56;
+  top: auto;
+  left: 12px;
+  right: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  width: auto;
+  max-height: min(80vh, 600px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 24px;
+  animation: nv-sheet-in 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.nv-pop[data-mode="sheet"][data-state="closed"] {
+  animation: nv-sheet-out 0.2s ease-in both;
+}
+.nv-pop[data-mode="sheet"] .nv-arrow {
+  display: none;
+}
+.nv-pop[data-mode="sheet"] .nv-handle {
+  display: block;
+}
+@keyframes nv-sheet-in {
+  from {
+    opacity: 0.6;
+    transform: translateY(calc(100% + 24px));
+  }
+}
+@keyframes nv-sheet-out {
+  to {
+    opacity: 0.6;
+    transform: translateY(calc(100% + 24px));
+  }
+}
+
+.nv-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(7, 11, 22, 0.55);
+  touch-action: none;
+  animation: nv-fade-in 0.25s ease both;
+}
+.nv-backdrop[data-state="closed"] {
+  pointer-events: none;
+  animation: nv-fade-out 0.2s ease both;
+}
+@keyframes nv-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes nv-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nv-panel,
+  .nv-tag-item,
+  .nv-cat[data-open="true"] .nv-tag-item {
+    transition: none;
+  }
+  .nv-pop,
+  .nv-pop[data-state="closed"],
+  .nv-backdrop,
+  .nv-backdrop[data-state="closed"] {
+    animation: none;
+  }
+  .nv-pop[data-state="closed"],
+  .nv-backdrop[data-state="closed"] {
+    opacity: 0;
+  }
+}
