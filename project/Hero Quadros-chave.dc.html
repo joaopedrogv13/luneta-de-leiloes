@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<style>body{--noite:#070B16;--tinta:#0F1830;--luar:#EAF0FF;--nevoa:#8E9BB5;--latao:#C9A24D;--pos:#4ADE9A;--aten:#E0B44C;--grave:#E5484D;--noite-rgb:7,11,22;--tinta-rgb:15,24,48;--luar-rgb:234,240,255;--fog-rgb:142,155,181;--stars:1}
+body[data-theme=light]{--noite:#F3F0E8;--tinta:#FFFFFF;--luar:#0F1830;--nevoa:#5B667F;--latao:#8C6B23;--pos:#12805A;--aten:#8A6400;--grave:#C2272D;--noite-rgb:243,240,232;--tinta-rgb:255,255,255;--luar-rgb:15,24,48;--fog-rgb:205,210,222;--stars:0}
+body{margin:0;background:#04070F}a{color:#C9A24D}a:hover{color:#EAF0FF}</style>
+</helmet>
+<div style="padding:48px;font-family:Inter,sans-serif;color:#EAF0FF;display:flex;flex-direction:column;gap:56px;width:max-content">
+  <div>
+    <div style="font:700 28px/1.1 'Space Grotesk',sans-serif;letter-spacing:-.02em">Hero · a luneta chega ao <em style="font:italic 400 1.1em/1 'Instrument Serif',serif;color:#C9A24D">alvo</em></div>
+    <div style="font:400 14px/1.5 Inter,sans-serif;color:#8E9BB5;margin-top:6px;max-width:720px">Quatro quadros-chave da cena fixa de rolagem (≈3 telas no desktop, 1,5 no celular). Na página real, cada rolada avança um quadro com transições suaves; em “reduzir movimento”, a cena abre já no quadro 4.</div>
+  </div>
+
+  <div>
+    <div style="font:600 12px/1 Inter,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8E9BB5;margin-bottom:18px">Desktop · 1280 × 720</div>
+    <div style="display:flex;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 14px/1 Inter,sans-serif;color:#EAF0FF"><span style="color:#C9A24D;font-family:'Space Grotesk',sans-serif;font-weight:700">01</span>&nbsp; Noite e névoa</div><div style="width:1280px;height:720px;border-radius:12px;overflow:hidden;border:1px solid rgba(142,155,181,.25)"><dc-import name="Luneta Hero Scene" stage="0" hint-size="1280px,720px" style="width:1280px;height:720px"></dc-import></div><div style="font:400 13px/1.5 Inter,sans-serif;color:#8E9BB5;max-width:1280px">Céu noturno com estrelas sutis, névoa densa e a luneta de latão pequena, ao longe. O título já está visível.</div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 14px/1 Inter,sans-serif;color:#EAF0FF"><span style="color:#C9A24D;font-family:'Space Grotesk',sans-serif;font-weight:700">02</span>&nbsp; Aproximação</div><div style="width:1280px;height:720px;border-radius:12px;overflow:hidden;border:1px solid rgba(142,155,181,.25)"><dc-import name="Luneta Hero Scene" stage="1" hint-size="1280px,720px" style="width:1280px;height:720px"></dc-import></div><div style="font:400 13px/1.5 Inter,sans-serif;color:#8E9BB5;max-width:1280px">A luneta cresce e se alinha ao centro; a névoa começa a abrir. Cartões desfocados (os sites dos leiloeiros) flutuam ao fundo.</div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 14px/1 Inter,sans-serif;color:#EAF0FF"><span style="color:#C9A24D;font-family:'Space Grotesk',sans-serif;font-weight:700">03</span>&nbsp; Foco no mapa</div><div style="width:1280px;height:720px;border-radius:12px;overflow:hidden;border:1px solid rgba(142,155,181,.25)"><dc-import name="Luneta Hero Scene" stage="2" hint-size="1280px,720px" style="width:1280px;height:720px"></dc-import></div><div style="font:400 13px/1.5 Inter,sans-serif;color:#8E9BB5;max-width:1280px">A lente vira uma moldura circular com anel de latão. Dentro, o mapa do Brasil entra em foco e os pins pulsam. Os cartões ficam nítidos.</div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 14px/1 Inter,sans-serif;color:#EAF0FF"><span style="color:#C9A24D;font-family:'Space Grotesk',sans-serif;font-weight:700">04</span>&nbsp; Mira travada</div><div style="width:1280px;height:720px;border-radius:12px;overflow:hidden;border:1px solid rgba(142,155,181,.25)"><dc-import name="Luneta Hero Scene" stage="3" hint-size="1280px,720px" style="width:1280px;height:720px"></dc-import></div><div style="font:400 13px/1.5 Inter,sans-serif;color:#8E9BB5;max-width:1280px">O retículo desliza até um pin e trava. O cartão do Alvo abre com deságio contando e selo verde-lente; a lente solta um brilho de luar e “Ver planos” acende em latão.</div></div>
+    </div>
+  </div>
+
+  <div>
+    <div style="font:600 12px/1 Inter,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8E9BB5;margin-bottom:18px">Mobile · 390 × 780</div>
+    <div style="display:flex;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 14px/1 Inter,sans-serif"><span style="color:#C9A24D;font-family:'Space Grotesk',sans-serif;font-weight:700">01</span>&nbsp; Noite e névoa</div><div style="width:390px;height:780px;border-radius:28px;overflow:hidden;border:1px solid rgba(142,155,181,.3)"><dc-import name="Luneta Hero Scene" stage="0" hint-size="390px,780px" style="width:390px;height:780px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 14px/1 Inter,sans-serif"><span style="color:#C9A24D;font-family:'Space Grotesk',sans-serif;font-weight:700">02</span>&nbsp; Aproximação</div><div style="width:390px;height:780px;border-radius:28px;overflow:hidden;border:1px solid rgba(142,155,181,.3)"><dc-import name="Luneta Hero Scene" stage="1" hint-size="390px,780px" style="width:390px;height:780px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 14px/1 Inter,sans-serif"><span style="color:#C9A24D;font-family:'Space Grotesk',sans-serif;font-weight:700">03</span>&nbsp; Foco no mapa</div><div style="width:390px;height:780px;border-radius:28px;overflow:hidden;border:1px solid rgba(142,155,181,.3)"><dc-import name="Luneta Hero Scene" stage="2" hint-size="390px,780px" style="width:390px;height:780px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 14px/1 Inter,sans-serif"><span style="color:#C9A24D;font-family:'Space Grotesk',sans-serif;font-weight:700">04</span>&nbsp; Mira travada</div><div style="width:390px;height:780px;border-radius:28px;overflow:hidden;border:1px solid rgba(142,155,181,.3)"><dc-import name="Luneta Hero Scene" stage="3" hint-size="390px,780px" style="width:390px;height:780px"></dc-import></div></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
