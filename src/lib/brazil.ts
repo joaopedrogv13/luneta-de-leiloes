@@ -18,3 +18,13 @@ export const BRAZIL_PINS = {
 } as const satisfies Record<string, readonly [number, number]>;
 
 export type PinId = keyof typeof BRAZIL_PINS;
+
+/**
+ * Converte latitude/longitude para o viewBox 400×400 do mapa. O contorno usa projeção de Mercator;
+ * os coeficientes foram calibrados nas 11 capitais acima (erro < 0,2px).
+ */
+export function latLonToMap(lat: number, lon: number): readonly [number, number] {
+  const x = 8.7411 * lon + 675.197;
+  const y = -501.1798 * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) + 65.883;
+  return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+}

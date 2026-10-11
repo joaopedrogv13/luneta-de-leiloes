@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef, type RefObject } from "react";
-import { brl, type Listing } from "@/content/examples";
+import { formatDate, listingLabel, brl, type Listing } from "@/content/examples";
 import { Tag } from "@/components/ui/Tag";
 import { FavButton, LensFrame, LockIcon, SealBadge } from "./parts";
 import { lockFilter, type Plan } from "./shared";
@@ -73,7 +73,7 @@ export function DetailDrawer({
       >
         <div key={`${l.id}-${openSeq}`} className="flex flex-col gap-5 px-5 pt-5 pb-8 sm:px-6">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] leading-none font-medium tracking-[0.14em] text-nevoa uppercase">Exemplo fictício</p>
+            <p className="text-[10px] leading-none font-medium tracking-[0.14em] text-nevoa uppercase">{listingLabel(l)}</p>
             <button
               ref={closeBtn}
               type="button"
@@ -172,17 +172,36 @@ export function DetailDrawer({
             <Link href="/#advogado" className="btn-primary w-full !whitespace-normal text-center">
               Falar com um advogado sobre este leilão
             </Link>
-            <button
-              type="button"
-              disabled
-              aria-describedby="edital-nota"
-              className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-1.5 rounded-full text-[13px] font-medium text-nevoa opacity-70"
-            >
-              Abrir edital no site do leiloeiro <span aria-hidden="true">↗</span>
-            </button>
-            <p id="edital-nota" className="-mt-1.5 text-center text-xs text-nevoa">
-              link do edital entra quando houver dados reais
-            </p>
+            {l.source ? (
+              <>
+                <a
+                  href={l.source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-outline w-full !whitespace-normal text-center"
+                >
+                  Ver este leilão no {l.source.leiloeiro} <span aria-hidden="true">↗</span>
+                  <span className="sr-only"> (abre em nova aba)</span>
+                </a>
+                <p className="-mt-1 text-center text-xs text-nevoa">
+                  Dados coletados em {formatDate(l.source.coletadoEm)}. Preços e datas podem mudar: confira o edital.
+                </p>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled
+                  aria-describedby="edital-nota"
+                  className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-1.5 rounded-full text-[13px] font-medium text-nevoa opacity-70"
+                >
+                  Abrir edital no site do leiloeiro <span aria-hidden="true">↗</span>
+                </button>
+                <p id="edital-nota" className="-mt-1.5 text-center text-xs text-nevoa">
+                  exemplo fictício: sem anúncio de verdade por trás
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>

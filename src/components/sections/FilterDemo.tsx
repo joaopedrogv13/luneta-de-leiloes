@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { LISTINGS, brl, type Listing } from "@/content/examples";
 import { BrazilMap } from "@/components/ui/BrazilMap";
 import { SEAL_NAMES } from "@/components/ui/Seal";
-import { BRAZIL_PINS } from "@/lib/brazil";
 
 type FilterKey = "sp" | "apto" | "des30" | "praca2" | "desoc";
 
@@ -95,7 +94,7 @@ export function FilterDemo() {
         <div className="absolute inset-[8%]">
           <BrazilMap pins={[]} label={`Mapa do Brasil com ${results.length} exemplos destacados`} />
           {LISTINGS.map((l) => {
-            const [x, y] = BRAZIL_PINS[l.pin];
+            const [x, y] = l.point;
             const active = ids.has(l.id);
             const lit = hover === l.id;
             return (

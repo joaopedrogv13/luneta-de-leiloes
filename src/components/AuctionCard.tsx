@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { brl, type Listing } from "@/content/examples";
+import { brl, formatDate, listingLabel, type Listing } from "@/content/examples";
 import { Seal, SEAL_NAMES } from "@/components/ui/Seal";
 import { Tag } from "@/components/ui/Tag";
 
@@ -72,7 +72,7 @@ export function AuctionCard({
 
   return (
     <article
-      aria-label={`Exemplo fictício: ${l.title}, ${l.place}, ${SEAL_NAMES[l.seal]}`}
+      aria-label={`${listingLabel(l)}: ${l.title}, ${l.place}, ${SEAL_NAMES[l.seal]}`}
       className={`group relative overflow-hidden rounded-[20px] bg-tinta transition-[transform,border-color,box-shadow] duration-300 ease-luneta hover:-translate-y-1 ${
         compact ? "p-4" : "p-6"
       } ${
@@ -98,7 +98,7 @@ export function AuctionCard({
         </>
       )}
 
-      <p className="text-[10px] font-medium tracking-[0.14em] text-nevoa uppercase">Exemplo fictício</p>
+      <p className="text-[10px] font-medium tracking-[0.14em] text-nevoa uppercase">{listingLabel(l)}</p>
 
       <div className="mt-4 flex items-center gap-3.5">
         <LensPhoto listing={l} size={compact ? 64 : 84} />
@@ -107,7 +107,22 @@ export function AuctionCard({
             {l.seal > 0 && <Seal level={l.seal} size={18} />}
             {SEAL_NAMES[l.seal]} · {RING_LABEL[l.seal]}
           </p>
-          <H className="mt-1.5 font-display text-lg leading-tight font-bold tracking-[-0.01em]">{l.title}</H>
+          <H className="mt-1.5 font-display text-lg leading-tight font-bold tracking-[-0.01em]">
+            {l.source ? (
+              // caso real: o cartão inteiro leva ao anúncio no site do leiloeiro (link "esticado")
+              <a
+                href={l.source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-luar no-underline after:absolute after:inset-0 after:z-[1] after:rounded-[20px] after:content-[''] hover:text-luar"
+              >
+                {l.title}
+                <span className="sr-only"> (abre o anúncio no site do leiloeiro, em nova aba)</span>
+              </a>
+            ) : (
+              l.title
+            )}
+          </H>
           <p className="mt-0.5 text-[13px] leading-snug text-nevoa">{l.place}</p>
         </div>
       </div>
@@ -157,13 +172,22 @@ export function AuctionCard({
           ))}
         </ul>
         {locked && (
-          <p className="absolute inset-0 flex items-center justify-center">
+          <p className="absolute inset-0 z-[2] flex items-center justify-center">
             <span className="rounded-full border border-latao/60 bg-noite/85 px-3 py-1.5 text-[11px] font-semibold text-latao-texto">
               Tags e selo visíveis no plano Luneta
             </span>
           </p>
         )}
       </div>
+
+      {l.source && (
+        <p className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-nevoa/15 pt-3 text-xs text-nevoa">
+          <span>Dados de {formatDate(l.source.coletadoEm)} · confira o edital</span>
+          <span aria-hidden="true" className="font-semibold text-latao-texto transition-transform group-hover:translate-x-0.5">
+            Ver no {l.source.leiloeiro} ↗
+          </span>
+        </p>
+      )}
     </article>
   );
 }

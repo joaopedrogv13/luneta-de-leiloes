@@ -1,17 +1,30 @@
 import type { SealLevel } from "@/components/ui/Seal";
-import type { PinId } from "@/lib/brazil";
+import { BRAZIL_PINS } from "@/lib/brazil";
 import type { Severity } from "./tags";
 
 /**
- * EXEMPLOS FICTÍCIOS (não são leilões reais). Servem só para ilustrar tags e selos.
- * Antes de publicar, troque por casos reais da base, com a etiqueta "exemplo de oportunidade".
+ * Casos exibidos na landing e na área do assinante.
+ * - Sem `source`: EXEMPLO FICTÍCIO, só para ilustrar tags e selos (rotulado "Exemplo fictício").
+ * - Com `source`: CASO REAL coletado de um anúncio público; o cartão leva direto ao anúncio no site do
+ *   leiloeiro e mostra a data da coleta. Tags e selo são uma análise ilustrativa feita a partir do anúncio,
+ *   não uma recomendação; preços e datas mudam, por isso sempre confira o edital.
  */
+export type ListingSource = {
+  /** Nome do leiloeiro ou portal (ex.: "Portal Zuk"). */
+  leiloeiro: string;
+  /** URL da página do imóvel específico no site do leiloeiro. */
+  url: string;
+  /** Data da coleta, AAAA-MM-DD. */
+  coletadoEm: string;
+};
+
 export type Listing = {
   id: string;
   title: string;
   place: string;
   uf: string;
-  pin: PinId;
+  /** Posição no mapa (viewBox 400×400): BRAZIL_PINS.x para capitais ou latLonToMap(lat, lon). */
+  point: readonly [number, number];
   type: "apartamento" | "casa" | "comercial" | "terreno";
   avaliacao: number;
   lance: number;
@@ -25,6 +38,8 @@ export type Listing = {
   why: string;
   /** Foto real em WebP, quando houver (renderizada com next/image dentro da moldura de lente). */
   photo?: string;
+  /** Origem, quando o caso é real. */
+  source?: ListingSource;
 };
 
 export const LISTINGS: Listing[] = [
@@ -33,7 +48,7 @@ export const LISTINGS: Listing[] = [
     title: "Apartamento 3 quartos",
     place: "Vila Mariana · São Paulo/SP",
     uf: "SP",
-    pin: "sp",
+    point: BRAZIL_PINS.sp,
     type: "apartamento",
     avaliacao: 620000,
     lance: 322400,
@@ -55,7 +70,7 @@ export const LISTINGS: Listing[] = [
     title: "Casa 2 quartos",
     place: "Água Verde · Curitiba/PR",
     uf: "PR",
-    pin: "cwb",
+    point: BRAZIL_PINS.cwb,
     type: "casa",
     avaliacao: 480000,
     lance: 307200,
@@ -75,7 +90,7 @@ export const LISTINGS: Listing[] = [
     title: "Apartamento 2 quartos",
     place: "Pituba · Salvador/BA",
     uf: "BA",
-    pin: "ssa",
+    point: BRAZIL_PINS.ssa,
     type: "apartamento",
     avaliacao: 390000,
     lance: 230100,
@@ -95,7 +110,7 @@ export const LISTINGS: Listing[] = [
     title: "Sala comercial",
     place: "Centro · Rio de Janeiro/RJ",
     uf: "RJ",
-    pin: "rj",
+    point: BRAZIL_PINS.rj,
     type: "comercial",
     avaliacao: 300000,
     lance: 135000,
@@ -116,7 +131,7 @@ export const LISTINGS: Listing[] = [
     title: "Apartamento 1 quarto",
     place: "Savassi · Belo Horizonte/MG",
     uf: "MG",
-    pin: "bh",
+    point: BRAZIL_PINS.bh,
     type: "apartamento",
     avaliacao: 350000,
     lance: 234500,
@@ -137,7 +152,7 @@ export const LISTINGS: Listing[] = [
     title: "Terreno 450 m²",
     place: "Setor Bueno · Goiânia/GO",
     uf: "GO",
-    pin: "gyn",
+    point: BRAZIL_PINS.gyn,
     type: "terreno",
     avaliacao: 410000,
     lance: 319800,
@@ -159,6 +174,12 @@ export const LISTINGS: Listing[] = [
 export const FEATURED_EXAMPLES = ["alvo-sp", "namira-pr", "promissor-ba", "semselo-rj"].map(
   (id) => LISTINGS.find((l) => l.id === id)!,
 );
+
+/** Rótulo do cartão: "Exemplo fictício" ou "Caso real · leiloeiro". */
+export const listingLabel = (l: Listing) => (l.source ? `Caso real · ${l.source.leiloeiro}` : "Exemplo fictício");
+
+/** "11/10/2026" a partir de "2026-10-11". */
+export const formatDate = (iso: string) => iso.split("-").reverse().join("/");
 
 export const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });

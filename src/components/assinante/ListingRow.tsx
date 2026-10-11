@@ -1,6 +1,6 @@
 "use client";
 
-import { brl, type Listing } from "@/content/examples";
+import { listingLabel, brl, type Listing } from "@/content/examples";
 import { Tag } from "@/components/ui/Tag";
 import { FavButton, LensFrame, LockIcon, SealBadge } from "./parts";
 import { lockFilter, splitPlace, type Plan } from "./shared";
@@ -51,7 +51,7 @@ export function ListingRow({
         </div>
 
         <div className="min-w-0 self-start [grid-area:head] sm:self-end">
-          <p className="text-[10px] leading-none font-medium tracking-[0.14em] text-nevoa uppercase">Exemplo fictício</p>
+          <p className="text-[10px] leading-none font-medium tracking-[0.14em] text-nevoa uppercase">{listingLabel(l)}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
             <h2 className="font-display text-base leading-tight font-bold tracking-[-0.01em] sm:text-[17px]">
               <button

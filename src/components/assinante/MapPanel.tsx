@@ -2,7 +2,6 @@
 
 import type { Listing } from "@/content/examples";
 import { BrazilMap } from "@/components/ui/BrazilMap";
-import { BRAZIL_PINS } from "@/lib/brazil";
 import type { Plan } from "./shared";
 
 /**
@@ -40,7 +39,7 @@ export function MapPanel({
         <div className="relative aspect-square w-[min(100%,calc(100svh-12rem))]">
           <BrazilMap pins={[]} label={`Mapa do Brasil com ${n} ${n === 1 ? "exemplo" : "exemplos"} da lista`} />
           {results.map((l) => {
-            const [x, y] = BRAZIL_PINS[l.pin];
+            const [x, y] = l.point;
             const lit = l.id === activeId;
             const alvo = plan === "luneta" && l.seal === 3;
             return (
