@@ -1,0 +1,300 @@
+/* ============================================================
+   "Por dentro, depois de assinar" (PorDentro.tsx + sweep.ts)
+   Classes com prefixo pd-. É um CSS comum, importado pelo componente: o next.config manda todo
+   *.css pelo loader do Tailwind como CSS global, então um .module.css perderia o escopo das classes.
+   Só transform e opacity animam. O desfoque da Lente é estático (vem pronto do AuctionCard);
+   a troca revela a camada Luneta por cima, sem redesenhar nada quadro a quadro.
+   ============================================================ */
+
+/* Conteúdos empilhados (texto do plano, selo do plano, contador): o ativo entra depois que o outro sai.
+   O inativo some só por opacidade (com inert + aria-hidden no HTML): sem transição de visibility,
+   que rodaria na thread principal e recalcularia o texto inteiro a cada quadro. */
+.pd-swap {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition:
+    opacity 0.35s ease,
+    transform 0.5s var(--ease-luneta);
+}
+.pd-swap[data-active] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity 0.45s ease 0.15s,
+    transform 0.65s var(--ease-luneta) 0.15s;
+}
+
+/* Pontos do plano entram em cascata quando o plano fica ativo. */
+.pd-point {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.4s ease,
+    transform 0.6s var(--ease-luneta);
+}
+.pd-swap[data-active] .pd-point {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(0.25s + var(--i, 0) * 0.08s);
+}
+
+/* Indicador de latão do controle Lente | Luneta. */
+.pd-thumb {
+  transition: transform 0.55s var(--ease-luneta);
+}
+.pd-thumb[data-luneta] {
+  transform: translateX(100%);
+}
+
+/* Barra do autoplay: enche enquanto a troca não acontece. */
+.pd-arm {
+  transform-origin: left center;
+  animation: pd-arm 2.2s linear forwards;
+}
+@keyframes pd-arm {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Número do contador "pula" a cada risco ou oportunidade encontrada. */
+.pd-bump {
+  display: inline-block;
+  animation: pd-bump 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes pd-bump {
+  from {
+    opacity: 0.2;
+    transform: translateY(-45%) scale(1.3);
+  }
+}
+
+/* Janela do app: sombra de noite no tema escuro, sombra suave de tinta no claro. */
+.pd-window {
+  box-shadow:
+    0 40px 120px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(201, 162, 77, 0.12);
+}
+:root[data-theme="light"] .pd-window {
+  box-shadow:
+    0 30px 80px rgba(15, 24, 48, 0.1),
+    0 0 0 1px rgba(201, 162, 77, 0.12);
+}
+
+/* ---------- Palco: Lente (base) · Luneta (revelada) · faixa de luz · luneta ----------
+   Tamanhos da luneta e da faixa vêm do sweep.ts (SIZE), conforme o eixo da varredura. */
+.pd-stage {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.pd-base {
+  position: relative;
+}
+.pd-reveal {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--noite);
+  z-index: 1;
+}
+.pd-reveal-inner {
+  position: absolute;
+  inset: 0;
+  background: var(--noite);
+}
+
+/* Repouso: a camada Luneta fica fora do palco na Lente e cobre tudo na Luneta. */
+.pd-stage[data-mode="lente"] .pd-reveal {
+  transform: translateX(-100%);
+}
+.pd-stage[data-mode="lente"] .pd-reveal-inner {
+  transform: translateX(100%);
+}
+.pd-stage[data-mode="lente"][data-phase="rest"] .pd-reveal,
+.pd-stage[data-mode="luneta"][data-phase="rest"] .pd-base {
+  visibility: hidden;
+}
+
+/* Com a lista na tela (data-primed) ou durante a troca, as camadas que se movem já ficam compostas. */
+.pd-stage:is([data-primed], [data-phase="sweep"], [data-phase="back"]) :is(.pd-reveal, .pd-reveal-inner, .pd-band, .pd-scope, .pd-scope-inner) {
+  will-change: transform, opacity;
+}
+.pd-stage[data-primed][data-mode="lente"][data-phase="rest"] .pd-reveal {
+  visibility: visible;
+}
+
+/* Faixa de luz na borda da varredura (centro da faixa = borda). */
+.pd-band {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 200px;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(201, 162, 77, 0.07) 28%,
+    rgba(243, 218, 142, 0.28) 46%,
+    rgba(255, 244, 214, 0.85) 50%,
+    rgba(243, 218, 142, 0.22) 53%,
+    rgba(201, 162, 77, 0.05) 64%,
+    transparent 80%
+  );
+}
+.pd-stage[data-axis="y"] .pd-band {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(201, 162, 77, 0.07) 28%,
+    rgba(243, 218, 142, 0.28) 46%,
+    rgba(255, 244, 214, 0.85) 50%,
+    rgba(243, 218, 142, 0.22) 53%,
+    rgba(201, 162, 77, 0.05) 64%,
+    transparent 80%
+  );
+}
+
+/* A luneta: anel de latão com retículo; por dentro, a cópia nítida da lista, um pouco ampliada. */
+.pd-scope {
+  --pad: 13px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  width: 224px;
+  height: 224px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.pd-stage:is([data-primed], [data-phase="sweep"]) .pd-scope {
+  visibility: visible;
+}
+.pd-scope-glow {
+  position: absolute;
+  inset: -16%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(243, 218, 142, 0.22), rgba(201, 162, 77, 0.1) 62%, transparent);
+}
+.pd-glass {
+  position: absolute;
+  inset: var(--pad);
+  overflow: hidden;
+  clip-path: circle(50%);
+  background: var(--noite);
+}
+.pd-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.1), transparent 30%),
+    radial-gradient(circle, transparent 60%, rgba(7, 11, 22, 0.32) 100%);
+}
+.pd-scope-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  background: var(--noite);
+}
+.pd-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* ---------- O que acende quando a borda passa (camadas Luneta e luneta) ---------- */
+.pd-layer [data-tags] [data-tag] {
+  transition:
+    opacity 0.3s ease,
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pd-layer[data-hide] [data-tags] [data-tag]:not([data-on]) {
+  opacity: 0;
+  transform: translateY(7px) scale(0.86);
+}
+
+/* selo: rótulo desliza, anéis se desenham um a um, deságio "pula" já com a cor do selo */
+.pd-layer [data-card] article > div > div:last-child > p:first-child {
+  transition:
+    opacity 0.35s ease,
+    transform 0.55s var(--ease-luneta);
+}
+.pd-layer[data-hide] [data-card]:not([data-seal-on]) article > div > div:last-child > p:first-child {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+.pd-layer [data-card] [data-ring] {
+  stroke-dasharray: 1;
+  transition: stroke-dashoffset 0.5s ease-in-out calc(0.1s + var(--r, 0) * 0.14s);
+}
+.pd-layer[data-hide] [data-card]:not([data-seal-on]) [data-ring] {
+  stroke-dashoffset: 1;
+}
+.pd-layer [data-card] article > p:nth-of-type(2) {
+  transform-origin: 0 70%;
+  transition:
+    opacity 0.3s ease,
+    transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pd-layer[data-hide] [data-card]:not([data-seal-on]) article > p:nth-of-type(2) {
+  opacity: 0.85;
+  transform: scale(0.9);
+}
+/* mira do Alvo trava ao acender */
+.pd-layer [data-card] article > div[aria-hidden="true"]:nth-of-type(2) {
+  transition:
+    opacity 0.35s ease,
+    transform 0.8s var(--ease-luneta),
+    rotate 1.2s var(--ease-luneta);
+}
+.pd-layer[data-hide] [data-card]:not([data-seal-on]) article > div[aria-hidden="true"]:nth-of-type(2) {
+  opacity: 0;
+  transform: scale(1.7) rotate(-60deg);
+}
+
+/* ---------- Na Lente o cartão não julga ----------
+   Como no app (/assinante): deságio em cor neutra, sem moldura de Alvo e sem anéis na foto,
+   para não entregar o selo. Ajusta só a cópia Lente desta seção; o AuctionCard segue igual. */
+.pd-base article {
+  border-width: 1px;
+  border-color: rgba(var(--fog-rgb), 0.2);
+  box-shadow: none;
+}
+.pd-base article:hover {
+  border-color: rgba(201, 162, 77, 0.55);
+}
+.pd-base article > p:nth-of-type(2) {
+  color: var(--luar);
+  text-shadow: none;
+}
+.pd-base article > div:first-of-type > div:first-child {
+  border: 2px solid rgba(var(--fog-rgb), 0.4);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-swap,
+  .pd-swap[data-active],
+  .pd-point,
+  .pd-swap[data-active] .pd-point,
+  .pd-thumb {
+    transition: none;
+  }
+  .pd-arm,
+  .pd-bump {
+    animation: none;
+  }
+}
