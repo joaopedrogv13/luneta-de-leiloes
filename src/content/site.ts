@@ -148,7 +148,7 @@ export const LEVELS = {
 export const EXAMPLES = {
   eyebrow: "Exemplos de cada nível",
   title: ["Da névoa ao", "alvo", ", lado a lado."],
-  note: "Exemplos fictícios, só para ilustrar a classificação. Na versão publicada, use casos reais da base com a etiqueta “exemplo de oportunidade”.",
+  note: "Exemplos fictícios, só para ilustrar a classificação.",
 } as const;
 
 export const PRACAS = {
@@ -235,7 +235,7 @@ export const PLANS = {
     { label: "Vários usuários", lente: false, luneta: false, telescopio: true },
     { label: "Suporte dedicado", lente: false, luneta: false, telescopio: true },
   ] satisfies { label: string; lente: boolean | "blur"; luneta: boolean | "blur"; telescopio: boolean | "blur" }[],
-  note: "Preços sugeridos, a validar. Cancele quando quiser · [7] dias para cancelar.",
+  note: "Cancele quando quiser · [7] dias para cancelar.",
 } as const;
 
 export const LAWYER = {

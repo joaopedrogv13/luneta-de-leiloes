@@ -181,7 +181,7 @@ export function AssinanteApp({ initialPlan }: { initialPlan: Plan }) {
             )}
 
             <p className="px-1 pt-2 text-xs leading-normal text-nevoa">
-              Exemplos fictícios, só para demonstrar a área do assinante. Na versão publicada, a lista vem da base de leilões.
+              Exemplos fictícios, só para demonstrar a área do assinante. Na assinatura, a lista traz os leilões reais da base.
             </p>
           </div>
 

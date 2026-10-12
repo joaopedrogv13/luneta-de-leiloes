@@ -102,7 +102,7 @@ export function PlansTable() {
                         <span className="blur-[1.2px]" aria-hidden="true">
                           {f.label}
                         </span>
-                        <span className="sr-only">{f.label}</span> <span className="text-[11px]">(desfocados, convite ao upgrade)</span>
+                        <span className="sr-only">{f.label}</span> <span className="text-[11px]">(aparecem desfocados)</span>
                       </span>
                     </li>
                   ) : (
@@ -161,7 +161,7 @@ export function PlansTable() {
             ))}
             <tr className="border-t border-nevoa/20">
               <th scope="row" className="px-5 py-4 font-semibold sm:px-7">
-                Preço sugerido
+                Preço
               </th>
               {PLANS.plans.map((p) => (
                 <td key={p.id} className={`px-3 py-4 text-center font-semibold whitespace-nowrap ${p.featured ? "bg-latao/10" : ""}`}>
