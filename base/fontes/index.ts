@@ -14,7 +14,7 @@ import type { Conector } from "../tipos.ts";
 
 // Vitrine (imóveis)
 import { caixaCsv } from "./caixa/index.ts";                              // Caixa: Lista de Imóveis (CSV oficial)
-// import { leiloesJudiciais } from "./leiloesjudiciais_api/index.ts";    // Leilões Judiciais (API/MCP pública)
+import { leiloesJudiciais } from "./leiloesjudiciais/index.ts";        // Leilões Judiciais (API/MCP pública), id leiloesjudiciais_api
 
 // Radar de editais
 // import { djen } from "./djen/index.ts";                                 // DJEN / Comunica PJe (meio=E)
@@ -26,7 +26,7 @@ export const CONECTORES: readonly Conector[] = [
   caixaCsv,
   // djen,
   // douInlabs,
-  // leiloesJudiciais,
+  leiloesJudiciais,
   // pncp,
   // queridoDiario,
 ];
