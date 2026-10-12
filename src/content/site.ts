@@ -243,7 +243,7 @@ export const LAWYER = {
   title: ["Achou a oportunidade? Fale com quem", "entende", "."],
   text: "Antes de dar o lance, converse com um advogado especialista em leilões. Ele analisa o edital, os riscos e o caminho para a posse do imóvel. Peça o contato direto aqui.",
   cta: "Quero falar com um advogado",
-  oab: "A publicidade de serviços jurídicos segue regras da OAB. Esta seção deve ser validada com o advogado parceiro.",
+  oab: "A publicidade de serviços jurídicos segue as regras da OAB.",
   steps: [
     { n: "01", title: "Análise do edital", text: "Regras do leilão, prazos, custos e condições de pagamento." },
     { n: "02", title: "Leitura dos riscos", text: "Ocupação, dívidas, matrícula e processos que podem pesar na decisão." },
