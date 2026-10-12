@@ -1,7 +1,10 @@
 import { FAQ, PLANS, SITE } from "@/content/site";
 import { hasPlaceholder } from "@/components/ui/RichText";
 
-/** Dados estruturados (schema.org): Organization, Product/Offer (planos) e FAQPage (só perguntas sem placeholder). */
+/**
+ * Dados estruturados (schema.org): Organization, Product/Offer (planos) e FAQPage.
+ * Nada com placeholder: oferta com preço "[...]" e pergunta com "[...]" ficam fora até o valor real entrar em site.ts.
+ */
 export function JsonLd() {
   const org = {
     "@type": "Organization",
@@ -14,6 +17,9 @@ export function JsonLd() {
     areaServed: { "@type": "Country", name: "Brasil" },
   };
 
+  // Preço com placeholder (ex.: "[49]") não vira oferta: o buscador mostraria um valor ainda não validado.
+  // Volta sozinha quando o colchete sair de `price` (troque `price` e `priceValue` juntos).
+  const plans = PLANS.plans.filter((p) => !hasPlaceholder(p.price));
   const product = {
     "@type": "Product",
     "@id": `${SITE.url}/#assinatura`,
@@ -22,7 +28,7 @@ export function JsonLd() {
       "Assinatura que reúne os leilões de imóveis de todo o Brasil, trata os dados e classifica as oportunidades por risco com tags e selos (Promissor, Na Mira e Alvo).",
     brand: { "@id": org["@id"] },
     image: `${SITE.url}/opengraph-image`,
-    offers: PLANS.plans.map((p) => ({
+    offers: plans.map((p) => ({
       "@type": "Offer",
       name: `Plano ${p.name}`,
       description: p.audience,
@@ -53,7 +59,9 @@ export function JsonLd() {
     })),
   };
 
-  const graph = faqItems.length > 0 ? [org, product, faq] : [org, product];
+  const graph: object[] = [org];
+  if (plans.length > 0) graph.push(product);
+  if (faqItems.length > 0) graph.push(faq);
   const data = { "@context": "https://schema.org", "@graph": graph };
   return (
     <script

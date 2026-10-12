@@ -33,12 +33,7 @@ export function RichText({ text }: { text: string }) {
   );
 }
 
-/** Remove os colchetes para usos em texto puro (atributos). No JSON-LD, use hasPlaceholder e omita o item. */
-export function plain(text: string) {
-  return text.replace(/\[([^\]]+)\]/g, "$1");
-}
-
-/** Diz se o texto ainda tem algum placeholder "[...]". */
+/** Diz se o texto ainda tem algum placeholder "[...]" (o JSON-LD omite esses itens). */
 export function hasPlaceholder(text: string) {
   return /\[[^\]]+\]/.test(text);
 }
