@@ -42,7 +42,9 @@ pelo valor real no arquivo de conteúdo.
 - **Exemplos de leilão** (`src/content/examples.ts`): 6 imóveis fictícios, sempre rotulados como "Exemplo fictício".
   O blueprint pede casos reais da base com a etiqueta "exemplo de oportunidade" e fotos; o cartão já aceita
   `photo` (WebP, servido via `next/image` dentro da moldura de lente). Hoje as fotos são placeholders listrados.
-- **Cartão do Alvo no hero** (deságio contando até 48%) e **praças** (R$ 520.000 → R$ 312.000, alerta de Curitiba): fictícios, rotulados.
+- **Cartão do Alvo no hero** (deságio contando até 48%) e **praças** (apartamento em Campinas/SP, R$ 400.000 → R$ 200.000,
+  e o aviso "Seu favorito foi para a 2ª praça"): fictícios, rotulados.
+- **"Por dentro, depois de assinar"** e **área do assinante** (`/assinante`): usam os mesmos exemplos fictícios.
 - **Demo de filtros e mapa**: filtra só os 6 exemplos fictícios ("N de 6 exemplos fictícios encontrados").
 - **Respostas do FAQ**: o blueprint só traz as perguntas; as respostas vieram do handoff do Claude Design. Revisar com o advogado parceiro.
 
@@ -53,6 +55,10 @@ pelo valor real no arquivo de conteúdo.
 - **Formulário**: valida nome, e-mail, WhatsApp e consentimento LGPD no front, mas **não envia nada**
   (`LeadForm.tsx`, ponto marcado no `onSubmit`). Ligar a API/CRM e a página de política de privacidade.
 - **Critérios das tags e selos**: validar com o advogado parceiro (as gravidades de cada tag estão em `src/content/tags.ts`).
+- **Explicações das tags** (pop-up "O que é / Na prática", `src/content/tags.ts`): linguagem simples, mas são orientações
+  jurídicas. Revisar todas com o advogado, em especial dívidas de condomínio e IPTU (quem paga depende do edital), ação
+  judicial pendente, penhoras de outros processos e imóvel financiado/alienação fiduciária.
+- **Aviso de 2ª praça por e-mail** (Praças e plano Luneta): é uma promessa de funcionalidade. Só publicar quando o alerta existir.
 - **Consultoria**: validar o texto da seção com as regras de publicidade da OAB.
 - **Origem dos dados**: confirmar que a coleta nos sites dos leiloeiros respeita termos de uso e a lei.
 - **Preços e garantia**: validar valores e o prazo de cancelamento; o JSON-LD Product/Offer usa `priceValue`.
@@ -69,14 +75,21 @@ pelo valor real no arquivo de conteúdo.
 
 ## Decisões de implementação
 
-- **Hero**: cena `sticky` de 300vh (desktop) / 150svh (celular) com um único timeline GSAP ScrollTrigger (scrub) nas 6 etapas
-  do Passo 4. A marcação é renderizada no servidor; a etapa 1 vem do CSS (`html.motion`), e o GSAP é baixado quando o navegador
-  fica ocioso (`HeroMotion.tsx`), para não atrasar a primeira pintura.
+- **Hero**: a intro inteira (as 6 etapas do Passo 4) roda de uma vez, em ~1,1 s, no primeiro gesto de rolar (dois dedos no
+  trackpad, roda do mouse, toque ou teclado). Durante a intro a rolagem fica presa no topo; depois volta ao normal. Esc pula.
+  A marcação vem do servidor, a etapa 1 vem do CSS (`html.motion`) e o GSAP é baixado no ócio (`HeroMotion.tsx`). Se o GSAP
+  não carregar, a página pula direto para o estado final (`#topo[data-done]`, só CSS) e nunca trava a rolagem.
 - **Animações de apoio** (entradas, números contando, anéis desenhados, tags em cascata): IntersectionObserver + transições CSS
   (`MotionLayer.tsx` e o bloco "Animações de apoio" em `globals.css`). Ficam bem mais leves que um ScrollTrigger por bloco.
 - **Vermelho das tags**: borda, fundo e ícone usam `#E5484D`; o **texto** da tag grave usa `#F26B70` no tema escuro, porque
   `#E5484D` em 12px sobre o fundo tingido da tag dá 4,0:1 (abaixo do AA). No tema claro, `#B3242A`.
-- **Extras do handoff mantidos**: tema claro (botão no menu, persistido), prévia "Por dentro, depois de assinar"
-  (visão Lente × Luneta com o círculo que segue o mouse/toque) e o bloco "Atenção · Cuidado" em Níveis.
+- **Extras do handoff mantidos**: tema claro (botão no menu, persistido, com o ícone sol ↔ lua animado), prévia
+  "Por dentro, depois de assinar" e o bloco "Atenção · Cuidado" em Níveis.
+- **Por dentro**: abas Lente × Luneta. Ao ir para a Luneta, uma luneta varre a lista e acende tags e selos, e o contador de
+  riscos e oportunidades sobe junto (troca sozinha 2,2 s depois que a lista aparece). A versão Lente vem do servidor; as duas
+  cópias nítidas usadas na varredura só são montadas quando a seção chega perto da tela.
+- **Níveis**: "Atenção" → cartão "Cuidado" animado → "Por isso, no plano Luneta…" → os três selos. Em seguida, as 26 tags
+  de risco em categorias que abrem com animação; cada tag abre um pop-up (no celular, uma folha de baixo) com a explicação.
+  As tags de uma categoria só entram na página quando ela é aberta.
 - **Tabela de planos**: cartões no visual do handoff + tabela comparativa completa (`<table>` acessível, rolável no celular).
 - **WhatsApp** é obrigatório e precisa ser celular com DDD (máscara `(11) 91234-5678`).

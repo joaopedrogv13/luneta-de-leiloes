@@ -73,7 +73,7 @@ export function AuctionCard({
   return (
     <article
       aria-label={`${listingLabel(l)}: ${l.title}, ${l.place}, ${SEAL_NAMES[l.seal]}`}
-      className={`group relative overflow-hidden rounded-[20px] bg-tinta transition-[transform,border-color,box-shadow] duration-300 ease-luneta hover:-translate-y-1 ${
+      className={`group relative isolate overflow-hidden rounded-[20px] bg-tinta transition-[transform,border-color,box-shadow] duration-300 ease-luneta hover:-translate-y-1 ${
         compact ? "p-4" : "p-6"
       } ${
         alvo

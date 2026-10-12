@@ -193,7 +193,8 @@
 
 /* ============================================================
    Categorias de tags (acordeões). Abrir: altura de 0fr a 1fr (grid-template-rows, curto e só no bloco
-   aberto) e as tags entram em cascata (opacity + transform). "Abrir todas" escalona com --cat-delay.
+   aberto) e as tags entram em cascata. "Abrir todas" escalona com --cat-delay. A entrada é animation (e não
+   transition) porque na primeira abertura as tags acabam de ser montadas, e transição não roda em nó novo.
    ============================================================ */
 .nv-panel {
   grid-template-rows: 0fr;
@@ -212,9 +213,13 @@
 .nv-cat[data-open="true"] .nv-tag-item {
   opacity: 1;
   transform: none;
-  transition:
-    opacity 0.35s ease calc(var(--cat-delay, 0ms) + 120ms + var(--i, 0) * 65ms),
-    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--cat-delay, 0ms) + 120ms + var(--i, 0) * 65ms);
+  animation: nv-tag-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--cat-delay, 0ms) + 120ms + var(--i, 0) * 65ms) both;
+}
+@keyframes nv-tag-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 /* convite no primeiro cartão, até o primeiro clique: um anel de latão que se expande e some */
@@ -376,9 +381,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .nv-panel,
-  .nv-tag-item,
-  .nv-cat[data-open="true"] .nv-tag-item {
+  .nv-tag-item {
     transition: none;
+  }
+  .nv-cat[data-open="true"] .nv-tag-item {
+    animation: none;
   }
   .nv-pop,
   .nv-pop[data-state="closed"],

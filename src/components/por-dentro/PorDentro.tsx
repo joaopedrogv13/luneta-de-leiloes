@@ -8,8 +8,8 @@ import { Title } from "@/components/ui/Heading";
 import { LogoMark } from "@/components/ui/Logo";
 import { createSweep, tally, type CardInfo, type Sweep, type Tally } from "./sweep";
 import { ArrowIcon, ChipIcon, LockIcon, OppIcon, PointIcon, ReplayIcon, RiskIcon, SearchIcon } from "./icons";
-// Estilos próprios da seção (classes pd-*). CSS comum, não .module.css: o next.config manda todo *.css pelo
-// loader do Tailwind como CSS global, então um .module.css não teria as classes com escopo.
+import { PreviewGrid } from "./PreviewGrid";
+// Estilos próprios da seção: CSS global com prefixo pd- (as animações dependem de seletores entre camadas).
 import "./por-dentro.css";
 
 const VIEWS: PlanView[] = ["lente", "luneta"];
@@ -17,6 +17,8 @@ const VIEWS: PlanView[] = ["lente", "luneta"];
 const AUTOPLAY_MS = 2200;
 /** Pausa na Lente antes de rever a troca. */
 const REPLAY_PAUSE_MS = 650;
+/** Monta as cópias da varredura quando a lista está a esta distância da tela. */
+const MOUNT_MARGIN = "900px 0px";
 
 /** Media query reativa; no servidor assume o desktop (3 cartões). */
 function useMedia(query: string, server: boolean) {
@@ -44,11 +46,12 @@ function Swap({ active, className = "", children }: { active: boolean; className
  * "Por dentro, depois de assinar": texto do plano + janela do app com a mesma lista nas visões
  * Lente (tags e selos desfocados) e Luneta. Ao trocar para a Luneta, uma luneta varre a lista uma vez
  * (ver sweep.ts); o texto troca junto e o contador de riscos e oportunidades ganha vida.
- * As três cópias da lista chegam prontas do servidor: `lente` (base), `luneta` (revelada) e `lens`
- * (vista por dentro da luneta).
+ * A cópia `lente` (base) chega pronta do servidor. As duas nítidas, a revelada e a vista por dentro da
+ * luneta, só são montadas quando a lista se aproxima da tela: metade a menos de DOM para hidratar.
  */
-export function PorDentro({ cards, lente, luneta, lens }: { cards: CardInfo[]; lente: ReactNode; luneta: ReactNode; lens: ReactNode }) {
+export function PorDentro({ cards, lente }: { cards: CardInfo[]; lente: ReactNode }) {
   const [view, setView] = useState<PlanView>("lente");
+  const [copies, setCopies] = useState(false);
   // camada exposta a leitores de tela: só muda quando a troca termina (não pesa no quadro do clique)
   const [layer, setLayer] = useState<PlanView>("lente");
   const [sweeping, setSweeping] = useState(false);
@@ -64,6 +67,8 @@ export function PorDentro({ cards, lente, luneta, lens }: { cards: CardInfo[]; l
   const scopeInner = useRef<HTMLDivElement>(null);
   const tabs = useRef<Record<PlanView, HTMLButtonElement | null>>({ lente: null, luneta: null });
   const engine = useRef<Sweep | null>(null);
+  /** Troca pedida antes de as cópias existirem (raro: seção alcançada antes do observador avisar). */
+  const pending = useRef<{ to: PlanView; opts?: { instant?: boolean } } | null>(null);
   const auto = useRef({ done: false, timer: 0, replay: 0 });
 
   // 3 cartões a partir de 64rem (lg); 2 abaixo disso.
@@ -81,7 +86,7 @@ export function PorDentro({ cards, lente, luneta, lens }: { cards: CardInfo[]; l
       scope: scope.current,
       scopeInner: scopeInner.current,
     };
-    if (!d.stage || !d.reveal || !d.revealInner || !d.band || !d.scope || !d.scopeInner) return;
+    if (!copies || !d.stage || !d.reveal || !d.revealInner || !d.band || !d.scope || !d.scopeInner) return;
     const sw = createSweep(
       { stage: d.stage, reveal: d.reveal, revealInner: d.revealInner, band: d.band, scope: d.scope, scopeInner: d.scopeInner },
       cards,
@@ -104,15 +109,34 @@ export function PorDentro({ cards, lente, luneta, lens }: { cards: CardInfo[]; l
       },
     );
     engine.current = sw;
+    // Se a lista já está na tela quando as cópias chegam, deixa as camadas compostas para a troca.
+    const r = d.stage.getBoundingClientRect();
+    if (r.bottom > 0 && r.top < window.innerHeight) sw.prime(true);
+    if (pending.current) {
+      sw.play(pending.current.to, pending.current.opts);
+      pending.current = null;
+    }
     return () => {
       sw.destroy();
       engine.current = null;
     };
-  }, [cards]);
+  }, [cards, copies]);
+
+  useEffect(() => {
+    const el = stage.current;
+    if (!el || copies) return;
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setCopies(true), { rootMargin: MOUNT_MARGIN });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [copies]);
 
   // A varredura começa já; o texto, as abas e o contador trocam no quadro seguinte (divide o trabalho do clique).
   const go = useCallback((to: PlanView, opts?: { instant?: boolean }) => {
-    engine.current?.play(to, opts);
+    if (engine.current) engine.current.play(to, opts);
+    else {
+      pending.current = { to, opts };
+      setCopies(true);
+    }
     requestAnimationFrame(() => setView(to));
   }, []);
 
@@ -323,7 +347,7 @@ export function PorDentro({ cards, lente, luneta, lens }: { cards: CardInfo[]; l
           </div>
           <div ref={reveal} className="pd-reveal" aria-hidden={layer !== "luneta" || undefined} inert={layer !== "luneta"}>
             <div ref={revealInner} className="pd-reveal-inner pd-layer">
-              {luneta}
+              {copies && <PreviewGrid locked={false} />}
             </div>
           </div>
           <div ref={band} className="pd-band" aria-hidden="true" />
@@ -331,7 +355,7 @@ export function PorDentro({ cards, lente, luneta, lens }: { cards: CardInfo[]; l
             <span className="pd-scope-glow" />
             <div className="pd-glass">
               <div ref={scopeInner} className="pd-scope-inner pd-layer" inert>
-                {lens}
+                {copies && <PreviewGrid locked={false} />}
               </div>
             </div>
             <svg className="pd-frame" viewBox="-60 -60 120 120">

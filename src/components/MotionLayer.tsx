@@ -50,6 +50,8 @@ export function MotionLayer() {
     // O que já está na tela ao montar entra direto, sem piscar.
     const vh = window.innerHeight;
     els.forEach((el) => {
+      // Seção pulada pelo content-visibility está longe da tela; medir forçaria o layout dela à toa.
+      if (el.checkVisibility?.({ contentVisibilityAuto: true }) === false) return;
       const r = el.getBoundingClientRect();
       if (r.top < vh && r.bottom > 0) el.classList.add("is-in");
     });

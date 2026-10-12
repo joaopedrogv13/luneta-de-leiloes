@@ -184,6 +184,14 @@
   }
   .section {
     padding: clamp(72px, 10vw, 140px) clamp(20px, 5vw, 64px);
+    /* Fora da tela, o navegador pula layout e pintura da seção (a primeira pintura só calcula o hero).
+       "auto" guarda o tamanho real depois da primeira vez; os 900px são só a estimativa inicial.
+       Links internos (#planos etc.) medem tudo antes de rolar: ver InPageLinks.tsx. */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+  }
+  html[data-cv="all"] .section {
+    content-visibility: visible;
   }
   .container-l {
     max-width: 1180px;

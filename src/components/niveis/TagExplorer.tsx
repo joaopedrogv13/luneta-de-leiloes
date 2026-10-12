@@ -55,6 +55,8 @@ function TapIcon() {
 export function TagExplorer() {
   const base = useId();
   const [open, setOpen] = useState<boolean[]>(() => TAG_CATEGORIES.map(() => false));
+  // As tags de uma categoria só entram no DOM na primeira vez que ela abre (a página hidrata ~400 nós a menos).
+  const [seen, setSeen] = useState<boolean[]>(() => TAG_CATEGORIES.map(() => false));
   const [bulk, setBulk] = useState(false);
   const [touched, setTouched] = useState(false);
   const [pop, setPopState] = useState<OpenTag | null>(null);
@@ -104,6 +106,7 @@ export function TagExplorer() {
     setBulk(false);
     if (open[ci] && pop?.ci === ci) closePop(false);
     setOpen((o) => o.map((v, i) => (i === ci ? !v : v)));
+    setSeen((s) => s.map((v, i) => v || i === ci));
   };
 
   const toggleAll = () => {
@@ -111,6 +114,7 @@ export function TagExplorer() {
     setBulk(true);
     if (allOpen && pop) closePop(false);
     setOpen((o) => o.map(() => !allOpen));
+    if (!allOpen) setSeen((s) => s.map(() => true));
   };
 
   return (
@@ -196,7 +200,7 @@ export function TagExplorer() {
                 <div id={panelId(ci)} className="nv-panel grid">
                   <div className="min-h-0 overflow-hidden" inert={!isOpen}>
                     <ul className="mx-3 border-t border-nevoa/15 pt-2 pb-3 sm:mx-4">
-                      {cat.tags.map((t, ti) => {
+                      {seen[ci] && cat.tags.map((t, ti) => {
                         const key = `${ci}-${ti}`;
                         const active = pop?.key === key && !pop.closing;
                         return (

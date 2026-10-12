@@ -2,6 +2,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { MobileCtaBar } from "@/components/MobileCtaBar";
 import { MotionLayer } from "@/components/MotionLayer";
+import { InPageLinks } from "@/components/InPageLinks";
 import { HeroScene } from "@/components/hero/HeroScene";
 import { Problem } from "@/components/sections/Problem";
 import { Solution } from "@/components/sections/Solution";
@@ -65,6 +66,7 @@ export default function Home() {
       <Footer />
       <MobileCtaBar />
       <MotionLayer />
+      <InPageLinks />
       <JsonLd />
     </>
   );
