@@ -63,6 +63,8 @@ export function PlansTable() {
         {CARDS.map((p) => {
           // Cada cartão lista só o que o plano acrescenta ao anterior ("Tudo da Lente" + novidades).
           const prev = PREV[p.id];
+          // abaixo de lg a Luneta vem antes da Lente: ali "Tudo da Lente" vira a lista do que a Lente tem
+          const prevAfter = !!prev && CARDS.findIndex((c) => c.id === prev) > CARDS.findIndex((c) => c.id === p.id);
           const highlights = PLANS.features.filter((f) => f[p.id] !== false && (!prev || f[prev] !== true));
           return (
             <div
@@ -93,13 +95,24 @@ export function PlansTable() {
               </p>
               <ul className="my-7 flex flex-1 flex-col gap-3 text-sm leading-snug">
                 {prev && (
-                  <li className="flex gap-2.5">
+                  <li className={`flex gap-2.5 ${prevAfter ? "max-lg:hidden" : ""}`}>
                     <span aria-hidden="true" className="font-bold text-latao-texto">
                       ✓
                     </span>
                     Tudo da {PLANS.plans.find((x) => x.id === prev)?.name}
                   </li>
                 )}
+                {prevAfter &&
+                  PLANS.features
+                    .filter((f) => f[prev] === true)
+                    .map((f) => (
+                      <li key={`base-${f.label}`} className="flex gap-2.5 lg:hidden">
+                        <span aria-hidden="true" className="font-bold text-latao-texto">
+                          ✓
+                        </span>
+                        {f.label}
+                      </li>
+                    ))}
                 {highlights.map((f) =>
                   f[p.id] === "blur" ? (
                     <li key={f.label} className="flex gap-2.5 text-nevoa">

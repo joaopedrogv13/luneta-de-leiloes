@@ -3,7 +3,7 @@
  * Checagem de publicação: lista o que ainda não pode ir ao ar.
  *
  *   npm run check:publicacao                                  relatório no terminal
- *   npm run check:publicacao -- --json                        o mesmo relatório em JSON
+ *   npm run -s check:publicacao -- --json                     o mesmo relatório em JSON (-s tira o cabeçalho do npm)
  *   npm run check:publicacao -- --url http://localhost:3000   também conta [data-placeholder] no HTML
  *
  * Varre o texto do código (strings, templates e texto JSX; comentários ficam de fora) de
@@ -70,9 +70,9 @@ const CATEGORIAS = {
   reservas: { letra: "", titulo: "Reservas de placeholder no código", bloqueia: false, nota: "não bloqueiam: só aparecem quando o valor falta" },
 };
 
-const AJUDA = `Uso: npm run check:publicacao -- [--json] [--url <endereço>]...
+const AJUDA = `Uso: npm run -s check:publicacao -- [--json] [--url <endereço>]...
 
-  --json            saída em JSON
+  --json            saída em JSON (use npm run -s para o npm não imprimir o cabeçalho)
   --url <endereço>  baixa o HTML renderizado e conta os elementos [data-placeholder]
                     (pode repetir: --url http://localhost:3000 --url http://localhost:3000/assinante)
 

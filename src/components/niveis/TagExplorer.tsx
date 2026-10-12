@@ -215,8 +215,8 @@ export function TagExplorer() {
                               aria-expanded={active}
                               aria-controls={active ? dialogId : undefined}
                               onClick={() => openTag(ci, ti)}
-                              className={`group/tag -mx-1 flex w-[calc(100%+8px)] items-center justify-between gap-3 rounded-xl px-1 py-1.5 text-left transition-colors hover:bg-nevoa/[0.08] ${
-                                active ? "bg-nevoa/[0.1]" : ""
+                              className={`group/tag -mx-1 flex w-[calc(100%+8px)] items-center justify-between gap-3 rounded-xl px-1 py-1.5 text-left transition-shadow hover:ring-1 hover:ring-nevoa/30 ${
+                                active ? "ring-1 ring-latao/60" : ""
                               }`}
                             >
                               <Tag label={t.label} severity={t.severity} className="!whitespace-normal !leading-[1.2]" />

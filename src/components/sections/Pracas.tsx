@@ -26,7 +26,7 @@ export function Pracas() {
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
             <div className="card-on-tinta !rounded-2xl p-4 sm:p-5">
               <p className="text-[11px] font-semibold tracking-[0.14em] text-nevoa uppercase">1ª praça</p>
-              <p className="mt-2.5 font-display text-[clamp(20px,5.6vw,26px)] leading-tight font-bold tracking-[-0.02em] text-nevoa">
+              <p className="mt-2.5 font-display text-[clamp(20px,5.6vw,26px)] md:text-[clamp(20px,2.6vw,26px)] leading-tight font-bold tracking-[-0.02em] text-nevoa">
                 R$ {fmt(PRIMEIRA)}
               </p>
               <p className="mt-1 text-xs text-nevoa">lance mínimo = avaliação</p>
@@ -39,7 +39,7 @@ export function Pracas() {
                 até −50%
               </span>
               <p className="text-[11px] font-semibold tracking-[0.14em] text-latao-texto uppercase">2ª praça</p>
-              <p className="mt-2.5 font-display text-[clamp(20px,5.6vw,26px)] leading-tight font-bold tracking-[-0.02em]">
+              <p className="mt-2.5 font-display text-[clamp(20px,5.6vw,26px)] md:text-[clamp(20px,2.6vw,26px)] leading-tight font-bold tracking-[-0.02em]">
                 R${" "}
                 <span data-count-from={PRIMEIRA} data-count-to={SEGUNDA} data-count-format="thousands">
                   {fmt(SEGUNDA)}

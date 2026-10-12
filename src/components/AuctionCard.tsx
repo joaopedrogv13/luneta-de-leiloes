@@ -32,7 +32,7 @@ function LensPhoto({ listing, size }: { listing: Listing; size: number }) {
       ) : (
         <div
           role="img"
-          aria-label="Foto do imóvel (placeholder)"
+          aria-label="Foto do imóvel ainda não disponível"
           className={`photo-placeholder flex h-full w-full items-center justify-center text-center font-mono text-[10px] leading-tight text-nevoa transition-transform duration-500 group-hover:scale-[1.04] ${
             seal === 0 ? "blur-[1px]" : seal === 1 ? "blur-[0.4px]" : ""
           }`}

@@ -140,7 +140,8 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
 - **Aviso de 2ª praça por e-mail** (Praças e plano Luneta): é uma promessa de funcionalidade. Só publicar quando o alerta existir.
 - **Consultoria**: validar o texto da seção com as regras de publicidade da OAB.
 - **Origem dos dados**: confirmar que a coleta nos sites dos leiloeiros respeita termos de uso e a lei.
-- **Preços e garantia**: validar valores e o prazo de cancelamento; o JSON-LD Product/Offer usa `priceValue`.
+- **Preços e garantia**: validar valores e o prazo de cancelamento. O JSON-LD Product/Offer volta sozinho quando `price`
+  deixar de ter colchete (troque `price` e `priceValue` juntos).
 - **Prova social**: hoje é selo de lançamento + garantia. Entrar só com depoimentos reais (nome, foto e resultado).
 
 ## O que foi verificado
@@ -159,7 +160,7 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
 - Celular: a barra de atalhos some com os cartões de plano na tela e volta depois; Tab pela página e pelo rodapé sem
   item focado sob a barra. Planos com a tabela recolhida e aberta sem violações no axe.
 - Um único `<h1>`, `lang="pt-BR"`, canonical, Open Graph/Twitter com imagem gerada, `sitemap.xml`, `robots.txt`,
-  JSON-LD com Organization, Product/Offer (3 planos) e FAQPage.
+  JSON-LD com Organization e FAQPage (só as perguntas sem placeholder); Product/Offer volta quando os preços forem reais.
 - `prefers-reduced-motion`: a seção do hero tem 1 tela e já mostra o estado final (mira travada); nenhuma animação de apoio roda.
 
 ## Decisões de implementação

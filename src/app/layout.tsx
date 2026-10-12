@@ -57,9 +57,11 @@ export const viewport: Viewport = {
 
 // Antes da pintura: marca html.motion (se o sistema não pede menos movimento) e aplica o tema salvo,
 // para a cena do hero começar na etapa 1 e o tema claro não piscar ao recarregar.
-// Endereço com #âncora: data-cv="all" mede todas as seções desde o início, para o navegador rolar até a
-// âncora com as alturas reais, não com as estimativas do content-visibility (InPageLinks desfaz ao montar).
-const themeScript = `try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("motion");if(location.hash.length>1)document.documentElement.dataset.cv="all";var t=localStorage.getItem("luneta-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+// Posição vinda do navegador na home (endereço com #âncora, recarregar, voltar/avançar): data-cv="all" mede
+// todas as seções desde o início, para a posição ser calculada com as alturas reais e não com as estimativas
+// do content-visibility, e a rolagem fica instantânea até o load (sem "viagem" suave pela página inteira).
+// O mesmo no popstate (voltar da /assinante para a home). InPageLinks desfaz data-cv ao montar ou no popstate.
+const themeScript = `try{var r=document.documentElement;if(!matchMedia("(prefers-reduced-motion: reduce)").matches)r.classList.add("motion");var n=performance.getEntriesByType("navigation")[0];if(location.pathname==="/"&&(location.hash.length>1||(n&&/^(reload|back_forward)$/.test(n.type)))){r.dataset.cv="all";r.style.scrollBehavior="auto";addEventListener("load",function(){setTimeout(function(){r.style.scrollBehavior=""},0)})}addEventListener("popstate",function(){if(location.pathname!=="/")return;r.dataset.cv="all";r.style.scrollBehavior="auto";requestAnimationFrame(function(){requestAnimationFrame(function(){r.style.scrollBehavior=""})})},true);var t=localStorage.getItem("luneta-theme");if(t==="light"||t==="dark")r.dataset.theme=t}catch(e){}`;
 
 // data-scroll-behavior="smooth" (Next 16): o framework desliga o scroll suave durante a troca de página
 // (ex.: /assinante → /#planos), e a navegação chega ao destino na hora em vez de "rolar" a página inteira.
