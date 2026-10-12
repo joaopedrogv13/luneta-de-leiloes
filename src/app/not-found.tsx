@@ -15,7 +15,7 @@ const DESCRIPTION = "O endereço pode ter mudado ou não existir mais.";
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  robots: { index: false, follow: true },
+  robots: { index: false, follow: SITE.indexable },
   alternates: { canonical: null },
   openGraph: {
     type: "website",
