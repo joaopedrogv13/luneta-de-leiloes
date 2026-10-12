@@ -4,14 +4,31 @@ import { SITE } from "@/content/site";
 import { Logo } from "@/components/ui/Logo";
 import { Title } from "@/components/ui/Heading";
 
+const TITLE = `Página não encontrada | ${SITE.name}`;
+const DESCRIPTION = "O endereço pode ter mudado ou não existir mais.";
+
 // O title do layout é texto fixo (sem template), por isso o nome do site vai aqui.
-// O Next responde 404 e injeta "noindex"; robots e canonical do layout ("index", "/") são trocados
-// para a página não mandar sinais contraditórios.
+// O Next responde 404 e injeta "noindex". Robots, canonical, openGraph e twitter do layout falam da home
+// ("index", "/", título e descrição dela) e o merge é raso: aqui eles são trocados inteiros, com o título
+// e a descrição do 404 e sem URL, para a página não mandar sinais contraditórios. A imagem do card
+// continua a da marca (app/opengraph-image.tsx).
 export const metadata: Metadata = {
-  title: `Página não encontrada | ${SITE.name}`,
-  description: "O endereço pode ter mudado ou não existir mais.",
+  title: TITLE,
+  description: DESCRIPTION,
   robots: { index: false, follow: true },
   alternates: { canonical: null },
+  openGraph: {
+    type: "website",
+    locale: SITE.locale,
+    siteName: SITE.name,
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 /** Lente vazia (mesmo anel e ponto do LogoMark): o alvo ficou fora do campo de visão. */

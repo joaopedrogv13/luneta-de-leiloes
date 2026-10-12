@@ -57,7 +57,9 @@ export const viewport: Viewport = {
 
 // Antes da pintura: marca html.motion (se o sistema não pede menos movimento) e aplica o tema salvo,
 // para a cena do hero começar na etapa 1 e o tema claro não piscar ao recarregar.
-const themeScript = `try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("motion");var t=localStorage.getItem("luneta-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+// Endereço com #âncora: data-cv="all" mede todas as seções desde o início, para o navegador rolar até a
+// âncora com as alturas reais, não com as estimativas do content-visibility (InPageLinks desfaz ao montar).
+const themeScript = `try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("motion");if(location.hash.length>1)document.documentElement.dataset.cv="all";var t=localStorage.getItem("luneta-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
 
 // data-scroll-behavior="smooth" (Next 16): o framework desliga o scroll suave durante a troca de página
 // (ex.: /assinante → /#planos), e a navegação chega ao destino na hora em vez de "rolar" a página inteira.
