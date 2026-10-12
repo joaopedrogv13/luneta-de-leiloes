@@ -13,7 +13,7 @@
 import type { Conector } from "../tipos.ts";
 
 // Vitrine (imóveis)
-// import { caixaCsv } from "./caixa_csv/index.ts";                       // Caixa: Lista de Imóveis (CSV oficial)
+import { caixaCsv } from "./caixa/index.ts";                              // Caixa: Lista de Imóveis (CSV oficial)
 // import { leiloesJudiciais } from "./leiloesjudiciais_api/index.ts";    // Leilões Judiciais (API/MCP pública)
 
 // Radar de editais
@@ -23,7 +23,7 @@ import type { Conector } from "../tipos.ts";
 // import { queridoDiario } from "./querido_diario/index.ts";              // Querido Diário (OKBR)
 
 export const CONECTORES: readonly Conector[] = [
-  // caixaCsv,
+  caixaCsv,
   // djen,
   // douInlabs,
   // leiloesJudiciais,
