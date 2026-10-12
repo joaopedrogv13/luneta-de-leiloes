@@ -1,7 +1,14 @@
 import { PLANS, type PlanId } from "@/content/site";
+import { PlansCompare } from "@/components/PlansCompare";
 import { RichText } from "@/components/ui/RichText";
 
 const PREV: Record<PlanId, PlanId | null> = { lente: null, luneta: "lente", telescopio: "luneta" };
+
+// Ordem dos cartões: no DOM a Luneta (destacada) vem primeiro, que é a ordem do celular (uma coluna);
+// assim leitura e foco seguem o que se vê. A partir de lg, order devolve Lente → Luneta → Telescópio e
+// reading-flow (onde houver suporte) faz o Tab e o leitor de tela seguirem essa ordem visual.
+const LG_ORDER = ["lg:order-1", "lg:order-2", "lg:order-3"] as const;
+const CARDS = PLANS.plans.map((p, i) => ({ ...p, lgOrder: LG_ORDER[i] })).sort((a, b) => Number(b.featured) - Number(a.featured));
 
 /** Ícone do plano: o alcance do instrumento (lente 1 anel, luneta 2, telescópio 3). */
 function PlanIcon({ id }: { id: PlanId }) {
@@ -44,22 +51,22 @@ function Cell({ value, plan }: { value: boolean | "blur"; plan: string }) {
 
 /**
  * Planos Lente / Luneta / Telescópio. Cartões com preço e CTA (Luneta destacada com o selo
- * "Mais escolhido" e botão em latão) + tabela comparativa completa.
+ * "Mais escolhido" e botão em latão; no celular ela vem primeiro) + tabela comparativa completa
+ * (recolhida no celular, ver PlansCompare). Sem animação de entrada: quem chega aqui vê o preço na hora.
  * Sem pagamento real: os botões levam ao formulário com o plano escolhido marcado (data-intent).
  */
 export function PlansTable() {
   return (
     <>
-      <div className="mt-10 grid items-stretch gap-4 sm:mt-16 lg:grid-cols-3">
-        {PLANS.plans.map((p) => {
+      <div className="mt-10 grid items-stretch gap-4 sm:mt-16 lg:grid-cols-3 lg:[reading-flow:grid-order]">
+        {CARDS.map((p) => {
           // Cada cartão lista só o que o plano acrescenta ao anterior ("Tudo da Lente" + novidades).
           const prev = PREV[p.id];
           const highlights = PLANS.features.filter((f) => f[p.id] !== false && (!prev || f[prev] !== true));
           return (
             <div
               key={p.id}
-              data-reveal
-              className={`group relative flex flex-col rounded-3xl bg-tinta p-7 transition-[border-color,box-shadow] duration-300 sm:p-8 ${
+              className={`group relative flex flex-col rounded-3xl bg-tinta p-7 transition-[border-color,box-shadow] duration-300 sm:p-8 ${p.lgOrder} ${
                 p.featured
                   ? "border-[1.5px] border-latao shadow-[0_0_0_1px_rgba(201,162,77,.25),0_30px_80px_rgba(0,0,0,.45),0_0_80px_rgba(201,162,77,.12)] lg:-translate-y-2"
                   : "border border-nevoa/20 hover:border-latao/55"
@@ -123,15 +130,7 @@ export function PlansTable() {
         })}
       </div>
 
-      <div
-        data-reveal
-        role="region"
-        aria-labelledby="comparativo-planos"
-        tabIndex={0}
-        // relative: os textos sr-only (position: absolute) das células ficam presos à caixa rolável;
-        // sem isso eles escapavam do recorte e alargavam a página no celular
-        className="relative mt-12 overflow-x-auto rounded-3xl border border-nevoa/20"
-      >
+      <PlansCompare labelId="comparativo-planos">
         <table className="w-full min-w-[520px] border-collapse text-left text-sm">
           <caption id="comparativo-planos" className="px-5 pt-6 pb-3 text-left font-display text-xl font-bold sm:px-7">Compare os planos</caption>
           <thead>
@@ -172,7 +171,7 @@ export function PlansTable() {
             </tr>
           </tbody>
         </table>
-      </div>
+      </PlansCompare>
     </>
   );
 }
