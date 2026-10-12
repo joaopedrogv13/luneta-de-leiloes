@@ -23,6 +23,33 @@ Todo o texto vem de `src/content/site.ts` (blueprint, Passo 3). Qualquer trecho 
 aparece na página como **placeholder visível** (borda tracejada em latão). Para publicar, troque o colchete
 pelo valor real no arquivo de conteúdo.
 
+## Pendências em aberto (12/10/2026)
+
+**Decisões suas** (detalhes e recomendação na análise: https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7)
+- [ ] Lançar em duas fases (reservas e e-mails sem cobrar; venda só com base real, login e pagamento)?
+- [ ] Advogado: manter "advogado especialista com prioridade" ou trocar por checklist/ficha até sair parecer da OAB.
+- [ ] Abertura do hero: manter na primeira rolada (atual) ou automática, sem trava.
+- [ ] Título novo com "imóveis" e "risco" ("Leilões de imóveis de todo o Brasil. E o risco de cada um, na mira.").
+- [ ] Encurtar a página (Exemplos e Filtros dentro do Por dentro; Dados e Prova social só com números reais).
+- [ ] Preços, oferta de fundador, garantia (7 ou 30 dias) e Lente paga ou grátis.
+
+**Com você, fora do código**
+- [ ] Liberar a rede do ambiente para as fontes de dados (Caixa, LeilãoMap, leiloeiros) ou colar links e textos.
+- [ ] Domínio (`lunetadeleiloes.com.br` no registro.br) e marca no INPI.
+- [ ] Razão social, CNPJ e endereço (rodapé e dados para o Google).
+- [ ] Política de privacidade e termos de uso (o formulário não pode coletar dados sem eles).
+- [ ] Ferramenta que recebe os contatos do formulário (e-mail ou CRM).
+- [ ] Advogado parceiro: validar as 26 tags e suas explicações, os selos, o texto do Na Mira, o FAQ e a seção do advogado.
+- [ ] Medição de visitas sem cookies (Vercel Web Analytics ou Plausible): aprovar.
+
+**Técnico (eu, quando as decisões e a rede permitirem)**
+- [ ] Base de dados de leilões: fontes com API pública primeiro (em andamento), depois raspagem de leiloeiros locais.
+- [ ] Casos reais no site (Exemplos, hero, Praças, Por dentro e `/assinante`) a partir da base.
+- [ ] Formulário que muda conforme o botão clicado e envia de verdade (servidor, anti-robô, LGPD).
+- [ ] Alerta de 2ª praça por e-mail (hoje é promessa na página).
+- [ ] Login e área do assinante com dados reais; pagamento só na fase de venda.
+- [ ] No lançamento: `npm run check:publicacao` sem bloqueios e `NEXT_PUBLIC_INDEXAR=1` (passos abaixo).
+
 ## Antes de publicar: checagem e buscadores
 
 ### `npm run check:publicacao`
