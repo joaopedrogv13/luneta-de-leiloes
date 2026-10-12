@@ -8,6 +8,7 @@ import { RichText } from "@/components/ui/RichText";
 /**
  * FAQ em acordeão (só uma aberta por vez). Abrir = grid-template-rows 0fr → 1fr (300ms) e o "+" gira 45°.
  * As respostas ficam no HTML mesmo fechadas (para SEO e para o JSON-LD FAQPage).
+ * Sem animação de entrada: quem chega aqui está procurando uma resposta, então a lista já aparece pronta.
  */
 export function Faq() {
   const [open, setOpen] = useState(0);
@@ -16,7 +17,7 @@ export function Faq() {
     <section aria-labelledby="faq-titulo" className="section bg-tinta">
       <div className="container-l grid items-start gap-10 md:grid-cols-[0.8fr_1.2fr] md:gap-20">
         <SectionHeading id="faq-titulo" eyebrow={FAQ.eyebrow} parts={FAQ.title} />
-        <div data-reveal className="border-t border-nevoa/20">
+        <div className="border-t border-nevoa/20">
           {FAQ.items.map((f, i) => {
             const isOpen = open === i;
             const btn = `${base}-q${i}`;

@@ -114,7 +114,7 @@ export function LeadForm() {
   };
 
   return (
-    <div data-reveal className="rounded-3xl border border-nevoa/20 bg-tinta p-6 [perspective:1200px] sm:p-9">
+    <div className="rounded-3xl border border-nevoa/20 bg-tinta p-6 [perspective:1200px] sm:p-9">
       {sent ? (
         <div ref={doneRef} tabIndex={-1} role="status" className="flex flex-col items-start gap-3 outline-none motion-safe:animate-[flip-in_.6s_var(--ease-luneta)]">
           <span aria-hidden="true" className="flex size-14 items-center justify-center rounded-full border-2 border-pos text-pos">

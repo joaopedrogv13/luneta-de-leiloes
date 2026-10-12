@@ -3,6 +3,9 @@
 import { useEffect } from "react";
 
 const SELECTOR = "[data-reveal],[data-seal-card],[data-caution],[data-tags],[data-draw-x],[data-slide-up],[data-pulse],[data-count-to]";
+// Cascata das entradas: 80ms entre os 3 primeiros blocos que entram juntos; do 4º em diante, sem atraso extra.
+const STAGGER_MS = 80;
+const STAGGER_STEPS = 2;
 
 const fmt = (n: number, format?: string) => (format === "thousands" ? Math.round(n).toLocaleString("pt-BR") : String(Math.round(n)));
 
@@ -25,7 +28,8 @@ function countUp(el: HTMLElement) {
  * Animações de apoio (todas leves). As seções são renderizadas no servidor e marcam o que anima com
  * data-*; aqui um único IntersectionObserver põe a classe .is-in quando o bloco entra na tela e o CSS
  * (globals.css → "Animações de apoio") faz o resto com transições de opacity/transform:
- *  - [data-reveal]     entrada suave: fade + y 24 → 0 (0.8s), em cascata quando entram juntos.
+ *  - [data-reveal]     entrada curta: fade + y 10 → 0 (0.45s), em cascata de até 3 itens (80ms) quando entram
+ *                      juntos. FAQ, chamada final e formulário não usam: já aparecem prontos.
  *  - [data-seal-card]  os anéis dos selos são "desenhados" um a um (stroke-dashoffset, 150ms entre eles).
  *  - [data-caution]    o anel de atenção pulsa 2× e as tags surgem uma a uma.
  *  - [data-tags]       as tags de risco do cartão surgem uma a uma (70ms).
@@ -63,7 +67,7 @@ export function MotionLayer() {
         entries.forEach((e) => {
           if (!e.isIntersecting) return;
           const el = e.target as HTMLElement;
-          if (el.hasAttribute("data-reveal")) el.style.setProperty("--stagger", `${n++ * 100}ms`);
+          if (el.hasAttribute("data-reveal")) el.style.setProperty("--stagger", `${Math.min(n++, STAGGER_STEPS) * STAGGER_MS}ms`);
           el.classList.add("is-in");
           if (el.dataset.countTo) countUp(el);
           io.unobserve(el);

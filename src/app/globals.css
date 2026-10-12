@@ -411,17 +411,19 @@
    Animações de apoio (MotionLayer põe .is-in quando o bloco entra na tela).
    Só valem com html.reveal-ready, que o JS liga; sem JS ou com menos movimento, tudo já aparece pronto.
    ============================================================ */
+/* entrada curta (acima de ~0,5 s já parece lenta): fade + 10px em 0,45 s, os dois com a curva que desacelera
+   (--ease-luneta), para o texto ficar legível logo no começo; a cascata (--stagger) vem do MotionLayer */
 .reveal-ready [data-reveal] {
   transition:
-    opacity 0.8s ease var(--stagger, 0ms),
-    transform 0.9s var(--ease-luneta) var(--stagger, 0ms),
+    opacity 0.45s var(--ease-luneta) var(--stagger, 0ms),
+    transform 0.45s var(--ease-luneta) var(--stagger, 0ms),
     translate 0.25s ease,
     border-color 0.25s ease,
     box-shadow 0.25s ease;
 }
 .reveal-ready [data-reveal]:not(.is-in) {
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateY(10px);
 }
 
 /* selos: anéis desenhados um a um (Promissor 1, Na Mira 2, Alvo 3) */
