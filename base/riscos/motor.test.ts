@@ -22,7 +22,7 @@ const regraOcupacao: RegraRisco = {
   },
 };
 
-test("registro de regras começa vazio (outro módulo escreve as regras)", () => {
+test("registro de regras: ids únicos (as regras e seus testes ficam em regras/)", () => {
   assert.ok(Array.isArray(REGRAS));
   assert.equal(new Set(REGRAS.map((r) => r.id)).size, REGRAS.length, "ids únicos");
 });

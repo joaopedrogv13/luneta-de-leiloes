@@ -54,7 +54,8 @@ test("ponta a ponta: migrar, coletar, riscos, exportar e status", async () => {
 
     const r = await rodar(["riscos", "--banco", banco], { conectores });
     assert.equal(r.codigo, 0);
-    assert.match(r.saida, /Riscos: 0 tag\(s\) gravada\(s\) em 4 imóvel\(is\)/);
+    // Cada imóvel recebe as 26 tags (sim, não ou desconhecido); a exportação leva só as "sim".
+    assert.match(r.saida, /Riscos: 104 tag\(s\) gravada\(s\) em 4 imóvel\(is\)/);
 
     const arquivo = join(dir, "saida", "imoveis.json");
     const e = await rodar(["exportar", "--banco", banco, "--saida", arquivo]);
@@ -66,7 +67,10 @@ test("ponta a ponta: migrar, coletar, riscos, exportar e status", async () => {
     assert.ok(primeiro);
     assert.equal(primeiro.fonte_nome, "Fonte falsa de teste");
     assert.equal(primeiro.fotos[0]?.url, "https://exemplo.test/fotos/1001-1.jpg");
-    assert.deepEqual(primeiro.tags, []);
+    assert.deepEqual(
+      primeiro.tags.map((t) => t.slug).sort(),
+      ["aceita-financiamento", "desagio-baixo", "desocupado", "imovel-inteiro", "primeira-praca"],
+    );
     assert.equal(primeiro.praca_atual, 1);
 
     const s = await rodar(["status", "--banco", banco, "--json"]);

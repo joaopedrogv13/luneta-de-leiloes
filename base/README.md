@@ -38,7 +38,8 @@ base/
   riscos/tags.ts      as 26 tags (slug estável, rótulo/categoria/severidade iguais ao site)
   riscos/motor.ts     interface de regra, avaliação, gravação e consolidação das tags
   riscos/evidencia.ts ferramentas para escrever regras (textos normalizados, recorte de trecho)
-  riscos/regras/      registro de regras (vazio por enquanto)
+  riscos/regras/      regras das 26 tags, limiares (config.ts), corpus real de teste (corpus.ts)
+  riscos/medir.ts     distribuição das tags sobre o CSV da Caixa e respostas da Leilões Judiciais
   util/               numero, data, texto, hash, dedup, lgpd, http, robots, csv, arquivo, uf, classificar
   testes/apoio.ts     banco em memória, imóvel de exemplo, conector falso
   migracoes/          (crie quando precisar) 002-descricao.sql, 003-...
@@ -93,6 +94,14 @@ export const minhaFonte: Conector<LinhaBruta> = {
 ## Regras de risco
 
 `riscos/regras/index.ts` lista as regras; cada uma é um `RegraRisco` (`riscos/motor.ts`): recebe o imóvel gravado e os textos prontos para regex e devolve tags com valor (`sim`/`nao`/`desconhecido`), confiança, origem, trecho e `precisa_revisao`. Escreva os regex em minúsculas e sem acento e use `buscar`/`buscarPrimeira` de `riscos/evidencia.ts` para recortar a evidência. O motor confere a tag, mascara o trecho, marca para revisão tags conflitantes (ex.: ocupado e desocupado) e nunca sobrescreve linhas revisadas por humano. Não marque "Sem fotos" quando `fonte.capacidades.fotos` for `false`. Para testar uma regra sem banco: `avaliarImovel(entradaPara(imovelDeTeste(normalizado), fonte), [regra])`.
+
+As 26 tags já têm regra (uma regra por tag, que olha campo e texto juntos). Todo imóvel recebe as 26 linhas: `sim` com evidência, `nao` com contrassinal ou campo da fonte, `desconhecido` quando a fonte não informa; a exportação leva só as `sim`. Critérios, decisões, limites e a medição de falsos positivos: `riscos/regras/README.md`. Para medir uma mudança de regra sem banco:
+
+```bash
+node --experimental-strip-types base/riscos/medir.ts --caixa Lista_imoveis_geral.csv --lj resposta_search_leiloes.json
+```
+
+O que os conectores podem preencher para as regras: `ocupacao` (campo estruturado), `textos` com origem `ficha`, `edital`, `titulo_leilao`, `alerta`; `extras.regra_praca` ("seg_nulo" = praça única ou desconhecida), `extras.avaliacao_confere` (false rebaixa o deságio), `extras.averbacao_leiloes_negativos`; fotos com `ok`/`verificada_em`; documento com "vistoria" no título. Selo provisório: não existe ainda (critérios dependem do advogado).
 
 ## Banco
 
