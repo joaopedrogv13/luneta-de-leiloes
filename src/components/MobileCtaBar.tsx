@@ -29,7 +29,8 @@ export function MobileCtaBar() {
   }, []);
 
   return (
-    <div
+    <nav
+      aria-label="Atalhos"
       inert={!visible}
       className={`fixed inset-x-4 bottom-4 z-40 flex gap-2.5 rounded-full border border-latao/40 bg-tinta/90 p-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-md transition-[transform,opacity] duration-500 ease-luneta md:hidden ${
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-20 opacity-0"
@@ -45,6 +46,6 @@ export function MobileCtaBar() {
       >
         Advogado
       </a>
-    </div>
+    </nav>
   );
 }

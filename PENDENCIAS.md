@@ -30,6 +30,7 @@ pelo valor real no arquivo de conteúdo.
 | O problema · faixa rolante | `[Leiloeiro 1]` … `[Leiloeiro 6]` (nomes dos leiloeiros monitorados) | `site.ts` → `PROBLEM.marquee` |
 | Dados de deságio | deságio médio `[X]%`, maior deságio do mês `[X]%`, total de leilões ativos `[X]` | `site.ts` → `STATS.items[].value` (número; `null` mostra `[X]`) |
 | Planos · preços sugeridos | Lente `R$ [49]`, Luneta `R$ [129]`, Telescópio `R$ [499]` (cartões e tabela) | `site.ts` → `PLANS.plans[].price` e `priceValue` (este alimenta o JSON-LD) |
+| Área do assinante (`/assinante`) | preço da Luneta `[129]` no aviso do plano Lente e na janela de upgrade | vem do mesmo `PLANS` (não precisa trocar em outro lugar) |
 | Planos · nota | `[7] dias para cancelar` | `site.ts` → `PLANS.note` |
 | Prova social · garantia | `[7] dias` | `site.ts` → `SOCIAL.guarantee` |
 | FAQ · "Os leilões de todo o Brasil estão aqui?" | `Hoje são [X] leiloeiros monitorados.` | `site.ts` → `FAQ.items[2].a` |
@@ -39,6 +40,11 @@ pelo valor real no arquivo de conteúdo.
 
 ## Conteúdo fictício (substituir por casos reais)
 
+- **Casos reais com link direto** (pedido do cliente): a estrutura está pronta, mas a coleta não foi feita porque a rede
+  deste ambiente bloqueia os sites dos leiloeiros. Cada imóvel em `examples.ts` aceita `source: { leiloeiro, url, coletadoEm }`
+  (o título vira link para o anúncio, com "Dados de DD/MM/AAAA · confira o edital") e `point` (use `latLonToMap(lat, lon)`
+  de `src/lib/brazil.ts` para pôr o pino no lugar exato). Com `source`, o rótulo muda sozinho para "Caso real · leiloeiro".
+  Tags e selo de um caso real devem ser marcados como análise ilustrativa até passarem pelo critério validado.
 - **Exemplos de leilão** (`src/content/examples.ts`): 6 imóveis fictícios, sempre rotulados como "Exemplo fictício".
   O blueprint pede casos reais da base com a etiqueta "exemplo de oportunidade" e fotos; o cartão já aceita
   `photo` (WebP, servido via `next/image` dentro da moldura de lente). Hoje as fotos são placeholders listrados.
@@ -66,9 +72,12 @@ pelo valor real no arquivo de conteúdo.
 
 ## O que foi verificado
 
-- `npm run build` e `npm run lint` sem erros nem avisos.
-- Lighthouse mobile (build de produção, local): Performance 92–93, Acessibilidade 100, Boas práticas 100, SEO 100.
-- axe-core (WCAG 2.1 AA + boas práticas) sem violações, temas escuro e claro, 390px e 1280px.
+- `npx tsc --noEmit`, `npm run lint` e `npm run build` sem erros nem avisos.
+- Lighthouse mobile (build de produção, local, 4 execuções): Performance 92–96 (TBT 110–160 ms, CLS 0),
+  Acessibilidade 100, Boas práticas 100, SEO 100.
+- axe-core (WCAG 2.2 AA + boas práticas) sem violações em `/` e `/assinante` (Lente e Luneta), temas escuro e claro,
+  390px e 1280px, com todas as categorias de tags abertas. Sem rolagem horizontal e sem erros no console.
+- Links internos do menu e dos CTAs param exatamente no início da seção (desktop, celular e movimento reduzido).
 - Um único `<h1>`, `lang="pt-BR"`, canonical, Open Graph/Twitter com imagem gerada, `sitemap.xml`, `robots.txt`,
   JSON-LD com Organization, Product/Offer (3 planos) e FAQPage.
 - `prefers-reduced-motion`: a seção do hero tem 1 tela e já mostra o estado final (mira travada); nenhuma animação de apoio roda.
