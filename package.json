@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check:publicacao": "node scripts/checar-publicacao.mjs"
+    "check:publicacao": "node scripts/checar-publicacao.mjs",
+    "base:migrar": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/cli.ts migrar",
+    "base:coletar": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/cli.ts coletar",
+    "base:riscos": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/cli.ts riscos",
+    "base:exportar": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/cli.ts exportar",
+    "base:status": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/cli.ts status",
+    "base:testar": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"base/**/*.test.ts\""
   },
   "dependencies": {
     "gsap": "^3.15.0",

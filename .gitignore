@@ -42,3 +42,6 @@ next-env.d.ts
 
 # worktrees temporárias de agentes
 /.claude/worktrees/
+
+# base de dados local (SQLite, exportações e downloads de coleta)
+/base/dados/

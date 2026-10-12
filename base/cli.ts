@@ -1,0 +1,238 @@
+/**
+ * Linha de comando da base. Rode pela raiz do repositório:
+ *   npm run base:migrar
+ *   npm run base:coletar -- <fonte> [--uf SP] [--arquivo caminho] [--limite 100] [--detalhes]
+ *   npm run base:riscos -- [--fonte <id>]
+ *   npm run base:exportar -- [--saida caminho] [--limite N]
+ *   npm run base:status -- [--json]
+ * ou direto: node --experimental-strip-types base/cli.ts <comando> ...
+ * Em qualquer comando, --banco <caminho> (ou LUNETA_DB) troca o arquivo do banco.
+ */
+import { resolve } from "node:path";
+import { parseArgs } from "node:util";
+import { pathToFileURL } from "node:url";
+import { executarColeta, type ResumoColeta } from "./coleta.ts";
+import { abrirBanco, CAMINHO_PADRAO, migrar, versaoDoBanco } from "./db.ts";
+import { exportar, SAIDA_PADRAO } from "./exportar.ts";
+import { CONECTORES, conferirRegistro, obterConector } from "./fontes/index.ts";
+import { rodarRiscos } from "./riscos/motor.ts";
+import { formatarStatus, relatorioStatus } from "./status.ts";
+import type { Conector } from "./tipos.ts";
+import type { ClienteHttp } from "./util/http.ts";
+import { normalizarUf } from "./util/uf.ts";
+
+const AJUDA = `Base da Luneta de Leilões
+
+Uso: node --experimental-strip-types base/cli.ts <comando> [opções]
+
+Comandos:
+  migrar                              cria ou atualiza o banco (idempotente)
+  coletar <fonte> [opções]            coleta uma fonte e grava (transacional)
+      --uf <UF>                       só uma UF (marca removidos só nela)
+      --arquivo <caminho>             lê arquivo local em vez da rede (sinônimo: --fixture)
+      --limite <N>                    para depois de N registros (não marca removidos)
+      --detalhes                      também busca páginas de detalhe (mais lento)
+  riscos [--fonte <id>]               roda as regras de risco e regrava as tags automáticas
+  exportar [--saida <arq>] [--limite <N>]
+                                      JSON para o site (padrão base/dados/exportacao/imoveis.json)
+  status [--json]                     contagens por fonte, UF, modalidade, tags, fotos e coletas
+  fontes                              lista os conectores registrados
+
+Opção geral: --banco <caminho> (padrão base/dados/luneta.db ou LUNETA_DB)`;
+
+export interface DependenciasCli {
+  conectores?: readonly Conector[];
+  http?: ClienteHttp;
+  agora?: Date;
+  saida?: (texto: string) => void;
+  erro?: (texto: string) => void;
+}
+
+function formatarResumo(r: ResumoColeta): string {
+  const linhas = [
+    `Coleta #${r.coletaId} de ${r.fonteId}: ${r.status}${r.completa ? " (completa: removidos marcados)" : ""}`,
+    `  lidos ${r.lidos} · descartados ${r.descartados} · inválidos ${r.invalidos}`,
+    `  novos ${r.novos} · atualizados ${r.atualizados} · inalterados ${r.inalterados} · reativados ${r.reativados} · removidos ${r.removidos}${r.antigos ? ` · ignorados (mais antigos) ${r.antigos}` : ""}${r.editais ? ` · editais ${r.editais}` : ""}`,
+  ];
+  if (r.origem) linhas.push(`  origem: ${r.origem}`);
+  if (r.geradoEm) linhas.push(`  gerado na fonte em: ${r.geradoEm}`);
+  if (r.erro) linhas.push(`  erro: ${r.erro}`);
+  for (const aviso of r.avisos) linhas.push(`  aviso: ${aviso}`);
+  return linhas.join("\n");
+}
+
+/** Executa a CLI e devolve o código de saída (0 ok, 1 falha da operação, 2 uso incorreto). */
+export async function principal(argv: readonly string[], deps: DependenciasCli = {}): Promise<number> {
+  const saida = deps.saida ?? ((t: string) => process.stdout.write(t + "\n"));
+  const erro = deps.erro ?? ((t: string) => process.stderr.write(t + "\n"));
+  const conectores = deps.conectores ?? CONECTORES;
+
+  let args: ReturnType<typeof lerArgs>;
+  try {
+    args = lerArgs(argv);
+  } catch (e) {
+    erro(`${(e as Error).message}\n\n${AJUDA}`);
+    return 2;
+  }
+  const { values: v, positionals } = args;
+  const [comando, ...resto] = positionals;
+  if (v.ajuda || !comando || comando === "ajuda") {
+    saida(AJUDA);
+    return comando || v.ajuda ? 0 : 2;
+  }
+  const caminhoBanco = v.banco ? resolve(v.banco) : process.env.LUNETA_DB || CAMINHO_PADRAO;
+
+  switch (comando) {
+    case "migrar": {
+      const db = abrirBanco(caminhoBanco, { migrar: false });
+      try {
+        const r = migrar(db);
+        saida(
+          r.aplicadas.length > 0
+            ? `Banco ${caminhoBanco}: versão ${r.de} → ${r.para} (aplicadas: ${r.aplicadas.join(", ")})`
+            : `Banco ${caminhoBanco} já está na versão ${versaoDoBanco(db)}.`,
+        );
+        return 0;
+      } finally {
+        db.close();
+      }
+    }
+
+    case "coletar": {
+      const id = resto[0];
+      if (!id) {
+        erro("Informe a fonte: coletar <fonte>. Use `fontes` para ver as disponíveis.");
+        return 2;
+      }
+      const conector = obterConector(id, conectores);
+      if (!conector) {
+        const disponiveis = conectores.map((c) => c.id).join(", ") || "(nenhum conector registrado em base/fontes/index.ts)";
+        erro(`Fonte desconhecida: ${id}. Disponíveis: ${disponiveis}`);
+        return 2;
+      }
+      const uf = v.uf ? normalizarUf(v.uf) : undefined;
+      if (v.uf && !uf) {
+        erro(`UF inválida: ${v.uf}`);
+        return 2;
+      }
+      const limite = v.limite ? Number(v.limite) : undefined;
+      if (limite !== undefined && (!Number.isInteger(limite) || limite <= 0)) {
+        erro(`--limite precisa ser um inteiro positivo: ${v.limite}`);
+        return 2;
+      }
+      const controle = new AbortController();
+      const cancelar = (): void => {
+        erro("Cancelando a coleta (nada será gravado)...");
+        controle.abort();
+      };
+      process.once("SIGINT", cancelar);
+      const db = abrirBanco(caminhoBanco);
+      try {
+        const arquivo = v.arquivo ?? v.fixture;
+        const resumo = await executarColeta(db, conector, {
+          uf: uf ?? undefined,
+          arquivo: arquivo ? resolve(arquivo) : undefined,
+          limite,
+          detalhes: Boolean(v.detalhes),
+          http: deps.http,
+          agora: deps.agora,
+          sinal: controle.signal,
+          log: (m) => erro(m),
+        });
+        saida(formatarResumo(resumo));
+        return resumo.status === "sucesso" || resumo.status === "parcial" ? 0 : 1;
+      } finally {
+        process.off("SIGINT", cancelar);
+        db.close();
+      }
+    }
+
+    case "riscos": {
+      const db = abrirBanco(caminhoBanco);
+      try {
+        const r = rodarRiscos(db, { fonteId: v.fonte, agora: deps.agora });
+        saida(`Riscos: ${r.riscos} tag(s) gravada(s) em ${r.imoveis} imóvel(is).`);
+        for (const e of r.erros) erro(`aviso: ${e}`);
+        if (r.totalErros > r.erros.length) erro(`(+${r.totalErros - r.erros.length} avisos omitidos)`);
+        return 0;
+      } finally {
+        db.close();
+      }
+    }
+
+    case "exportar": {
+      const limite = v.limite ? Number(v.limite) : undefined;
+      if (limite !== undefined && (!Number.isInteger(limite) || limite <= 0)) {
+        erro(`--limite precisa ser um inteiro positivo: ${v.limite}`);
+        return 2;
+      }
+      const destino = v.saida ? resolve(v.saida) : SAIDA_PADRAO;
+      const db = abrirBanco(caminhoBanco);
+      try {
+        const dados = exportar(db, destino, { limite, agora: deps.agora });
+        saida(`Exportados ${dados.total} imóvel(is) para ${destino}`);
+        return 0;
+      } finally {
+        db.close();
+      }
+    }
+
+    case "status": {
+      const db = abrirBanco(caminhoBanco);
+      try {
+        const relatorio = relatorioStatus(db);
+        saida(v.json ? JSON.stringify(relatorio, null, 2) : `${formatarStatus(relatorio)}\nBanco: ${caminhoBanco}`);
+        return 0;
+      } finally {
+        db.close();
+      }
+    }
+
+    case "fontes": {
+      const problemas = conferirRegistro(conectores);
+      if (conectores.length === 0) saida("Nenhum conector registrado (base/fontes/index.ts).");
+      for (const c of conectores) {
+        saida(`${c.id}\t${c.nome}\t${c.finalidade}\t${c.acesso}${c.capacidades.listaCompleta ? "\tlista completa" : ""}`);
+      }
+      for (const p of problemas) erro(`problema no registro: ${p}`);
+      return problemas.length > 0 ? 1 : 0;
+    }
+
+    default:
+      erro(`Comando desconhecido: ${comando}\n\n${AJUDA}`);
+      return 2;
+  }
+}
+
+function lerArgs(argv: readonly string[]) {
+  return parseArgs({
+    args: [...argv],
+    allowPositionals: true,
+    strict: true,
+    options: {
+      banco: { type: "string" },
+      uf: { type: "string" },
+      arquivo: { type: "string" },
+      fixture: { type: "string" },
+      limite: { type: "string" },
+      detalhes: { type: "boolean" },
+      fonte: { type: "string" },
+      saida: { type: "string" },
+      json: { type: "boolean" },
+      ajuda: { type: "boolean", short: "h" },
+    },
+  });
+}
+
+const executadoDireto = process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (executadoDireto) {
+  principal(process.argv.slice(2)).then(
+    (codigo) => {
+      process.exitCode = codigo;
+    },
+    (e: unknown) => {
+      process.stderr.write(`Erro: ${(e as Error)?.stack ?? String(e)}\n`);
+      process.exitCode = 1;
+    },
+  );
+}

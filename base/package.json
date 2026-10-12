@@ -1,0 +1,6 @@
+{
+  "name": "luneta-base",
+  "private": true,
+  "description": "Marca a pasta base/ como ESM para o Node e para o TypeScript (module nodenext). Sem dependências: os scripts ficam no package.json da raiz.",
+  "type": "module"
+}
