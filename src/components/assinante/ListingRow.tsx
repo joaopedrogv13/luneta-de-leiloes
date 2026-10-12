@@ -2,7 +2,7 @@
 
 import { listingLabel, brl, type Listing } from "@/content/examples";
 import { Tag } from "@/components/ui/Tag";
-import { FavButton, LensFrame, LockIcon, SealBadge } from "./parts";
+import { FavButton, LensFrame, LockIcon, SealBadge, TagPlaceholders } from "./parts";
 import { lockFilter, splitPlace, type Plan } from "./shared";
 
 /**
@@ -10,6 +10,8 @@ import { lockFilter, splitPlace, type Plan } from "./shared";
  * avaliação e lance mínimo, tags de risco, deságio grande, selo e Favoritar.
  * O título é um <button> cujo ::after cobre o cartão inteiro: clicar em qualquer ponto abre o detalhe,
  * e pelo teclado é um único botão (o Favoritar fica por cima, sem botões aninhados).
+ * O hover vem do <li>, que não se move: o cartão sobe 3px sem "tremer" com o mouse na borda de baixo.
+ * No celular, selo e Favoritar ficam numa linha própria (a 3ª coluna é só do deságio, e o título respira).
  */
 export function ListingRow({
   listing: l,
@@ -42,9 +44,10 @@ export function ListingRow({
       : "border-nevoa/15";
 
   return (
-    <li onMouseEnter={() => onHover(l.id)} onMouseLeave={() => onHover(null)}>
+    // group/row: o hover do cartão; group (sem nome): o hover da moldura de lente (LensFrame), também pelo <li>
+    <li className="group group/row" onMouseEnter={() => onHover(l.id)} onMouseLeave={() => onHover(null)}>
       <article
-        className={`group relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3.5 gap-y-3 rounded-[18px] border bg-tinta p-4 transition-[translate,border-color,box-shadow] duration-200 ease-out [grid-template-areas:'foto_head_des'_'meta_meta_meta'_'tags_tags_tags'_'selo_selo_fav'] hover:-translate-y-[3px] hover:border-latao/55 hover:shadow-[0_18px_50px_rgba(0,0,0,.25)] has-[:focus-visible]:border-latao/70 sm:gap-x-[18px] sm:p-[18px] sm:[grid-template-areas:'foto_head_des'_'foto_meta_selo'_'foto_tags_fav'] ${frame}`}
+        className={`relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3.5 gap-y-3 rounded-[18px] border bg-tinta p-4 transition-[translate,border-color,box-shadow] duration-200 ease-out [grid-template-areas:'foto_head_des'_'meta_meta_meta'_'tags_tags_tags'_'acts_acts_acts'] group-hover/row:-translate-y-[3px] group-hover/row:border-latao/55 group-hover/row:shadow-[0_18px_50px_rgba(0,0,0,.25)] has-[:focus-visible]:border-latao/70 sm:gap-x-[18px] sm:p-[18px] sm:[grid-template-areas:'foto_head_des'_'foto_meta_selo'_'foto_tags_fav'] ${frame}`}
       >
         <div className="self-start [grid-area:foto] sm:self-center">
           <LensFrame listing={l} plan={plan} size={76} sizeClass="size-14 sm:size-[76px]" />
@@ -95,23 +98,25 @@ export function ListingRow({
         </p>
 
         {/* Tags e selo não são interativos: com pointer-events-none o clique passa para o ::after do título
-            (o filter do desfoque cria uma camada própria, que ficaria por cima dele). */}
+            (o filter do desfoque cria uma camada própria, que ficaria por cima dele).
+            No Lente as tags reais nem vão para o DOM: só marcadores neutros, iguais em todo cartão. */}
         <div className="pointer-events-none relative min-w-0 [grid-area:tags]">
-          <ul
-            aria-label={lente ? undefined : "Tags de risco"}
-            aria-hidden={lente || undefined}
-            className="flex flex-wrap gap-1.5 select-none"
+          <div
+            className="transition-[filter] duration-[600ms] ease-out select-none motion-reduce:transition-none"
+            style={{ filter: lockFilter(lente) }}
           >
-            {l.tags.map((t, i) => (
-              <li
-                key={t.label}
-                className="transition-[filter] duration-[600ms] ease-out motion-reduce:transition-none"
-                style={{ filter: lockFilter(lente), transitionDelay: `${i * 60}ms` }}
-              >
-                <Tag {...t} />
-              </li>
-            ))}
-          </ul>
+            {lente ? (
+              <TagPlaceholders />
+            ) : (
+              <ul aria-label="Tags de risco" className="flex flex-wrap gap-1.5">
+                {l.tags.map((t) => (
+                  <li key={t.label}>
+                    <Tag {...t} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           {lente && (
             <p className="absolute inset-0 flex items-center transition-opacity duration-300 starting:opacity-0">
               <span className="inline-flex items-center gap-2 rounded-full bg-tinta/85 px-2.5 py-1.5 text-[11px] leading-none font-semibold tracking-[0.08em] text-latao-texto uppercase">
@@ -122,10 +127,12 @@ export function ListingRow({
           )}
         </div>
 
-        <SealBadge listing={l} plan={plan} className="pointer-events-none justify-self-start [grid-area:selo] sm:justify-self-end" />
-
-        <div className="justify-self-end [grid-area:fav]">
-          <FavButton listing={l} plan={plan} active={fav} onToggle={onFav} onLocked={onLocked} />
+        {/* celular: uma linha só para selo + Favoritar; sm+: `contents`, e cada um vai para a sua área */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 [grid-area:acts] sm:contents">
+          <SealBadge listing={l} plan={plan} className="pointer-events-none sm:justify-self-end sm:[grid-area:selo]" />
+          <div className="ml-auto sm:ml-0 sm:justify-self-end sm:[grid-area:fav]">
+            <FavButton listing={l} plan={plan} active={fav} onToggle={onFav} onLocked={onLocked} />
+          </div>
         </div>
       </article>
     </li>

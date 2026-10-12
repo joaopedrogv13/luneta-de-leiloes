@@ -56,7 +56,7 @@ export function AppHeader({
             strokeWidth="1.6"
             strokeLinecap="round"
             aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-nevoa"
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-nevoa sm:left-3.5"
           >
             <circle cx="7" cy="7" r="5" />
             <path d="M11 11l3.2 3.2" />
@@ -66,10 +66,10 @@ export function AppHeader({
             type="search"
             value={query}
             onChange={(e) => onQuery(e.target.value)}
-            placeholder="Cidade, bairro ou UF"
+            placeholder="Cidade, bairro, UF"
             autoComplete="off"
             enterKeyHint="search"
-            className="h-11 w-full rounded-full border border-nevoa/25 bg-tinta pr-4 pl-10 text-base text-luar transition-colors placeholder:text-nevoa hover:border-nevoa/50 focus:border-latao sm:text-sm pointer-fine:h-10"
+            className="h-11 w-full rounded-full border border-nevoa/25 bg-tinta pr-2 pl-9 text-base text-luar transition-colors placeholder:text-sm placeholder:text-nevoa hover:border-nevoa/50 focus:border-latao sm:pr-4 sm:pl-10 sm:text-sm pointer-fine:h-10"
           />
         </div>
 

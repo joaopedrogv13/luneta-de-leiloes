@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LISTINGS } from "@/content/examples";
 import { RichText } from "@/components/ui/RichText";
 import { AppHeader } from "./AppHeader";
@@ -17,20 +17,15 @@ type Toast = { id: number; text: string; leaving: boolean };
 const TOAST_FAV = "Você será avisado por e-mail quando a praça mudar (demonstração).";
 const TOAST_PLAN = "Plano Luneta ativado nesta demonstração: tags e selos nítidos. Nenhuma cobrança foi feita.";
 
-const noSubscribe = () => () => {};
-const planFromUrl = (): Plan | null => (new URLSearchParams(window.location.search).get("plano") === "lente" ? "lente" : null);
-
 /**
  * Área do assinante (demonstração, só front-end): filtros, busca, lista em linhas, mapa e detalhe,
  * vista como plano Lente (tags e selos desfocados) ou Luneta (tudo nítido). Começa na Luneta;
  * ?plano=lente na URL começa no Lente. Usa só os exemplos fictícios de src/content/examples.ts.
  */
-export function AssinanteApp() {
-  // ?plano=lente começa a demonstração no plano Lente. A URL é lida só no cliente (a página é estática
-  // e não usa useSearchParams, que exigiria Suspense); no servidor e na hidratação vale a Luneta.
-  const urlPlan = useSyncExternalStore(noSubscribe, planFromUrl, () => null);
-  const [chosenPlan, setChosenPlan] = useState<Plan | null>(null);
-  const plan: Plan = chosenPlan ?? urlPlan ?? "luneta";
+export function AssinanteApp({ initialPlan }: { initialPlan: Plan }) {
+  // O plano inicial vem do servidor (page.tsx lê ?plano=lente), para o Lente já sair no HTML:
+  // sem pintar a Luneta primeiro e trocar na hidratação (sem flash nem salto do banner).
+  const [plan, setPlanState] = useState<Plan>(initialPlan);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -61,7 +56,7 @@ export function AssinanteApp() {
   const showToast = (text: string) => setToast({ id: Date.now(), text, leaving: false });
 
   const setPlan = useCallback((p: Plan) => {
-    setChosenPlan(p);
+    setPlanState(p);
     // "Só com selo" revelaria quem tem selo: no Lente o filtro é desligado.
     if (p === "lente") setFilters((f) => ({ ...f, selo: false }));
     const url = new URL(window.location.href);

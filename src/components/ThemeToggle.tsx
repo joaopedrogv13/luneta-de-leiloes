@@ -46,7 +46,7 @@ export function ThemeToggle() {
       type="button"
       onClick={() => setTheme(next)}
       aria-label={theme === "light" ? "Ativar tema escuro" : "Ativar tema claro"}
-      className={`${styles.button} inline-flex h-10 items-center gap-2 rounded-full border border-nevoa/40 px-3 text-[13px] font-medium text-nevoa transition-colors hover:border-latao hover:text-luar`}
+      className={`${styles.button} inline-flex h-10 pointer-coarse:h-11 items-center gap-2 rounded-full border border-nevoa/40 px-3 text-[13px] font-medium text-nevoa transition-colors hover:border-latao hover:text-luar`}
     >
       <svg
         viewBox="0 0 24 24"

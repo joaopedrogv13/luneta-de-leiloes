@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, type RefObject } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import { formatDate, listingLabel, brl, type Listing } from "@/content/examples";
 import { Tag } from "@/components/ui/Tag";
-import { FavButton, LensFrame, LockIcon, SealBadge } from "./parts";
+import { FavButton, LensFrame, LockIcon, SealBadge, TagPlaceholders } from "./parts";
 import { lockFilter, type Plan } from "./shared";
 import { useDialog } from "./useDialog";
 
@@ -12,6 +12,7 @@ import { useDialog } from "./useDialog";
  * Detalhe do exemplo: drawer da direita (480px; tela cheia no celular) que desliza em 420ms com
  * cubic-bezier(.2,.7,.2,1), com o fundo escurecendo. Fica montado o tempo todo (para animar a saída)
  * e, fechado, fica `inert` e invisível. As tags entram em cascata a cada abertura.
+ * No Lente, tags e explicação reais não vão para o DOM: só marcadores neutros sob o cartão de bloqueio.
  */
 export function DetailDrawer({
   open,
@@ -43,7 +44,22 @@ export function DetailDrawer({
   const tagsHeading = useRef<HTMLHeadingElement>(null);
   const lente = plan === "lente";
 
-  useDialog({ open, dialogRef: panel, onClose, initialFocusRef: closeBtn, openerRef });
+  // O painel fica montado: sem isso, reabriria na rolagem anterior (topo cortado e o foco inicial,
+  // no botão Fechar, fora da tela). Roda antes do efeito do useDialog, que move o foco.
+  useLayoutEffect(() => {
+    if (open && panel.current) panel.current.scrollTop = 0;
+  }, [open, l.id, openSeq]);
+
+  useDialog({
+    open,
+    dialogRef: panel,
+    onClose,
+    initialFocusRef: closeBtn,
+    openerRef,
+    // aberto por um pin do mapa que sumiu (a janela encolheu e o mapa saiu): o foco volta ao cartão
+    fallbackFocus: () =>
+      document.querySelector<HTMLElement>(`[data-open="${CSS.escape(l.id)}"]`) ?? document.getElementById("conteudo"),
+  });
 
   const unlock = () => {
     onUnlock();
@@ -133,24 +149,35 @@ export function DetailDrawer({
               Tags de risco
             </h3>
             <div className="grid">
-              <div aria-hidden={lente || undefined} className={`select-none [grid-area:1/1] ${lente ? "pointer-events-none" : ""}`}>
-                <ul className="flex flex-wrap gap-1.5">
-                  {l.tags.map((t, i) => (
-                    <li
-                      key={t.label}
-                      className="transition-[opacity,translate,filter] duration-500 ease-out starting:translate-y-2 starting:opacity-0 motion-reduce:transition-none"
-                      style={{ filter: lockFilter(lente), transitionDelay: `${150 + i * 60}ms` }}
-                    >
-                      <Tag {...t} className="!px-3 !py-2 !text-[13px]" />
-                    </li>
-                  ))}
-                </ul>
-                <p
-                  className="mt-3 text-[13px] leading-relaxed text-nevoa transition-[filter] duration-[600ms] ease-out motion-reduce:transition-none"
-                  style={{ filter: lockFilter(lente), transitionDelay: `${l.tags.length * 60}ms` }}
-                >
-                  {l.why}
-                </p>
+              <div
+                className={`transition-[filter] duration-[600ms] ease-out select-none [grid-area:1/1] motion-reduce:transition-none ${lente ? "pointer-events-none" : ""}`}
+                style={{ filter: lockFilter(lente) }}
+              >
+                {lente ? (
+                  <div aria-hidden="true">
+                    <TagPlaceholders large />
+                    <div className="mt-4 flex flex-col gap-2.5">
+                      <span className="block h-2.5 w-full rounded-full bg-nevoa/20" />
+                      <span className="block h-2.5 w-[88%] rounded-full bg-nevoa/20" />
+                      <span className="block h-2.5 w-3/5 rounded-full bg-nevoa/20" />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <ul className="flex flex-wrap gap-1.5">
+                      {l.tags.map((t, i) => (
+                        <li
+                          key={t.label}
+                          className="transition-[opacity,translate] duration-500 ease-out starting:translate-y-2 starting:opacity-0 motion-reduce:transition-none"
+                          style={{ transitionDelay: `${150 + i * 60}ms` }}
+                        >
+                          <Tag {...t} className="!px-3 !py-2 !text-[13px]" />
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-3 text-[13px] leading-relaxed text-nevoa">{l.why}</p>
+                  </>
+                )}
               </div>
               {lente && (
                 <div className="relative z-10 flex flex-col items-start gap-2.5 self-start rounded-[14px] border border-latao/50 bg-tinta/90 p-4 transition-opacity duration-300 [grid-area:1/1] starting:opacity-0">

@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE } from "@/content/site";
 import { AssinanteApp } from "@/components/assinante/AssinanteApp";
+import type { Plan } from "@/components/assinante/shared";
 
 const TITLE = "Área do assinante (demonstração) | Luneta de Leilões";
 const DESCRIPTION =
   "Demonstração da área do assinante com exemplos fictícios: filtros, mapa, tags de risco e selos nos planos Lente e Luneta.";
 
+// openGraph e twitter da página substituem os do layout inteiros (merge raso), por isso o card vai de novo.
+// A imagem vem de ./opengraph-image.tsx (a mesma da home); o Next a usa também como twitter:image.
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
@@ -20,13 +23,23 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 /**
  * Área do assinante · DEMONSTRAÇÃO (só front-end, sem login nem pagamento), a partir do protótipo
  * project/App Assinante.dc.html. A faixa e o rodapé são estáticos; a interação vive em <AssinanteApp>.
+ * O plano inicial (?plano=lente) é decidido aqui, no servidor, para o HTML já sair no plano certo;
+ * por isso a rota é dinâmica.
  */
-export default function AssinantePage() {
+export default async function AssinantePage({ searchParams }: PageProps<"/assinante">) {
+  const { plano } = await searchParams;
+  const initialPlan: Plan = plano === "lente" ? "lente" : "luneta";
+
   return (
     <>
       <a
@@ -43,13 +56,13 @@ export default function AssinantePage() {
         <p>Demonstração com exemplos fictícios · sem login</p>
         <Link
           href="/"
-          className="inline-flex min-h-8 items-center rounded-full underline decoration-noite-fixa/50 underline-offset-[3px] hover:decoration-noite-fixa focus-visible:outline-noite-fixa"
+          className="inline-flex min-h-11 pointer-fine:min-h-8 items-center rounded-full underline decoration-noite-fixa/50 underline-offset-[3px] hover:decoration-noite-fixa focus-visible:outline-noite-fixa"
         >
           <span aria-hidden="true">←&nbsp;</span>Voltar ao site
         </Link>
       </aside>
 
-      <AssinanteApp />
+      <AssinanteApp initialPlan={initialPlan} />
 
       <footer className="border-t border-nevoa/15 px-4 pt-8 pb-16 text-[13px] leading-relaxed text-nevoa sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">

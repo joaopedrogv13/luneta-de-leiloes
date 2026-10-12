@@ -90,9 +90,13 @@ export function LensFrame({
   );
 }
 
+/** Selo genérico do Lente: o mesmo desenho em todo cartão, para não entregar o nível. */
+const GENERIC_SEAL = 2;
+
 /**
- * Rótulo do selo + selo de anéis. No Lente fica desfocado (e escondido de leitores de tela);
- * ao trocar para a Luneta o desfoque sai em 600ms e os anéis se desenham um a um (120ms entre eles).
+ * Rótulo do selo + selo de anéis. No Lente o selo real nem vai para o DOM: aparece um marcador neutro,
+ * igual em todo cartão (rótulo fixo "Selo · Luneta" e um selo genérico desfocado, de largura fixa).
+ * Ao trocar para a Luneta o desfoque sai em 600ms e os anéis se desenham um a um (120ms entre eles).
  */
 export function SealBadge({
   listing,
@@ -111,22 +115,43 @@ export function SealBadge({
   const lente = plan === "lente";
   const tone = lente ? "text-nevoa" : listing.seal === 3 ? "text-pos" : listing.seal > 0 ? "text-latao-texto" : "text-nevoa";
   return (
-    <div
-      aria-hidden={lente || undefined}
-      className={`flex items-center gap-2 transition-[filter] duration-[600ms] ease-out select-none motion-reduce:transition-none ${reverse ? "flex-row-reverse justify-end" : ""} ${className}`}
-      style={{ filter: lockFilter(lente) }}
-    >
+    <div className={`flex items-center gap-2 select-none ${reverse ? "flex-row-reverse justify-end" : ""} ${className}`}>
       <span className={`text-[10px] leading-none font-semibold tracking-[0.12em] whitespace-nowrap uppercase transition-colors duration-500 ${tone}`}>
-        <span className="sr-only">Selo: </span>
-        {sealLabel(listing)}
+        {lente ? (
+          <>
+            <span aria-hidden="true">Selo · Luneta</span>
+            <span className="sr-only">Selo: recurso do plano Luneta</span>
+          </>
+        ) : (
+          <>
+            <span className="sr-only">Selo: </span>
+            {sealLabel(listing)}
+          </>
+        )}
       </span>
       <span
-        className={`inline-flex [&_[data-ring]]:[stroke-dasharray:1] [&_[data-ring]]:[transition:stroke-dashoffset_500ms_ease-out_calc(var(--r,0)*120ms_+_150ms)] motion-reduce:[&_[data-ring]]:[transition:none] ${
+        aria-hidden="true"
+        className={`inline-flex transition-[filter] duration-[600ms] ease-out motion-reduce:transition-none [&_[data-ring]]:[stroke-dasharray:1] [&_[data-ring]]:[transition:stroke-dashoffset_500ms_ease-out_calc(var(--r,0)*120ms_+_150ms)] motion-reduce:[&_[data-ring]]:[transition:none] ${
           lente ? "[&_[data-ring]]:[stroke-dashoffset:1]" : "[&_[data-ring]]:[stroke-dashoffset:0]"
         }`}
+        style={{ filter: lockFilter(lente) }}
       >
-        <Seal level={listing.seal} size={size} />
+        <Seal level={lente ? GENERIC_SEAL : listing.seal} size={size} />
       </span>
+    </div>
+  );
+}
+
+/** Larguras dos marcadores de tag no Lente: as mesmas em todo cartão (não entregam quantas tags há, nem quais). */
+const TAG_SLOTS = ["w-[72px]", "w-24", "w-[60px]"] as const;
+
+/** Marcadores neutros no lugar das tags de risco (plano Lente): sem texto, sem cor de gravidade. */
+export function TagPlaceholders({ large = false }: { large?: boolean }) {
+  return (
+    <div aria-hidden="true" className="flex flex-wrap gap-1.5">
+      {TAG_SLOTS.map((w) => (
+        <span key={w} className={`block rounded-full border border-nevoa/45 bg-nevoa/10 ${large ? "h-[31px]" : "h-[26px]"} ${w}`} />
+      ))}
     </div>
   );
 }
@@ -134,6 +159,8 @@ export function SealBadge({
 /**
  * Favoritar com alerta de praça. Na Luneta alterna "Favoritar" ↔ "Alerta ativo" (o anel vira sólido
  * com um "pop"); no Lente é um convite: abre o modal de upgrade.
+ * O estado vai só no rótulo (sem aria-pressed), para o leitor de tela não ouvir nome e estado trocando
+ * juntos ("Alerta ativo, pressionado"); o nome acessível é sempre o texto visível.
  */
 export function FavButton({
   listing,
@@ -178,10 +205,11 @@ export function FavButton({
     <button
       type="button"
       onClick={onClick}
-      aria-pressed={lente ? undefined : active}
       aria-haspopup={lente ? "dialog" : undefined}
-      className={`relative z-10 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border font-medium whitespace-nowrap transition-[background-color,border-color,color,scale] duration-150 active:scale-[0.96] ${
-        long ? "min-h-12 w-full px-5 text-sm font-semibold" : "min-h-11 px-3.5 text-xs pointer-fine:min-h-9"
+      className={`relative z-10 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border font-medium transition-[background-color,border-color,color,scale] duration-150 active:scale-[0.96] ${
+        long
+          ? "min-h-12 w-full px-5 py-2.5 text-center text-sm leading-snug font-semibold text-balance whitespace-normal"
+          : "min-h-11 px-3.5 text-xs whitespace-nowrap pointer-fine:min-h-9"
       } ${on ? "border-latao bg-latao/15 text-latao-texto" : "border-nevoa/35 text-nevoa hover:border-latao hover:text-luar"}`}
     >
       {lente ? (
@@ -196,7 +224,7 @@ export function FavButton({
       {label}
       {!long && (
         <span className="sr-only">
-          ({listing.title}, {listing.place})
+          {on && " · remover"} ({listing.title}, {listing.place})
         </span>
       )}
     </button>
