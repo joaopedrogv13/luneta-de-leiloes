@@ -7,6 +7,7 @@ npm install
 npm run dev     # http://localhost:3000
 npm run build && npm start
 npm run lint
+npm run check:publicacao   # lista o que ainda não pode ir ao ar (ver "Antes de publicar")
 ```
 
 ### Publicar na Vercel (link para testar no PC e no celular)
@@ -21,6 +22,49 @@ npm run lint
 Todo o texto vem de `src/content/site.ts` (blueprint, Passo 3). Qualquer trecho entre colchetes, como `[X]`,
 aparece na página como **placeholder visível** (borda tracejada em latão). Para publicar, troque o colchete
 pelo valor real no arquivo de conteúdo.
+
+## Antes de publicar: checagem e buscadores
+
+### `npm run check:publicacao`
+
+Script em Node puro (`scripts/checar-publicacao.mjs`, fora do build e do lint). Varre `src/content`, `src/components` e
+`src/app` lendo o texto como a página mostra, e aponta `arquivo:linha:coluna` com o trecho:
+
+- **a) placeholders entre colchetes** (e `null` no conteúdo, que vira `[X]`): **bloqueia**;
+- **b) "fictício" em texto visível**: só informa (rótulo de exemplo, ok enquanto os exemplos forem fictícios);
+- **c) notas internas** ("a validar", "versão publicada", "ainda não envia", "envio for ligado"…): **bloqueia**;
+- reservas de placeholder no código (`?? "[129]"`): não bloqueiam;
+- com `--url http://localhost:3000`, conta os `[data-placeholder]` do HTML servido. `--json` dá a saída em JSON.
+
+Código de saída 1 se houver item em a) ou c). **Resultado de 12/10/2026: não publicar, 24 itens bloqueiam** (os
+placeholders da tabela abaixo e os dois avisos de que o formulário ainda não envia, que saem quando ele for ligado).
+Limite conhecido: uma nota partida por um elemento JSX (`a <strong>validar</strong>`) não é pega.
+
+### Buscadores: fora do Google até o lançamento
+
+A chave `NEXT_PUBLIC_INDEXAR` (lida só em `src/content/site.ts` → `SITE.indexable`) decide.
+
+- **Sem a chave (padrão):** todas as páginas saem `noindex, nofollow`. O `robots.txt` é só `Allow: /`, sem `Disallow`
+  e sem `Sitemap`, de propósito: com Disallow o Google não abriria as páginas, não leria o noindex e manteria no índice
+  o que já tivesse do vercel.app. O JSON-LD nunca publica placeholder: pergunta do FAQ com `[...]` fica de fora, e plano
+  com preço `[...]` não vira oferta (hoje o JSON-LD tem só Organization e FAQPage).
+- **Com `NEXT_PUBLIC_INDEXAR=1`:** a página principal sai `index, follow` e o `robots.txt` anuncia o sitemap.
+- `/assinante` e a página 404 são sempre `noindex`.
+
+Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-leiloes.vercel.app` e busque
+`site:luneta-de-leiloes.vercel.app`. Se algo aparecer, o noindex tira no próximo rastreio; a ferramenta **Remoções** acelera.
+
+**No dia do lançamento:**
+1. Troque os placeholders (tabela abaixo) e confira os preços: `PLANS.plans[].price` e `priceValue` juntos.
+2. Na Vercel, **Settings → Environment Variables**, só no ambiente **Production**: `NEXT_PUBLIC_INDEXAR` = `1` e
+   `NEXT_PUBLIC_SITE_URL` = domínio final (ex.: `https://lunetadeleiloes.com.br`). Faça **Redeploy**: variáveis
+   `NEXT_PUBLIC_` entram no build. Preview e Development continuam noindex.
+3. **Settings → Domains**: domínio final como principal; `luneta-de-leiloes.vercel.app` (e o `www`, se não for o
+   principal) redirecionando com **308**.
+4. Confira no domínio final: `view-source:` com `content="index, follow"`, `/robots.txt` com a linha `Sitemap:`,
+   `/sitemap.xml` com o domínio final e o vercel.app respondendo 308.
+5. **Google Search Console**: propriedade do domínio (verificação por DNS), envie o sitemap e peça a indexação da home.
+   **Bing Webmaster Tools**: importe do Search Console. Confira os dados estruturados no Teste de pesquisa aprimorada.
 
 ## Placeholders `[ ]` na página
 
@@ -48,6 +92,8 @@ pelo valor real no arquivo de conteúdo.
 - **Exemplos de leilão** (`src/content/examples.ts`): 6 imóveis fictícios, sempre rotulados como "Exemplo fictício".
   O blueprint pede casos reais da base com a etiqueta "exemplo de oportunidade" e fotos; o cartão já aceita
   `photo` (WebP, servido via `next/image` dentro da moldura de lente). Hoje as fotos são placeholders listrados.
+  O Na Mira diz que, segundo o edital, o condomínio em atraso é quitado com o valor da arrematação: revisar com o
+  advogado junto com as explicações das tags.
 - **Cartão do Alvo no hero** (deságio contando até 48%) e **praças** (apartamento em Campinas/SP, R$ 400.000 → R$ 200.000,
   e o aviso "Seu favorito foi para a 2ª praça"): fictícios, rotulados.
 - **"Por dentro, depois de assinar"** e **área do assinante** (`/assinante`): usam os mesmos exemplos fictícios.
@@ -77,7 +123,14 @@ pelo valor real no arquivo de conteúdo.
   Acessibilidade 100, Boas práticas 100, SEO 100.
 - axe-core (WCAG 2.2 AA + boas práticas) sem violações em `/` e `/assinante` (Lente e Luneta), temas escuro e claro,
   390px e 1280px, com todas as categorias de tags abertas. Sem rolagem horizontal e sem erros no console.
-- Links internos do menu e dos CTAs param exatamente no início da seção (desktop, celular e movimento reduzido).
+- Links internos do menu e dos CTAs param exatamente no início da seção (desktop, celular e movimento reduzido). Vale
+  também ao chegar de outra página com âncora ("Voltar ao site" da `/assinante` → `/#planos`, "Ver planos" do 404,
+  link aberto numa aba nova): para a 72px do topo em 360, 390, 1280 e 1440.
+- Página 404: responde 404, título "Página não encontrada | Luneta de Leilões", noindex, axe sem violações.
+- Entradas genéricas: 250 ms depois de chegar ao bloco, opacidade de 0,83 a 0,92 (antes 0,36 a 0,55); tudo pronto em
+  ~0,58 s (antes ~1,05 s). FAQ e formulário com opacidade 1 desde o primeiro quadro.
+- Celular: a barra de atalhos some com os cartões de plano na tela e volta depois; Tab pela página e pelo rodapé sem
+  item focado sob a barra. Planos com a tabela recolhida e aberta sem violações no axe.
 - Um único `<h1>`, `lang="pt-BR"`, canonical, Open Graph/Twitter com imagem gerada, `sitemap.xml`, `robots.txt`,
   JSON-LD com Organization, Product/Offer (3 planos) e FAQPage.
 - `prefers-reduced-motion`: a seção do hero tem 1 tela e já mostra o estado final (mira travada); nenhuma animação de apoio roda.
@@ -87,12 +140,25 @@ pelo valor real no arquivo de conteúdo.
 - **Hero**: a intro inteira (as 6 etapas do Passo 4) roda de uma vez no primeiro gesto de rolar (dois dedos no trackpad,
   roda do mouse, toque ou teclado): ~1,9 s até a cena montar (lente, mapa, mira e cartão do Alvo) e ~2,7 s com o brilho
   final. Enquanto a cena monta, a página fica no topo e a inércia do trackpad é absorvida; com a cena montada, um gesto
-  novo já rola a página. Esc pula. Roda uma vez por visita (voltar da `/assinante` não repete; recarregar repete).
+  novo já rola a página. Esc pula. Roda uma vez por visita (o "Voltar ao site" da `/assinante` leva aos planos com o
+  hero já no estado final; recarregar repete).
   No celular, a lente fica entre o texto e o cartão e encolhe em telas baixas, sem cobrir os botões.
   A marcação vem do servidor, a etapa 1 vem do CSS (`html.motion`) e o GSAP é baixado no ócio (`HeroMotion.tsx`). Se o GSAP
   não carregar, a página pula direto para o estado final (`#topo[data-done]`, só CSS) e nunca trava a rolagem.
 - **Animações de apoio** (entradas, números contando, anéis desenhados, tags em cascata): IntersectionObserver + transições CSS
   (`MotionLayer.tsx` e o bloco "Animações de apoio" em `globals.css`). Ficam bem mais leves que um ScrollTrigger por bloco.
+  As entradas genéricas (`[data-reveal]`) são curtas: fade + 10 px em 0,45 s, cascata de no máximo 3 blocos (80 ms).
+  Planos, FAQ, chamada final e formulário não têm entrada: aparecem prontos.
+- **Âncoras e content-visibility**: as seções fora da tela têm altura estimada (900px) até serem desenhadas. Antes de
+  rolar até uma âncora, todas são medidas de uma vez (`html[data-cv="all"]`) e voltam a ser puladas dois quadros depois:
+  no clique interno e na chegada vinda de outra página (`InPageLinks.tsx`), e no carregamento com `#âncora` pelo script
+  do `<head>` em `layout.tsx`.
+- **Página 404** (`app/not-found.tsx`): lente vazia com o ponto de latão fora do campo, "Erro 404", "Essa página saiu do
+  alcance da luneta." e dois links, "Voltar ao início" e "Ver planos".
+- **Barra de atalhos do celular** (`MobileCtaBar.tsx`, abaixo de md): some enquanto os cartões de plano estão na tela
+  (`[data-plan-cards]`) e perto do formulário, só com IntersectionObserver; oculta, fica `inert`. Enquanto existe,
+  `html[data-cta-bar]` ganha `scroll-padding-bottom` (barra + área segura + 16px) para o foco não ficar sob ela (WCAG 2.4.11).
+- **Dados de deságio**: os três números na cor neutra; na página, o verde marca só ponto positivo.
 - **Vermelho das tags**: borda, fundo e ícone usam `#E5484D`; o **texto** da tag grave usa `#F26B70` no tema escuro, porque
   `#E5484D` em 12px sobre o fundo tingido da tag dá 4,0:1 (abaixo do AA). No tema claro, `#B3242A`.
 - **Extras do handoff mantidos**: tema claro (botão no menu, persistido, com o ícone sol ↔ lua animado), prévia
@@ -103,5 +169,8 @@ pelo valor real no arquivo de conteúdo.
 - **Níveis**: "Atenção" → cartão "Cuidado" animado → "Por isso, no plano Luneta…" → os três selos. Em seguida, as 26 tags
   de risco em categorias que abrem com animação; cada tag abre um pop-up (no celular, uma folha de baixo) com a explicação.
   As tags de uma categoria só entram na página quando ela é aberta.
-- **Tabela de planos**: cartões no visual do handoff + tabela comparativa completa (`<table>` acessível, rolável no celular).
+- **Planos**: cartões no visual do handoff + tabela comparativa completa (`<table>` acessível). Abaixo de 1024px a Luneta
+  vem primeiro (também no HTML, para leitura e foco seguirem a tela) e a tabela fica recolhida atrás de "Comparar todos
+  os recursos" (sem JavaScript, aparece aberta). A partir de 1024px: Lente → Luneta → Telescópio (`lg:order-*` +
+  `reading-flow: grid-order`; no Chrome/Edge o Tab segue a ordem visual, nos outros começa pela Luneta) e tabela aberta.
 - **WhatsApp** é obrigatório e precisa ser celular com DDD (máscara `(11) 91234-5678`).
