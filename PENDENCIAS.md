@@ -84,8 +84,11 @@ pelo valor real no arquivo de conteúdo.
 
 ## Decisões de implementação
 
-- **Hero**: a intro inteira (as 6 etapas do Passo 4) roda de uma vez, em ~1,1 s, no primeiro gesto de rolar (dois dedos no
-  trackpad, roda do mouse, toque ou teclado). Durante a intro a rolagem fica presa no topo; depois volta ao normal. Esc pula.
+- **Hero**: a intro inteira (as 6 etapas do Passo 4) roda de uma vez no primeiro gesto de rolar (dois dedos no trackpad,
+  roda do mouse, toque ou teclado): ~1,9 s até a cena montar (lente, mapa, mira e cartão do Alvo) e ~2,7 s com o brilho
+  final. Enquanto a cena monta, a página fica no topo e a inércia do trackpad é absorvida; com a cena montada, um gesto
+  novo já rola a página. Esc pula. Roda uma vez por visita (voltar da `/assinante` não repete; recarregar repete).
+  No celular, a lente fica entre o texto e o cartão e encolhe em telas baixas, sem cobrir os botões.
   A marcação vem do servidor, a etapa 1 vem do CSS (`html.motion`) e o GSAP é baixado no ócio (`HeroMotion.tsx`). Se o GSAP
   não carregar, a página pula direto para o estado final (`#topo[data-done]`, só CSS) e nunca trava a rolagem.
 - **Animações de apoio** (entradas, números contando, anéis desenhados, tags em cascata): IntersectionObserver + transições CSS

@@ -93,8 +93,8 @@ export function HeroScene() {
           />
         </div>
 
-        {/* Centro da lente: 66%/50% no desktop, 50%/70% no celular */}
-        <div aria-hidden="true" className="absolute top-[71%] left-1/2 sm:top-1/2 sm:left-[66%]">
+        {/* Centro da lente: 66%/50% no desktop; no celular, entre o texto e o cartão (--lens-y, globals.css) */}
+        <div aria-hidden="true" className="absolute top-[var(--lens-y)] left-1/2 sm:top-1/2 sm:left-[66%]">
           {/* Luneta de latão: ocular + 3 tubos + objetiva */}
           <div data-h="scope" className="absolute top-0 left-0 origin-center">
             <div className="flex items-center">
@@ -127,13 +127,13 @@ export function HeroScene() {
         <div
           data-h="glow"
           aria-hidden="true"
-          className="pointer-events-none absolute top-[71%] left-1/2 size-[min(78cqw,40cqh)] -translate-x-1/2 -translate-y-1/2 rounded-full sm:top-1/2 sm:left-[66%] sm:size-[min(52cqw,62cqh)]"
+          className="pointer-events-none absolute top-[var(--lens-y)] left-1/2 size-[var(--lens)] -translate-x-1/2 -translate-y-1/2 rounded-full sm:top-1/2 sm:left-[66%] sm:size-[min(52cqw,62cqh)]"
           style={{ boxShadow: LENS_GLOW }}
         />
 
         {/* Lente: moldura circular com anel de latão, mapa e retículo (fica noturna também no tema claro).
             O contêiner externo só posiciona (CSS responsivo); o GSAP anima apenas o interno. */}
-        <div className="absolute top-[71%] left-1/2 size-[min(78cqw,40cqh)] -translate-x-1/2 -translate-y-1/2 sm:top-1/2 sm:left-[66%] sm:size-[min(52cqw,62cqh)]">
+        <div className="absolute top-[var(--lens-y)] left-1/2 size-[var(--lens)] -translate-x-1/2 -translate-y-1/2 sm:top-1/2 sm:left-[66%] sm:size-[min(52cqw,62cqh)]">
         <div
           data-h="lens"
           className="relative h-full w-full overflow-hidden rounded-full border-[6px] border-latao"
@@ -157,7 +157,7 @@ export function HeroScene() {
               <BrazilMap variant="lens" highlight="sp" label="Mapa do Brasil com os leilões monitorados; a mira está travada em São Paulo" />
             </div>
             {/* retículo: o externo fica no pin de São Paulo; o GSAP anima o interno */}
-            <div aria-hidden="true" className="absolute top-[69.475%] left-[66.9%] size-[clamp(48px,14cqmin,72px)] -translate-x-1/2 -translate-y-1/2">
+            <div aria-hidden="true" className="absolute top-[69.475%] left-[66.9%] size-[clamp(36px,20%,72px)] -translate-x-1/2 -translate-y-1/2">
             <div
               data-h="reticle"
               className="absolute inset-0 rounded-full border-[1.5px] border-[#EAF0FF] shadow-[0_0_16px_rgba(234,240,255,.5)]"
@@ -213,15 +213,22 @@ export function HeroScene() {
             {HERO.titleStart} <em className="accent text-latao-texto">{HERO.titleEm}</em> {HERO.titleEnd}
           </h1>
           <p className="mt-4 max-w-[460px] text-[clamp(15px,1.3cqw,19px)] leading-normal text-nevoa">{HERO.subtitle}</p>
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 sm:gap-3">
             <a data-h="cta" href="#planos" className="btn-primary">
               {HERO.primary}
             </a>
-            <a href="#advogado" className="btn-ghost">
-              {HERO.secondary}
+            <a
+              href="#advogado"
+              className="btn-ghost max-sm:min-h-11 max-sm:gap-1.5 max-sm:border-transparent max-sm:px-0 max-sm:underline max-sm:decoration-latao/60 max-sm:underline-offset-4"
+            >
+              <span className="sm:hidden">{HERO.secondaryShort}</span>
+              <span className="max-sm:hidden">{HERO.secondary}</span>
+              <span aria-hidden="true" className="text-latao-texto sm:hidden">
+                →
+              </span>
             </a>
           </div>
-          <p className="mt-5 text-xs leading-relaxed font-medium text-nevoa">
+          <p className="mt-5 text-xs leading-relaxed font-medium text-nevoa max-sm:mt-4">
             <RichText text={HERO.trust} />
           </p>
         </div>

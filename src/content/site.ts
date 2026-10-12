@@ -44,6 +44,8 @@ export const HERO = {
     "Pare de abrir dezenas de sites de leiloeiros. A Luneta de Leilões reúne, compara e classifica cada oportunidade, da névoa ao alvo.",
   primary: "Ver planos",
   secondary: "Falar com um advogado especialista",
+  /** No celular o secundário vira link de texto ao lado do botão principal (sobra espaço para a lente). */
+  secondaryShort: "Falar com advogado",
   trust: "+[X] leilões ativos · [X] leiloeiros monitorados · atualizado todos os dias",
 } as const;
 

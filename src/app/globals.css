@@ -339,23 +339,30 @@
     padding-top: 92px;
   }
 }
-.motion #topo:not([data-done])
+/* Celular: a lente fica entre o texto (termina por volta de 400–415px) e o cartão do Alvo, ancorada embaixo:
+   o cartão (12px da borda, ~110px de altura) cobre ~29px dela. Em telas baixas ela encolhe em vez de subir
+   no texto. A partir de sm, o HeroScene usa outro posicionamento. */
+.hero-track [data-h="stage"] {
+  --lens: max(130px, min(78cqw, calc(100cqh - 512px)));
+  --lens-y: calc(100cqh - 93px - var(--lens) / 2);
+}
+.motion:not(.intro-seen) #topo:not([data-done])
   :is([data-h="sites-sharp"] [data-site], [data-h="map"], [data-h="map-sharp"], [data-h="map"] [data-pin], [data-h="reticle"], [data-h="glow"]) {
   opacity: 0;
 }
-.motion #topo:not([data-done]) [data-h="map-soft"] {
+.motion:not(.intro-seen) #topo:not([data-done]) [data-h="map-soft"] {
   opacity: 1;
 }
-.motion #topo:not([data-done]) [data-h="lens"] {
+.motion:not(.intro-seen) #topo:not([data-done]) [data-h="lens"] {
   opacity: 0;
   transform: scale(0.15);
 }
-.motion #topo:not([data-done]) [data-h="card"] {
+.motion:not(.intro-seen) #topo:not([data-done]) [data-h="card"] {
   opacity: 0;
   transform: translateY(24px);
 }
 /* camadas que se mexem na intro ganham composição própria (GPU) enquanto ela não termina */
-.motion #topo:not([data-done])
+.motion:not(.intro-seen) #topo:not([data-done])
   :is([data-h="fog"], [data-h="scope"], [data-h="lens"], [data-h="glow"], [data-h="map"], [data-h="map-soft"], [data-h="map-sharp"], [data-site], [data-h="card"]) {
   will-change: transform, opacity;
 }
@@ -365,7 +372,7 @@
     0 0 0 4px rgba(201, 162, 77, 0.25),
     0 0 44px rgba(201, 162, 77, 0.55);
 }
-.motion #topo:not([data-done]) [data-h="cta"] {
+.motion:not(.intro-seen) #topo:not([data-done]) [data-h="cta"] {
   box-shadow: 0 0 0 0 rgba(201, 162, 77, 0);
 }
 /* a luneta só existe durante a intro; fora dela não ocupa nada */
@@ -373,25 +380,26 @@
   opacity: 0;
   visibility: hidden;
 }
-.motion #topo:not([data-done]) [data-h="scope"] {
+.motion:not(.intro-seen) #topo:not([data-done]) [data-h="scope"] {
   opacity: 1;
   visibility: visible;
   transform: translate(-50%, -50%) translate(24cqw, -2cqh) rotate(-32deg) scale(0.38);
 }
 @media (min-width: 640px) {
-  .motion #topo:not([data-done]) [data-h="scope"] {
+  .motion:not(.intro-seen) #topo:not([data-done]) [data-h="scope"] {
     transform: translate(-50%, -50%) translate(26cqw, -22cqh) rotate(-32deg) scale(0.38);
   }
 }
-/* fim da intro: a névoa se dissipou; a dica some assim que a intro começa */
-#topo[data-done] [data-h="fog"] {
+/* fim da intro: a névoa se dissipou; a dica some assim que a intro começa.
+   html.intro-seen: a intro já rodou nesta visita (ex.: voltou da /assinante); o hero já nasce no estado final. */
+:is(#topo[data-done], .intro-seen #topo) [data-h="fog"] {
   opacity: 0;
   visibility: hidden;
 }
 [data-h="hint"] {
   transition: opacity 0.3s ease;
 }
-#topo:is([data-playing], [data-done]) [data-h="hint"] {
+:is(#topo[data-playing], #topo[data-done], .intro-seen #topo) [data-h="hint"] {
   opacity: 0;
 }
 /* mouse sobre a lente: o mapa acompanha 2–4px com inércia */

@@ -16,6 +16,14 @@ const SPEED = 1.1;
 const TOP_SLACK = 40;
 /** Fim do gesto: a página só destrava depois deste tempo sem rolagem (absorve a inércia do trackpad). */
 const QUIET_MS = 220;
+/** Ponto do timeline (s, antes do timeScale) em que a cena essencial já está montada (lente, mapa, mira e
+ *  cartão do Alvo). Daí em diante um gesto novo rola a página; brilho e pulso do botão seguem por cima. */
+const UNLOCK_AT = 2.05;
+/** Depois desse ponto, a inércia que sobrar do gesto que disparou a intro é absorvida no máximo por este tempo. */
+const HOLD_MAX_MS = 1600;
+/** Pausa entre eventos de roda que indica um gesto novo. A inércia do trackpad chega a cada 8–16 ms (até ~60 ms
+ *  num aparelho lento); a roda do mouse girada com calma, a cada 100 ms ou mais. */
+const NEW_GESTURE_GAP_MS = 90;
 /** Se o GSAP não chegar até este tempo depois do gesto (rede lenta, arquivo indisponível), a cena vai ao fim. */
 const WATCHDOG_MS = 700;
 const FORWARD_KEYS = new Set(["ArrowDown", "PageDown", " ", "Spacebar", "End"]);
@@ -32,8 +40,10 @@ const spaceActivates = (t: EventTarget | null) =>
  *
  * Intro de UMA rolada: no topo da página, o primeiro gesto para baixo (dois dedos no trackpad, roda do
  * mouse, deslizar com um dedo no celular, ↓ / PageDown / espaço) dispara a animação inteira, com tempo fixo
- * e suave. Enquanto ela roda, a página fica parada (os eventos de rolagem são absorvidos) e só destrava
- * quando a animação termina E o gesto acabou, para a inércia do trackpad não arremessar a página.
+ * e suave. Enquanto ela monta a cena, a página fica parada (os eventos de rolagem são absorvidos). Com a
+ * cena montada (UNLOCK_AT), um gesto novo (dedo novo, roda depois de uma pausa, tecla) já rola a página, e
+ * a inércia do gesto que disparou a intro é absorvida no máximo por HOLD_MAX_MS. A intro roda uma vez por
+ * visita: ao voltar de outra página do site, o hero já vem no estado final (html.intro-seen).
  *
  * Saídas garantidas (a página nunca fica presa):
  * - Esc pula para o fim, inclusive enquanto o GSAP ainda está chegando;
@@ -58,7 +68,11 @@ export function HeroMotion() {
     let started = false; // o gesto já disparou (ou a cena já foi finalizada)
     let finished = false; // cena no estado final (data-done)
     let locked = false;
+    let unlockReady = false; // a cena essencial já está montada
+    let unlockAt = 0;
     let lastInput = 0;
+    let lastWheelAt = 0;
+    let lastWheelAbs = 0;
     let releaseTimer = 0;
     let watchdog = 0;
     let touchY: number | null = null;
@@ -116,6 +130,7 @@ export function HeroMotion() {
           },
           onComplete: onAnimDone,
         });
+        tl.call(reachUnlock, undefined, UNLOCK_AT);
         // 2 · a luneta se aproxima; a névoa abre; os sites dos leiloeiros surgem desfocados
         tl.to(scope, { x: 0, y: 0, scale: 1, duration: 0.8, ease: "power3.inOut" }, 0)
           .to(q("[data-h=fog]"), { opacity: 0.55, scale: 1.12, duration: 0.8 }, 0)
@@ -168,6 +183,7 @@ export function HeroMotion() {
       clearTimeout(watchdog);
       section.dataset.done = "";
       delete section.dataset.playing;
+      document.documentElement.classList.add("intro-seen");
       ctx?.revert();
       ctx = undefined;
       tl = undefined;
@@ -178,21 +194,31 @@ export function HeroMotion() {
     // ---- trava de rolagem ----------------------------------------------------------------------
     const scheduleRelease = () => {
       clearTimeout(releaseTimer);
-      const wait = QUIET_MS - (performance.now() - lastInput);
+      if (!locked) return;
+      const now = performance.now();
+      const wait = Math.min(QUIET_MS - (now - lastInput), HOLD_MAX_MS - (now - unlockAt));
       if (wait <= 0) release();
       else releaseTimer = window.setTimeout(scheduleRelease, wait + 10);
     };
     const markInput = () => {
       lastInput = performance.now();
-      if (finished) scheduleRelease();
+      if (unlockReady) scheduleRelease();
     };
     const release = () => {
+      clearTimeout(releaseTimer);
       locked = false;
-      detach(); // intro concluída: não precisamos mais ouvir nada
+      if (finished) detach(); // intro concluída: não precisamos mais ouvir nada
     };
+    function reachUnlock() {
+      if (unlockReady) return;
+      unlockReady = true;
+      unlockAt = performance.now();
+      scheduleRelease();
+    }
     function onAnimDone() {
       finalizeScene();
-      scheduleRelease();
+      reachUnlock();
+      if (!locked) detach();
     }
     /** Pular para o fim agora (Esc, rolagem por outro caminho, GSAP indisponível). */
     const finishNow = () => {
@@ -223,7 +249,17 @@ export function HeroMotion() {
 
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey) return; // zoom do navegador
+      const now = performance.now();
+      const abs = Math.abs(e.deltaX) + Math.abs(e.deltaY);
+      const gap = now - lastWheelAt;
+      // inércia do trackpad: valores que só caem (repetidos só no fim, já pequenos). A roda do mouse repete
+      // passos grandes e iguais (100, 120…), então conta como gesto novo.
+      const decaying = abs < lastWheelAbs || (abs === lastWheelAbs && abs <= 12);
+      lastWheelAt = now;
+      lastWheelAbs = abs;
       if (locked) {
+        // cena montada e roda depois de uma pausa, ou acelerando de novo: é um gesto novo, a página rola
+        if (unlockReady && (gap > NEW_GESTURE_GAP_MS || !decaying)) return release();
         e.preventDefault();
         markInput();
         return;
@@ -235,6 +271,7 @@ export function HeroMotion() {
     };
     const onTouchStart = (e: TouchEvent) => {
       touchY = e.touches.length === 1 ? e.touches[0].clientY : null;
+      if (locked && unlockReady) release(); // dedo novo com a cena montada: este deslize já rola a página
     };
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length > 1) return; // pinça (zoom): nunca bloquear
@@ -252,7 +289,9 @@ export function HeroMotion() {
     };
     const onTouchEnd = () => {
       touchY = null;
-      if (locked) markInput();
+      if (!locked) return;
+      if (unlockReady) release(); // no toque não há inércia a absorver (os movimentos foram bloqueados)
+      else markInput();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey || e.ctrlKey || e.metaKey || isTyping(e.target)) return;
@@ -264,6 +303,7 @@ export function HeroMotion() {
           return;
         }
         if (SCROLL_KEYS.has(e.key)) {
+          if (unlockReady) return release(); // a tecla já rola a página
           e.preventDefault();
           markInput();
         }
@@ -325,8 +365,9 @@ export function HeroMotion() {
     }
 
     attach();
-    // Página aberta já rolada (link com #âncora, recarregar no meio): cena direto no estado final.
-    if (window.scrollY > TOP_SLACK) finishNow();
+    // Página aberta já rolada (link com #âncora, recarregar no meio) ou intro já vista nesta visita:
+    // cena direto no estado final.
+    if (window.scrollY > TOP_SLACK || document.documentElement.classList.contains("intro-seen")) finishNow();
     // No ócio: baixa o GSAP e já deixa o timeline montado (pausado), para o primeiro gesto só dar "play".
     const cancelIdle = whenIdle(() => {
       loadGsap()
