@@ -13,7 +13,8 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  robots: { index: false, follow: true },
+  // Demonstração: nunca indexada; só segue os links quando o site é indexável (substitui o robots do layout).
+  robots: { index: false, follow: SITE.indexable },
   alternates: { canonical: "/assinante" },
   openGraph: {
     type: "website",

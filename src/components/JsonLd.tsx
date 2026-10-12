@@ -1,7 +1,7 @@
 import { FAQ, PLANS, SITE } from "@/content/site";
-import { plain } from "@/components/ui/RichText";
+import { hasPlaceholder } from "@/components/ui/RichText";
 
-/** Dados estruturados (schema.org): Organization, Product/Offer (planos) e FAQPage. */
+/** Dados estruturados (schema.org): Organization, Product/Offer (planos) e FAQPage (só perguntas sem placeholder). */
 export function JsonLd() {
   const org = {
     "@type": "Organization",
@@ -41,16 +41,20 @@ export function JsonLd() {
     })),
   };
 
+  // Pergunta com placeholder (ex.: "Hoje são [X] leiloeiros") fica fora: o buscador mostraria o "X" como resposta.
+  // Volta sozinha quando o colchete for trocado pelo valor real em site.ts.
+  const faqItems = FAQ.items.filter((f) => !hasPlaceholder(f.q) && !hasPlaceholder(f.a));
   const faq = {
     "@type": "FAQPage",
-    mainEntity: FAQ.items.map((f) => ({
+    mainEntity: faqItems.map((f) => ({
       "@type": "Question",
       name: f.q,
-      acceptedAnswer: { "@type": "Answer", text: plain(f.a) },
+      acceptedAnswer: { "@type": "Answer", text: f.a },
     })),
   };
 
-  const data = { "@context": "https://schema.org", "@graph": [org, product, faq] };
+  const graph = faqItems.length > 0 ? [org, product, faq] : [org, product];
+  const data = { "@context": "https://schema.org", "@graph": graph };
   return (
     <script
       type="application/ld+json"

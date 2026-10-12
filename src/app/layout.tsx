@@ -45,7 +45,8 @@ export const metadata: Metadata = {
     title: SITE.title,
     description: SITE.description,
   },
-  robots: { index: true, follow: true },
+  // Fora dos buscadores até o lançamento (SITE.indexable).
+  robots: { index: SITE.indexable, follow: SITE.indexable },
   formatDetection: { telephone: false },
 };
 

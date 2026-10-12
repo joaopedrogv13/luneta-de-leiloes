@@ -11,6 +11,8 @@ export const SITE = {
   shortName: "Luneta",
   /** [domínio] confirmar no registro.br antes de publicar. */
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://lunetadeleiloes.com.br",
+  /** Só NEXT_PUBLIC_INDEXAR="1" libera buscadores: até o domínio final, o site publicado tem placeholders. */
+  indexable: process.env.NEXT_PUBLIC_INDEXAR === "1",
   locale: "pt_BR",
   title: "Leilões de Imóveis do Brasil em um Só Lugar | Luneta de Leilões",
   description:
