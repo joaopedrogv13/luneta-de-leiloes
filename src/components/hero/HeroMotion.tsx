@@ -16,63 +16,82 @@ const SPEED = 1.1;
 const TOP_SLACK = 40;
 /** Fim do gesto: a página só destrava depois deste tempo sem rolagem (absorve a inércia do trackpad). */
 const QUIET_MS = 220;
+/** Se o GSAP não chegar até este tempo depois do gesto (rede lenta, arquivo indisponível), a cena vai ao fim. */
+const WATCHDOG_MS = 700;
 const FORWARD_KEYS = new Set(["ArrowDown", "PageDown", " ", "Spacebar", "End"]);
 const SCROLL_KEYS = new Set([...FORWARD_KEYS, "ArrowUp", "PageUp", "Home"]);
 
 const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+/** Controles que o espaço aciona (em links o espaço rola a página, então não entram aqui). */
+const spaceActivates = (t: EventTarget | null) =>
+  t instanceof HTMLElement && !!t.closest("button,summary,[role=button],input,select,textarea,label");
 
 /**
  * Ilha cliente do hero (a marcação vem do servidor, em HeroScene).
  *
  * Intro de UMA rolada: no topo da página, o primeiro gesto para baixo (dois dedos no trackpad, roda do
- * mouse, deslizar no celular, ↓ / PageDown / espaço) dispara a animação inteira, com tempo fixo e suave.
- * Enquanto ela roda, a página fica parada (os eventos de rolagem são absorvidos) e só destrava quando a
- * animação termina E o gesto acabou, para a inércia do trackpad não arremessar a página para a seção
- * seguinte. Esc pula para o fim. Se a página rolar por outro caminho (link do menu, barra de rolagem,
- * Tab), a cena vai direto para o estado final.
+ * mouse, deslizar com um dedo no celular, ↓ / PageDown / espaço) dispara a animação inteira, com tempo fixo
+ * e suave. Enquanto ela roda, a página fica parada (os eventos de rolagem são absorvidos) e só destrava
+ * quando a animação termina E o gesto acabou, para a inércia do trackpad não arremessar a página.
  *
- * Desempenho: só transform e opacity animam. O desfoque do mapa e dos "sites" é feito trocando a
- * opacidade de duas camadas (desfocada estática × nítida) e o brilho de luar é uma camada própria.
+ * Saídas garantidas (a página nunca fica presa):
+ * - Esc pula para o fim, inclusive enquanto o GSAP ainda está chegando;
+ * - se o GSAP não carregar em WATCHDOG_MS (ou falhar), a cena vai direto ao estado final;
+ * - se a página rolar por outro caminho (link do menu, barra de rolagem, Tab), idem;
+ * - pinça com dois dedos nunca é bloqueada.
+ *
+ * Ao terminar, #topo ganha data-done e os estilos do GSAP são removidos: o estado final é só CSS
+ * (responsivo: girar o celular ou redimensionar não desalinha nada).
  */
 export function HeroMotion() {
   useEffect(() => {
     const el = document.getElementById("topo");
     if (!el || !document.documentElement.classList.contains("motion")) return;
+    const section = el;
+    const wide = matchMedia("(min-width: 640px)"); // o mesmo critério do CSS (conta a barra de rolagem)
 
     let gsapPromise: Promise<Gsap> | undefined;
     let ctx: { revert: () => void } | undefined;
     let tl: Timeline | undefined;
-    let builtFor = ""; // tamanho da cena quando o timeline foi montado
-    let started = false; // o gesto já disparou (ou a cena foi finalizada)
-    let animDone = false;
+    let builtFor = "";
+    let started = false; // o gesto já disparou (ou a cena já foi finalizada)
+    let finished = false; // cena no estado final (data-done)
     let locked = false;
     let lastInput = 0;
     let releaseTimer = 0;
+    let watchdog = 0;
     let touchY: number | null = null;
     let cancelled = false;
 
-    const loadGsap = () => (gsapPromise ??= import("gsap").then((m) => m.gsap));
+    const counter = section.querySelector<HTMLElement>("[data-h=count]");
+    const stars = section.querySelector<HTMLElement>("[data-h=stars]");
 
-    const sizeKey = () => `${el.clientWidth}x${el.clientHeight}`;
+    const loadGsap = () =>
+      (gsapPromise ??= import("gsap")
+        .then((m) => m.gsap)
+        .catch((err) => {
+          gsapPromise = undefined; // permite tentar de novo depois
+          throw err;
+        }));
+
+    const sizeKey = () => `${section.clientWidth}x${section.clientHeight}`;
+
     const build = (gsap: Gsap) => {
       if (tl && builtFor === sizeKey()) return tl;
-      // montado antes com outro tamanho de tela (ex.: janela redimensionada): remonta com as medidas atuais
       ctx?.revert();
       tl = undefined;
       builtFor = sizeKey();
       ctx = gsap.context(() => {
-        const q = gsap.utils.selector(el);
+        const q = gsap.utils.selector(section);
         const stage = q("[data-h=stage]")[0] as HTMLElement;
         const map = q("[data-h=map]")[0] as HTMLElement;
-        const counter = q("[data-h=count]")[0] as HTMLElement;
         const scope = q("[data-h=scope]");
         const lens = q("[data-h=lens]");
         const reticle = q("[data-h=reticle]");
         const cta = q("[data-h=cta]");
-        const narrow = stage.clientWidth < 640;
+        const narrow = !wide.matches;
         const num = { v: 0 };
-        counter.textContent = "0";
 
         // Mesma posição "ao longe" que o CSS da etapa 1 (html.motion) já mostra.
         gsap.set(scope, {
@@ -84,23 +103,21 @@ export function HeroMotion() {
           scale: 0.38,
           opacity: 1,
         });
-        // O retículo mora no pin de São Paulo; começa deslocado para o centro da lente.
+        // O retículo mora no pin de São Paulo (contêiner externo); o interno começa no centro da lente.
         gsap.set(reticle, { x: (0.5 - SP_X / 400) * map.clientWidth, y: (0.5 - SP_Y / 400) * map.clientHeight, scale: 1.8, opacity: 0 });
 
-        // Durante a intro as estrelas param de piscar (menos uma camada de tela inteira a recompor por quadro).
-        const sky = q("[data-h=stars]")[0] as HTMLElement | undefined;
         tl = gsap.timeline({
           paused: true,
           defaults: { ease: "power2.inOut" },
-          onStart: () => sky?.style.setProperty("animation-play-state", "paused"),
-          onComplete: () => {
-            sky?.style.removeProperty("animation-play-state");
-            onAnimDone();
+          onStart: () => {
+            if (counter) counter.textContent = "0";
+            // durante a intro as estrelas param de piscar (menos uma camada de tela inteira por quadro)
+            stars?.style.setProperty("animation-play-state", "paused");
           },
+          onComplete: onAnimDone,
         });
-        tl.to(q("[data-h=hint]"), { opacity: 0, y: 8, duration: 0.3, ease: "power1.out" }, 0)
-          // 2 · a luneta se aproxima; a névoa abre; os sites dos leiloeiros surgem desfocados
-          .to(scope, { x: 0, y: 0, scale: 1, duration: 0.8, ease: "power3.inOut" }, 0)
+        // 2 · a luneta se aproxima; a névoa abre; os sites dos leiloeiros surgem desfocados
+        tl.to(scope, { x: 0, y: 0, scale: 1, duration: 0.8, ease: "power3.inOut" }, 0)
           .to(q("[data-h=fog]"), { opacity: 0.55, scale: 1.12, duration: 0.8 }, 0)
           .to(q("[data-h=sites-soft] [data-site]"), { opacity: 0.9, duration: 0.5, ease: "power1.out" }, 0.15)
           .fromTo(q("[data-h=sites] [data-site]"), { y: -30 }, { y: 0, duration: 0.9, ease: "power2.out", stagger: (i: number) => (i % 4) * 0.06 }, 0.1)
@@ -108,8 +125,7 @@ export function HeroMotion() {
           .to(q("[data-h=tube]"), { x: (i: number) => i * 18, duration: 0.35, stagger: 0.04, ease: "power2.out" }, 0.62)
           .to(scope, { scale: 1.9, opacity: 0, duration: 0.38, ease: "power2.in" }, 0.92)
           .fromTo(lens, { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 0.95)
-          // a névoa se dissipa de vez quando a lente abre (autoAlpha → visibility: hidden): a parte mais pesada
-          // da intro (foco do mapa e pins) já roda sem essa camada translúcida do tamanho da tela
+          // a névoa se dissipa de vez quando a lente abre: a parte mais pesada já roda sem essa camada
           .to(q("[data-h=fog]"), { autoAlpha: 0, scale: 1.3, duration: 0.5, ease: "power1.in" }, 0.75)
           .to(map, { opacity: 1, duration: 0.35, ease: "power1.out" }, 1)
           // 4 · foco: o mapa sai do desfoque, os pins acendem, os sites ficam nítidos
@@ -131,7 +147,7 @@ export function HeroMotion() {
               duration: 0.9,
               ease: "expo.out",
               onUpdate: () => {
-                counter.textContent = String(Math.round(num.v));
+                if (counter) counter.textContent = String(Math.round(num.v));
               },
             },
             2.05,
@@ -141,72 +157,68 @@ export function HeroMotion() {
           .to(cta, { boxShadow: CTA_GLOW, duration: 0.45, ease: "power1.out" }, 2.35)
           .to(cta, { scale: 1.04, duration: 0.16, yoyo: true, repeat: 1, ease: "power1.inOut" }, 2.55);
         tl.timeScale(SPEED);
-
-        // Mouse sobre a lente: o mapa desloca 2–4px com inércia; sair recentra.
-        if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
-          const lensEl = lens[0] as HTMLElement;
-          const mx = gsap.quickTo(map, "x", { duration: 0.6, ease: "power3" });
-          const my = gsap.quickTo(map, "y", { duration: 0.6, ease: "power3" });
-          const onMove = (e: PointerEvent) => {
-            const r = lensEl.getBoundingClientRect();
-            mx(((e.clientX - r.left) / r.width - 0.5) * 8);
-            my(((e.clientY - r.top) / r.height - 0.5) * 8);
-          };
-          const onLeave = () => {
-            mx(0);
-            my(0);
-          };
-          lensEl.addEventListener("pointermove", onMove);
-          lensEl.addEventListener("pointerleave", onLeave);
-          return () => {
-            lensEl.removeEventListener("pointermove", onMove);
-            lensEl.removeEventListener("pointerleave", onLeave);
-          };
-        }
-      }, el);
+      }, section);
       return tl!;
     };
 
-    // ---- trava de rolagem ----------------------------------------------------------------------
-    const markInput = () => {
-      lastInput = performance.now();
-      if (animDone) scheduleRelease();
+    /** Estado final só com CSS: marca data-done e remove os estilos que o GSAP deixou. */
+    const finalizeScene = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(watchdog);
+      section.dataset.done = "";
+      delete section.dataset.playing;
+      ctx?.revert();
+      ctx = undefined;
+      tl = undefined;
+      if (counter) counter.textContent = String(ALVO_DESAGIO);
+      stars?.style.removeProperty("animation-play-state");
     };
+
+    // ---- trava de rolagem ----------------------------------------------------------------------
     const scheduleRelease = () => {
       clearTimeout(releaseTimer);
       const wait = QUIET_MS - (performance.now() - lastInput);
       if (wait <= 0) release();
       else releaseTimer = window.setTimeout(scheduleRelease, wait + 10);
     };
+    const markInput = () => {
+      lastInput = performance.now();
+      if (finished) scheduleRelease();
+    };
     const release = () => {
       locked = false;
       detach(); // intro concluída: não precisamos mais ouvir nada
     };
     function onAnimDone() {
-      animDone = true;
+      finalizeScene();
       scheduleRelease();
     }
+    /** Pular para o fim agora (Esc, rolagem por outro caminho, GSAP indisponível). */
+    const finishNow = () => {
+      started = true;
+      finalizeScene();
+      release();
+    };
 
     const play = async () => {
       if (started) return;
       started = true;
       locked = true;
       lastInput = performance.now();
-      const gsap = await loadGsap();
-      if (cancelled) return;
-      build(gsap).play();
-    };
-
-    /** A página saiu do topo sem a intro (menu, barra de rolagem, Tab): vai direto ao estado final. */
-    const finishNow = async () => {
-      started = true;
-      locked = false;
-      const gsap = await loadGsap();
-      if (cancelled) return;
-      const t = build(gsap);
-      t.progress(1);
-      animDone = true;
-      release();
+      section.dataset.playing = "";
+      watchdog = window.setTimeout(() => {
+        if (!tl || !tl.isActive()) finishNow();
+      }, WATCHDOG_MS);
+      try {
+        const gsap = await loadGsap();
+        if (cancelled || finished) return;
+        if (window.scrollY > TOP_SLACK) return finishNow(); // a página saiu do topo enquanto o GSAP chegava
+        clearTimeout(watchdog);
+        build(gsap).play();
+      } catch {
+        if (!cancelled) finishNow();
+      }
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -222,16 +234,17 @@ export function HeroMotion() {
       play();
     };
     const onTouchStart = (e: TouchEvent) => {
-      touchY = e.touches[0]?.clientY ?? null;
+      touchY = e.touches.length === 1 ? e.touches[0].clientY : null;
     };
     const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 1) return; // pinça (zoom): nunca bloquear
       if (locked) {
         if (e.cancelable) e.preventDefault();
         markInput();
         return;
       }
       if (started || touchY === null || window.scrollY > TOP_SLACK) return;
-      const dy = touchY - (e.touches[0]?.clientY ?? touchY); // > 0: dedo subindo = rolar para baixo
+      const dy = touchY - e.touches[0].clientY; // > 0: dedo subindo = rolar para baixo
       if (dy > 6) {
         if (e.cancelable) e.preventDefault();
         play();
@@ -243,11 +256,11 @@ export function HeroMotion() {
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey || e.ctrlKey || e.metaKey || isTyping(e.target)) return;
-      // espaço em botão/link aciona o controle, não rola a página
-      if (e.key === " " && e.target instanceof HTMLElement && e.target.closest("button,a,summary,[role=button]")) return;
+      if (e.key === " " && spaceActivates(e.target)) return;
       if (locked) {
         if (e.key === "Escape") {
-          tl?.progress(1);
+          if (tl?.isActive()) tl.progress(1);
+          else finishNow();
           return;
         }
         if (SCROLL_KEYS.has(e.key)) {
@@ -256,20 +269,42 @@ export function HeroMotion() {
         }
         return;
       }
-      if (!started && window.scrollY <= TOP_SLACK && FORWARD_KEYS.has(e.key)) {
+      const forward = FORWARD_KEYS.has(e.key) && !(e.key === " " && e.shiftKey); // Shift+espaço volta
+      if (!started && window.scrollY <= TOP_SLACK && forward) {
         e.preventDefault();
         play();
       }
     };
     const onScroll = () => {
-      if (window.scrollY <= TOP_SLACK) return;
-      if (locked) {
-        // rolagem que não veio de roda/toque/tecla (ex.: âncora do menu): não brigamos com ela
-        tl?.progress(1);
-        return;
-      }
-      if (!started) finishNow();
+      if (window.scrollY <= TOP_SLACK || finished) return;
+      // rolagem que não veio de roda/toque/tecla (âncora do menu, barra de rolagem, Tab): não brigamos com ela
+      finishNow();
     };
+
+    // Mouse sobre a lente: o mapa desloca 2–4px com inércia (transição CSS); sair recentra.
+    const lensEl = section.querySelector<HTMLElement>("[data-h=lens]");
+    const mapEl = section.querySelector<HTMLElement>("[data-h=map]");
+    const onLensMove = (e: PointerEvent) => {
+      if (!lensEl || !mapEl || e.pointerType !== "mouse") return;
+      const r = lensEl.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width - 0.5) * 8;
+      const y = ((e.clientY - r.top) / r.height - 0.5) * 8;
+      mapEl.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+    };
+    const onLensLeave = () => mapEl?.style.removeProperty("transform");
+    lensEl?.addEventListener("pointermove", onLensMove);
+    lensEl?.addEventListener("pointerleave", onLensLeave);
+
+    // Antes da primeira rolada: se a tela mudar de tamanho (girar o celular), descarta o timeline
+    // pré-montado (medidas antigas) e devolve a etapa 1 ao CSS, que é responsivo.
+    const ro = new ResizeObserver(() => {
+      if (!started && tl && builtFor !== sizeKey()) {
+        ctx?.revert();
+        ctx = undefined;
+        tl = undefined;
+      }
+    });
+    ro.observe(section);
 
     const opts = { passive: false } as const;
     const attach = () => {
@@ -294,16 +329,24 @@ export function HeroMotion() {
     if (window.scrollY > TOP_SLACK) finishNow();
     // No ócio: baixa o GSAP e já deixa o timeline montado (pausado), para o primeiro gesto só dar "play".
     const cancelIdle = whenIdle(() => {
-      loadGsap().then((gsap) => {
-        if (!cancelled && !started) build(gsap);
-      });
-    }, 1500);
+      loadGsap()
+        .then((gsap) => {
+          if (!cancelled && !started) build(gsap);
+        })
+        .catch(() => {
+          /* sem GSAP: o primeiro gesto cai no estado final (play → finishNow) */
+        });
+    }, 800);
 
     return () => {
       cancelled = true;
       cancelIdle();
       clearTimeout(releaseTimer);
+      clearTimeout(watchdog);
       detach();
+      ro.disconnect();
+      lensEl?.removeEventListener("pointermove", onLensMove);
+      lensEl?.removeEventListener("pointerleave", onLensLeave);
       ctx?.revert();
     };
   }, []);

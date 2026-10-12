@@ -299,57 +299,96 @@
 /* ============================================================
    Hero · "a luneta chega ao alvo"
    Sem JS ou com prefers-reduced-motion: a cena já aparece no estado final (mira travada).
-   Com movimento, o script do <head> põe html.motion e estas regras desenham a etapa 1
+   Com movimento, o script do <head> põe html.motion e as regras abaixo desenham a etapa 1
    (noite e névoa) antes da pintura; a primeira rolada dispara a intro inteira (HeroMotion, GSAP).
-   Só opacity e transform animam: desfoque e brilho são camadas prontas que trocam de opacidade.
+   Quando a intro termina (ou é pulada, ou o GSAP não carrega), HeroMotion marca #topo[data-done]
+   e remove os estilos do GSAP: daí em diante o estado final é só CSS e continua responsivo.
+   Só opacity e transform animam; desfoque e brilho são camadas prontas que trocam de opacidade.
+   O GSAP anima apenas elementos internos; a posição (com os translate do Tailwind) fica nos externos.
    ============================================================ */
 .hero-track {
   height: 100svh;
 }
-.motion [data-h="sites-sharp"] [data-site],
-.motion [data-h="map"],
-.motion [data-h="map-sharp"],
-.motion [data-h="map"] [data-pin],
-.motion [data-h="reticle"],
-.motion [data-h="glow"] {
+/* Telas baixas (celular deitado, notebook de 600px): a cena ganha altura mínima e a página rola. */
+@media (max-height: 640px) {
+  .hero-track {
+    height: auto;
+  }
+  .hero-track [data-h="stage"] {
+    height: max(100svh, 640px);
+  }
+  /* o texto começa logo abaixo do menu (em vez de centralizar) e a dica de rolagem sai de cena */
+  .hero-track [data-h="text"] {
+    top: 0;
+    translate: none;
+  }
+  .hero-track [data-h="hint"] {
+    display: none;
+  }
+}
+@media (max-height: 640px) and (min-width: 640px) {
+  .hero-track [data-h="text"] {
+    padding-top: 92px;
+  }
+}
+.motion #topo:not([data-done])
+  :is([data-h="sites-sharp"] [data-site], [data-h="map"], [data-h="map-sharp"], [data-h="map"] [data-pin], [data-h="reticle"], [data-h="glow"]) {
   opacity: 0;
 }
-.motion [data-h="map-soft"] {
+.motion #topo:not([data-done]) [data-h="map-soft"] {
   opacity: 1;
 }
-.motion [data-h="lens"] {
+.motion #topo:not([data-done]) [data-h="lens"] {
   opacity: 0;
   transform: scale(0.15);
 }
-.motion [data-h="card"] {
+.motion #topo:not([data-done]) [data-h="card"] {
   opacity: 0;
   transform: translateY(24px);
 }
-/* camadas que se mexem na intro ganham composição própria (GPU) desde o início */
-.motion :is([data-h="fog"], [data-h="scope"], [data-h="lens"], [data-h="glow"], [data-h="map"], [data-h="map-soft"], [data-h="map-sharp"], [data-site], [data-h="card"]) {
+/* camadas que se mexem na intro ganham composição própria (GPU) enquanto ela não termina */
+.motion #topo:not([data-done])
+  :is([data-h="fog"], [data-h="scope"], [data-h="lens"], [data-h="glow"], [data-h="map"], [data-h="map-soft"], [data-h="map-sharp"], [data-site], [data-h="card"]) {
   will-change: transform, opacity;
 }
-/* Etapa 6 acende o botão; no estado final (sem movimento) ele já nasce aceso. */
+/* Etapa 6 acende o botão; no estado final ele fica aceso. */
 [data-h="cta"] {
   box-shadow:
     0 0 0 4px rgba(201, 162, 77, 0.25),
     0 0 44px rgba(201, 162, 77, 0.55);
 }
-.motion [data-h="cta"] {
+.motion #topo:not([data-done]) [data-h="cta"] {
   box-shadow: 0 0 0 0 rgba(201, 162, 77, 0);
 }
-/* luneta pequena ao longe (o GSAP assume a partir daqui) */
-.motion [data-h="scope"] {
+/* a luneta só existe durante a intro; fora dela não ocupa nada */
+[data-h="scope"] {
+  opacity: 0;
+  visibility: hidden;
+}
+.motion #topo:not([data-done]) [data-h="scope"] {
   opacity: 1;
+  visibility: visible;
   transform: translate(-50%, -50%) translate(24cqw, -2cqh) rotate(-32deg) scale(0.38);
 }
 @media (min-width: 640px) {
-  .motion [data-h="scope"] {
+  .motion #topo:not([data-done]) [data-h="scope"] {
     transform: translate(-50%, -50%) translate(26cqw, -22cqh) rotate(-32deg) scale(0.38);
   }
 }
-[data-h="scope"] {
+/* fim da intro: a névoa se dissipou; a dica some assim que a intro começa */
+#topo[data-done] [data-h="fog"] {
   opacity: 0;
+  visibility: hidden;
+}
+[data-h="hint"] {
+  transition: opacity 0.3s ease;
+}
+#topo:is([data-playing], [data-done]) [data-h="hint"] {
+  opacity: 0;
+}
+/* mouse sobre a lente: o mapa acompanha 2–4px com inércia */
+[data-h="map"] {
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 /* ============================================================

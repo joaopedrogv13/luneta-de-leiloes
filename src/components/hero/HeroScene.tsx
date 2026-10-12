@@ -131,10 +131,12 @@ export function HeroScene() {
           style={{ boxShadow: LENS_GLOW }}
         />
 
-        {/* Lente: moldura circular com anel de latão, mapa e retículo (fica noturna também no tema claro) */}
+        {/* Lente: moldura circular com anel de latão, mapa e retículo (fica noturna também no tema claro).
+            O contêiner externo só posiciona (CSS responsivo); o GSAP anima apenas o interno. */}
+        <div className="absolute top-[71%] left-1/2 size-[min(78cqw,40cqh)] -translate-x-1/2 -translate-y-1/2 sm:top-1/2 sm:left-[66%] sm:size-[min(52cqw,62cqh)]">
         <div
           data-h="lens"
-          className="absolute top-[71%] left-1/2 size-[min(78cqw,40cqh)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border-[6px] border-latao sm:top-1/2 sm:left-[66%] sm:size-[min(52cqw,62cqh)]"
+          className="relative h-full w-full overflow-hidden rounded-full border-[6px] border-latao"
           style={{
             background: "radial-gradient(circle at 50% 45%,#16224A,#0F1830 60%,#0A1226 100%)",
             boxShadow: LENS_SHADOW,
@@ -154,10 +156,11 @@ export function HeroScene() {
             <div data-h="map-sharp" className="absolute inset-0">
               <BrazilMap variant="lens" highlight="sp" label="Mapa do Brasil com os leilões monitorados; a mira está travada em São Paulo" />
             </div>
+            {/* retículo: o externo fica no pin de São Paulo; o GSAP anima o interno */}
+            <div aria-hidden="true" className="absolute top-[69.475%] left-[66.9%] size-[clamp(48px,14cqmin,72px)] -translate-x-1/2 -translate-y-1/2">
             <div
               data-h="reticle"
-              aria-hidden="true"
-              className="absolute top-[69.475%] left-[66.9%] size-[clamp(48px,14cqmin,72px)] -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] border-[#EAF0FF] shadow-[0_0_16px_rgba(234,240,255,.5)]"
+              className="absolute inset-0 rounded-full border-[1.5px] border-[#EAF0FF] shadow-[0_0_16px_rgba(234,240,255,.5)]"
             >
               <span className="absolute -top-2.5 left-1/2 h-5 w-[1.5px] -translate-x-1/2 bg-[#EAF0FF]" />
               <span className="absolute -bottom-2.5 left-1/2 h-5 w-[1.5px] -translate-x-1/2 bg-[#EAF0FF]" />
@@ -165,13 +168,16 @@ export function HeroScene() {
               <span className="absolute top-1/2 -right-2.5 h-[1.5px] w-5 -translate-y-1/2 bg-[#EAF0FF]" />
               <span className="absolute top-1/2 left-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#4ADE9A] shadow-[0_0_8px_#4ADE9A]" />
             </div>
+            </div>
           </div>
+        </div>
         </div>
 
         {/* Cartão do Alvo (exemplo fictício) */}
+        <div className="absolute bottom-3 left-1/2 z-[4] w-[min(360px,calc(100cqw-32px))] -translate-x-1/2 sm:bottom-[8cqh] sm:left-[min(calc(66%+4cqw),calc(100cqw-376px))] sm:translate-x-0">
         <div
           data-h="card"
-          className="absolute bottom-3 left-1/2 z-[4] flex w-[min(360px,calc(100cqw-32px))] -translate-x-1/2 items-center gap-3 rounded-2xl border border-latao/45 bg-tinta p-3 pr-4 shadow-[0_20px_60px_rgba(0,0,0,.5)] sm:bottom-[8cqh] sm:left-[min(calc(66%+4cqw),calc(100cqw-376px))] sm:translate-x-0"
+          className="flex items-center gap-3 rounded-2xl border border-latao/45 bg-tinta p-3 pr-4 shadow-[0_20px_60px_rgba(0,0,0,.5)]"
         >
           <div
             aria-hidden="true"
@@ -187,15 +193,19 @@ export function HeroScene() {
             <p className="mt-0.5 text-[11px] leading-tight text-nevoa">Desocupado · sem dívidas identificadas</p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="font-display text-[30px] leading-none font-bold tracking-[-0.03em] text-pos">
+            {/* o número anima de 0 a 48; leitores de tela recebem sempre o valor final */}
+            <p aria-hidden="true" className="font-display text-[30px] leading-none font-bold tracking-[-0.03em] text-pos">
               −<span data-h="count">{ALVO_DESAGIO}</span>%
             </p>
-            <p className="mt-1 text-[10px] font-medium text-nevoa">deságio</p>
+            <p className="mt-1 text-[10px] font-medium text-nevoa">
+              <span className="sr-only">{ALVO_DESAGIO}% de </span>deságio
+            </p>
           </div>
+        </div>
         </div>
 
         {/* Texto: título, promessa e 2 botões */}
-        <div className="absolute inset-x-0 top-0 z-[3] px-5 pt-[84px] sm:top-1/2 sm:w-[48%] sm:-translate-y-1/2 sm:px-[6cqw] sm:pt-9 lg:w-[44%]">
+        <div data-h="text" className="absolute inset-x-0 top-0 z-[3] px-5 pt-[84px] sm:top-1/2 sm:w-[48%] sm:-translate-y-1/2 sm:px-[6cqw] sm:pt-9 lg:w-[44%]">
           <h1
             id="hero-title"
             className="font-display text-[clamp(32px,min(5.6cqw,8.5cqh),74px)] leading-[1.02] font-bold tracking-[-0.03em] text-luar max-sm:text-[clamp(30px,8.6cqw,40px)]"
@@ -216,7 +226,7 @@ export function HeroScene() {
           </p>
         </div>
 
-        {/* Dica de rolagem (some quando a intro começa) */}
+        {/* Dica de rolagem (some por CSS quando a intro começa) */}
         <div
           data-h="hint"
           aria-hidden="true"
