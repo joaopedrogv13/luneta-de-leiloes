@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE } from "@/content/site";
 import { AssinanteApp } from "@/components/assinante/AssinanteApp";
-import type { Plan } from "@/components/assinante/shared";
+import { BACK_TO_SITE, type Plan } from "@/components/assinante/shared";
 
 const TITLE = "Área do assinante (demonstração) | Luneta de Leilões";
 const DESCRIPTION =
@@ -55,7 +55,7 @@ export default async function AssinantePage({ searchParams }: PageProps<"/assina
       >
         <p>Demonstração com exemplos fictícios · sem login</p>
         <Link
-          href="/"
+          href={BACK_TO_SITE}
           className="inline-flex min-h-11 pointer-fine:min-h-8 items-center rounded-full underline decoration-noite-fixa/50 underline-offset-[3px] hover:decoration-noite-fixa focus-visible:outline-noite-fixa"
         >
           <span aria-hidden="true">←&nbsp;</span>Voltar ao site
@@ -70,7 +70,7 @@ export default async function AssinantePage({ searchParams }: PageProps<"/assina
             <strong className="font-semibold text-luar">Aviso:</strong> A classificação é uma análise baseada nos dados dos editais,
             não uma garantia, e não substitui a avaliação de um advogado. Exemplos fictícios.
           </p>
-          <Link href="/" className="inline-flex min-h-11 items-center font-medium text-latao-texto underline-offset-4 hover:text-luar hover:underline">
+          <Link href={BACK_TO_SITE} className="inline-flex min-h-11 items-center font-medium text-latao-texto underline-offset-4 hover:text-luar hover:underline">
             <span aria-hidden="true">←&nbsp;</span>Voltar ao site
           </Link>
         </div>

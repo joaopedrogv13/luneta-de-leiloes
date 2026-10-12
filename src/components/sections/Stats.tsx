@@ -5,6 +5,7 @@ import { Placeholder } from "@/components/ui/RichText";
 /**
  * Dados de deságio: 3 números grandes calculados com a própria base. Enquanto o valor for null
  * (src/content/site.ts → STATS.items), aparece o placeholder [X]. Com valor, o número conta até o final.
+ * Os três números ficam na cor neutra (luar): na página, verde (pos) marca só ponto positivo.
  */
 export function Stats() {
   return (
@@ -15,7 +16,7 @@ export function Stats() {
           {STATS.items.map((s) => (
             <div key={s.label} data-reveal className="card-on-tinta flex flex-col-reverse p-7 transition-transform duration-200 hover:-translate-y-1 sm:p-8">
               <dt className="mt-4 text-[15px] font-medium text-nevoa">{s.label}</dt>
-              <dd className={`font-display text-[clamp(64px,7vw,104px)] leading-[0.9] font-bold tracking-[-0.05em] ${s.tone === "pos" ? "text-pos" : "text-luar"}`}>
+              <dd className="font-display text-[clamp(64px,7vw,104px)] leading-[0.9] font-bold tracking-[-0.05em] text-luar">
                 {s.value === null ? (
                   <Placeholder>[X]</Placeholder>
                 ) : (

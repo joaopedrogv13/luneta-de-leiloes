@@ -19,6 +19,9 @@ export const OPEN_FILTERS: { key: Exclude<FilterKey, "selo">; label: string; tes
   { key: "desoc", label: "Desocupado", test: (l) => l.desocupado },
 ];
 
+/** "Voltar ao site" (logo, faixa e rodapé) leva aos planos da landing: quem viu a demonstração volta para assinar. */
+export const BACK_TO_SITE = "/#planos";
+
 /** Preço da Luneta com colchetes (placeholder visível até o valor ser validado). */
 export const LUNETA_PRICE = PLANS.plans.find((p) => p.id === "luneta")?.price ?? "[129]";
 

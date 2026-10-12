@@ -83,7 +83,7 @@ export const LISTINGS: Listing[] = [
       { label: "Desocupado", severity: "positivo" },
       { label: "Condomínio em atraso · R$ 4.300", severity: "atencao" },
     ],
-    why: "Posse livre e nenhuma dívida passando ao arrematante. O condomínio em atraso fica com o antigo dono, conforme o edital.",
+    why: "Posse livre e nenhuma dívida passando ao arrematante. Segundo o edital, o condomínio em atraso é quitado com o valor da arrematação.",
   },
   {
     id: "promissor-ba",

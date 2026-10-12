@@ -5,7 +5,7 @@ import type { RefObject } from "react";
 import { LogoMark } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { RingsIcon } from "./parts";
-import type { Plan } from "./shared";
+import { BACK_TO_SITE, type Plan } from "./shared";
 
 const PLANS: { id: Plan; label: string }[] = [
   { id: "lente", label: "Lente" },
@@ -35,7 +35,7 @@ export function AppHeader({
     <header className="sticky top-0 z-30 border-b border-nevoa/15 bg-noite/90 backdrop-blur-md">
       <div className="mx-auto flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 md:h-16 md:flex-nowrap md:py-0 lg:px-8">
         <Link
-          href="/"
+          href={BACK_TO_SITE}
           aria-label="Luneta de Leilões, voltar ao site"
           className="mr-auto inline-flex min-h-11 items-center gap-2.5 rounded-md font-display text-base leading-none font-bold tracking-[-0.01em] whitespace-nowrap text-luar no-underline md:mr-0"
         >

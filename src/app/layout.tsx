@@ -59,7 +59,7 @@ export const viewport: Viewport = {
 const themeScript = `try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("motion");var t=localStorage.getItem("luneta-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
 
 // data-scroll-behavior="smooth" (Next 16): o framework desliga o scroll suave durante a troca de página
-// (ex.: /assinante → /), e a navegação chega no topo na hora em vez de "rolar" a página inteira.
+// (ex.: /assinante → /#planos), e a navegação chega ao destino na hora em vez de "rolar" a página inteira.
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html

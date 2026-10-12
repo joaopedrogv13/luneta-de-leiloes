@@ -172,9 +172,9 @@ export const STATS = {
    * Não use números de terceiros sem fonte.
    */
   items: [
-    { value: null as number | null, suffix: "%", label: "deságio médio", tone: "luar" },
-    { value: null as number | null, suffix: "%", label: "maior deságio do mês", tone: "pos" },
-    { value: null as number | null, suffix: "", label: "total de leilões ativos", tone: "luar" },
+    { value: null as number | null, suffix: "%", label: "deságio médio" },
+    { value: null as number | null, suffix: "%", label: "maior deságio do mês" },
+    { value: null as number | null, suffix: "", label: "total de leilões ativos" },
   ],
 } as const;
 
