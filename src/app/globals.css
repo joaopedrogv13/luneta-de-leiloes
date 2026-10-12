@@ -123,6 +123,15 @@
     scroll-behavior: smooth;
     scroll-padding-top: 72px;
     -webkit-text-size-adjust: 100%;
+    /* Faixa que a barra de atalhos do celular (MobileCtaBar) cobre no pé da tela, com 16px de folga:
+       bottom-4 (16) + bordas (2) + respiro de cima (10) + botão (48) + respiro de baixo ou área segura + 16. */
+    --cta-bar-space: calc(92px + max(10px, env(safe-area-inset-bottom)));
+  }
+  /* Com a barra na página (abaixo de md), o item focado e o alvo de um link interno param acima dela. */
+  @media (width < 48rem) {
+    html[data-cta-bar] {
+      scroll-padding-bottom: var(--cta-bar-space);
+    }
   }
   body {
     background: var(--noite);

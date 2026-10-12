@@ -58,7 +58,8 @@ function Cell({ value, plan }: { value: boolean | "blur"; plan: string }) {
 export function PlansTable() {
   return (
     <>
-      <div className="mt-10 grid items-stretch gap-4 sm:mt-16 lg:grid-cols-3 lg:[reading-flow:grid-order]">
+      {/* data-plan-cards: a barra de atalhos do celular some enquanto os cartões estão na tela */}
+      <div data-plan-cards className="mt-10 grid items-stretch gap-4 sm:mt-16 lg:grid-cols-3 lg:[reading-flow:grid-order]">
         {CARDS.map((p) => {
           // Cada cartão lista só o que o plano acrescenta ao anterior ("Tudo da Lente" + novidades).
           const prev = PREV[p.id];

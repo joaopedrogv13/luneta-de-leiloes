@@ -3,10 +3,14 @@ import { FOOTER, NAV_LINKS, SITE, SUBSCRIBER_AREA } from "@/content/site";
 import { Logo } from "@/components/ui/Logo";
 import { RichText } from "@/components/ui/RichText";
 
-/** Rodapé com avisos legais (a classificação não é garantia; LGPD; preços podem mudar). */
+/**
+ * Rodapé com avisos legais (a classificação não é garantia; LGPD; preços podem mudar).
+ * Abaixo de md, o respiro de baixo nunca é menor que a faixa da barra de atalhos (--cta-bar-space, que cresce
+ * com a área segura): no fim da página o texto fica acima dela.
+ */
 export function Footer() {
   return (
-    <footer className="border-t border-nevoa/15 bg-noite px-5 pt-14 pb-32 sm:px-10 md:pb-16">
+    <footer className="border-t border-nevoa/15 bg-noite px-5 pt-14 pb-[max(8rem,var(--cta-bar-space))] sm:px-10 md:pb-16">
       <div className="container-l grid gap-10 md:grid-cols-[1.1fr_0.7fr_1.6fr]">
         <div>
           <Logo />

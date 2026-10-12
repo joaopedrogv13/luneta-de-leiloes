@@ -2,29 +2,50 @@
 
 import { useEffect, useState } from "react";
 
+type Zone = "hero" | "plans" | "form";
+
 /**
- * Barra fixa de CTA no celular ("Ver planos"). Entra (y 80 → 0) depois que o visitante começa a rolar
- * a cena do hero e some quando o formulário final está na tela, para não cobri-lo.
+ * Barra fixa de CTA no celular ("Ver planos"), só abaixo de md. Entra (y 80 → 0) quando o hero já saiu
+ * quase todo da tela e some enquanto os cartões de plano estão na tela (lá "Ver planos" só repetiria o que já
+ * está à vista) e perto do formulário final, para não cobri-lo. Tudo por IntersectionObserver, sem ouvir a rolagem.
+ * Oculta, fica inert: sai do Tab e do leitor de tela.
+ * Enquanto ela existe, html[data-cta-bar] reserva o espaço dela no pé da tela (scroll-padding-bottom em
+ * globals.css): o item focado e o alvo de um link interno param acima da barra.
  */
 export function MobileCtaBar() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const form = document.getElementById("comecar");
-    let formInView = false;
-    const update = () => setVisible(window.scrollY > window.innerHeight * 0.6 && !formInView);
-    const io = form
-      ? new IntersectionObserver(([e]) => {
-          formInView = e.isIntersecting;
-          update();
-        }, { rootMargin: "0px 0px -20% 0px" })
-      : null;
-    if (form && io) io.observe(form);
-    update();
-    window.addEventListener("scroll", update, { passive: true });
+    const root = document.documentElement;
+    root.dataset.ctaBar = "";
+    // Zonas onde a barra não aparece; cada uma "ativa" enquanto o alvo cruza a faixa da tela dada pela margem.
+    const active: Record<Zone, boolean> = { hero: true, plans: false, form: false };
+    const watch = (zone: Zone, el: Element | null, rootMargin: string) => {
+      if (!el) {
+        active[zone] = false;
+        return null;
+      }
+      const io = new IntersectionObserver(
+        (entries) => {
+          active[zone] = entries[entries.length - 1].isIntersecting;
+          setVisible(!active.hero && !active.plans && !active.form);
+        },
+        { rootMargin },
+      );
+      io.observe(el);
+      return io;
+    };
+    const observers = [
+      // hero: ativo até o fim dele subir acima de 40% da altura da tela (≈ 60% de uma tela rolada)
+      watch("hero", document.getElementById("topo"), "-40% 0px 0px 0px"),
+      // cartões de plano: qualquer pedaço deles visível abaixo do menu fixo (56px)
+      watch("plans", document.querySelector("[data-plan-cards]"), "-56px 0px 0px 0px"),
+      // formulário: a partir do momento em que passa de 80% da altura da tela
+      watch("form", document.getElementById("comecar"), "0px 0px -20% 0px"),
+    ];
     return () => {
-      window.removeEventListener("scroll", update);
-      io?.disconnect();
+      observers.forEach((io) => io?.disconnect());
+      delete root.dataset.ctaBar;
     };
   }, []);
 
