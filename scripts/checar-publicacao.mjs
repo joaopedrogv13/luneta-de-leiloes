@@ -7,7 +7,8 @@
  *   npm run check:publicacao -- --url http://localhost:3000   também conta [data-placeholder] no HTML
  *
  * Varre o texto do código (strings, templates e texto JSX; comentários ficam de fora) de
- * src/content, src/components e src/app e aponta, com arquivo:linha:coluna e o trecho:
+ * src/content, src/components e src/app, lido como a página mostra (escapes e entidades interpretados;
+ * quebra de linha e recuo viram um espaço), e aponta, com arquivo:linha:coluna e o trecho:
  *   a) placeholders entre colchetes ("[X]", "[49]", "[Leiloeiro 1]"…) e valores null do conteúdo
  *      (STATS: null vira [X] na página);
  *   b) "fictício" em texto visível (informativo: enquanto houver exemplo fictício, ele segue rotulado);
@@ -28,14 +29,14 @@ const PASTAS = ["src/content", "src/components", "src/app"];
 
 /** c) Frases que só fazem sentido para a equipe. Acento opcional; maiúsculas não importam. */
 const NOTAS = [
-  /(?<!\p{L})a validar(?!\p{L})/giu,
-  /(?<!\p{L})vers[ãa]o publicada/giu,
-  /(?<!\p{L})devem? ser validad\p{L}*/giu,
-  /(?<!\p{L})ainda n[ãa]o envia\p{L}*/giu,
-  /(?<!\p{L})convite ao upgrade(?!\p{L})/giu,
+  /(?<!\p{L})a\s+validar(?!\p{L})/giu,
+  /(?<!\p{L})vers[ãa]o\s+publicada/giu,
+  /(?<!\p{L})devem?\s+ser\s+validad\p{L}*/giu,
+  /(?<!\p{L})ainda\s+n[ãa]o\s+envia\p{L}*/giu,
+  /(?<!\p{L})convite\s+ao\s+upgrade(?!\p{L})/giu,
   /(?<!\p{L})sugerid\p{L}*/giu,
   // aviso de demonstração da confirmação do formulário (FINAL_CTA.successText)
-  /(?<!\p{L})envio for ligado/giu,
+  /(?<!\p{L})envio\s+for\s+ligado/giu,
 ];
 
 /** b) "fictício", "fictícios", "fictícia"… */
@@ -45,9 +46,21 @@ const FICTICIO = /(?<!\p{L})fict[íi]ci[oa]s?(?!\p{L})/giu;
 const ATRIBUTO =
   /^\s*(?:data-[\w-]*|aria-[\w-]+|href|src|name|id|class|role|type|value|lang|dir|for|rel|target|style|hidden|inert|open|disabled|checked|selected|tabindex|contenteditable|draggable)\s*(?:[~|^$*]?=\s*(?:"[^"]*"|'[^']*'|[^\s\]]*))?\s*(?:\s[iIsS])?\s*$/;
 
+/** O que sobra de um seletor (ou CSS) sem os colchetes: tags, classes, combinadores, :not(), { … }. Texto tem maiúscula ou acento. */
+const RESTO_DE_SELETOR = /^[a-z0-9\s_.#:,>+~*()\-{};%!@'"/=]*$/;
+
 /** Chamadas cujo argumento é código (seletor, regex, atributo), nunca texto da página. */
 const SO_CODIGO =
   /^(?:querySelector(?:All)?|closest|matches|RegExp|getAttribute|setAttribute|removeAttribute|hasAttribute|toggleAttribute|matchMedia|getPropertyValue|setProperty|addEventListener|removeEventListener)$/;
+
+/** setAttribute(nome, valor): o valor destes atributos é lido ou mostrado ao visitante. */
+const ATRIBUTO_DE_TEXTO = /^(?:aria-[\w-]+|title|alt|placeholder|label|value|content)$/i;
+
+/** Entidades HTML no texto JSX ("a&nbsp;validar" aparece como "a validar"). */
+const ENTIDADES = { nbsp: "\u00a0", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+
+/** Escapes de uma letra em strings e templates ("\n", "\t"…); os demais ("\"", "\[") valem o próprio caractere. */
+const ESCAPES = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f", v: "\v", 0: "\0" };
 
 const CATEGORIAS = {
   placeholders: { letra: "a", titulo: "Placeholders entre colchetes", bloqueia: true, nota: "bloqueia: troque pelo valor real, lista em PENDENCIAS.md" },
@@ -121,6 +134,61 @@ function listarArquivos() {
   return arquivos.sort();
 }
 
+// ---------------------------------------------------------------- texto como a página mostra
+
+/**
+ * Interpreta o texto cru de um literal: escapes em strings e templates ("\n", "\x41", "\" no fim da
+ * linha), entidades no JSX ("&nbsp;", "&#91;"). Devolve o texto e, para cada caractere, a posição no texto cru.
+ */
+function interpretar(cru, tipo) {
+  let texto = "";
+  const pos = [];
+  const emitir = (s, k) => {
+    for (let u = 0; u < s.length; u++) pos.push(k);
+    texto += s;
+  };
+  for (let k = 0; k < cru.length; ) {
+    const c = cru[k];
+    if (tipo === "jsx" && c === "&") {
+      const m = /^&(?:#(\d{1,7})|#x([\da-f]{1,6})|([a-z]+));/i.exec(cru.slice(k, k + 12));
+      const codigo = m && (m[1] ? Number(m[1]) : m[2] ? parseInt(m[2], 16) : -1);
+      const ch = !m ? undefined : codigo >= 0 ? (codigo <= 0x10ffff ? String.fromCodePoint(codigo) : undefined) : ENTIDADES[m[3]];
+      if (ch !== undefined) {
+        emitir(ch, k);
+        k += m[0].length;
+        continue;
+      }
+    } else if (tipo !== "jsx" && c === "\\") {
+      const m = /^\\(?:x([\da-f]{2})|u([\da-f]{4})|u\{([\da-f]{1,6})\}|(\r\n?|[\n\u2028\u2029])|([\s\S]))/i.exec(cru.slice(k, k + 12));
+      const hex = m[1] ?? m[2] ?? m[3];
+      emitir(hex ? String.fromCodePoint(Math.min(parseInt(hex, 16), 0x10ffff)) : m[4] ? "" : (ESCAPES[m[5]] ?? m[5]), k);
+      k += m[0].length;
+      continue;
+    } else if (tipo === "template" && c === "\r") {
+      emitir("\n", k); // o template guarda \r\n como \n
+      k += cru[k + 1] === "\n" ? 2 : 1;
+      continue;
+    }
+    emitir(c, k);
+    k++;
+  }
+  return { texto, pos };
+}
+
+/** Cada sequência de espaços, tabs e quebras vira um espaço, como no HTML; `mapa` leva cada índice de volta ao texto. */
+function normalizar(texto) {
+  let plano = "";
+  const mapa = [];
+  for (let i = 0; i < texto.length; i++) {
+    const espaco = /\s/.test(texto[i]);
+    if (espaco && plano.endsWith(" ")) continue;
+    plano += espaco ? " " : texto[i];
+    mapa.push(i);
+  }
+  mapa.push(texto.length);
+  return { plano, mapa };
+}
+
 // ---------------------------------------------------------------- colchetes
 
 /** Grupos "[...]" de nível mais externo (colchetes aninhados ficam no mesmo grupo). */
@@ -131,7 +199,7 @@ function gruposDeColchete(texto) {
     let prof = 0;
     let j = i;
     for (; j < texto.length; j++) {
-      if (texto[j] === "\n") break; // placeholder não quebra linha
+      // o texto já vem normalizado: um placeholder quebrado em duas linhas ("[Razão\n social]") chega inteiro
       if (texto[j] === "[") prof++;
       else if (texto[j] === "]" && --prof === 0) break;
     }
@@ -142,21 +210,50 @@ function gruposDeColchete(texto) {
   return grupos;
 }
 
-/** Valor arbitrário do Tailwind: text-[13px], bg-latao/[0.08], [&_p]:mt-2, [grid-area:1/1]. */
-function eTailwind(texto, { inicio, conteudo }) {
-  if (/\s/.test(conteudo)) return false; // o Tailwind usa "_" no lugar de espaço
-  const antes = texto[inicio - 1] ?? "";
-  const antes2 = texto[inicio - 2] ?? "";
-  if ((antes === "-" || antes === "/") && /[a-z]/.test(antes2)) return true;
-  if (/^[&@]/.test(conteudo)) return true; // variante arbitrária
-  return /^-{0,2}[a-z][a-z0-9-]*:./.test(conteudo); // propriedade arbitrária
+/** A "palavra" (sem espaço) em volta do grupo: o que vem antes e depois dele. */
+function vizinhanca(texto, { inicio, fim }) {
+  const ini = texto.lastIndexOf(" ", inicio) + 1;
+  const f = texto.indexOf(" ", fim);
+  return { antes: texto.slice(ini, inicio), depois: texto.slice(fim, f === -1 ? texto.length : f) };
 }
 
-function ePlaceholder(texto, grupo) {
+/**
+ * Valor arbitrário do Tailwind: text-[13px], md:grid-cols-[1fr_auto], bg-latao/[0.08], [&_p]:mt-2,
+ * [grid-area:1/1]. Exige a forma de uma classe: "instagram.com/[perfil]" ou "Lote-[N]" são texto.
+ */
+function eTailwind(texto, grupo) {
   const { conteudo } = grupo;
-  if (!conteudo.trim() || conteudo.includes("[")) return false; // vazio ou aninhado (seletor/Tailwind)
-  if (ATRIBUTO.test(conteudo)) return false;
-  return !eTailwind(texto, grupo);
+  // o Tailwind usa "_" no lugar de espaço; acento é texto, salvo entre aspas (content-['→'])
+  if (/[^\x21-\x7e]/.test(conteudo) && !/^(['"]).*\1$/.test(conteudo)) return false;
+  const { antes, depois } = vizinhanca(texto, grupo);
+  const variantes = /^(?:(?:[a-z0-9-]+|\[[^\]]+\])(?:\/[\w-]+)?:)*!?$/; // "md:", "[&_p]:", "group-hover/x:"
+  if (/^[&@]/.test(conteudo)) return variantes.test(antes) && depois.startsWith(":"); // variante arbitrária
+  if (/^-{0,2}[a-z][a-z0-9-]*:./.test(conteudo)) return variantes.test(antes); // propriedade arbitrária
+  const utilitario = /^(?:(?:[a-z0-9-]+|\[[^\]]+\])(?:\/[\w-]+)?:)*!?-?[a-z][a-z0-9-]*([-/])$/.exec(antes);
+  if (!utilitario) return false;
+  // "/[...]" é modificador de opacidade ou de altura de linha: só número ou var()
+  return utilitario[1] === "-" || /^(?:[\d.]+[a-z%]*|var\(.+\))$/.test(conteudo);
+}
+
+/** Atributo de seletor CSS: "[data-h=lens]", "a[href], [tabindex]:not([tabindex='-1'])". Texto com "[name]" não. */
+function eSeletor(texto, grupo, grupos) {
+  if (!ATRIBUTO.test(grupo.conteudo)) return false;
+  let resto = "";
+  let k = 0;
+  for (const g of grupos) {
+    resto += texto.slice(k, g.inicio);
+    k = g.fim;
+  }
+  return RESTO_DE_SELETOR.test(resto + texto.slice(k));
+}
+
+/** `codigo`: o texto pode ser código (classe, seletor). Em src/content e no texto JSX, todo colchete vai para a página. */
+function ePlaceholder(texto, grupo, grupos, codigo) {
+  const { conteudo } = grupo;
+  if (!conteudo.trim()) return false; // "[]", "[ ]"
+  if (!codigo) return true;
+  if (conteudo.includes("[")) return false; // aninhado: seletor ou variante do Tailwind
+  return !eSeletor(texto, grupo, grupos) && !eTailwind(texto, grupo);
 }
 
 // ---------------------------------------------------------------- leitura de um arquivo
@@ -206,6 +303,15 @@ function varrerArquivo(arquivo) {
     achados.push({ categoria, arquivo, ...posicao(abs), achado, trecho });
   }
 
+  /** Nome do atributo JSX em que a string está (`title="…"`, `className={cond ? "…" : "…"}`), ou "". */
+  function atributoJsx(no) {
+    for (let n = no.parent; n && !ts.isSourceFile(n); n = n.parent) {
+      if (ts.isJsxAttribute(n)) return n.name.getText(sf);
+      if (ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n) || ts.isJsxFragment(n) || ts.isFunctionLike(n)) break;
+    }
+    return "";
+  }
+
   /** String que é código, não texto da página: import, tipo, chave, seletor, className… */
   function foraDoTexto(no) {
     const pai = no.parent;
@@ -221,13 +327,22 @@ function varrerArquivo(arquivo) {
     if ("name" in pai && pai.name === no) return true; // chave de objeto, membro de enum
     if (ts.isElementAccessExpression(pai) && pai.argumentExpression === no) return true;
     if ((ts.isCallExpression(pai) || ts.isNewExpression(pai)) && pai.arguments?.includes(no)) {
-      if (SO_CODIGO.test(nomeDaChamada(pai.expression))) return true;
+      const chamada = nomeDaChamada(pai.expression);
+      // setAttribute("aria-label", "Preço [49]"): o nome é código; o valor de aria-*, title, alt… é texto
+      if (chamada === "setAttribute" && pai.arguments[1] === no) {
+        const nome = pai.arguments[0];
+        return ts.isStringLiteralLike(nome) && !ATRIBUTO_DE_TEXTO.test(nome.text);
+      }
+      if (SO_CODIGO.test(chamada)) return true;
     }
-    for (let n = pai; n && !ts.isSourceFile(n); n = n.parent) {
-      if (ts.isJsxAttribute(n)) return n.name.getText(sf) === "className";
-      if (ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n) || ts.isJsxFragment(n) || ts.isFunctionLike(n)) break;
-    }
-    return false;
+    return atributoJsx(no) === "className";
+  }
+
+  /** Classe ou seletor podem aparecer aqui? Não em src/content (tudo passa pelo RichText) nem em title, alt… */
+  function podeSerCodigo(no) {
+    if (eConteudo) return false;
+    const atributo = atributoJsx(no);
+    return !atributo || /class/i.test(atributo); // fora de atributo JSX, ou em accentClass, iconClassName…
   }
 
   /** Em `x === null` (ou == null / undefined), true; em `x !== null`, false; senão, null. */
@@ -259,35 +374,43 @@ function varrerArquivo(arquivo) {
   }
 
   /**
-   * Analisa as partes de um texto. Cada parte traz o texto já interpretado, a posição onde o texto
-   * cru começa no arquivo e o texto cru (difere quando há escape, como \n ou \"). `contexto` é o
-   * texto em volta, usado só no recorte.
+   * Lê uma parte de um texto: o texto cru, a posição onde ele começa no arquivo, o tipo ("string",
+   * "template" ou "jsx") e, fora do JSX, o texto que o TypeScript já interpretou (`esperado`), para conferir.
    */
-  function analisar(no, partes, contexto) {
-    const inteiro = contexto?.inteiro ?? partes.map((p) => p.texto).join(EXPRESSAO);
+  function ler({ cru, base, tipo, esperado }) {
+    let { texto, pos } = interpretar(cru, tipo);
+    if (esperado !== undefined && texto !== esperado) {
+      // escape que a leitura não cobre (octal antigo…): fica o texto do TypeScript, com coluna aproximada
+      texto = esperado;
+      pos = Array.from({ length: texto.length }, (_, i) => Math.min(i, cru.length));
+    }
+    return { texto, pos, base };
+  }
+
+  /**
+   * Analisa as partes de um texto (uma só, ou os pedaços de um template entre as expressões), já
+   * normalizado como a página mostra. `contexto` é o texto em volta, usado só no recorte; `codigo` diz
+   * se o texto pode ser classe ou seletor.
+   */
+  function analisar(no, partes, { contexto, codigo }) {
+    const lidas = partes.map(ler);
+    const inteiro = contexto?.inteiro ?? lidas.map((p) => p.texto).join(EXPRESSAO);
     const reserva = eReserva(no);
     let deslocamento = contexto?.inicio ?? 0;
-    for (const parte of partes) {
-      const { texto, base, cru } = parte;
-      const absoluta = (indice, achado) => {
-        if (cru === texto) return base + indice;
-        // com escape: acha a mesma ocorrência no texto cru
-        let n = 0;
-        for (let k = texto.indexOf(achado); k !== -1 && k < indice; k = texto.indexOf(achado, k + 1)) n++;
-        let k = cru.indexOf(achado);
-        while (k !== -1 && n-- > 0) k = cru.indexOf(achado, k + 1);
-        return k === -1 ? base : base + k;
+    for (const { texto, pos, base } of lidas) {
+      const { plano, mapa } = normalizar(texto);
+      const registrar = (categoria, inicio, fim) => {
+        const achado = plano.slice(inicio, fim);
+        const i = mapa[inicio]; // índice no texto interpretado
+        adicionar(categoria, base + pos[i], achado, recorte(inteiro, deslocamento + i, achado.length));
       };
-      const registrar = (categoria, indice, achado) =>
-        adicionar(categoria, absoluta(indice, achado), achado, recorte(inteiro, deslocamento + indice, achado.length));
 
-      for (const grupo of gruposDeColchete(texto)) {
-        if (ePlaceholder(texto, grupo)) {
-          registrar(reserva ? "reservas" : "placeholders", grupo.inicio, texto.slice(grupo.inicio, grupo.fim));
-        }
+      const grupos = gruposDeColchete(plano);
+      for (const grupo of grupos) {
+        if (ePlaceholder(plano, grupo, grupos, codigo)) registrar(reserva ? "reservas" : "placeholders", grupo.inicio, grupo.fim);
       }
-      for (const m of texto.matchAll(FICTICIO)) registrar("ficticio", m.index, m[0]);
-      for (const re of NOTAS) for (const m of texto.matchAll(re)) registrar("notas", m.index, m[0]);
+      for (const m of plano.matchAll(FICTICIO)) registrar("ficticio", m.index, m.index + m[0].length);
+      for (const re of NOTAS) for (const m of plano.matchAll(re)) registrar("notas", m.index, m.index + m[0].length);
       deslocamento += texto.length + EXPRESSAO.length;
     }
   }
@@ -300,7 +423,7 @@ function varrerArquivo(arquivo) {
     let inicio = 0;
     for (const filho of irmaos) {
       if (filho === no) inicio = inteiro.length;
-      inteiro += ts.isJsxText(filho) ? filho.text : ts.isJsxExpression(filho) ? "{…}" : "<…>";
+      inteiro += ts.isJsxText(filho) ? interpretar(filho.text, "jsx").texto : ts.isJsxExpression(filho) ? "{…}" : "<…>";
     }
     return { inteiro, inicio };
   }
@@ -309,23 +432,30 @@ function varrerArquivo(arquivo) {
     // TemplateHead "`…${", TemplateMiddle "}…${", TemplateTail "}…`"
     const ini = literal.getStart(sf) + 1;
     const fim = ts.isTemplateTail(literal) ? literal.end - 1 : literal.end - 2;
-    return { texto: literal.text, base: ini, cru: fonte.slice(ini, fim) };
+    return { cru: fonte.slice(ini, fim), base: ini, tipo: "template", esperado: literal.text };
   }
 
   function visitar(no) {
     if (ts.isStringLiteral(no) || ts.isNoSubstitutionTemplateLiteral(no)) {
       const ini = no.getStart(sf) + 1;
-      if (!foraDoTexto(no)) analisar(no, [{ texto: no.text, base: ini, cru: fonte.slice(ini, no.end - 1) }]);
+      const cru = fonte.slice(ini, no.end - 1);
+      // no atributo JSX (title="…") não há escape com "\", mas há entidade (&nbsp;)
+      const parte = ts.isJsxAttribute(no.parent)
+        ? { cru, base: ini, tipo: "jsx" }
+        : { cru, base: ini, tipo: ts.isStringLiteral(no) ? "string" : "template", esperado: no.text };
+      if (!foraDoTexto(no)) analisar(no, [parte], { codigo: podeSerCodigo(no) });
       return;
     }
     if (ts.isTemplateExpression(no)) {
-      if (!foraDoTexto(no)) analisar(no, [no.head, ...no.templateSpans.map((s) => s.literal)].map(parteDoTemplate));
+      const partes = [no.head, ...no.templateSpans.map((s) => s.literal)].map(parteDoTemplate);
+      if (!foraDoTexto(no)) analisar(no, partes, { codigo: podeSerCodigo(no) });
       for (const span of no.templateSpans) visitar(span.expression);
       return;
     }
     if (ts.isJsxText(no)) {
       if (!no.containsOnlyTriviaWhiteSpaces) {
-        analisar(no, [{ texto: no.text, base: no.pos, cru: fonte.slice(no.pos, no.end) }], contextoJsx(no));
+        const parte = { cru: fonte.slice(no.pos, no.end), base: no.pos, tipo: "jsx" };
+        analisar(no, [parte], { contexto: contextoJsx(no), codigo: false });
       }
       return;
     }
