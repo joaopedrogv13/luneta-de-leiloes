@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture construída (esquema do XML do INLABS); textos fictícios. Leilão de veículos: deve ser descartado. -->
+<xml>
+  <article id="90000002" name="AVISO DE LEILAO" idOficio="80000002" pubName="DO3" artType="Aviso" pubDate="09/10/2026" artCategory="Ministério da Defesa/Comando do Exército/Batalhão Fictício" numberPage="88" pdfPage="http://pesquisa.in.gov.br/imprensa/jsp/visualiza/index.jsp?data=09/10/2026&amp;jornal=530&amp;pagina=88" editionNumber="194" idMateria="70000002">
+    <body>
+      <Identifica><![CDATA[AVISO DE LEILÃO Nº 1/2026]]></Identifica>
+      <Ementa />
+      <Titulo />
+      <SubTitulo />
+      <Texto><![CDATA[<p class="identifica">AVISO DE LEILÃO Nº 1/2026</p><p>Objeto: alienação de veículos, motocicletas e sucatas inservíveis. Sessão em 20/11/2026, às 9h.</p><p class="assina">BELTRANO SIGNATÁRIO</p><p class="cargo">Ordenador de Despesas</p>]]></Texto>
+    </body>
+  </article>
+</xml>

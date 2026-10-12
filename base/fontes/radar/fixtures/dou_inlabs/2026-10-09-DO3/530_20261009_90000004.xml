@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture construída (esquema do XML do INLABS); textos fictícios. Pregão sem leilão: deve ser descartado. -->
+<xml>
+  <article id="90000004" name="AVISO DE LICITACAO" idOficio="80000004" pubName="DO3" artType="Aviso" pubDate="09/10/2026" artCategory="Ministério da Educação/Universidade Federal Fictícia" numberPage="90" pdfPage="http://pesquisa.in.gov.br/imprensa/jsp/visualiza/index.jsp?data=09/10/2026&amp;jornal=530&amp;pagina=90" editionNumber="194" idMateria="70000004">
+    <body>
+      <Identifica><![CDATA[AVISO DE LICITAÇÃO PREGÃO ELETRÔNICO Nº 90012/2026]]></Identifica>
+      <Texto><![CDATA[<p>Objeto: contratação de serviços de manutenção predial do imóvel sede. Abertura em 21/10/2026.</p>]]></Texto>
+    </body>
+  </article>
+</xml>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture construída a partir do esquema do XML do INLABS (atributos de <article> e campos de <body>); textos, ids e nomes fictícios. Não é matéria real. -->
+<xml>
+  <article id="90000001" name="AVISO DE LEILAO N 3/2026" idOficio="80000001" pubName="DO3" artType="Aviso" pubDate="09/10/2026" artClass="00034:00012:00000:00000:00000:00000:00000:00000:00000:00000:00003:00000" artCategory="Ministério da Gestão e da Inovação em Serviços Públicos/Secretaria do Patrimônio da União/Superintendência do Patrimônio da União no Estado de São Paulo" artSize="12" artNotes="" numberPage="87" pdfPage="http://pesquisa.in.gov.br/imprensa/jsp/visualiza/index.jsp?data=09/10/2026&amp;jornal=530&amp;pagina=87" editionNumber="194" highlightType="" highlightPriority="" highlight="" highlightimage="" highlightimagename="" idMateria="70000001">
+    <body>
+      <Identifica><![CDATA[AVISO DE LEILÃO Nº 3/2026]]></Identifica>
+      <Data><![CDATA[]]></Data>
+      <Ementa />
+      <Titulo />
+      <SubTitulo />
+      <Texto><![CDATA[<p class="identifica">AVISO DE LEILÃO Nº 3/2026</p><p>A Superintendência do Patrimônio da União no Estado de São Paulo torna público que realizará leilão público, na forma eletrônica, para alienação de imóvel da União: apartamento nº 34 do Edifício Modelo, com área privativa de 82,40 m², situado na Rua Hipotética, nº 500, no Município de Santos/SP, matrícula nº 77.777 do 1º Cartório de Registro de Imóveis de Santos. Valor mínimo: R$ 410.000,00.</p><p>A sessão pública será realizada no dia 17/11/2026, às 10h, no endereço eletrônico www.gov.br/exemplo-leiloes. O edital está disponível no mesmo endereço.</p><p class="assina">FULANA SIGNATÁRIA DE EXEMPLO</p><p class="cargo">Superintendente</p>]]></Texto>
+    </body>
+    <Midias />
+  </article>
+</xml>

@@ -16,19 +16,19 @@ import type { Conector } from "../tipos.ts";
 import { caixaCsv } from "./caixa/index.ts";                              // Caixa: Lista de Imóveis (CSV oficial)
 import { leiloesJudiciais } from "./leiloesjudiciais/index.ts";        // Leilões Judiciais (API/MCP pública), id leiloesjudiciais_api
 
-// Radar de editais
-// import { djen } from "./djen/index.ts";                                 // DJEN / Comunica PJe (meio=E)
-// import { douInlabs } from "./dou_inlabs/index.ts";                      // DOU seção 3 via INLABS
-// import { pncp } from "./pncp/index.ts";                                 // PNCP, modalidades 1 e 13 (leilão)
-// import { queridoDiario } from "./querido_diario/index.ts";              // Querido Diário (OKBR)
+// Radar de editais (base/fontes/radar/README.md)
+import { djen } from "./radar/djen/index.ts";                              // DJEN / Comunica PJe (meio=E)
+import { douInlabs } from "./radar/dou_inlabs/index.ts";                   // DOU seção 3 via INLABS
+import { pncp } from "./radar/pncp/index.ts";                              // PNCP, modalidades 1 e 13 (leilão)
+import { queridoDiario } from "./radar/querido_diario/index.ts";           // Querido Diário (OKBR)
 
 export const CONECTORES: readonly Conector[] = [
   caixaCsv,
-  // djen,
-  // douInlabs,
+  djen,
+  douInlabs,
   leiloesJudiciais,
-  // pncp,
-  // queridoDiario,
+  pncp,
+  queridoDiario,
 ];
 
 /** Conector pelo id, ou undefined. */

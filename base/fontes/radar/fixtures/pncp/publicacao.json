@@ -1,0 +1,117 @@
+{
+  "_origem": "Construída a partir do esquema documentado da API de consulta do PNCP (envelope e nomes de campo do pncp-cli, pipeworx mcp-brazil-pncp, pypncp e da arquitetura br_mgi_pncp.contratacao da Base dos Dados). Órgãos, CNPJs, números e textos são fictícios. Sem resposta real em disco: não testado ao vivo.",
+  "paginas": [
+    {
+      "data": [
+        {
+          "numeroControlePNCP": "11222333000181-1-000045/2026",
+          "anoCompra": 2026,
+          "sequencialCompra": 45,
+          "numeroCompra": "3/2026",
+          "processo": "1.234/2026",
+          "objetoCompra": "Alienação, por meio de leilão eletrônico, de imóvel urbano de propriedade do Município, constituído pelo lote 12 da quadra 7 do Loteamento Jardim Exemplo, com área de 360,00 m², matrícula nº 12.345 do Cartório de Registro de Imóveis da Comarca de Exemplópolis/SP.",
+          "informacaoComplementar": "Lance mínimo igual ao valor de avaliação. Edital e laudo disponíveis no PNCP e no sítio eletrônico do leiloeiro.",
+          "modalidadeId": 1,
+          "modalidadeNome": "Leilão - Eletrônico",
+          "modoDisputaNome": "Aberto",
+          "situacaoCompraId": 1,
+          "situacaoCompraNome": "Divulgada no PNCP",
+          "srp": false,
+          "orgaoEntidade": { "cnpj": "11222333000181", "razaoSocial": "MUNICIPIO DE EXEMPLOPOLIS", "poderId": "E", "esferaId": "M" },
+          "unidadeOrgao": { "ufNome": "São Paulo", "ufSigla": "SP", "municipioNome": "Exemplópolis", "codigoUnidade": "1", "nomeUnidade": "PREFEITURA MUNICIPAL DE EXEMPLOPOLIS", "codigoIbge": "3599901" },
+          "amparoLegal": { "codigo": 1, "nome": "Lei 14.133/2021, Art. 28, IV", "descricao": "leilão" },
+          "dataPublicacaoPncp": "2026-10-08T10:15:22",
+          "dataAberturaProposta": "2026-10-09T08:00:00",
+          "dataEncerramentoProposta": "2026-11-10T10:00:00",
+          "dataAtualizacaoGlobal": "2026-10-08T10:15:22",
+          "valorTotalEstimado": 185000.0,
+          "valorTotalHomologado": null,
+          "linkSistemaOrigem": "https://leiloes.exemplo.test/leilao/3-2026"
+        },
+        {
+          "numeroControlePNCP": "11222333000181-1-000046/2026",
+          "anoCompra": 2026,
+          "sequencialCompra": 46,
+          "numeroCompra": "4/2026",
+          "objetoCompra": "Leilão de veículos automotores e sucatas inservíveis da frota municipal.",
+          "informacaoComplementar": null,
+          "modalidadeId": 1,
+          "modalidadeNome": "Leilão - Eletrônico",
+          "situacaoCompraNome": "Divulgada no PNCP",
+          "orgaoEntidade": { "cnpj": "11222333000181", "razaoSocial": "MUNICIPIO DE EXEMPLOPOLIS" },
+          "unidadeOrgao": { "ufSigla": "SP", "municipioNome": "Exemplópolis", "nomeUnidade": "PREFEITURA MUNICIPAL DE EXEMPLOPOLIS", "codigoIbge": "3599901" },
+          "dataPublicacaoPncp": "2026-10-08T11:02:10",
+          "dataAberturaProposta": "2026-10-09T08:00:00",
+          "dataEncerramentoProposta": "2026-11-11T10:00:00",
+          "valorTotalEstimado": 92000.0
+        },
+        {
+          "numeroControlePNCP": "44555666000172-1-000007/2026",
+          "anoCompra": 2026,
+          "sequencialCompra": 7,
+          "numeroCompra": "1",
+          "objetoCompra": "Leilão presencial de bens imóveis e de veículos inservíveis do Estado, conforme relação de lotes do Anexo I.",
+          "informacaoComplementar": "Sessão pública no auditório da Secretaria.",
+          "modalidadeId": 13,
+          "modalidadeNome": "Leilão - Presencial",
+          "situacaoCompraNome": "Divulgada no PNCP",
+          "orgaoEntidade": { "cnpj": "44555666000172", "razaoSocial": "SECRETARIA DE ESTADO DE ADMINISTRACAO FICTICIA" },
+          "unidadeOrgao": { "ufSigla": "MG", "municipioNome": "Cidade Fictícia", "nomeUnidade": "SECRETARIA DE ESTADO DE ADMINISTRACAO FICTICIA", "codigoIbge": "3199901" },
+          "dataPublicacaoPncp": "2026-10-09T09:00:00",
+          "dataAberturaProposta": "2026-11-20T09:30:00",
+          "dataEncerramentoProposta": null,
+          "valorTotalEstimado": 0
+        },
+        {
+          "numeroControlePNCP": "44555666000172-1-000008/2026",
+          "anoCompra": 2026,
+          "sequencialCompra": 8,
+          "numeroCompra": "2/2026",
+          "objetoCompra": "Concessão de uso, a título oneroso, de área pública no terminal rodoviário para exploração de lanchonete, mediante leilão.",
+          "modalidadeId": 1,
+          "modalidadeNome": "Leilão - Eletrônico",
+          "situacaoCompraNome": "Divulgada no PNCP",
+          "orgaoEntidade": { "cnpj": "44555666000172", "razaoSocial": "SECRETARIA DE ESTADO DE ADMINISTRACAO FICTICIA" },
+          "unidadeOrgao": { "ufSigla": "MG", "municipioNome": "Cidade Fictícia", "nomeUnidade": "SECRETARIA DE ESTADO DE ADMINISTRACAO FICTICIA" },
+          "dataPublicacaoPncp": "2026-10-09T09:30:00",
+          "dataEncerramentoProposta": "2026-11-21T10:00:00"
+        }
+      ],
+      "totalRegistros": 4,
+      "totalPaginas": 1,
+      "numeroPagina": 1,
+      "paginasRestantes": 0,
+      "empty": false
+    }
+  ],
+  "arquivos": {
+    "11222333000181-1-000045/2026": [
+      {
+        "sequencialDocumento": 1,
+        "titulo": "Edital do Leilão nº 3/2026",
+        "tipoDocumentoId": 2,
+        "tipoDocumentoNome": "Edital",
+        "url": "https://pncp.gov.br/pncp-api/v1/orgaos/11222333000181/compras/2026/45/arquivos/1",
+        "uri": "https://pncp.gov.br/pncp-api/v1/orgaos/11222333000181/compras/2026/45/arquivos/1",
+        "dataPublicacaoPncp": "2026-10-08T10:15:22",
+        "statusAtivo": true
+      },
+      {
+        "sequencialDocumento": 2,
+        "titulo": "Anexo I - Laudo de avaliação",
+        "tipoDocumentoId": 16,
+        "tipoDocumentoNome": "Outros documentos",
+        "url": "https://pncp.gov.br/pncp-api/v1/orgaos/11222333000181/compras/2026/45/arquivos/2",
+        "dataPublicacaoPncp": "2026-10-08T10:15:22",
+        "statusAtivo": true
+      },
+      {
+        "sequencialDocumento": 3,
+        "titulo": "Minuta substituída",
+        "tipoDocumentoNome": "Outros documentos",
+        "url": "https://pncp.gov.br/pncp-api/v1/orgaos/11222333000181/compras/2026/45/arquivos/3",
+        "statusAtivo": false
+      }
+    ]
+  }
+}
