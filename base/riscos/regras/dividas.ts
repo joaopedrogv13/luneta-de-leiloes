@@ -3,15 +3,20 @@
  *
  * - Condomínio/IPTU em atraso: só quando o texto DECLARA a dívida ("Há débitos de condomínio
  *   no valor de R$ ...", "Débito Condominial: R$ ...", "IPTU em atraso"). Menção genérica
- *   ("eventuais débitos condominiais", "inscritos ou não na dívida ativa") não conta, e a regra
- *   de despesas da ficha da Caixa ("Condomínio: sob responsabilidade do comprador, até 10% da
- *   avaliação") diz quem paga, não que a dívida existe. Contrassinal: "em dia com as cotas",
- *   "não há débitos". Valores mudam: sempre com revisão.
+ *   ("eventuais débitos condominiais", "inscritos ou não na dívida ativa", "débitos de IPTU até
+ *   2025") não conta, e a regra de despesas da ficha da Caixa ("Condomínio: sob responsabilidade
+ *   do comprador, até 10% da avaliação") diz quem paga, não que a dívida existe. Dívida
+ *   declarada que se sub-roga no preço continua declarada ("Há débitos de IPTU de R$ 8 mil, que
+ *   se sub-rogam no preço"): esta tag diz que a dívida existe; quem paga é "Dívida passa".
+ *   Contrassinal: "em dia com as cotas", "não há débitos". Valores mudam: sempre com revisão.
  * - Dívida passa ao arrematante: cláusula que põe dívida do imóvel "por conta / a cargo / sob
- *   responsabilidade do arrematante". Contrassinal na MESMA cláusula anula: sub-rogação no
- *   preço, isenção, art. 130 do CTN, art. 908 §1º do CPC, "não serão transferidos". Encargos
- *   posteriores à arrematação e custos da transferência (ITBI, registro) não contam. Na
- *   Caixa, o texto-padrão da ficha vale confiança alta; no judicial, média com revisão.
+ *   responsabilidade do arrematante". Contrassinal na MESMA PARTE da cláusula anula:
+ *   sub-rogação no preço, isenção, art. 130 do CTN, art. 908 §1º do CPC, "não serão
+ *   transferidos", "livre de ônus" dito da venda. A cláusula é partida nos conectivos (", e os",
+ *   "mas", "bem como"): "o IPTU sub-roga-se no preço (CTN 130), e o condomínio, propter rem, é do
+ *   arrematante" dá "sim" pelo condomínio. Encargos posteriores à arrematação, custos da
+ *   transferência (ITBI, registro) e "eventuais débitos" sem objeto não contam. Na Caixa, o
+ *   texto-padrão da ficha vale confiança alta; no judicial, média com revisão.
  */
 import type { RegraRisco } from "../motor.ts";
 import { clausulasDe, desconhecido, deteccao, ehCaixa, trechoDaClausula, trechoDe } from "./apoio.ts";

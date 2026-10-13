@@ -4,12 +4,15 @@
  * - Matrícula: indisponibilidade, hipoteca, bloqueio, gravame, arrolamento ou alienação
  *   fiduciária não baixada declarados no texto ("Há indisponibilidade", "Imóvel objeto de
  *   HIPOTECA") → média; atos de matrícula ("AV.10 - INDISPONIBILIDADE", "R.12 Hipoteca") →
- *   baixa (o ato pode ter sido cancelado depois). Na Caixa, "Averbação dos leilões negativos"
- *   diferente de "Averbado" → baixa. Penhoras ficam na tag própria. Sempre com revisão.
- *   "Não há registro de ônus" é contrassinal.
+ *   baixa (o ato pode ter sido cancelado sem que o texto diga). Ato cancelado por ato posterior
+ *   que cita o mesmo número ("R.5 Hipoteca ... AV.6 Cancelamento da hipoteca do R.5") não conta,
+ *   nem o próprio ato de cancelamento. Na Caixa, "Averbação dos leilões negativos" diferente de
+ *   "Averbado" → baixa. Penhoras ficam na tag própria. Sempre com revisão. "Não há registro de
+ *   ônus" é contrassinal.
  * - Construção irregular: benfeitoria/construção "não averbada", "sem habite-se", "irregular
  *   perante a prefeitura"; e matrícula que descreve terreno "sem benfeitoria" quando o texto
- *   diz que há construção. Sempre com revisão.
+ *   diz que há construção. Ressalva antes ("eventual área construída") ou depois ("se houver")
+ *   faz da frase texto-modelo. Sempre com revisão.
  * - Área divergente: texto que declara divergência de área, ou área do título diferente de
  *   todas as áreas dos campos (tolerância em config.ts). Texto-modelo "ad corpus" ("havendo
  *   divergência de metragem...") não conta.
@@ -17,7 +20,20 @@
 import { lerNumeroBR } from "../../util/numero.ts";
 import { normalizarTexto } from "../../util/texto.ts";
 import type { RegraRisco } from "../motor.ts";
-import { achados, clausulaDeIntimacao, clausulasDe, desconhecido, deteccao, extra, negado, ressalvado, trechoDe, type Achado } from "./apoio.ts";
+import {
+  achados,
+  atoCancelado,
+  clausulaDeIntimacao,
+  clausulasDe,
+  condicionalDepois,
+  desconhecido,
+  deteccao,
+  extra,
+  negado,
+  ressalvado,
+  trechoDe,
+  type Achado,
+} from "./apoio.ts";
 import { CONFIG_RISCOS, type ConfigRiscos } from "./config.ts";
 
 // ---------------------------------------------------------------------------
@@ -36,7 +52,6 @@ const PENDENCIA_DECLARADA = new RegExp(
 );
 const ATO_DE_MATRICULA = /\b(?:r|av)\.?\s*-?\s*\d{1,3}\b[^;.]{0,30}?\b(?:indisponibilidade|hipoteca|arrolamento|bloqueio|alienacao fiduciaria)\b/;
 const ONUS_ROTULADO = /\bonus(?:\/observac(?:ao|oes))?\s*:\s*(?:[rv]\.|av\.|r\s?\d)/;
-const ATO_CANCELADO = /^[^;.]{0,50}\b(?:cancelad[oa]|baixad[oa]|extint[oa])\b/;
 const LIMPEZA = /(?:cancelamento|baixa|levantamento)\s+(?:de\s+|das?\s+|dos?\s+)?(?:eventua\w+\s+)?$/;
 const SEM_ONUS = /\bnao\s+ha\s+registro\s+(?:ou certificacao\s+)?de\s+onus\b|\b(?:imovel|bem)\s+sem\s+(?:onus|gravames)\b|\bnada consta\b[^;]{0,30}\bonus\b/;
 
@@ -49,7 +64,7 @@ export const regraMatricula: RegraRisco = {
     const valido = (a: Achado): boolean => !ressalvado(a) && !negado(a) && !clausulaDeIntimacao(a.clausula) && !LIMPEZA.test(a.antes);
     const declarada = achados(cls, PENDENCIA_DECLARADA).find(valido);
     if (declarada) return [deteccao("matricula-pendencia", "sim", "media", declarada.texto.origem, trechoDe(declarada), true)];
-    const ato = [...achados(cls, ATO_DE_MATRICULA), ...achados(cls, ONUS_ROTULADO)].find((a) => valido(a) && !ATO_CANCELADO.test(a.depois));
+    const ato = [...achados(cls, ATO_DE_MATRICULA), ...achados(cls, ONUS_ROTULADO)].find((a) => valido(a) && !atoCancelado(a));
     if (ato) return [deteccao("matricula-pendencia", "sim", "baixa", ato.texto.origem, trechoDe(ato), true)];
     const averbacao = extra(imovel, "averbacao_leiloes_negativos");
     if (typeof averbacao === "string" && /nao averbad|pendente|a averbar/.test(normalizarTexto(averbacao))) {
@@ -85,7 +100,9 @@ export const regraConstrucao: RegraRisco = {
   tags: ["construcao-irregular"],
   avaliar({ textos }) {
     const cls = clausulasDe(textos);
-    const explicita = achados(cls, CONSTRUCAO_IRREGULAR).find((a) => !ressalvado(a, 50));
+    // Ressalva antes ("eventual área construída não averbada") ou depois ("construções não
+    // averbadas, se houver, ...") faz da frase texto-modelo de edital.
+    const explicita = achados(cls, CONSTRUCAO_IRREGULAR).find((a) => !ressalvado(a, 50) && !condicionalDepois(a.depois));
     if (explicita) return [deteccao("construcao-irregular", "sim", "media", explicita.texto.origem, trechoDe(explicita), true)];
     // Matrícula de terreno "sem benfeitoria" e oficial/laudo dizendo que há construção.
     const semBenfeitoria = achados(cls, SEM_BENFEITORIA)[0];

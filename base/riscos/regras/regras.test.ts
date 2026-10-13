@@ -119,6 +119,15 @@ test("praça: oferta única pela modalidade, praça em vigor, regra 'seg_nulo' e
   m = avaliar({ pracas: [], praca_atual: null, textos: [{ origem: "titulo_leilao", texto: "2º Leilão Judicial - Vara Cível" }] });
   assert.equal(valor(m, "segunda-praca"), "sim");
   assert.equal(m.get("segunda-praca")?.confianca, "baixa");
+  // Ordinal feminino (ª), a forma mais comum em "Praça".
+  m = avaliar({ pracas: [], praca_atual: null, textos: [{ origem: "titulo_leilao", texto: "1ª Praça - Leilão Judicial - Vara Cível de Santos" }] });
+  assert.deepEqual([valor(m, "primeira-praca"), valor(m, "segunda-praca"), valor(m, "praca-unica")], ["sim", "desconhecido", "desconhecido"]);
+  m = avaliar({ pracas: [], praca_atual: null, textos: [{ origem: "titulo_leilao", texto: "2ª Praça - Leilão Judicial" }] });
+  assert.deepEqual([valor(m, "primeira-praca"), valor(m, "segunda-praca"), valor(m, "praca-unica")], ["desconhecido", "sim", "desconhecido"]);
+  assert.equal(m.get("segunda-praca")?.precisa_revisao, true);
+  // "1ª Vara" não é praça; "711ª Leilão" não é 1º leilão.
+  m = avaliar({ pracas: [], praca_atual: null, textos: [{ origem: "titulo_leilao", texto: "711ª LEILÃO JUDICIAL UNIFICADO DO TRT DA 2ª REGIÃO - 1ª Vara" }] });
+  assert.equal(valor(m, "primeira-praca"), "desconhecido");
 });
 
 test("preferência: Leilão SFI (alta), venda direta da Caixa (não), alienação fiduciária só no extrajudicial", () => {

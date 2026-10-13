@@ -2,16 +2,19 @@
  * Propriedade: imóvel inteiro, cota-parte, só direitos sobre o imóvel.
  *
  * - Só direitos: título que começa com "Direitos" (alta); no texto, "direitos sobre o
- *   apartamento", "direitos aquisitivos/possessórios/de promitente comprador" (média);
+ *   apartamento", "direitos aquisitivos/possessórios/de promitente comprador" (média, revisão);
  *   domínio útil, terreno de marinha, aforamento, concessão de uso (média, revisão);
  *   nua-propriedade (baixa, revisão: quem arremata não leva o uso enquanto houver usufruto).
- *   A frase do CTN ("fato gerador seja a propriedade, o domínio útil ou a posse") e as listas de
- *   intimação ("titular de usufruto, enfiteuse...") não contam.
+ *   A frase do CTN ("fato gerador seja a propriedade, o domínio útil ou a posse"), as listas de
+ *   intimação ("titular de usufruto, enfiteuse...") e os direitos de outra pessoa ("o
+ *   arrematante exercerá todos os direitos sobre o imóvel", "o fiduciante perdeu seus direitos")
+ *   não contam.
  * - Cota-parte: percentual ou fração ideal DO IMÓVEL ("50% do imóvel", "fração ideal de 50%
- *   do bem"), "metade ideal", "parte ideal", "cota-parte" (média, revisão). A fração ideal NO
- *   TERRENO da descrição de apartamento ("cabendo-lhe a fração ideal de 2,57% no terreno")
- *   não é cota-parte. Venda com reserva da cota do coproprietário (art. 843 do CPC) vende o
- *   imóvel inteiro: não é cota-parte.
+ *   do bem"), "metade ideal", "parte ideal", "cota-parte" (média, revisão). A fração ideal do
+ *   terreno na descrição de uma unidade em condomínio ("cabendo-lhe a fração ideal de 2,57% no
+ *   terreno", "correspondendo-lhe a fração ideal de 2,0833% do terreno", "participação de 1,25%
+ *   do terreno e coisas comuns") não é cota-parte. Venda com reserva da cota do coproprietário
+ *   (art. 843 do CPC) vende o imóvel inteiro: não é cota-parte.
  * - Imóvel inteiro: "não" quando há sinal de cota ou de só direitos; "sim" quando o texto diz
  *   (100% do imóvel, totalidade) ou quando é venda extrajudicial de banco (o banco vende
  *   imóvel próprio), confiança média; no judicial, a ausência de sinal num texto razoável vale
@@ -40,10 +43,21 @@ const BEM = String.raw`(?:imovel|bem|apartamento|casa|predio|unidade(?: autonoma
 const DIREITOS_TEXTO = new RegExp(
   [
     String.raw`\bdireitos?\s+(?:e\s+acoes|aquisitivos?|possessorios?|hereditarios|de\s+(?:compromissari[oa]|promissari[oa]|promitente|cessionari[oa])\s+comprador\w*|decorrentes\s+d[eoa]s?\s+(?:contrato|compromisso|instrumento|escritura|financiamento))`,
-    String.raw`\bdireitos?\s+(?:que\s+(?:o|a|os|as)\s+(?:executad[oa]s?|devedor\w*)\s+(?:possui|possuem|detem|tem)\s+)?sobre\s+(?:o\s+|a\s+)?${BEM}\b`,
+    String.raw`\bdireitos?\s+(?:que\s+(?:o|a|os|as)\s+(?:executad[oa]s?|devedor\w*)\s+(?:possui|possuem|detem|tem)\s+|d[oa]s?\s+(?:executad[oa]s?|devedor\w*)\s+)?sobre\s+(?:o\s+|a\s+)?${BEM}\b`,
     String.raw`\bconcessao\s+de\s+(?:direito\s+real\s+de\s+)?uso\b`,
   ].join("|"),
 );
+/**
+ * Os direitos de outra pessoa, não o objeto da venda: "o arrematante exercerá todos os
+ * direitos sobre o imóvel", "o devedor fiduciante perdeu seus direitos sobre o imóvel".
+ */
+const DIREITOS_DE_OUTRO =
+  /\b(?:arrematantes?|adquirentes?|compradore?s?|licitantes?|fiduciantes?|fiduciari[oa]s?|credor\w*|perde\w*|perdeu|seus|suas|todos os|todas as|exerce\w*|transfer\w*|transmit\w*|imitid\w*|sub-?rog\w*|investid\w*|plenos?)\s+(?:\w+\s+){0,3}$/;
+/** Terreno ou solo como "bem" de uma unidade em condomínio ("fração ideal de 2,0833% do terreno"). */
+const BEM_TERRENO = /\b(?:terreno|solo)$/;
+const UNIDADE_EM_CONDOMINIO =
+  /\b(?:coisas comuns|areas? comu(?:m|ns)|participacao|correspondendo-lhe|cabendo-lhe|vinculad[oa]s?|apartamento|apto|unidade autonoma|sala|conjunto|vagas? de garagem|box|pavimento|andar|edificio|bloco|torre)\b/;
+const TIPOS_UNIDADE: ReadonlySet<string> = new Set(["apartamento", "vaga"]);
 const DOMINIO_UTIL = /\b(?:dominio util|terrenos? de marinha|acrescidos? de marinha|aforamento|aforad[oa]|enfiteuse|enfiteutic\w*|foreiro)\b/;
 const NUA_PROPRIEDADE = /\bnua[- ]?propriedade\b/;
 const BOILERPLATE = /fato gerador|dominio util ou a posse|\bctn\b/;
@@ -96,6 +110,11 @@ function generico(a: Achado): boolean {
   return ressalvado(a) || negado(a) || clausulaDeIntimacao(a.clausula) || BOILERPLATE.test(a.clausula.n);
 }
 
+/** "x% do terreno" na descrição de uma unidade em condomínio é a fração ideal, não cota-parte. */
+function fracaoDoTerrenoDaUnidade(a: Achado, tipo: string): boolean {
+  return BEM_TERRENO.test(a.casado) && (TIPOS_UNIDADE.has(tipo) || UNIDADE_EM_CONDOMINIO.test(a.clausula.n));
+}
+
 export function criarRegraObjeto(config: ConfigRiscos = CONFIG_RISCOS): RegraRisco {
   return {
     id: "propriedade/objeto",
@@ -111,7 +130,8 @@ export function criarRegraObjeto(config: ConfigRiscos = CONFIG_RISCOS): RegraRis
       const direitos: Sinal[] = [];
       const tituloDireitos = titulos.find((t) => TITULO_DIREITOS.test(t.normalizado));
       if (tituloDireitos) direitos.push({ confianca: "alta", origem: tituloDireitos.origem, trecho: tituloDireitos.original, revisar: false });
-      for (const a of achados(cls, DIREITOS_TEXTO)) if (!generico(a)) direitos.push(sinal(a, "media", false));
+      // No texto, sempre com revisão: a frase pode falar dos direitos de outra pessoa.
+      for (const a of achados(cls, DIREITOS_TEXTO)) if (!generico(a) && !DIREITOS_DE_OUTRO.test(a.antes)) direitos.push(sinal(a, "media", true));
       for (const a of achados(cls, DOMINIO_UTIL)) if (!generico(a)) direitos.push(sinal(a, "media", true));
       for (const a of achados(cls, NUA_PROPRIEDADE)) if (!generico(a)) direitos.push(sinal(a, "baixa", true));
 
@@ -121,7 +141,7 @@ export function criarRegraObjeto(config: ConfigRiscos = CONFIG_RISCOS): RegraRis
       if (tituloFracao) cotas.push({ confianca: "media", origem: tituloFracao.origem, trecho: tituloFracao.original, revisar: true });
       for (const a of achados(cls, PERCENTUAL_DO_BEM)) {
         const pct = Number((a.grupos[1] ?? "").replace(",", "."));
-        if (generico(a) || !(pct > 0 && pct < 100)) continue;
+        if (generico(a) || !(pct > 0 && pct < 100) || fracaoDoTerrenoDaUnidade(a, imovel.tipo)) continue;
         cotas.push(sinal(a, "media", true));
       }
       for (const a of achados(cls, FRACAO_NUMERICA)) {
@@ -131,7 +151,7 @@ export function criarRegraObjeto(config: ConfigRiscos = CONFIG_RISCOS): RegraRis
         cotas.push(sinal(a, "media", true));
       }
       for (const a of achados(cls, FRACAO_DO_BEM)) {
-        if (generico(a) || VENDA_COM_RESERVA_DE_COTA.test(a.clausula.n)) continue;
+        if (generico(a) || VENDA_COM_RESERVA_DE_COTA.test(a.clausula.n) || fracaoDoTerrenoDaUnidade(a, imovel.tipo)) continue;
         if (/^parte ideal/.test(a.casado) && FRACAO_NO_TERRENO.test(a.depois)) continue;
         cotas.push(sinal(a, "media", true));
       }

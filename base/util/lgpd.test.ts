@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cnpjValido, cpfValido, mascararDadosPessoais, mascararDocumentos, mascararTrecho, temDocumentoPessoal } from "./lgpd.ts";
+import { cnpjValido, cpfValido, mascararDadosPessoais, mascararDocumentos, mascararNomesSoltos, mascararTrecho, temDocumentoPessoal } from "./lgpd.ts";
 
 // Nomes e documentos abaixo são fictícios (CPF/CNPJ gerados só para passar no dígito verificador).
 
@@ -138,4 +138,52 @@ test("idempotente e trecho cortado", () => {
   const trecho = mascararTrecho(`${"palavra ".repeat(100)}Executado: JOÃO DA SILVA`, 50);
   assert.ok(trecho.length <= 50);
   assert.ok(!trecho.includes("JOÃO"));
+});
+
+test("posse e parentesco: papel com vírgula, Ocupação Atual, irmã, verbo depois do nome (nomes fictícios)", () => {
+  const casos: Array<[string, string]> = [
+    // Gatilhos de ocupação do núcleo ("ocupado por", "na posse de", "locado para", "moradora").
+    ["Imóvel ocupado por JOÃO DA SILVA SAURO e família.", "Imóvel ocupado por [NOME] e família."],
+    ["O bem encontra-se na posse de MARIA PEREIRA LIMA.", "O bem encontra-se na posse de [NOME]."],
+    ["Moradora: Ana Paula Costa", "Moradora: [NOME]"],
+    ["Ocupada por terceiros. Imóvel locado a terceiros.", "Ocupada por terceiros. Imóvel locado a terceiros."],
+    ["a executada, Maria Silva Ramos, e sua irmã, Ana Silva Ramos.", "a executada, [NOME], e sua irmã, [NOME]."],
+    ["1) Ocupação Atual: Maria Aparecida Santos, irmã do executado;", "1) Ocupação Atual: [NOME], irmã do executado;"],
+    ["Residem no imóvel João Pereira Lima e esposa", "Residem no imóvel [NOME] e esposa"],
+    ["servindo de moradia para Francisco das Chagas Oliveira e filhos", "servindo de moradia para [NOME] e filhos"],
+    ["José Carlos de Souza e família ocupam o imóvel desde 2010.", "[NOME] e família ocupam o imóvel desde 2010."],
+    ["ocupado por Roberto Carlos Mendes, ex-mutuário, de responsabilidade de Roberto Carlos Mendes.", "ocupado por [NOME], ex-mutuário, de responsabilidade de [NOME]."],
+    ["nos autos movidos por Antônio Ferreira Gomes contra Luiz Carlos Prado", "nos autos movidos por [NOME] contra [NOME]"],
+    // O ponto final do nome anterior fica; o verbo no começo da frase não tem nome antes.
+    ["e sua irmã, Ana Silva Ramos. Residem no imóvel há vinte anos", "e sua irmã, [NOME]. Residem no imóvel há vinte anos"],
+  ];
+  for (const [entrada, esperado] of casos) assert.equal(mascararDadosPessoais(entrada), esperado, entrada);
+});
+
+test("posse: valores de ocupação e frases sem nome ficam como estão", () => {
+  const textos = [
+    "Ocupação: Desocupado.",
+    "Ocupação Atual: O próprio executado",
+    "OCUPAÇÃO ATUAL: O PRÓPRIO EXECUTADO",
+    "Ocupação: Terceiros",
+    "Situação de ocupação: Ocupado por invasores",
+    "O executado, intimado, informou que o imóvel está ocupado por inquilino.",
+    "SALDO REMANESCENTE SERÁ DE RESPONSABILIDADE DO(S) ARREMATANTE(S), CONFORME DETERMINADO",
+    "Condomínio: Sob responsabilidade do comprador, até o limite de 10%",
+    "Depositário: o Sr. [NOME].",
+  ];
+  for (const t of textos) assert.equal(mascararDadosPessoais(t), t, t);
+});
+
+test("máscara reforçada: sequência de nomes sem gatilho, palavras de edital ficam", () => {
+  assert.equal(
+    mascararNomesSoltos("o imóvel está ocupado; Lúcia Ferreira Prado informou que mora lá."),
+    "o imóvel está ocupado; [NOME] informou que mora lá.",
+  );
+  const edital = "1) Certificou o Oficial de Justiça que: Ocupação Atual: O próprio executado; 2) Há outra penhora. Leilão Judicial.";
+  assert.equal(mascararNomesSoltos(edital), edital);
+  assert.equal(mascararNomesSoltos("IMÓVEL OCUPADO."), "IMÓVEL OCUPADO.", "caixa alta fica com os gatilhos");
+  const uma = mascararNomesSoltos("Maria e José da Silva moram no local.");
+  assert.equal(uma, "[NOME] moram no local.");
+  assert.equal(mascararNomesSoltos(uma), uma, "idempotente");
 });

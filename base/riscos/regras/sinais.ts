@@ -2,9 +2,50 @@
  * Sinais de texto usados por mais de uma regra: quem paga as dívidas, dívidas declaradas,
  * gravames declarados e venda do imóvel inteiro com reserva da cota do coproprietário
  * (art. 843 do CPC). Regex em minúsculas e sem acento, aplicados por cláusula (apoio.ts).
+ *
+ * Contrassinal de dívida vale só para a PARTE da cláusula em que aparece: num edital atual a
+ * mesma frase costuma dizer "os débitos de IPTU sub-rogam-se no preço (art. 130 do CTN), e os
+ * condominiais, propter rem, são do arrematante" (Tema 1.134/STJ para tributo, propter rem
+ * para condomínio). A cláusula é partida nos conectivos (", e os", "mas", "bem como"...).
  */
 import { lerNumeroBR } from "../../util/numero.ts";
-import { achados, negado, ressalvado, type Achado, type Clausula } from "./apoio.ts";
+import { achados, clausulaCondicional, negado, ressalvado, type Achado, type Clausula } from "./apoio.ts";
+
+// ---------------------------------------------------------------------------
+// Partes de uma cláusula
+// ---------------------------------------------------------------------------
+
+/**
+ * Conectivos que, dentro de uma cláusula, passam a falar de outra dívida ou de outro
+ * responsável. "cabendo/ficando" ficam na parte seguinte ("..., cabendo ao arrematante...").
+ */
+const CONECTIVO =
+  /,\s*(?:e|mas|porem|contudo|todavia|entretanto|enquanto(?:\s+que)?|ao passo que|ja|sendo que|bem como|assim como)\s+|\s+(?:mas|porem|contudo|todavia|entretanto|enquanto(?:\s+que)?|ao passo que|bem como|assim como)\s+|,\s*(?=(?:cabendo|ficando|devendo)\s)|\s+e\s+(?=(?:os|as|o|a)\s+(?:debitos?|dividas?|condominia\w*|encargos?|tributos?|despesas|cotas|taxas|iptu)\b)/g;
+
+/** Uma cláusula partida nos conectivos; cada parte tem o formato de cláusula (mesmo texto). */
+export function partesDaClausula(cl: Clausula): Clausula[] {
+  const partes: Clausula[] = [];
+  let inicio = 0;
+  const fechar = (fim: number): void => {
+    if (fim > inicio) partes.push({ texto: cl.texto, inicio: cl.inicio + inicio, fim: cl.inicio + fim, n: cl.n.slice(inicio, fim) });
+  };
+  for (const m of cl.n.matchAll(CONECTIVO)) {
+    fechar(m.index);
+    inicio = m.index + m[0].length;
+  }
+  fechar(cl.n.length);
+  return partes.length > 0 ? partes : [cl];
+}
+
+/** O achado feito numa parte, com a cláusula inteira como contexto (para o trecho). */
+function naClausula(a: Achado, cl: Clausula): Achado {
+  return { ...a, clausula: cl, antes: cl.n.slice(0, a.inicio - cl.inicio), depois: cl.n.slice(a.fim - cl.inicio) };
+}
+
+/** A parte da cláusula que contém o achado. */
+function parteDe(a: Achado): Clausula {
+  return partesDaClausula(a.clausula).find((p) => p.inicio <= a.inicio && a.inicio < p.fim) ?? a.clausula;
+}
 
 // ---------------------------------------------------------------------------
 // Quem paga
@@ -19,7 +60,7 @@ export const RESPONSABILIDADE_DO_ARREMATANTE = new RegExp(
   [
     String.raw`(?:por conta|a cargo|responsabilidade(?:\s+(?:exclusiva|integral|inteira|unica|solidaria))?)\s+${DE_QUEM}`,
     String.raw`(?:suportad|assumid|arcad|pag|quitad|custead)[oa]s?(?:\s+integralmente)?\s+pel[oa]s?\s+${ARREMATANTE}`,
-    String.raw`(?:cabera|caberao|cabe|compete|competira)\s+ao\s+${ARREMATANTE}`,
+    String.raw`(?:cabera|caberao|cabe|cabendo|compete|competira|competindo)\s+ao\s+${ARREMATANTE}`,
     String.raw`\b(?:o|a|os|as)\s+${ARREMATANTE}\s+(?:arcara|arcarao|devera arcar|deverao arcar|assumira|assumirao|pagara|pagarao|respondera|responderao|sera responsavel|serao responsaveis|ficara responsavel|ficarao responsaveis)`,
   ].join("|"),
 );
@@ -50,9 +91,15 @@ export const CONTRASSINAL_DIVIDA = new RegExp(
 
 const SOBRE_VEICULO = /\bveicul\w*|\bipva\b|orgaos? de transito|\bdetran\b/;
 const DISTANCIA_MAXIMA = 160;
+/** "livre de ônus" só é contrassinal de dívida quando fala da venda ("será vendido/entregue livre de ônus"). */
+const CONTEXTO_DE_VENDA = /\b(?:arremat\w*|adquir\w*|aquisic\w*|entreg\w*|transmit\w*|transfer\w*|alienad[oa]s?|vendid[oa]s?|vend[ae]\w*|leiload[oa]s?)\b/;
+/** "eventuais débitos" sem dizer de quê: texto genérico (lista de despesas), não dívida do imóvel. */
+const DIVIDA_GENERICA = /^(?:debitos?|dividas?)$/;
+const HESITACAO_ANTES = /\b(?:eventua(?:l|is)|eventualmente|porventura|possive(?:l|is))\s+(?:\w+\s+)?$/;
+const DIVIDA_DO_IMOVEL_G = new RegExp(DIVIDA_DO_IMOVEL.source, "g");
 
 export interface AnaliseDividaPassa {
-  /** Cláusulas que põem dívida do imóvel na conta do arrematante (sem contrassinal na mesma cláusula). */
+  /** Cláusulas que põem dívida do imóvel na conta do arrematante (sem contrassinal na mesma parte da cláusula). */
   positivos: Achado[];
   /** Cláusulas com sub-rogação, isenção ou "não serão transferidos". */
   contrassinais: Achado[];
@@ -60,26 +107,53 @@ export interface AnaliseDividaPassa {
   caixaPadrao: boolean;
 }
 
-function dividaPerto(cl: Clausula, resp: Achado): boolean {
-  const ini = resp.inicio - cl.inicio;
-  const fim = resp.fim - cl.inicio;
-  const antes = cl.n.slice(Math.max(0, ini - DISTANCIA_MAXIMA), ini);
-  const depois = cl.n.slice(fim, fim + DISTANCIA_MAXIMA);
-  return DIVIDA_DO_IMOVEL.test(antes) || DIVIDA_DO_IMOVEL.test(depois);
+/**
+ * Há dívida do imóvel perto do achado (dentro de `cl`)? "Eventuais débitos" sem objeto não
+ * conta; "eventuais débitos de condomínio" conta (o objeto é específico).
+ */
+function dividaPerto(cl: Clausula, resp: Pick<Achado, "inicio" | "fim">): boolean {
+  const ini = Math.max(0, resp.inicio - cl.inicio - DISTANCIA_MAXIMA);
+  const fim = Math.min(cl.n.length, resp.fim - cl.inicio + DISTANCIA_MAXIMA);
+  for (const m of cl.n.slice(ini, fim).matchAll(DIVIDA_DO_IMOVEL_G)) {
+    const pos = ini + m.index;
+    if (pos >= resp.inicio - cl.inicio && pos < resp.fim - cl.inicio) continue;
+    if (!DIVIDA_GENERICA.test(m[0]) || !HESITACAO_ANTES.test(cl.n.slice(Math.max(0, pos - 30), pos))) return true;
+  }
+  return false;
 }
 
-/** Lê, cláusula a cláusula, quem paga as dívidas do imóvel. */
+function contrassinalDaParte(parte: Clausula): Achado | undefined {
+  return achados([parte], CONTRASSINAL_DIVIDA).find((a) => !/^livre/.test(a.casado) || CONTEXTO_DE_VENDA.test(parte.n));
+}
+
+/**
+ * Lê, cláusula a cláusula, quem paga as dívidas do imóvel. O contrassinal (sub-rogação,
+ * isenção, art. 130 do CTN...) anula só a parte da cláusula em que está: "o IPTU sub-roga-se
+ * no preço, e o condomínio é do arrematante" dá positivo (condomínio) e contrassinal (IPTU).
+ * Na mesma parte, o contrassinal vence ("ônus por conta do arrematante, exceto os débitos de
+ * IPTU, que se sub-rogam no preço").
+ */
 export function analisarDividaPassa(cls: readonly Clausula[]): AnaliseDividaPassa {
   const positivos: Achado[] = [];
   const contrassinais: Achado[] = [];
   let caixaPadrao = false;
   for (const cl of cls) {
     if (SOBRE_VEICULO.test(cl.n)) continue;
-    const contra = achados([cl], CONTRASSINAL_DIVIDA)[0];
-    if (contra && (DIVIDA_DO_IMOVEL.test(cl.n) || /\bonus\b|\bencargos\b/.test(cl.n))) contrassinais.push(contra);
-    if (contra || ENCARGO_FUTURO.test(cl.n)) continue;
+    const partes = partesDaClausula(cl);
+    const contraPorParte = partes.map(contrassinalDaParte);
+    const fala = (p: Clausula): boolean => DIVIDA_DO_IMOVEL.test(p.n) || /\bonus\b|\bencargos\b/.test(p.n);
+    contraPorParte.forEach((contra, i) => {
+      const parte = partes[i];
+      // A parte do contrassinal pode não repetir a dívida ("..., e demais tributos, sub-rogam-se no preço").
+      if (contra && parte && (fala(parte) || fala(cl))) contrassinais.push(naClausula(contra, cl));
+    });
+    const algumContra = contraPorParte.some(Boolean);
     for (const resp of achados([cl], RESPONSABILIDADE_DO_ARREMATANTE)) {
-      if (!dividaPerto(cl, resp)) continue;
+      const i = partes.findIndex((p) => p.inicio <= resp.inicio && resp.inicio < p.fim);
+      const parte = partes[i] ?? cl;
+      if (contraPorParte[i] || ENCARGO_FUTURO.test(parte.n)) continue;
+      // Sem contrassinal na cláusula, a dívida pode estar em outra parte dela (comportamento antigo).
+      if (!dividaPerto(parte, resp) && (algumContra || !dividaPerto(cl, resp))) continue;
       if (negado(resp)) {
         contrassinais.push(resp);
         break;
@@ -99,7 +173,9 @@ export function analisarDividaPassa(cls: readonly Clausula[]): AnaliseDividaPass
 const VERBO_EXISTE = String.raw`(?:ha|existe|existem|consta|constam|possui|apresenta|apresentam|com|constando|existencia de|registra|registram)`;
 // Só "débito/dívida/pendência": "cota condominial de R$ 500" é a mensalidade, não atraso.
 const TIPO_DIVIDA = String.raw`(?:debitos?|dividas?|pendencias?(?: financeiras)?)`;
-const VALOR_OU_DATA = String.raw`(?:r\$\s*[\d.,]+|em aberto|em atraso|vencid\w*|nao pag\w*|ate (?:a data de )?\d|inscri\w* (?:na|em) divida ativa)`;
+// Valor ou situação de atraso. "Até 2025" e "vencidos até a arrematação" sozinhos não declaram
+// dívida (são o período de uma regra de edital: "Débitos de IPTU até 2025: consultar a Prefeitura").
+const VALOR_OU_DATA = String.raw`(?:r\$\s*[\d.,]+|em aberto|em atraso|vencid\w* e nao pag\w*|nao pag\w*|inscri\w* (?:na|em) divida ativa)`;
 
 export type TipoDivida = "condominio" | "iptu";
 
@@ -118,6 +194,7 @@ function positivosDe(tipo: TipoDivida): RegExp {
     lista.push(
       String.raw`\b(?:condominio|cotas? condominia\w*|taxas? condominia\w*)\s+(?:em atraso|em aberto|atrasad\w*|inadimpl\w*|vencidas e nao pagas|nao pag\w*)`,
       String.raw`\bdebito condominial\b`,
+      String.raw`\b(?:o\s+)?(?:condominio|sindic[oa]|administradora)\s+(?:informou|informa|apontou|aponta|declarou|declara|noticiou)\s+(?:\w+\s+){0,2}?${TIPO_DIVIDA}\b`,
     );
   } else {
     lista.push(
@@ -159,6 +236,19 @@ const PRESSUPOSTOS: Readonly<Record<TipoDivida, RegExp | null>> = {
 const NEGATIVOS: Readonly<Record<TipoDivida, RegExp>> = { condominio: negativosDe("condominio"), iptu: negativosDe("iptu") };
 /** Cláusula de isenção/sub-rogação genérica ("inscritos ou não na dívida ativa"): não declara dívida. */
 const CLAUSULA_GENERICA_DIVIDA = /inscrit\w* ou nao|\bisent|\bsub-?\s?r+og|\bdesembaracad/;
+/** ...a não ser que a frase declare a dívida: verbo de existência ("Há débitos...") ou valor em reais. */
+const DECLARA_EXISTENCIA = new RegExp(String.raw`^(?:${VERBO_EXISTE}\s|o\s+condominio|condominio|sindic|administradora)`);
+
+/**
+ * Cláusula genérica de sub-rogação ou isenção que não declara dívida nenhuma. Olha só a parte
+ * da cláusula do achado ("desembaraçado de débitos fiscais, mas o débito condominial de R$ 40
+ * mil fica a cargo do arrematante" declara o condomínio). "Há débitos de IPTU de R$ 8 mil, que
+ * se sub-rogam no preço" declara a dívida: IPTU em atraso sai "sim" e só "Dívida passa" sai "não".
+ */
+function clausulaGenerica(a: Achado): boolean {
+  const parte = parteDe(a);
+  return CLAUSULA_GENERICA_DIVIDA.test(parte.n) && !DECLARA_EXISTENCIA.test(a.casado) && !/\br\$\s*\d/.test(parte.n);
+}
 
 export interface DividaDeclarada {
   achado: Achado;
@@ -187,7 +277,7 @@ export function dividasDeclaradas(cls: readonly Clausula[], tipo: TipoDivida): A
   for (const a of achados(cls, NEGATIVOS[tipo])) if (!ressalvado(a)) negativos.push(a);
   for (const a of achados(cls, POSITIVOS[tipo])) {
     if (ressalvado(a) || negado(a)) continue;
-    if (CLAUSULA_GENERICA_DIVIDA.test(a.clausula.n)) continue;
+    if (clausulaGenerica(a)) continue;
     if (negativos.some((n) => n.clausula === a.clausula)) continue;
     const valor = valorDaClausula(a);
     // "Débitos condominiais: R$ 0,00" diz que não há dívida.
@@ -200,7 +290,7 @@ export function dividasDeclaradas(cls: readonly Clausula[], tipo: TipoDivida): A
   const pressuposto = PRESSUPOSTOS[tipo];
   if (pressuposto) {
     for (const a of achados(cls, pressuposto)) {
-      if (CLAUSULA_GENERICA_DIVIDA.test(a.clausula.n) || positivos.some((p) => p.achado.clausula === a.clausula)) continue;
+      if (clausulaGenerica(a) || positivos.some((p) => p.achado.clausula === a.clausula)) continue;
       positivos.push({ achado: a, valor: null, pressuposta: true });
     }
   }
@@ -227,6 +317,10 @@ export function gravamesDeclarados(cls: readonly Clausula[]): Achado[] {
 export const VENDA_COM_RESERVA_DE_COTA =
   /\bart(?:igo)?\.?\s*843\b|\breserv\w*\s+(?:a\s+|da\s+)?(?:cota|quota)[- ]?parte|\bgarantia\s+da\s+(?:cota|quota)[- ]?parte|\b(?:reservad|resguardad|preservad)\w*\s+(?:a\s+)?meacao|\b(?:coproprietario|conjuge)\s+(?:nao executad\w*|alheio a execucao)/;
 
+/**
+ * Venda com reserva da cota (art. 843) afirmada sobre este imóvel; a regra condicional do modelo
+ * ("Caso o bem penhorado seja indivisível, ... (art. 843 do CPC)") não conta.
+ */
 export function vendaComReservaDeCota(cls: readonly Clausula[]): Achado[] {
-  return achados(cls, VENDA_COM_RESERVA_DE_COTA);
+  return achados(cls, VENDA_COM_RESERVA_DE_COTA).filter((a) => !ressalvado(a) && !clausulaCondicional(a.clausula));
 }

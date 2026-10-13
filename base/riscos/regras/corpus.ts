@@ -14,14 +14,23 @@
  * - "edital:E1"/"E2"/"E3": frases literais de três editais reais (judicial SP, judicial PE e
  *   extrajudicial Lei 9.514), citadas em sbroggioadv/leiloes-os-marketplace,
  *   context/clausulas-armadilha-de-edital.md. Só a frase do edital, nada do texto do projeto.
+ * - "edital:tjsp-vc" e "caixa:edital-licitacao": cláusulas de dois editais públicos em PDF
+ *   arquivados em goulartt/puc-rj-projeto-final (data/editais): leilão judicial de vara cível de
+ *   São Paulo (2026) e Licitação Aberta da Caixa (modelo v058, 2026), com a descrição de um imóvel
+ *   da tabela anexa. Só o texto do edital (documento público), nada do código do projeto.
  * - real = false: variação construída a partir de um texto real para cobrir um contrassinal ou
  *   uma forma que o material não trouxe. Está marcada para não ser confundida com dado real.
  *
- * LGPD: nomes de partes, proprietários, credores e usufrutuários viraram [NOME]; CPF e CNPJ
- * viraram [CPF]/[CNPJ]; números de processo foram trocados por números fictícios (mantendo o
- * formato); ids de documentos do PJe e endereços (rua e número) dos lotes judiciais foram
- * retirados, para não ligar o texto a quem mora no imóvel. Ficaram áreas, valores, cidades e
- * matrículas (dados do imóvel, públicos no edital), que as regras usam.
+ * LGPD: nomes de partes, proprietários, credores, usufrutuários e leiloeiros viraram [NOME]; CPF
+ * e CNPJ viraram [CPF]/[CNPJ]; números de processo foram trocados por números fictícios
+ * (mantendo o formato). Para o texto não identificar o imóvel (e, por certidão, o titular),
+ * também foram trocados por fictícios ou por "[nome]": número de matrícula e de inscrição de
+ * IPTU, cartório, nome de edifício, torre, condomínio, loteamento, fazenda e rua, número de
+ * unidade, de andar, de vaga, de lote e de quadra; ids de documentos do PJe, endereços e
+ * referências de localização ("a 100 metros da praia") saíram. Ficaram áreas, valores e
+ * cidades, que as regras usam e que sozinhos não apontam um imóvel. As regras não dependem dos
+ * valores trocados. Os casos "lgpd-*" usam nomes inventados SEM máscara, de propósito: o teste
+ * confere que nenhum deles chega ao trecho de evidência.
  */
 import type { CapacidadesFonte, ImovelNormalizado, TextoFonte, ValorRisco } from "../../tipos.ts";
 import type { SlugTag } from "../tags.ts";
@@ -43,7 +52,22 @@ export interface CasoCorpus {
   esperado: Partial<Record<SlugTag, ValorRisco>>;
   /** Tags que, além do valor, precisam sair marcadas (true) ou não (false) para revisão humana. */
   revisao?: Partial<Record<SlugTag, boolean>>;
+  /** Nomes (inventados) que estão no texto sem máscara e não podem aparecer em nenhum trecho. */
+  semNomes?: readonly string[];
 }
+
+/**
+ * Tags cujo único caso positivo no corpus é construído (real = false): o material real não
+ * trouxe a frase. corpus.test.ts confere esta lista; o README repete.
+ */
+export const SO_POSITIVO_CONSTRUIDO: readonly SlugTag[] = [
+  "desocupado",
+  "acao-judicial",
+  "leilao-com-recurso",
+  "area-divergente",
+  "sem-vistoria",
+  "aceita-financiamento",
+];
 
 const CAIXA = { fonteId: "caixa_csv", imovel: { judicial: false, comitente: "Caixa Econômica Federal" } } as const;
 
@@ -55,10 +79,10 @@ export const CORPUS: readonly CasoCorpus[] = [
     id: "lj-218898-observacoes",
     fonte: "lj:218898",
     real: true,
-    titulo: "Apartamento nº 21 c/ 165,555m² - São Paulo/SP",
+    titulo: "Apartamento nº 11 c/ 165,555m² - São Paulo/SP",
     descricao:
-      "LOTE 096 – 12:11H) (Proc. 1000000-11.2020.5.02.0090 - 90ª VT São Paulo/SP) O IMÓVEL DE MATRÍCULA Nº 147.300 DO 6º CARTÓRIO DE REGISTRO DE IMÓVEIS DE SÃO PAULO/SP. " +
-      "DESCRIÇÃO: O apartamento nº 21, localizado no 2º andar ou 4º pavimento do Edifício Jardins de Guadalupe, com a área útil de 165,555m², a área comum de 269,861m², a área total de 435,416m² e a participação no terreno e coisas comuns do condomínio de 12,5000%, estando-lhe vinculados 1 depósito localizado no 2º subsolo, e 3 vagas de garagem. " +
+      "LOTE 096 – 12:11H) (Proc. 1000000-11.2020.5.02.0090 - 90ª VT São Paulo/SP) O IMÓVEL DE MATRÍCULA Nº 100.001 DO 1º CARTÓRIO DE REGISTRO DE IMÓVEIS DE SÃO PAULO/SP. " +
+      "DESCRIÇÃO: O apartamento nº 11, localizado no 1º andar ou 3º pavimento do Edifício [nome], com a área útil de 165,555m², a área comum de 269,861m², a área total de 435,416m² e a participação no terreno e coisas comuns do condomínio de 12,5000%, estando-lhe vinculados 1 depósito localizado no 2º subsolo, e 3 vagas de garagem. " +
       "OBSERVAÇÕES: 1) Há indisponibilidade. 2) Há outras penhoras. 3) Eventuais despesas cartorárias decorrentes do registro da arrematação, inclusive a baixa de eventuais gravames (cancelamento de penhoras e/ou indisponibilidades), poderão ficar a cargo do arrematante, na forma do art. 320-G do Provimento CNJ n° 149/2023, ressalvada eventual decisão do Juízo da Execução em sentido contrário, na forma do art. 320-C do Provimento CNJ n° 149/2023. " +
       "4) Nos termos do art. 79, §§ 6º e 7º da Consolidação das Normas da Corregedoria (provimento GP/CR nº 04/2026), o adquirente ficará isento dos débitos tributários cujo fato gerador seja a propriedade, o domínio útil ou a posse dos bens e direitos adquiridos em leilão judicial ou por iniciativa particular, inscritos ou não na dívida ativa, bem como dos débitos não tributários de natureza propter rem relativos ao referido bem, que se sub-rogarão no preço da aquisição, observada a ordem de preferência. " +
       "VALOR DA AVALIAÇÃO: R$ 1.700.000,00 (um milhão e setecentos mil reais). EXEQUENTE: [NOME] EXECUTADO(A)(S): [NOME]; [NOME]; [NOME]",
@@ -84,7 +108,7 @@ export const CORPUS: readonly CasoCorpus[] = [
     fonte: "lj:218848",
     real: true,
     descricao:
-      "DESCRIÇÃO: Imóvel: O APARTAMENTO nº 162, localizado no 16º pavimento do EDIFÍCIO [nome], com a área privativa real de 143,809m², nela incluída a área correspondente as vagas nºs 93P/94P/95M, e área total real de 261,578m², cabendo-lhe a fração ideal de 2,5763% no terreno descrito na matrícula nº 105.211. " +
+      "DESCRIÇÃO: Imóvel: O APARTAMENTO nº 101, localizado no 10º pavimento do EDIFÍCIO [nome], com a área privativa real de 143,809m², nela incluída a área correspondente as vagas nºs 1P/2P/3M, e área total real de 261,578m², cabendo-lhe a fração ideal de 2,5763% no terreno descrito na matrícula nº 100.002. " +
       'OBSERVAÇÕES: 1) Certificou o oficial de justiça que: " Ocupam o imóvel, como moradoras, a executada, (...) e sua irmã, (...) Residem no imóvel há mais de vinte anos"; 2) Há indisponibilidades; 3) Há outras penhoras; 4) Há bloqueios; ' +
       "5) A unidade autônoma encontra-se em dia com o pagamento das cotas vencidas até o dia 20 de março de 2026; " +
       '6) Consignou em despacho o juízo da execução que: " a) nos termos do parágrafo único do art. 130 do CTN e art. 110 da Consolidação dos Provimentos da CGJT, sendo hipótese de sub-rogação dos débitos no preço, fica o bem imóvel arrematado nesta hasta pública desembaraçado das dívidas tributárias e fiscais de qualquer órgão da Administração Pública, inscritas ou não na dívida pública, geradas até a data da arrematação, de forma que esses encargos não serão transferidos aos arrematantes; ' +
@@ -108,7 +132,7 @@ export const CORPUS: readonly CasoCorpus[] = [
     fonte: "lj:218903",
     real: true,
     descricao:
-      "DESCRIÇÃO: o APARTAMENTO nº 91, localizado no 9º andar do Edifício Daniela, com a área útil de 212,50m², a área comum de 62,19m², e a área total de 274,69m², a área ideal no terreno de 43,701421m² e a fração ideal no terreno de 4,284.453%. " +
+      "DESCRIÇÃO: o APARTAMENTO nº 21, localizado no 2º andar do Edifício [nome], com a área útil de 212,50m², a área comum de 62,19m², e a área total de 274,69m², a área ideal no terreno de 43,701421m² e a fração ideal no terreno de 4,284.453%. " +
       "OBSERVAÇÕES: 1) Imóvel objeto de HIPOTECA (os efeitos da arrematação no caso de hipoteca e alienação fiduciária, serão apreciados e decididos pelo(a) Juiz(a) Da Vara de origem, nos termos do art. 85º da Consolidação das Normas da Corregedoria (provimento GP/CR nº 04/2026); 2) Imóvel objeto de PENHORAS e INDISPONIBILIDADES em outros processos; " +
       "3) Nos termos do art. 79, §§ 6º e 7º da Consolidação das Normas da Corregedoria (provimento GP/CR nº 04/2026), o adquirente ficará isento dos débitos tributários cujo fato gerador seja a propriedade, o domínio útil ou a posse dos bens e direitos adquiridos em leilão judicial ou por iniciativa particular, inscritos ou não na dívida ativa, bem como dos débitos não tributários de natureza propter rem relativos ao referido bem, que se sub-rogarão no preço da aquisição, observada a ordem de preferência. Imóvel AVALIADO em R$ 2.700.000,00.",
     esperado: {
@@ -124,10 +148,10 @@ export const CORPUS: readonly CasoCorpus[] = [
     id: "lj-222141-saldo-condominial-e-agravo-decidido",
     fonte: "lj:222141",
     real: true,
-    titulo: "Apto - 240,80m² - Box 9-10 e 20 - São Caetano do Sul/SP",
+    titulo: "Apto - 240,80m² - Box 1-2 e 3 - São Caetano do Sul/SP",
     descricao:
-      "Apartamento no 152, 15º Andar, do Ed. Chartres, c/ área total 271,11m² (área útil 240,80m² e comum 30,31m²), possuindo o mesmo 5 dormitórios, sendo 2 suítes, 2º CRI 13.941. Imóvel localizado em São Caetano do Sul/SP. (Proc. 0000001-22.2018.8.26.0565) " +
-      "(O IMÓVEL PODE SER PARCELADO COM 25% DE ENTRADA E O RESTANTE EM ATÉ 30 MESES) OBS.: O empreendimento é composto por 15 (quinze) pavimentos e 2 (dois) apartamentos por andar. " +
+      "Apartamento no 31, 3º Andar, do Ed. [nome], c/ área total 271,11m² (área útil 240,80m² e comum 30,31m²), possuindo o mesmo 5 dormitórios, sendo 2 suítes, 1º CRI 10.003. Imóvel localizado em São Caetano do Sul/SP. (Proc. 0000001-22.2018.8.26.0565) " +
+      "(O IMÓVEL PODE SER PARCELADO COM 25% DE ENTRADA E O RESTANTE EM ATÉ 30 MESES) " +
       "OBS.: CASO O VALOR OBTIDO COM A ARREMATAÇÃO NÃO SEJA SUFICIENTE PARA A QUITAÇÃO INTEGRAL DOS DÉBITOS CONDOMINIAIS, O SALDO REMANESCENTE SERÁ DE RESPONSABILIDADE DO(S) ARREMATANTE(S), CONFORME DETERMINADO NO ACÓRDÃO PROFERIDO NO AGRAVO DE INSTRUMENTO Nº 2000001-33.2023.8.26.0000.",
     imovel: { area_privativa: 240.8, area_total: 271.11, aceita_parcelamento: true },
     esperado: {
@@ -166,7 +190,7 @@ export const CORPUS: readonly CasoCorpus[] = [
     real: true,
     titulo: "Direitos - Apartamento - 160,780m² - 03 Vagas - São Paulo/SP",
     descricao:
-      "Direitos sobre o apartamento nº 161, com a área privativa de 160,780m² e a área comum de 311,966m², perfazendo a área total de 472,746m², localizado no 16º pavimento da TORRE “G-3”, designada “EDIFÍCIO STRELITZIA”, situado no Bairro Morumbi, contando com 03 vagas para guarda de automóveis. " +
+      "Direitos sobre o apartamento nº 41, com a área privativa de 160,780m² e a área comum de 311,966m², perfazendo a área total de 472,746m², localizado no 4º pavimento da TORRE “[nome]”, designada “EDIFÍCIO [nome]”, contando com 03 vagas para guarda de automóveis. " +
       "(Proc. 1000002-44.2022.8.26.0224) Obs.2: O referido imóvel encontra-se registrado em nome de [NOME] ([CNPJ]) e [NOME] ([CNPJ]).",
     imovel: { area_privativa: 160.78, area_total: 472.746 },
     esperado: { "so-direitos": "sim", "imovel-inteiro": "nao", "cota-parte": "desconhecido", "area-divergente": "desconhecido" },
@@ -177,7 +201,7 @@ export const CORPUS: readonly CasoCorpus[] = [
     fonte: "lj:221879 (item 4.1)",
     real: true,
     descricao:
-      "Lote c/ 03 Imóveis Urbanos: 4.1) Lote de terreno n. 05, quadra D, com frente para a rua Projetada Seis, do Parque Cesarino Borba, em Iracemápolis/SP, desta comarca e 2ª circunscrição, sem benfeitoria alguma, com área superficial de 250,00 m², medindo 10,00 metros na frente e nos fundos. AVALIAÇÃO: 730.000,00 Identificação: Matrícula: 15081 - 2º Cartório – LIMEIRA/SP. " +
+      "Lote c/ 03 Imóveis Urbanos: 4.1) Lote de terreno n. 01, quadra A, com frente para a rua [nome], do [loteamento], em Iracemápolis/SP, desta comarca e 2ª circunscrição, sem benfeitoria alguma, com área superficial de 250,00 m², medindo 10,00 metros na frente e nos fundos. AVALIAÇÃO: 730.000,00 Identificação: Matrícula: 10004 - 1º Cartório – LIMEIRA/SP. " +
       "Ônus/Observação: R.12 Hipoteca em favor de [NOME], para garantia de dívida de R$ 800.000,00. Obs. Conforme diligências do Oficial de Justiça em 05.12.2017, sobre referido imóvel foi construído um prédio residencial, contendo sala, cozinha, área de serviço, despensa, dois quartos, uma suíte, banheiro social e na área externa garagem coberta para três carros, num total aproximado de 205 m² de construção em bom estado, padrão alto. Proprietários: [NOME].",
     esperado: { "construcao-irregular": "sim", "matricula-pendencia": "sim", "penhora-outros-credores": "desconhecido" },
     revisao: { "construcao-irregular": true },
@@ -187,7 +211,7 @@ export const CORPUS: readonly CasoCorpus[] = [
     fonte: "lj:221879 (item 4.2)",
     real: true,
     descricao:
-      "4.2) Lote de terreno sob o nº 19 da quadra 13, da Estância Balneária Tupy, Itanhaém/SP, encerrando a área de 282,60 m². AVALIAÇÃO: 390.000,00 Identificação: Matrícula: 110394 - 1º Cartório – ITANHAÉM/SP. Ônus/Observação: Obs. Conforme diligência do Sr. Oficial de Justiça em 17/04/2018: O imóvel é um terreno de esquina, há 100 metros da praia, com uma casa térrea de alvenaria. " +
+      "4.2) Lote de terreno sob o nº 02 da quadra 01, do [loteamento], Itanhaém/SP, encerrando a área de 282,60 m². AVALIAÇÃO: 390.000,00 Identificação: Matrícula: 10005 - 1º Cartório – ITANHAÉM/SP. Ônus/Observação: Obs. Conforme diligência do Sr. Oficial de Justiça em 17/04/2018: O imóvel é um terreno de esquina, com uma casa térrea de alvenaria. " +
       "Obs. 2 - A penhora recai sobre 100% da nua-propriedade do imóvel, NÃO PODERÁ ser arrematado por lance inferior a 75% da avaliação para garantia da quota-parte do coproprietário não executado. R.09 - Usufruto vitalício em favor de [NOME], CPF [CPF]; AV.10 - INDISPONIBILIDADE DE BENS - PROC. 0000003-55.2015.5.15.0014. Proprietários: [NOME]. " +
       "Obs.: O Lance Mínimo foi calculado considerando os termos do Art. 843, do CPC/2015, ou seja, reservando a cota parte do coproprietário ou cônjuge alheio à execução.",
     esperado: {
@@ -205,7 +229,7 @@ export const CORPUS: readonly CasoCorpus[] = [
     fonte: "lj:221879 (item 4.2, sem a frase da nua-propriedade)",
     real: false,
     descricao:
-      "4.2) Lote de terreno sob o nº 19 da quadra 13, da Estância Balneária Tupy, Itanhaém/SP, encerrando a área de 282,60 m². AVALIAÇÃO: 390.000,00. " +
+      "4.2) Lote de terreno sob o nº 02 da quadra 01, do [loteamento], Itanhaém/SP, encerrando a área de 282,60 m². AVALIAÇÃO: 390.000,00. " +
       "Obs.: O Lance Mínimo foi calculado considerando os termos do Art. 843, do CPC/2015, ou seja, reservando a cota parte do coproprietário ou cônjuge alheio à execução.",
     esperado: { "imovel-inteiro": "sim", "cota-parte": "nao", "so-direitos": "desconhecido", "direito-preferencia": "sim" },
     revisao: { "imovel-inteiro": true },
@@ -215,7 +239,7 @@ export const CORPUS: readonly CasoCorpus[] = [
     fonte: "lj:218901",
     real: true,
     descricao:
-      "DESCRIÇÃO: O APARTAMENTO DUPLEX SOB Nº 133, localizado no 13º andar do empreendimento [nome], contendo área real privativa de 165,915 m2, área real comum de 132,479 m2 e área real total de 298,394 m2, correspondendo-lhe a fração ideal de terreno de 3,0361% e coeficiente de proporcionalidade de 0,030361. " +
+      "DESCRIÇÃO: O APARTAMENTO DUPLEX SOB Nº 51, localizado no 5º andar do empreendimento [nome], contendo área real privativa de 165,915 m2, área real comum de 132,479 m2 e área real total de 298,394 m2, correspondendo-lhe a fração ideal de terreno de 3,0361% e coeficiente de proporcionalidade de 0,030361. " +
       'OBSERVAÇÕES: 1) Certificou o Oficial de Justiça que: " Endereço atualizado: [endereço do imóvel] (...) Ocupação Atual: O próprio executado"; 2) Há outra penhora; 3) Há indisponibilidades; 4) Consta na Av. 3 Alienação Fiduciária, Não Baixada, (Conforme documento nos autos, o débito encontra-se quitado); 5) Há débitos condominiais (R$ 8.146,15 até 20/01/2025); ' +
       '6) Conforme despacho do juízo da execução : "(...) fica registrada a isenção dos débitos tributários anteriores à arrematação do bem em hasta pública, pois é considerada como aquisição originária, inexistindo relação jurídica entre o arrematante e o anterior proprietário do bem, sendo certo que os débitos anteriores à arrematação subrogam-se no preço da hasta, por aplicação do artigo 130, parágrafo único do CTN em interpretação que se estende aos bens móveis e semoventes. ' +
       "No mais, ressalte-se que os débitos condominiais não se incluem para fixação do Lance mínimo e são de responsabilidade do adquirente (obrigação propter rem) nos termos do art. 1.345 do CC;",
@@ -239,7 +263,7 @@ export const CORPUS: readonly CasoCorpus[] = [
     real: true,
     titulo: "Ed. Comercial - Terreno c/ 484m² - Presidente Prudente/SP",
     descricao:
-      "Prédio Comercial c/ 481,16m², composto por salas para depósito, barracão aos fundos, dois apartamentos (piso superior), terreno c/ 484m², lotes nº 12 e 13, quadra 04, Vila Industrial, em Presidente Prudente/SP. CRI local nº 22.215. (Proc. 1000004-66.2023.8.26.0482). (O IMÓVEL PODE SER PARCELADO COM 25% DE ENTRADA E O RESTANTE EM ATÉ 30 MESES) " +
+      "Prédio Comercial c/ 481,16m², composto por salas para depósito, barracão aos fundos, dois apartamentos (piso superior), terreno c/ 484m², lotes nº 01 e 02, quadra 01, em Presidente Prudente/SP. CRI local nº 10.006. (Proc. 1000004-66.2023.8.26.0482). (O IMÓVEL PODE SER PARCELADO COM 25% DE ENTRADA E O RESTANTE EM ATÉ 30 MESES) " +
       "Obs.1: Conforme Laudo de Avaliação, trata-se de um PRÉDIO COMERCIAL DE ALVENARIA, medindo 481,16m², aparentemente com mais de 35 anos de construção. O imóvel praticamente sem manutenção, sem pintura há muitos anos. Atualmente servindo de depósito de caixas e materiais. (benfeitoria não averbada na matrícula imobiliária). " +
       "Obs.2: As benfeitorias acima descritas não se encontram averbadas na matrícula do imóvel, ficando a cargo do arrematante a adoção de todas as providências necessárias à sua regularização perante os órgãos competentes, bem como o pagamento de eventuais despesas, custas, taxas, emolumentos e demais encargos incidentes.",
     imovel: { area_terreno: 484, aceita_parcelamento: true },
@@ -258,8 +282,8 @@ export const CORPUS: readonly CasoCorpus[] = [
     fonte: "lj:221884",
     real: true,
     descricao:
-      "Lote c/ 02 Imóveis: 5.1) Lote nº 07 da Quadra \"FR\" do loteamento \"TERRAS DE SANTA CRISTINA - GLEBA VII\", situado no perímetro urbano de Paranapanema-SP, com área de 450,00m². AVALIAÇÃO: 55.125,00 Identificação: Matrícula: 75522 - Cartório – AVARÉ/SP. Proprietários: [NOME]. " +
-      "5.2) Apartamento nº 302, situado no 3º andar ou 5º pavimento do Condomínio Edifício \"Leonardo da Vinci\". AVALIAÇÃO: 1.400.000,00 Identificação: Matrícula: 71167 – 1º Cartório – AMERICANA/SP. Proprietários: [NOME]. (Proc. 0000005-77.2015.5.15.0086 - DIVEX - Piracicaba)",
+      "Lote c/ 02 Imóveis: 5.1) Lote nº 01 da Quadra \"A\" do loteamento \"[nome]\", situado no perímetro urbano de Paranapanema-SP, com área de 450,00m². AVALIAÇÃO: 55.125,00 Identificação: Matrícula: 10007 - Cartório – AVARÉ/SP. Proprietários: [NOME]. " +
+      "5.2) Apartamento nº 11, situado no 1º andar ou 3º pavimento do Condomínio Edifício \"[nome]\". AVALIAÇÃO: 1.400.000,00 Identificação: Matrícula: 10008 – 1º Cartório – AMERICANA/SP. Proprietários: [NOME]. (Proc. 0000005-77.2015.5.15.0086 - DIVEX - Piracicaba)",
     textos: [
       {
         origem: "alerta",
@@ -310,7 +334,7 @@ export const CORPUS: readonly CasoCorpus[] = [
     id: "lj-titulo-direitos-por-alienacao",
     fonte: "lj:titulo",
     real: true,
-    titulo: "Fazenda Tavares c/ 122,50,00ha - Sacramento/MG (Direitos por Alienação/Hipoteca)",
+    titulo: "Fazenda [nome] c/ 122,50,00ha - Sacramento/MG (Direitos por Alienação/Hipoteca)",
     esperado: { "so-direitos": "sim" },
   },
   {
@@ -339,7 +363,7 @@ export const CORPUS: readonly CasoCorpus[] = [
     id: "lj-titulos-sem-sinal",
     fonte: "lj:titulo",
     real: true,
-    titulo: "Goiânia/GO - Apartamento - 212,57m²  - Residencial Por do Sol",
+    titulo: "Goiânia/GO - Apartamento - 212,57m²  - Residencial [nome]",
     textos: [{ origem: "titulo_leilao", texto: "Louveira/SP | Grande Terreno em Região Industrial c/ 30.591,13m² - Edificações inacabadas" }],
     esperado: { "cota-parte": "desconhecido", "so-direitos": "desconhecido", "construcao-irregular": "desconhecido", "area-divergente": "desconhecido" },
   },
@@ -701,5 +725,408 @@ export const CORPUS: readonly CasoCorpus[] = [
     real: false,
     descricao: "Imóvel situado em terreno de marinha, sob regime de aforamento; o arrematante pagará o laudêmio.",
     esperado: { "so-direitos": "sim", "custos-extras-altos": "sim" },
+  },
+
+  // -------------------------------------------------------------------------
+  // Editais em PDF (vara cível de SP e Licitação Aberta da Caixa, 2026)
+  // -------------------------------------------------------------------------
+  {
+    id: "edital-tjsp-vc-debitos-onus-e-iptu",
+    fonte: "edital:tjsp-vc",
+    real: true,
+    descricao:
+      'DO IMÓVEL - O imóvel será vendido em caráter "AD CORPUS" e no estado em que se encontra, sem garantia, constituindo ônus da parte interessada verificar suas condições antes das datas designadas para as alienações judiciais eletrônicas. "Despesas gerais relativas à desmontagem, transporte e transferência patrimonial do bem arrematado, baixa de gravames e imissão na posse serão de responsabilidade do arrematante, junto ao MM. Juízo da causa". Eventuais regularizações registrais e cadastrais serão de responsabilidade do Arrematante. ' +
+      'DOS DÉBITOS – Eventuais ônus sobre o imóvel correrão por conta do arrematante, exceto débitos de IPTU e demais taxas e impostos, nos termos do art. 130, "caput" e parágrafo único, do CTN, e exceto os débitos de condomínio (que possuem natureza propter rem), os quais ficam sub-rogados no preço da arrematação (conforme decisão Evento 189 e Art. 908, § 1º do Código de Processo Civil). "Diante do disposto no art. 130, parágrafo único, do Código Tributário Nacional, é inválida a previsão em edital de leilão atribuindo responsabilidade ao arrematante pelos débitos tributários que já incidiam sobre o imóvel na data de sua alienação" (tema nº 1134 do STJ), ou seja, o arrematante não será responsável pelos débitos tributários anteriores à arrematação. ' +
+      "DOS ÔNUS HIPOTECÁRIOS: A hipoteca extingue-se com a arrematação, assim, nada será devido pelo arrematante ao credor hipotecário (Art. 1499, VI do Código Civil). " +
+      'RELAÇÃO DO BEM – Apartamento nº 11, no 1º andar do "Edifício [nome]", com a área real privativa de 66,02m², área real comum de 44,547m², área real total de 110,567m², a fração ideal de 1,7857% no terreno e coisas de uso comum do edifício, e o direito ao uso de uma vaga indeterminada na garagem coletiva do edifício, objeto da matrícula nº 100.009 do 1º Cartório de Registro de Imóveis da Capital/SP. ' +
+      "ÔNUS: Consta conforme R.02, hipoteca em favor de [NOME], e; Conforme Av.03, a penhora exequenda. " +
+      "DÉBITOS DE IPTU: Débitos fiscais (IPTU e taxas) que já constam em Dívida Ativa, referentes a Exercícios Anteriores: R$ 293,19 até 15/06/2026. Débitos fiscais (IPTU e taxas) referentes ao Exercício Atual: R$ 1.254,96 até 15/06/2026. " +
+      "OBSERVAÇÃO: Conforme informado pelo credor hipotecário, o contrato de hipoteca encontra-se devidamente quitado (Evento 185). Eventuais regularizações registrais e cadastrais serão de responsabilidade do Arrematante. " +
+      "CRÉDITO EXECUTADO: Débitos desta ação no valor de R$ 75.708,24 em junho de 2026.",
+    imovel: { area_privativa: 66.02, area_total: 110.567 },
+    esperado: {
+      "divida-passa-arrematante": "nao",
+      "iptu-em-atraso": "sim",
+      "condominio-em-atraso": "desconhecido",
+      "penhora-outros-credores": "desconhecido",
+      "matricula-pendencia": "sim",
+      "cota-parte": "desconhecido",
+      "so-direitos": "desconhecido",
+      ocupado: "desconhecido",
+      "ocupacao-nao-informada": "sim",
+      "acao-judicial": "desconhecido",
+      "leilao-com-recurso": "desconhecido",
+      "construcao-irregular": "desconhecido",
+      "area-divergente": "desconhecido",
+      "sem-vistoria": "desconhecido",
+    },
+    revisao: { "iptu-em-atraso": true, "matricula-pendencia": true },
+  },
+  {
+    id: "caixa-edital-licitacao-clausulas-modelo",
+    fonte: "caixa:edital-licitacao",
+    real: true,
+    ...CAIXA,
+    textos: [
+      {
+        origem: "edital",
+        texto:
+          "17.1. O comprador declara-se ciente de que o imóvel pode ter dívidas como impostos (ex: IPTU) e taxas de condomínio, além de outras pendências. 17.2. Cada imóvel possui regras específicas quanto ao responsável pelo pagamento de despesas de natureza propter rem, que variam conforme a estratégia da CAIXA. " +
+          "17.7. Na hipótese do proponente classificado ser o ocupante e/ou o ex-mutuário e/ou parente direto, até o terceiro grau civil (pais, filhos, avôs, netos, bisavôs e bisnetos), do ex-mutuário do imóvel, são de sua responsabilidade as despesas vencidas e vincendas com IPTU, condomínio, água, esgoto, foro, laudêmio e demais tarifas, taxas ou qualquer outro tributo incidente sobre o imóvel. " +
+          "23.4.1. Os imóveis são avaliados por situação paradigma, com base na vistoria externa, quando não for possível a vistoria interna. " +
+          '23.5. Os imóveis são ofertados à venda como coisa certa e determinada (venda "ad-corpus"), sendo apenas enunciativas as referências a respeito da descrição, da divisão interna e fotos constante da página de cada imóvel, e, são vendidos no estado de ocupação e conservação em que se encontram, ficando a cargo e ônus do comprador a sua desocupação, reformas que ocasionem alterações nas quantidades e/ou dimensões dos cômodos, averbação de áreas e/ou regularização documental, quando for o caso, arcando com as despesas decorrentes. ' +
+          "23.8. Sobre o imóvel podem pender ação(ões) judicial(is), ainda que esta(s) não esteja(m) informada(s) no anúncio de oferta do imóvel, cabendo ao cliente interessado adotar as providências necessárias para averiguar sua existência. " +
+          '23.9. Em razão da decisão judicial proferida no processo 0000007-99.2010.4.01.3900, para os ocupantes de imóveis retomados no âmbito do SFH integrantes de "conjuntos habitacionais" no Estado do Pará não há limite de valor de renda familiar, nem de valor de avaliação do imóvel, para a habilitação à aquisição do imóvel ocupado, todavia o ocupante não está dispensado de apresentar documentos e condições.',
+      },
+    ],
+    imovel: { ...CAIXA.imovel, modalidade: "licitacao_aberta", modalidade_fonte: "Licitação Aberta" },
+    esperado: {
+      ocupado: "desconhecido",
+      desocupado: "desconhecido",
+      "ocupacao-nao-informada": "sim",
+      "custos-extras-altos": "desconhecido",
+      "condominio-em-atraso": "desconhecido",
+      "iptu-em-atraso": "desconhecido",
+      "divida-passa-arrematante": "desconhecido",
+      "acao-judicial": "desconhecido",
+      "sem-vistoria": "desconhecido",
+      "area-divergente": "desconhecido",
+      "construcao-irregular": "desconhecido",
+      "direito-preferencia": "nao",
+    },
+  },
+  {
+    id: "caixa-edital-licitacao-imovel-com-gravame",
+    fonte: "caixa:edital-licitacao (tabela de imóveis)",
+    real: true,
+    ...CAIXA,
+    descricao:
+      "Apartamento, 75,65 m2 de área total, 43,64 m2 de área privativa, 2 qts, a.serv, WC, 2 sls, cozinha. IPTU: 100010 Matrícula: 10011 Ofício: 2. Imóvel com gravame/penhora/indisponibilidade averbada na matrícula. Regularização por conta do adquirente.",
+    imovel: { ...CAIXA.imovel, modalidade: "licitacao_aberta", modalidade_fonte: "Licitação Aberta", preco: 81964.82, valor_avaliacao: 140000 },
+    esperado: {
+      "matricula-pendencia": "sim",
+      "custos-extras-altos": "sim",
+      "iptu-em-atraso": "desconhecido",
+      "penhora-outros-credores": "desconhecido",
+      "praca-unica": "sim",
+      "desagio-alto": "sim",
+    },
+    revisao: { "matricula-pendencia": true, "custos-extras-altos": true },
+  },
+
+  // -------------------------------------------------------------------------
+  // LGPD: nomes inventados SEM máscara, em frases de posse (formas dos lotes reais 218848 e
+  // 218901). Nenhum pode chegar ao trecho de evidência.
+  // -------------------------------------------------------------------------
+  {
+    id: "lgpd-ocupado-por-nome",
+    fonte: "variação (LGPD)",
+    real: false,
+    descricao: "Imóvel ocupado por José Carlos de Souza e família, conforme certidão.",
+    esperado: { ocupado: "sim", "ocupacao-nao-informada": "nao" },
+    semNomes: ["José", "Carlos", "Souza"],
+  },
+  {
+    id: "lgpd-executada-com-virgula-e-irma",
+    fonte: "variação (LGPD) de lj:218848",
+    real: false,
+    descricao:
+      'OBSERVAÇÕES: 1) Certificou o oficial de justiça que: " Ocupam o imóvel, como moradoras, a executada, Maria Silva Ramos, e sua irmã, Ana Silva Ramos. Residem no imóvel há mais de vinte anos"; 2) Há indisponibilidades;',
+    esperado: { ocupado: "sim", "matricula-pendencia": "sim" },
+    semNomes: ["Maria", "Ana", "Silva", "Ramos"],
+  },
+  {
+    id: "lgpd-residem-no-imovel",
+    fonte: "variação (LGPD)",
+    real: false,
+    descricao: "Residem no imóvel João Pereira Lima e sua esposa, segundo o oficial.",
+    esperado: { ocupado: "sim" },
+    semNomes: ["João", "Pereira", "Lima"],
+  },
+  {
+    id: "lgpd-locado-a",
+    fonte: "variação (LGPD)",
+    real: false,
+    descricao: "O imóvel encontra-se locado a Pedro Henrique Alves, com contrato vigente.",
+    esperado: { ocupado: "sim" },
+    semNomes: ["Pedro", "Henrique", "Alves"],
+  },
+  {
+    id: "lgpd-moradia-para",
+    fonte: "variação (LGPD) de lj:220169",
+    real: false,
+    descricao: "Imóvel atualmente servindo de moradia para Francisco das Chagas Oliveira e filhos.",
+    esperado: { ocupado: "sim", desocupado: "desconhecido", "ocupacao-nao-informada": "sim" },
+    revisao: { ocupado: true, "ocupacao-nao-informada": true },
+    semNomes: ["Francisco", "Chagas", "Oliveira"],
+  },
+  {
+    id: "lgpd-ocupacao-atual-nome-e-penhora",
+    fonte: "variação (LGPD) de lj:218901",
+    real: false,
+    descricao: "OBSERVAÇÕES: 1) Ocupação Atual: Maria Aparecida Santos, irmã do executado; 2) Há outras penhoras.",
+    esperado: { ocupado: "sim", "penhora-outros-credores": "sim" },
+    semNomes: ["Maria", "Aparecida", "Santos"],
+  },
+  {
+    id: "lgpd-nome-antes-do-verbo",
+    fonte: "variação (LGPD)",
+    real: false,
+    descricao: "José Carlos de Souza e família ocupam o imóvel desde 2010.",
+    esperado: { ocupado: "sim" },
+    semNomes: ["José", "Carlos", "Souza"],
+  },
+  {
+    id: "lgpd-caixa-alta",
+    fonte: "variação (LGPD)",
+    real: false,
+    descricao: "IMÓVEL OCUPADO POR JOSÉ CARLOS DE SOUZA E FAMÍLIA.",
+    esperado: { ocupado: "sim" },
+    semNomes: ["José", "Carlos", "Souza"],
+  },
+  {
+    id: "lgpd-responsabilidade-de-nome",
+    fonte: "variação (LGPD)",
+    real: false,
+    descricao:
+      "O imóvel está ocupado por Roberto Carlos Mendes, ex-mutuário. Há débitos de condomínio no valor de R$ 12.000,00, de responsabilidade de Roberto Carlos Mendes.",
+    esperado: { ocupado: "sim", "condominio-em-atraso": "sim" },
+    semNomes: ["Roberto", "Carlos", "Mendes"],
+  },
+  {
+    id: "lgpd-nome-sem-gatilho",
+    fonte: "variação (LGPD)",
+    real: false,
+    descricao: "Conforme o auto de constatação, o imóvel está ocupado; Lúcia Ferreira Prado informou que mora lá há dez anos.",
+    esperado: { ocupado: "sim" },
+    semNomes: ["Lúcia", "Ferreira", "Prado"],
+  },
+
+  // -------------------------------------------------------------------------
+  // Variações da revisão de 13/10/2026 (falsos positivos e contrassinais apontados)
+  // -------------------------------------------------------------------------
+  {
+    id: "var-nao-ha-informacoes-se-ocupado",
+    fonte: "variação",
+    real: false,
+    descricao: "Não há informações se o imóvel está ocupado.",
+    esperado: { ocupado: "desconhecido", desocupado: "desconhecido", "ocupacao-nao-informada": "sim" },
+  },
+  {
+    id: "var-leiloeiro-nao-garante-desocupado",
+    fonte: "variação",
+    real: false,
+    descricao: "O leiloeiro não garante que o imóvel esteja desocupado.",
+    esperado: { ocupado: "desconhecido", desocupado: "desconhecido", "ocupacao-nao-informada": "sim" },
+  },
+  {
+    id: "var-desocupacao-modelo-lei-9514",
+    fonte: "variação de edital:E3",
+    real: false,
+    descricao: "A desocupação do imóvel ficará a cargo do adquirente, nos termos do art. 30 da Lei 9.514/97.",
+    imovel: { judicial: false },
+    esperado: { ocupado: "sim", desocupado: "desconhecido", "ocupacao-nao-informada": "sim" },
+    revisao: { ocupado: true, "ocupacao-nao-informada": true },
+  },
+  {
+    id: "var-terreno-ocupado-por-edificacao",
+    fonte: "variação",
+    real: false,
+    descricao: "Terreno ocupado por edificação residencial de 120 m², conforme matrícula.",
+    esperado: { ocupado: "desconhecido", desocupado: "desconhecido", "ocupacao-nao-informada": "sim" },
+  },
+  {
+    id: "var-situacao-livre-de-onus",
+    fonte: "variação",
+    real: false,
+    descricao: "Situação: livre de ônus e gravames.",
+    esperado: { desocupado: "desconhecido", ocupado: "desconhecido", "divida-passa-arrematante": "desconhecido" },
+  },
+  {
+    id: "var-situacao-vaga-de-garagem",
+    fonte: "variação",
+    real: false,
+    descricao: "Situação: vaga de garagem nº 12 vinculada à unidade.",
+    esperado: { desocupado: "desconhecido", "ocupacao-nao-informada": "sim" },
+  },
+  {
+    id: "var-encontra-se-ocupado",
+    fonte: "variação",
+    real: false,
+    descricao: "Matrícula 10.012. Encontra-se ocupado.",
+    esperado: { ocupado: "sim", desocupado: "nao" },
+  },
+  {
+    id: "var-iptu-sub-roga-e-condominio-do-arrematante",
+    fonte: "variação",
+    real: false,
+    descricao:
+      "Os débitos de IPTU sub-rogam-se no preço da arrematação (art. 130 do CTN), e os débitos condominiais, de natureza propter rem, são de responsabilidade do arrematante.",
+    esperado: { "divida-passa-arrematante": "sim" },
+    revisao: { "divida-passa-arrematante": true },
+  },
+  {
+    id: "var-desembaracado-de-fiscais-mas-condominio",
+    fonte: "variação",
+    real: false,
+    descricao: "O imóvel será entregue desembaraçado de débitos fiscais, mas o débito condominial de R$ 40.000,00 fica a cargo do arrematante.",
+    esperado: { "divida-passa-arrematante": "sim", "condominio-em-atraso": "sim" },
+  },
+  {
+    id: "var-vencidos-e-posteriores",
+    fonte: "variação",
+    real: false,
+    descricao: "Os débitos de condomínio vencidos até a data da arrematação são de responsabilidade do arrematante, assim como os posteriores à arrematação.",
+    esperado: { "divida-passa-arrematante": "sim", "condominio-em-atraso": "desconhecido" },
+  },
+  {
+    id: "var-iptu-declarado-sub-rogado",
+    fonte: "variação",
+    real: false,
+    descricao: "Há débitos de IPTU no valor de R$ 8.000,00, que serão sub-rogados no preço da arrematação (art. 130 do CTN).",
+    esperado: { "iptu-em-atraso": "sim", "divida-passa-arrematante": "nao" },
+  },
+  {
+    id: "var-condominio-declarado-sub-rogado",
+    fonte: "variação",
+    real: false,
+    descricao: "Constam débitos condominiais de R$ 25.000,00, que se sub-rogam no preço, nos termos do art. 908, § 1º, do CPC.",
+    esperado: { "condominio-em-atraso": "sim", "divida-passa-arrematante": "nao" },
+  },
+  {
+    id: "var-despesas-de-transferencia-e-eventuais-debitos",
+    fonte: "variação",
+    real: false,
+    descricao: "Correrão por conta do arrematante as despesas com a transferência do imóvel, como ITBI, laudêmio, registro e eventuais débitos.",
+    esperado: { "divida-passa-arrematante": "desconhecido" },
+  },
+  {
+    id: "var-iptu-ate-ano",
+    fonte: "variação",
+    real: false,
+    descricao: "Débitos de IPTU até 2025: consultar a Prefeitura.",
+    esperado: { "iptu-em-atraso": "desconhecido" },
+  },
+  {
+    id: "var-nao-ha-debitos-de-iptu",
+    fonte: "variação",
+    real: false,
+    descricao: "Não há débitos de IPTU, conforme certidão juntada aos autos.",
+    esperado: { "iptu-em-atraso": "nao" },
+  },
+  {
+    id: "var-condominio-informou-debito",
+    fonte: "variação",
+    real: false,
+    descricao: "O condomínio informou débito de R$ 3.400,00 referente às cotas vencidas.",
+    esperado: { "condominio-em-atraso": "sim" },
+  },
+  {
+    id: "var-fracao-ideal-do-terreno",
+    fonte: "variação",
+    real: false,
+    descricao: "Apartamento nº 12, com área privativa de 70,00 m², correspondendo-lhe a fração ideal de 2,0833% do terreno.",
+    esperado: { "cota-parte": "desconhecido" },
+  },
+  {
+    id: "var-participacao-no-terreno-e-coisas-comuns",
+    fonte: "variação",
+    real: false,
+    descricao: "Apartamento com área privativa de 70 m² e participação de 1,25% do terreno e coisas comuns.",
+    esperado: { "cota-parte": "desconhecido" },
+  },
+  {
+    id: "var-arrematante-exercera-os-direitos",
+    fonte: "variação",
+    real: false,
+    descricao: "Após a expedição da carta de arrematação, o arrematante exercerá todos os direitos sobre o imóvel.",
+    esperado: { "so-direitos": "desconhecido" },
+  },
+  {
+    id: "var-fiduciante-perdeu-os-direitos",
+    fonte: "variação",
+    real: false,
+    descricao: "Com a consolidação, o devedor fiduciante perdeu seus direitos sobre o imóvel, que será vendido em leilão.",
+    imovel: { judicial: false },
+    esperado: { "so-direitos": "nao", "imovel-inteiro": "sim" },
+  },
+  {
+    id: "var-direitos-do-executado",
+    fonte: "variação",
+    real: false,
+    descricao: "Penhora dos direitos do executado sobre o imóvel objeto da matrícula nº 10.013.",
+    esperado: { "so-direitos": "sim" },
+    revisao: { "so-direitos": true },
+  },
+  {
+    id: "var-construcao-nao-averbada-se-houver",
+    fonte: "variação",
+    real: false,
+    descricao: "A regularização de construções não averbadas, se houver, será de responsabilidade do arrematante.",
+    esperado: { "construcao-irregular": "desconhecido", "custos-extras-altos": "desconhecido" },
+  },
+  {
+    id: "var-regularizacao-de-eventual-area",
+    fonte: "variação",
+    real: false,
+    descricao: "O arrematante será responsável pela regularização de eventual área construída não averbada.",
+    esperado: { "construcao-irregular": "desconhecido", "custos-extras-altos": "desconhecido" },
+  },
+  {
+    id: "var-hipoteca-cancelada",
+    fonte: "variação",
+    real: false,
+    descricao: "R.5 Hipoteca em favor do Banco Exemplo. AV.6 Cancelamento da hipoteca do R.5.",
+    esperado: { "matricula-pendencia": "desconhecido" },
+  },
+  {
+    id: "var-indisponibilidade-cancelada",
+    fonte: "variação",
+    real: false,
+    descricao: "AV.9 - Indisponibilidade de bens; AV.11 - Cancelamento da indisponibilidade objeto da AV.9.",
+    esperado: { "matricula-pendencia": "desconhecido" },
+  },
+  {
+    id: "var-usucapiao-transitada",
+    fonte: "variação",
+    real: false,
+    descricao: "R.1 - Por sentença proferida nos autos da ação de usucapião, transitada em julgado, o imóvel foi registrado em nome do executado.",
+    esperado: { "acao-judicial": "desconhecido" },
+  },
+  {
+    id: "var-embargos-de-terceiro-julgados",
+    fonte: "variação",
+    real: false,
+    descricao: "Os embargos de terceiro opostos foram julgados improcedentes, com trânsito em julgado.",
+    esperado: { "acao-judicial": "desconhecido" },
+  },
+  {
+    id: "var-art-843-condicional",
+    fonte: "variação",
+    real: false,
+    descricao:
+      "Caso o bem penhorado seja indivisível, o equivalente à quota-parte do coproprietário ou do cônjuge alheio à execução recairá sobre o produto da alienação do bem (art. 843 do CPC).",
+    esperado: { "direito-preferencia": "desconhecido", "cota-parte": "desconhecido" },
+  },
+  {
+    id: "var-penhora-destes-autos",
+    fonte: "variação",
+    real: false,
+    descricao: "AV.12 - Penhora: penhora realizada nestes autos em favor do exequente.",
+    esperado: { "penhora-outros-credores": "desconhecido" },
+  },
+  {
+    id: "var-visita-com-agendamento",
+    fonte: "variação",
+    real: false,
+    descricao: "A visita ao imóvel não é permitida sem agendamento prévio com o leiloeiro.",
+    esperado: { "sem-vistoria": "desconhecido" },
+  },
+  {
+    id: "var-vistoria-realizada",
+    fonte: "variação",
+    real: false,
+    descricao: "Vistoria interna realizada em 10/03/2026, com acesso a todos os cômodos.",
+    esperado: { "sem-vistoria": "nao" },
   },
 ];

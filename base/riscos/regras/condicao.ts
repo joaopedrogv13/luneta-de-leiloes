@@ -6,9 +6,9 @@
  *   Só a capa montada por padrão de URL e ainda não verificada (Caixa sem HEAD) →
  *   "desconhecido". Fonte que não publica foto (CSV, PNCP, DOU...) → "desconhecido", nunca "sim".
  * - Sem vistoria: "não foi possível vistoriar", "vistoria externa", "sem acesso ao interior",
- *   "avaliação feita externamente", "visitação não permitida" (revisão). Anexo de avaliação
- *   não é vistoria. Laudo de vistoria entre os documentos, ou "visitação permitida", é
- *   contrassinal.
+ *   "avaliação feita externamente", "visitação não permitida" (revisão). "Não é permitida sem
+ *   agendamento prévio" é visita com condição, não proibição. Anexo de avaliação não é
+ *   vistoria. Laudo de vistoria entre os documentos, ou "visitação permitida", é contrassinal.
  * - Aceita financiamento: campo estruturado (coluna "Financiamento" da Caixa) → alta. Texto:
  *   "aceita financiamento" / "NÃO aceita financiamento", "exclusivamente à vista" → média.
  *   Parcelamento judicial (art. 895, "pode ser parcelado com 25% de entrada") NÃO é
@@ -51,6 +51,13 @@ const SEM_VISTORIA = new RegExp(
     String.raw`\b(?:acesso|entrada|ingresso)\s+(?:ao\s+(?:interior|imovel)\s+)?(?:foi\s+)?(?:negad|recusad|impedid|nao\s+(?:foi\s+)?(?:permitid|franquead|autorizad))\w*`,
   ].join("|"),
 );
+/**
+ * Condição logo depois: "a visita não é permitida sem agendamento prévio" (a visita é permitida,
+ * com condição); "avaliados com base na vistoria externa, quando não for possível a vistoria
+ * interna" (regra geral do edital da Caixa, não fato do imóvel).
+ */
+const SO_COM_CONDICAO =
+  /^\s*,?\s*(?:sem\s+(?:o\s+|a\s+)?(?:previ[oa]\s+)?(?:agendamento|autorizacao|acompanhamento|aviso)|salvo|exceto|senao|a nao ser|fora d[oa]s?\s+(?:horario|dias?|data)|quando|caso|se|na hipotese|nos casos)\b/;
 const COM_VISTORIA =
   /\bvistoria\s+(?:interna\s+)?(?:realizada|efetuada|feita)\s+(?:em|no dia|na data)\b|\b(?:visitacao|visitas?)\s+(?:ao imovel\s+)?(?:permitida|liberada|agendad\w*|mediante agendamento)/;
 
@@ -60,7 +67,7 @@ export const regraVistoria: RegraRisco = {
   tags: ["sem-vistoria"],
   avaliar({ imovel, textos }) {
     const cls = clausulasDe(textos);
-    const sem = achados(cls, SEM_VISTORIA).find((a) => !ressalvado(a, 50));
+    const sem = achados(cls, SEM_VISTORIA).find((a) => !ressalvado(a, 50) && !SO_COM_CONDICAO.test(a.depois));
     if (sem) return [deteccao("sem-vistoria", "sim", "media", sem.texto.origem, trechoDe(sem), true)];
     const laudo = imovel.documentos.find((d) => /vistoria/i.test(d.titulo ?? "") || (d.tipo === "laudo" && /vistoria/i.test(d.url)));
     if (laudo) return [deteccao("sem-vistoria", "nao", "media", "campo:documentos", `Documento publicado: ${laudo.titulo ?? "laudo de vistoria"}.`)];

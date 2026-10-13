@@ -5,7 +5,9 @@
  * - Ação judicial: só ação que discute o imóvel ou o leilão (anulatória, embargos de
  *   terceiro, usucapião, reintegração de posse, fraude à execução...). O processo da própria
  *   execução não conta, nem o texto-modelo do art. 903 ("ainda que venham a ser julgados
- *   procedentes os embargos do executado"). Sempre com revisão.
+ *   procedentes os embargos do executado"), nem ação já julgada ("por sentença proferida nos
+ *   autos da ação de usucapião, transitada em julgado"; "embargos de terceiro julgados
+ *   improcedentes"). Sempre com revisão.
  * - Penhora de outros credores: "Há outras penhoras", "penhoras em outros processos",
  *   "penhora no rosto dos autos" (confiança média). Ato de matrícula ("R.5 - Penhora") é
  *   fraco: pode ser a penhora da própria execução (baixa, revisão). A lista-modelo de
@@ -17,8 +19,9 @@
  * - Direito de preferência: Leilão SFI da Caixa (Lei 9.514/97, art. 27, §2º-B: o devedor
  *   fiduciante tem preferência até o 2º leilão) → alta. Alienação fiduciária extrajudicial de
  *   outro credor → média. Judicial: só preferência atribuída a alguém ("o coproprietário terá
- *   direito de preferência") ou venda com reserva da cota do coproprietário (art. 843, §1º),
- *   confiança baixa e revisão. Venda direta, venda online e licitação da Caixa acontecem
+ *   direito de preferência") ou venda com reserva da cota do coproprietário (art. 843, §1º)
+ *   afirmada sobre este imóvel (a regra condicional do modelo, "caso o bem seja indivisível...",
+ *   não conta), confiança baixa e revisão. Venda direta, venda online e licitação da Caixa acontecem
  *   depois dos leilões: a preferência do antigo devedor já acabou ("não", média). Remição da
  *   execução (art. 826 do CPC) existe em todo leilão judicial e não é sinal específico.
  */
@@ -26,6 +29,7 @@ import type { Confianca } from "../../tipos.ts";
 import type { RegraRisco } from "../motor.ts";
 import {
   achados,
+  atoCancelado,
   clausulaDeIntimacao,
   clausulasDe,
   desconhecido,
@@ -66,14 +70,29 @@ const SEM_PROCESSOS =
 
 /** Ressalvas próprias dos modelos de edital ("ainda que venham a ser julgados procedentes"). */
 const MODELO_903 = /\bart(?:igo)?\.?\s*903\b|ainda que venham a ser julgad/;
+/** Decisão logo depois da ação ou do recurso ("..., julgados improcedentes"); "ainda não julgados" é pendente. */
+const JA_DECIDIDO_DEPOIS =
+  /^[^;]{0,60}\b(?<!\bnao\s)(?:transitad\w* em julgado|julgad[oa]s?\b|(?:negad|dad)[oa] provimento|(?:deu|negou|dar|negar|deram|negaram)\s+(?:parcial\s+)?provimento|nao conhecid[oa]|improvid[oa]|desprovid[oa]|provid[oa]\b|decidid[oa])/;
+/**
+ * Ação já decidida ou histórica: "por sentença proferida nos autos da ação de usucapião,
+ * transitada em julgado, o imóvel foi registrado", "os embargos de terceiro foram julgados
+ * improcedentes". Mais estreito que o do recurso: "conforme certidão, há ação..." conta.
+ */
+const ACAO_DECIDIDA_ANTES = /\b(?:proferid\w*|transitad\w*|julgad\w*|homologad\w*)\b[^;]{0,40}$/;
 
 export const regraAcaoJudicial: RegraRisco = {
   id: "juridico/acao-judicial",
-  descricao: "Ação que discute o imóvel ou o leilão (anulatória, embargos de terceiro, usucapião...). O processo da própria execução não conta.",
+  descricao: "Ação que discute o imóvel ou o leilão (anulatória, embargos de terceiro, usucapião...). O processo da própria execução e ação já julgada não contam.",
   tags: ["acao-judicial"],
   avaliar({ textos }) {
     const cls = clausulasDe(textos);
-    const valido = (a: Achado): boolean => !ressalvado(a) && !negado(a) && !MODELO_903.test(a.clausula.n) && !clausulaDeIntimacao(a.clausula);
+    const valido = (a: Achado): boolean =>
+      !ressalvado(a) &&
+      !negado(a) &&
+      !MODELO_903.test(a.clausula.n) &&
+      !clausulaDeIntimacao(a.clausula) &&
+      !ACAO_DECIDIDA_ANTES.test(a.antes) &&
+      !JA_DECIDIDO_DEPOIS.test(a.depois);
     const forte = achados(cls, ACAO_FORTE).find(valido);
     if (forte) return [deteccao("acao-judicial", "sim", "media", forte.texto.origem, trechoDe(forte), true)];
     const fraca = achados(cls, ACAO_FRACA).find(valido);
@@ -101,6 +120,9 @@ const PENHORA_EXPLICITA = new RegExp(
 const PENHORA_MATRICULA = /\b(?:r|av)\.?\s*-?\s*\d{1,3}\b[^;.]{0,40}?\bpenhora\b/;
 const SEM_PENHORA = /\b(?:nao|inexist\w*)\s+(?:ha|existem|constam|consta)?\s*(?:outras?\s+)?penhoras?\b/;
 const LIMPEZA_DE_GRAVAMES = /(?:cancelamento|baixa|levantamento)\s+(?:de\s+|das?\s+|dos?\s+)?(?:eventua\w+\s+)?$/;
+/** Penhora da própria execução ("AV.12 - Penhora realizada nestes autos em favor do exequente", "Av.03, a penhora exequenda"). */
+const PENHORA_DESTES_AUTOS =
+  /\b(?:nestes|destes|neste|deste|nos presentes|dos presentes)\s+(?:autos|processo|feito)\b|\b(?:desta|da presente|nesta)\s+execucao\b|\bem favor d[oa]s?\s+(?:exequente|reclamante|autor)\b|\bpenhoras?\s+exequend[oa]s?\b/;
 
 export const regraPenhora: RegraRisco = {
   id: "juridico/penhora",
@@ -112,7 +134,9 @@ export const regraPenhora: RegraRisco = {
       !ressalvado(a) && !negado(a) && !clausulaDeIntimacao(a.clausula) && !LIMPEZA_DE_GRAVAMES.test(a.antes) && !/\bcredor\w*[^;]{0,80}$/.test(a.antes);
     const explicita = achados(cls, PENHORA_EXPLICITA).find(valido);
     if (explicita) return [deteccao("penhora-outros-credores", "sim", "media", explicita.texto.origem, trechoDe(explicita))];
-    const ato = achados(cls, PENHORA_MATRICULA).find(valido);
+    const ato = achados(cls, PENHORA_MATRICULA).find(
+      (a) => valido(a) && !atoCancelado(a) && !PENHORA_DESTES_AUTOS.test(a.casado + a.depois.slice(0, 120)),
+    );
     if (ato) return [deteccao("penhora-outros-credores", "sim", "baixa", ato.texto.origem, trechoDe(ato), true)];
     const sem = achados(cls, SEM_PENHORA).find((a) => !ressalvado(a));
     if (sem) return [deteccao("penhora-outros-credores", "nao", "media", sem.texto.origem, trechoDe(sem), true)];
@@ -138,8 +162,6 @@ const RECURSO = new RegExp(
 );
 /** Recurso já decidido: a menção é a fonte de uma decisão, não algo pendente. */
 const JA_DECIDIDO_ANTES = /\b(?:acordao|decisao|decidid\w*|julgad\w*|transitad\w*|proferid\w*|determinad\w*|conforme|nos autos d[oa])\b[^;]{0,40}$/;
-const JA_DECIDIDO_DEPOIS =
-  /^[^;]{0,60}\b(?:transitad\w* em julgado|julgad[oa]s?\b|(?:negad|dad)[oa] provimento|(?:deu|negou|dar|negar|deram|negaram)\s+(?:parcial\s+)?provimento|nao conhecid[oa]|improvid[oa]|desprovid[oa]|provid[oa]\b|decidid[oa])/;
 const SEM_RECURSO = /\b(?:nao|inexist\w*)\s+(?:ha|existem|constam|consta)?\s*(?:registro\s+(?:ou certificacao\s+)?de\s+onus,?\s+)?recursos?\s+(?:ou\s+processos?\s+)?pendentes?/;
 
 export const regraRecurso: RegraRisco = {

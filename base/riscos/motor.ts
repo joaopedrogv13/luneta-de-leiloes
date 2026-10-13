@@ -6,7 +6,8 @@
  * para regex, e devolve zero ou mais `RiscoDetectado`, cada um com tag, valor, confiança,
  * origem e trecho. O motor:
  * - confere que a tag existe e foi declarada pela regra;
- * - preenche `regra` com o id da regra e mascara/corta o trecho (LGPD);
+ * - preenche `regra` com o id da regra e mascara/corta o trecho (LGPD), com a máscara reforçada
+ *   de nomes nos trechos de posse;
  * - mantém uma linha por (tag, regra): a de maior confiança;
  * - marca para revisão tags "sim" do mesmo grupo exclusivo (ex.: ocupado + desocupado);
  * - nunca sobrescreve linhas revisadas por humano.
@@ -15,7 +16,8 @@ import { transacao, type Banco } from "../db.ts";
 import { capacidadesDasFontes, carregarImoveis, linhaParaImovel } from "../consultas.ts";
 import { prepararImovel } from "../gravar.ts";
 import type { CapacidadesFonte, Confianca, ImovelGravado, ImovelNormalizado, RiscoDetectado, ValorRisco } from "../tipos.ts";
-import { mascararTrecho } from "../util/lgpd.ts";
+import { mascararNomesSoltos, mascararTrecho } from "../util/lgpd.ts";
+import { dobrarCaixaEAcento } from "../util/texto.ts";
 import { textosDoImovel, type TextoAnalise } from "./evidencia.ts";
 import { REGRAS } from "./regras/index.ts";
 import { definicaoTag, ehSlugTag, type SlugTag } from "./tags.ts";
@@ -84,13 +86,14 @@ export function avaliarImovel(entrada: EntradaRegra, regras: readonly RegraRisco
         erros.push(`Regra ${regra.id} emitiu valor ou confiança inválidos para ${d.tag}`);
         continue;
       }
+      const origem = d.origem?.trim() || "desconhecida";
       const risco: RiscoDetectado = {
         tag: d.tag,
         valor: d.valor,
         confianca: d.confianca,
         precisa_revisao: Boolean(d.precisa_revisao),
-        origem: d.origem?.trim() || "desconhecida",
-        trecho: d.trecho ? mascararTrecho(d.trecho, TAMANHO_TRECHO) : null,
+        origem,
+        trecho: d.trecho ? mascararEvidencia(d.tag, origem, d.trecho) : null,
         regra: regra.id,
       };
       const chave = `${risco.tag}\u0000${risco.regra}`;
@@ -101,6 +104,22 @@ export function avaliarImovel(entrada: EntradaRegra, regras: readonly RegraRisco
   const riscos = [...porChave.values()];
   marcarConflitos(riscos);
   return { riscos, erros };
+}
+
+/** Frase de posse: é onde o edital põe nomes de ocupantes, executados e parentes. */
+const CONTEXTO_POSSE = /\b(?:ocupa\w*|desocupa\w*|resid\w*|moram?|morador\w*|moradia|locad[oa]s?|alugad[oa]s?|inquilin\w*|locatari\w*|possuidor\w*|invadid\w*|invasor\w*)\b/;
+
+/**
+ * Máscara do trecho (LGPD): a de sempre, mais a reforçada (`mascararNomesSoltos`, que não
+ * depende de papel nem de gatilho) nos trechos tirados do texto da fonte que falam de posse:
+ * as tags de Posse e qualquer outra cujo recorte pegue uma frase de ocupação.
+ */
+function mascararEvidencia(tag: SlugTag, origem: string, trecho: string): string {
+  const mascarado = mascararTrecho(trecho, TAMANHO_TRECHO);
+  // Trechos montados pela regra a partir de campos ("campo:...", "ausencia") não têm nome.
+  const doTexto = !/[:×]/.test(origem) && origem !== "ausencia";
+  const posse = definicaoTag(tag)?.categoria === "posse" || CONTEXTO_POSSE.test(dobrarCaixaEAcento(mascarado));
+  return doTexto && posse ? mascararNomesSoltos(mascarado) : mascarado;
 }
 
 function forca(r: Pick<RiscoDetectado, "valor" | "confianca">): number {

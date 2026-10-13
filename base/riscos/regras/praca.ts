@@ -18,8 +18,9 @@ import { desconhecido, deteccao, extra, moeda } from "./apoio.ts";
 
 const OFERTA_UNICA = new Set(["venda_direta", "venda_online", "licitacao_aberta"]);
 const ORIGENS_TITULO = new Set(["titulo", "titulo_leilao"]);
-const PRIMEIRA = /\b(?:1|primeir)[oaº°]?\s*(?:leilao|praca|hasta)\b/;
-const SEGUNDA = /\b(?:2|segund)[oaº°]?\s*(?:leilao|praca|hasta)\b/;
+// Ordinal masculino ou feminino: "1º Leilão", "1ª Praça", "2o leilão" (a normalização não mexe em º/ª).
+const PRIMEIRA = /\b(?:1|primeir)[oaº°ª]?\s*(?:leilao|praca|hasta)\b/;
+const SEGUNDA = /\b(?:2|segund)[oaº°ª]?\s*(?:leilao|praca|hasta)\b/;
 
 type Rodada = "primeira-praca" | "segunda-praca" | "praca-unica";
 const RODADAS: readonly Rodada[] = ["primeira-praca", "segunda-praca", "praca-unica"];

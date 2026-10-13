@@ -18,6 +18,12 @@
  * a deixar passar um nome. Nunca confie nela para liberar um campo que a fonte rotula como
  * dado pessoal (ex.: nm_usuario): esses campos simplesmente não devem ser mapeados.
  * A função é idempotente: mascarar duas vezes dá o mesmo resultado.
+ *
+ * Posse (frases que as regras de risco recortam como evidência): nomes depois de papel e
+ * vírgula ("a executada, Fulana de Tal"), de parentesco ("e sua irmã, Fulana"), de "Ocupação
+ * Atual:", "moradia para", "ocupado pela", e antes de ", irmã do executado", ", ex-mutuário" ou
+ * "e família ocupam o imóvel". `mascararNomesSoltos` é a máscara reforçada dos trechos de
+ * posse: qualquer sequência de palavras com inicial maiúscula, sem depender de papel.
  */
 import { semAcento, truncar } from "./texto.ts";
 
@@ -157,12 +163,18 @@ const NAO_NOMES = new Set(
     "SOLTEIRO SOLTEIRA DIVORCIADO DIVORCIADA VIUVO VIUVA SEPARADO SEPARADA ACERCA SOBRE QUANTO COMO BEM BENS " +
     "IMOVEL IMOVEIS LOTE VALOR EDITAL LEILAO PRACA DATA NOME ATE APOS ANTES DURANTE MEDIANTE ATRAVES " +
     "CASO FIDUCIARIO FIDUCIARIA NOTIFICADO NOTIFICADA NOTIFICACAO CIENTE CIENTES VIA INFORMA INFORMADO " +
-    "EVENTUAIS EVENTUAL TAMBEM AINDA JA HA"
+    "EVENTUAIS EVENTUAL TAMBEM AINDA JA HA " +
+    // Valores de ocupação ("Ocupação: Desocupado", "Ocupação Atual: O próprio executado").
+    "OCUPADO OCUPADA OCUPADOS OCUPADAS DESOCUPADO DESOCUPADA DESOCUPADOS DESOCUPADAS VAGO VAGA VAZIO VAZIA " +
+    "LIVRE TERCEIRO TERCEIRA TERCEIROS TERCEIRAS INVASOR INVASORES INVADIDO INVADIDA LOCADO LOCADA ALUGADO " +
+    "ALUGADA FAMILIA FAMILIARES PROPRIO PROPRIA PROPRIOS PROPRIAS DESCONHECIDO DESCONHECIDA DESCONHECIDOS " +
+    "INFORMACAO INFORMACOES NENHUM NENHUMA OCUPACAO SITUACAO ATUAL ATUALMENTE RESIDENCIAL COMERCIAL CONSTA CONSTAM"
   ).split(" "),
 );
 
 const PALAVRA = /\p{L}[\p{L}\p{M}'’.-]*/uy;
 const ESPACO_LINHA = /[ \t]+/y;
+const VIRGULA = /[ \t]*,[ \t]*/y;
 const SUFIXO_PLURAL = /(?:[ \t]*\((?:a|s|as|es|os|o|a\/s|s\/as)\))+/iuy;
 const SEPARADOR = /[ \t]*[:–—=-][ \t]*\n?[ \t]*/uy;
 const PREFIXOS = /(?:(?:o|a|os|as|de|da|do|das|dos|sr\.?|sra\.?|srs\.?|sras\.?|srta\.?|dr\.?|dra\.?|esp[óo]lio[ \t]+de|massa[ \t]+falida[ \t]+de)[ \t]+)*/iuy;
@@ -175,6 +187,34 @@ const SUFIXO_EMPRESA = /[ \t]*(?:[-–][ \t]*)?(?:ME|EPP|EIRELI|MEI|LTDA\.?|S\/A
  */
 const ANCORAS_APOS_NOME =
   /[ \t]*[,(–-]?[ \t]*(?:inscrit[oa]s?\s+no\s+|portador(?:a|es|as)?\s+d[oa]\s+)?(?:CPF|\[CPF\]|RG(?![\p{L}])|\[RG\]|brasileir[oa]s?|casad[oa]s?|solteir[oa]s?|divorciad[oa]s?|vi[úu]v[oa]s?|separad[oa]s?\s+judicialmente|nascid[oa]s?\s+em|filh[oa]\s+de)(?![\p{L}])/giu;
+/**
+ * Âncoras de posse depois do nome: parentesco depois de vírgula ("FULANA DE TAL, irmã do
+ * executado"), "ex-mutuário" e verbo de ocupação ("Fulano de Tal e família ocupam o imóvel").
+ */
+const ANCORAS_POSSE =
+  /[ \t]*,[ \t]*(?:irm[ãa](?:o|os|s)?|espos[oa]|marido|companheir[oa]|genitor(?:a)?|m[ãa]e|pai|sogr[oa]|genro|nora|cunhad[oa]|filh[oa]s?|net[oa]s?|sobrinh[oa]s?|ti[oa]s?|prim[oa]s?|enteado|enteada)[ \t]+d[oa]s?(?![\p{L}])|[ \t]*,[ \t]*ex-\p{L}+|[ \t]+(?:e[ \t]+(?:sua[ \t]+|seus?[ \t]+)?(?:fam[íi]lia|filh[oa]s|espos[oa]|marido|companheir[oa])[ \t]+)?(?:ocupa|ocupam|reside|residem|mora|moram|habita|habitam)[ \t]+(?:n?[oa][ \t]+)?(?:im[óo]vel|bem|local|casa|apartamento|unidade)(?![\p{L}])/giu;
+
+/**
+ * Mais frases de posse e de parentesco, com o nome logo depois: são as frases que as regras de
+ * Ocupado/Desocupado recortam como evidência ("ocupado pela Fulana", "Ocupam o imóvel Fulano e
+ * Beltrana", "servindo de moradia para Fulano", "e sua irmã, Fulana"). "Filho/neto/sobrinho"
+ * ficam de fora como gatilho: também são sobrenome ("Antônio de Oliveira Filho").
+ */
+const GATILHOS_POSSE = [
+  "ocupad[oa]s?\\s+pel[oa]s?", "ocupam?\\s+(?:o|a)\\s+(?:im[óo]vel|bem|unidade|apartamento|casa|local|resid[êe]ncia)",
+  "resid(?:e|em)\\s+n[oa]\\s+(?:bem|unidade|apartamento|casa|local|resid[êe]ncia)",
+  "moram?\\s+n[oa]\\s+(?:im[óo]vel|bem|unidade|apartamento|casa|local)", "habitad[oa]s?\\s+por", "utilizad[oa]s?\\s+por",
+  "moradia\\s+(?:para|de|d[oa]s?)", "alugad[oa]s?\\s+(?:para|a|ao|[àá])", "cedid[oa]s?\\s+(?:para|a|ao|[àá])",
+  "(?:de\\s+)?responsabilidade\\s+d[eoa]s?", "(?:movid|propost|ajuizad)[oa]s\\s+por",
+  "irm[ãa](?:o|os|s)?", "espos[oa]s?", "marido", "companheir[oa]s?", "conviventes?", "genitor(?:a|es)?", "m[ãa]e",
+  "pai", "sogr[oa]s?", "genro", "nora", "cunhad[oa]s?", "enteado", "enteada",
+];
+/** Rótulos de ocupação: o nome só conta depois de dois-pontos ("Ocupação Atual: Fulana"). */
+const ROTULOS_POSSE = ["ocupa[çc][ãa]o(?:\\s+atual)?", "situa[çc][ãa]o\\s+(?:de|da)\\s+ocupa[çc][ãa]o"];
+const RE_GATILHOS_POSSE = regexPapeis(GATILHOS_POSSE);
+const RE_ROTULOS_POSSE = regexPapeis(ROTULOS_POSSE);
+/** "Irmã", "Ocupação": palavra de gatilho nunca conta como nome. */
+const RE_PALAVRA_POSSE = new RegExp(`^(?:${[...GATILHOS_POSSE, ...ROTULOS_POSSE].join("|")})$`, "iu");
 
 type ClassePalavra = "nome" | "particula" | "outra";
 
@@ -182,9 +222,12 @@ function classificar(palavra: string): ClassePalavra {
   const semPonto = palavra.replace(/\.+$/, "");
   if (PARTICULAS.has(semPonto.toLowerCase())) return "particula";
   if (!/^\p{Lu}/u.test(semPonto)) return "outra";
+  // "Ex-mutuário", "Ex-companheira": papel, não nome.
+  if (/^ex-/iu.test(semPonto)) return "outra";
   if (semPonto.length < 2 && !palavra.endsWith(".")) return "outra";
   if (NAO_NOMES.has(semAcento(semPonto).toUpperCase())) return "outra";
   if (RE_PALAVRA_PAPEL.test(semPonto) || RE_PALAVRA_PAPEL.test(palavra)) return "outra";
+  if (RE_PALAVRA_POSSE.test(semPonto)) return "outra";
   return "nome";
 }
 
@@ -300,7 +343,9 @@ function intervalosDeNome(texto: string): Array<[number, number]> {
       if (separador) pos += separador[0].length;
       else if (separadorObrigatorio) continue;
       else {
-        const espaco = casar(ESPACO_LINHA, texto, pos);
+        // "a executada, Maria Silva Ramos": a vírgula também separa o papel do nome (com pelo
+        // menos duas palavras de nome, como no espaço).
+        const espaco = casar(VIRGULA, texto, pos) ?? casar(ESPACO_LINHA, texto, pos);
         if (!espaco) continue;
         pos += espaco[0].length;
       }
@@ -329,6 +374,17 @@ function intervalosDeNome(texto: string): Array<[number, number]> {
     if (esquerda && direita && esquerda.palavras >= 2 && direita.palavras >= 2) {
       intervalos.push([esquerda.inicio, esquerda.fim], [direita.inicio, direita.fim]);
     }
+  }
+
+  // Posse e parentesco: nome depois do gatilho ("ocupado pela Fulana", "Ocupação Atual: Fulana")
+  // ou antes da âncora ("Fulana de Tal, irmã do executado", "Fulano e família ocupam o imóvel").
+  aposPapel(RE_GATILHOS_POSSE, false);
+  aposPapel(RE_ROTULOS_POSSE, true);
+  for (const achado of texto.matchAll(ANCORAS_POSSE)) {
+    // "... Ramos. Residem no imóvel": verbo no começo da frase não tem nome antes.
+    if (/[.!?;:]$/.test(texto.slice(0, achado.index).trimEnd())) continue;
+    const nome = nomeAtras(texto, achado.index);
+    if (nome && nome.palavras >= 2) intervalos.push([nome.inicio, nome.fim]);
   }
   return intervalos;
 }
@@ -366,4 +422,71 @@ export function mascararTrecho(texto: string, maximo = 300): string {
 /** `true` se o texto ainda tem algo com cara de CPF, CNPJ, e-mail ou IP (para testes e auditoria). */
 export function temDocumentoPessoal(texto: string): boolean {
   return mascararDocumentos(texto) !== texto;
+}
+
+// ---------------------------------------------------------------------------
+// Máscara reforçada (sem papel nem gatilho)
+// ---------------------------------------------------------------------------
+
+/**
+ * Palavras com inicial maiúscula comuns em editais que não são nome de pessoa. Só a máscara
+ * reforçada usa esta lista; nomes próprios de lugar (cidade, rua) ficam de fora de propósito:
+ * mascarar um lugar a mais é melhor que deixar passar um nome.
+ */
+const PALAVRAS_COMUNS = new Set(
+  (
+    "RUA AVENIDA AV ALAMEDA TRAVESSA ESTRADA RODOVIA LARGO VILA JARDIM BAIRRO CENTRO PARQUE LOTEAMENTO " +
+    "EDIFICIO ED CONDOMINIO CONJUNTO BLOCO TORRE QUADRA APARTAMENTO APTO CASA SALA LOJA TERRENO GALPAO " +
+    "PREDIO UNIDADE MATRICULA CARTORIO REGISTRO REGISTROS OFICIAL OFICIALA JUSTICA JUIZ JUIZA JUIZO VARA " +
+    "CIVEL CIVIL TRABALHO TRIBUNAL FORO COMARCA EXECUCAO CODIGO PROVIMENTO RESOLUCAO CONSOLIDACAO NORMAS " +
+    "CORREGEDORIA DECRETO ESTADO MUNICIPIO PREFEITURA MUNICIPAL UNIAO FEDERAL ESTADUAL CAIXA ECONOMICA BANCO " +
+    "RECEITA FAZENDA NACIONAL PUBLICA PUBLICO MINISTERIO LEILOEIRO LEILOEIRA HASTA CERTIDAO AUTO LAUDO " +
+    "AVALIACAO DESCRICAO OBSERVACAO OBSERVACOES OBS ENDERECO LANCE MINIMO INICIAL JUDICIAL EXTRAJUDICIAL " +
+    "UNIFICADO UNIFICADA PRIMEIRO SEGUNDO PRIMEIRA SEGUNDA CERTIFICOU CERTIFICA DR DRA SR SRA SRS SRTA"
+  ).split(" "),
+);
+
+function palavraDeNomeSolto(palavra: string): ClassePalavra {
+  if (PARTICULAS.has(palavra.toLowerCase())) return "particula";
+  // Inicial maiúscula e o resto com minúscula ("Maria", "D'Ávila"): caixa alta fica com os gatilhos.
+  if (palavra.length < 2 || !/^\p{Lu}/u.test(palavra) || !/\p{Ll}/u.test(palavra)) return "outra";
+  if (/^ex-/iu.test(palavra) || RE_PALAVRA_PAPEL.test(palavra) || RE_PALAVRA_POSSE.test(palavra)) return "outra";
+  const chave = semAcento(palavra).toUpperCase();
+  return NAO_NOMES.has(chave) || PALAVRAS_COMUNS.has(chave) ? "outra" : "nome";
+}
+
+/**
+ * Máscara reforçada para trechos de evidência que falam de posse (onde moram os nomes de
+ * ocupantes, executados e parentes): troca por [NOME] qualquer sequência de duas ou mais
+ * palavras com inicial maiúscula ("José Carlos de Souza", "Maria Silva"), mesmo sem papel ou
+ * gatilho antes. Palavras de edital ("Oficial de Justiça", "Leilão Judicial") ficam; nomes em
+ * caixa alta dependem dos gatilhos de `mascararNomes`. Mascara demais (lugares, empresas) de
+ * propósito. Idempotente.
+ */
+export function mascararNomesSoltos(texto: string): string {
+  const intervalos: Array<[number, number]> = [];
+  let inicio = -1;
+  let fim = -1;
+  let palavras = 0;
+  let fimAnterior = -1;
+  const fechar = (): void => {
+    if (palavras >= 2) intervalos.push([inicio, fim]);
+    inicio = -1;
+    fim = -1;
+    palavras = 0;
+  };
+  for (const achado of texto.matchAll(/\p{L}[\p{L}\p{M}'’-]*/gu)) {
+    const comeco = achado.index;
+    // Só espaço entre uma palavra e a seguinte: vírgula, ponto ou parêntese encerram o nome.
+    if (fimAnterior < 0 || !/^[ \t]+$/.test(texto.slice(fimAnterior, comeco))) fechar();
+    fimAnterior = comeco + achado[0].length;
+    const classe = palavraDeNomeSolto(achado[0]);
+    if (classe === "nome") {
+      if (inicio < 0) inicio = comeco;
+      fim = fimAnterior;
+      palavras++;
+    } else if (classe === "outra" || palavras === 0) fechar();
+  }
+  fechar();
+  return aplicarMascara(texto, intervalos, MASCARA.nome);
 }

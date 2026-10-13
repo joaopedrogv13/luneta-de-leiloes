@@ -9,22 +9,28 @@
  *   material, preço abaixo da avaliação não prova nada: fica "desconhecido".
  * - Custos extras: comissão acima de 5%, laudêmio/foro/terreno de marinha, regularização de
  *   construção a cargo do arrematante, baixa de gravames a cargo do arrematante quando o texto
- *   declara gravames, e dívidas que passam ao arrematante somando 10% ou mais da avaliação.
- *   ITBI, registro e comissão de 5% são custos normais de todo leilão e não contam.
+ *   declara gravames (na Caixa: "Imóvel com gravame... Regularização por conta do adquirente"),
+ *   e dívidas que passam ao arrematante somando 10% ou mais da avaliação. ITBI, registro e
+ *   comissão de 5% são custos normais de todo leilão e não contam. Regularização com ressalva
+ *   no objeto ("de eventual área construída", "de construções não averbadas, se houver") é
+ *   texto-modelo e não conta.
  */
 import type { Confianca, ImovelGravado } from "../../tipos.ts";
 import { lerNumeroBR } from "../../util/numero.ts";
 import type { RegraRisco } from "../motor.ts";
 import {
   achados,
+  clausulaCondicional,
   clausulaDeIntimacao,
   clausulasDe,
+  condicionalDepois,
   desconhecido,
   deteccao,
   extra,
   maisForte,
   moeda,
   porcento,
+  RESSALVAS,
   ressalvado,
   ressalvadoDepois,
   trechoDaClausula,
@@ -116,6 +122,19 @@ const BOILERPLATE_CTN = /fato gerador|dominio util ou a posse|\bctn\b/;
 const REGULARIZACAO = /\bregulariza(?:cao|coes|r)\b/;
 const OBJETO_REGULARIZACAO = /benfeitori|construc|edificac|averbac|averbad|area|habite|prefeitura|orgaos? competentes|documenta/;
 const BAIXA_GRAVAMES = /\b(?:baixa|cancelamento|levantamento)\s+(?:de\s+|das?\s+|dos?\s+)?(?:eventua\w+\s+)?(?:gravames|penhoras|indisponibilidades|onus|constricoes|hipotecas?)/;
+/** Cláusula que é só "Regularização por conta do adquirente" (o objeto é o gravame da frase anterior). */
+const REGULARIZACAO_DO_GRAVAME = /^regularizac(?:ao|oes)\s+(?:por conta|a cargo|sob responsabilidade)\s+d[oa]s?\s+(?:adquirente|arrematante|comprador)\w*\W*$/;
+
+/**
+ * A ressalva pode estar no objeto da regularização, depois da palavra: "regularização de
+ * eventual área construída", "regularização de construções não averbadas, se houver". É o
+ * texto-modelo de edital, não um fato do imóvel.
+ */
+function regularizacaoCondicional(a: Achado): boolean {
+  const objeto = OBJETO_REGULARIZACAO.exec(a.depois.slice(0, 80));
+  if (!objeto) return condicionalDepois(a.depois, 40);
+  return RESSALVAS.test(a.depois.slice(0, objeto.index)) || condicionalDepois(a.depois.slice(objeto.index));
+}
 
 function sinaisDeCusto(imovel: ImovelGravado, cls: ReturnType<typeof clausulasDe>, config: ConfigRiscos): SinalCusto[] {
   const sinais: SinalCusto[] = [];
@@ -132,20 +151,22 @@ function sinaisDeCusto(imovel: ImovelGravado, cls: ReturnType<typeof clausulasDe
   }
   // b) Laudêmio, foro, terreno de marinha, aforamento.
   for (const a of achados(cls, FORO_LAUDEMIO)) {
-    if (ressalvado(a) || ressalvadoDepois(a) || clausulaDeIntimacao(a.clausula) || BOILERPLATE_CTN.test(a.clausula.n)) continue;
+    if (ressalvado(a) || ressalvadoDepois(a) || clausulaDeIntimacao(a.clausula) || clausulaCondicional(a.clausula) || BOILERPLATE_CTN.test(a.clausula.n)) continue;
     sinais.push(doAchado(a, "media"));
     break;
   }
   // c) Regularização de construção ou documentação a cargo do arrematante.
   for (const a of achados(cls, REGULARIZACAO)) {
-    if (ressalvado(a, 40)) continue;
+    if (ressalvado(a, 40) || regularizacaoCondicional(a)) continue;
     if (!OBJETO_REGULARIZACAO.test(a.clausula.n) || !RESPONSABILIDADE_DO_ARREMATANTE.test(a.clausula.n)) continue;
     sinais.push({ confianca: "media", origem: a.texto.origem, trecho: trechoDaClausula(a) });
     break;
   }
-  // d) Baixa de gravames a cargo do arrematante, quando o texto declara gravames.
+  // d) Baixa de gravames a cargo do arrematante, quando o texto declara gravames. Na Caixa, a
+  //    frase vem solta logo depois do gravame: "Imóvel com gravame/penhora/indisponibilidade
+  //    averbada na matrícula. Regularização por conta do adquirente."
   if (gravamesDeclarados(cls).length > 0) {
-    for (const a of achados(cls, BAIXA_GRAVAMES)) {
+    for (const a of [...achados(cls, BAIXA_GRAVAMES), ...achados(cls, REGULARIZACAO_DO_GRAVAME)]) {
       if (!RESPONSABILIDADE_DO_ARREMATANTE.test(a.clausula.n)) continue;
       sinais.push({ confianca: "baixa", origem: a.texto.origem, trecho: trechoDaClausula(a) });
       break;

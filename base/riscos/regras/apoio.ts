@@ -229,11 +229,46 @@ export function ressalvadoDepois(a: Pick<Achado, "depois">, janela = 40): boolea
 }
 
 /**
+ * Condição logo DEPOIS do objeto ("construções não averbadas, se houver, ..."), sem contar
+ * "eventuais" (que, depois do objeto, costuma ser de outro assunto: "bem como eventuais despesas").
+ */
+export function condicionalDepois(depois: string, janela = 60): boolean {
+  return /^[^;.]*?\b(?:quando for o caso|se houver(?:em)?|se for o caso|caso (?:exista|existam|haja|seja necessari\w*|necessari\w*)|se existir(?:em)?|se necessari\w*|acaso necessari\w*|se for necessari\w*)\b/.test(
+    depois.slice(0, janela),
+  );
+}
+
+/**
+ * Ato de matrícula ("R.5", "AV-9") cancelado ou baixado por ato posterior que cita o mesmo
+ * número ("AV.6 Cancelamento da hipoteca do R.5", "AV.11 - Cancelamento da indisponibilidade
+ * objeto da AV.9"), ou ele mesmo um cancelamento ("AV.6 Cancelamento da hipoteca").
+ */
+export function atoCancelado(a: Pick<Achado, "texto" | "fim" | "casado" | "depois">): boolean {
+  if (/\b(?:cancel\w*|baix(?:a|ad[oa])|levantament\w*|extin\w*)\b/.test(a.casado)) return true;
+  if (/^[^;.]{0,50}\b(?:cancelad[oa]|baixad[oa]|extint[oa])\b/.test(a.depois)) return true;
+  const ato = /^(r|av)\.?\s*-?\s*0*(\d{1,3})\b/.exec(a.casado);
+  if (!ato) return false;
+  const [, tipo, numero] = ato;
+  const cancelamento = new RegExp(
+    String.raw`\b(?:cancel\w*|baix(?:a|ad[oa])|levantament\w*|extin\w*)\b[^;]{0,100}?\b${tipo}\.?\s*-?\s*0*${numero}(?![\d.,]?\d)`,
+  );
+  return cancelamento.test(a.texto.normalizado.slice(a.fim));
+}
+
+/**
  * Cláusula-modelo de intimação ("ficam intimados ... o credor com penhora anteriormente
  * averbada, o titular de usufruto, enfiteuse..."): lista papéis possíveis, não fatos do imóvel.
  */
 export function clausulaDeIntimacao(cl: Pick<Clausula, "n">): boolean {
   return /\bintimad[oa]s?\b|\bintimac(?:ao|oes)\b|\bficam? (?:desde ja )?cientes?\b|\bcientificad[oa]s?\b/.test(cl.n);
+}
+
+/**
+ * Cláusula que começa com condição ("Caso o bem penhorado seja indivisível, ...", "Na hipótese do
+ * proponente ser o ocupante, ..."): regra geral do edital, não fato do imóvel.
+ */
+export function clausulaCondicional(cl: Pick<Clausula, "n">): boolean {
+  return /^\W*(?:\d+(?:\.\d+)*\s*[.)-]?\s*|[a-h]\)\s*)?(?:caso|se|na hipotese|nas hipoteses|em caso|no caso|havendo|tratando-se|quando|sendo o bem)\b/.test(cl.n);
 }
 
 /** O trecho logo antes do achado nega o que vem depois ("não está ocupado", "sem indisponibilidade")? */
