@@ -2,8 +2,8 @@
 
 import { listingLabel, brl, type Listing } from "@/content/examples";
 import { Tag } from "@/components/ui/Tag";
-import { FavButton, LensFrame, LockIcon, SealBadge, TagPlaceholders } from "./parts";
-import { lockFilter, splitPlace, type Plan } from "./shared";
+import { FavButton, LensFrame, LockIcon, ReviewTags, SealBadge, TagPlaceholders } from "./parts";
+import { desagioView, lockFilter, pracaLabel, splitPlace, type Plan } from "./shared";
 
 /**
  * Uma linha da lista (layout do protótipo): foto em moldura de lente, título + praça, local e data,
@@ -12,6 +12,7 @@ import { lockFilter, splitPlace, type Plan } from "./shared";
  * e pelo teclado é um único botão (o Favoritar fica por cima, sem botões aninhados).
  * O hover vem do <li>, que não se move: o cartão sobe 3px sem "tremer" com o mouse na borda de baixo.
  * No celular, selo e Favoritar ficam numa linha própria (a 3ª coluna é só do deságio, e o título respira).
+ * Casos reais (/previa): praça não informada, lance acima da avaliação e tags em revisão (à parte, neutras).
  */
 export function ListingRow({
   listing: l,
@@ -36,6 +37,7 @@ export function ListingRow({
   const lente = plan === "lente";
   const alvo = !lente && l.seal === 3;
   const { bairro, cidadeUf } = splitPlace(l.place);
+  const des = desagioView(l);
   const desTone = lente ? "text-luar" : alvo ? "text-pos" : l.seal === 0 ? "text-nevoa" : "text-luar";
   const frame = active
     ? "border-latao/60 shadow-[0_18px_50px_rgba(0,0,0,.22)]"
@@ -69,15 +71,25 @@ export function ListingRow({
                 {l.title}
               </button>
             </h2>
-            <span className="rounded-full border border-nevoa/30 px-2 py-1 text-[11px] leading-none font-medium whitespace-nowrap text-nevoa">
-              {l.praca}
+            <span
+              className={`${l.praca ? "rounded-full" : "rounded-[10px]"} border border-nevoa/30 px-2 py-1 text-[11px] ${l.praca ? "leading-none font-medium whitespace-nowrap" : "leading-tight font-medium"} text-nevoa`}
+            >
+              {pracaLabel(l)}
             </span>
           </div>
         </div>
 
         <div className="min-w-0 self-start [grid-area:meta] sm:-mt-2">
+          {/* caso real sem bairro ("Cidade/UF") ou sem data da praça: sem separador sobrando nem "encerra data não informada" */}
           <p className="text-[13px] leading-snug text-nevoa">
-            {bairro} · {cidadeUf} · encerra {l.date}
+            {cidadeUf ? (
+              <>
+                {bairro} · {cidadeUf}
+              </>
+            ) : (
+              bairro
+            )}
+            {l.dataPraca === null ? <> · {l.date}</> : <> · encerra {l.date}</>}
           </p>
           <dl className="mt-2.5 flex flex-wrap gap-x-[18px] gap-y-1 text-xs leading-snug text-nevoa">
             <div className="flex gap-1">
@@ -91,11 +103,19 @@ export function ListingRow({
           </dl>
         </div>
 
-        <p
-          className={`self-start text-right font-display text-[26px] leading-[0.9] font-bold tracking-[-0.04em] transition-colors duration-500 [grid-area:des] sm:self-center sm:text-[34px] ${desTone}`}
-        >
-          −{l.desagio}%<span className="sr-only"> de deságio</span>
-        </p>
+        {des.note ? (
+          // lance igual ou acima da avaliação (casos reais): número menor e a nota, em vez de um "−" que confunde
+          <p className="flex flex-col items-end self-start text-right [grid-area:des] sm:self-center">
+            <span className="block font-display text-xl leading-none font-bold tracking-[-0.03em] text-nevoa sm:text-2xl">{des.value}</span>
+            <span className="mt-1 block max-w-[12ch] text-[11px] leading-tight text-nevoa">{des.note}</span>
+          </p>
+        ) : (
+          <p
+            className={`self-start text-right font-display text-[26px] leading-[0.9] font-bold tracking-[-0.04em] transition-colors duration-500 [grid-area:des] sm:self-center sm:text-[34px] ${desTone}`}
+          >
+            −{l.desagio}%<span className="sr-only"> de deságio</span>
+          </p>
+        )}
 
         {/* Tags e selo não são interativos: com pointer-events-none o clique passa para o ::after do título
             (o filter do desfoque cria uma camada própria, que ficaria por cima dele).
@@ -108,13 +128,16 @@ export function ListingRow({
             {lente ? (
               <TagPlaceholders />
             ) : (
-              <ul aria-label="Tags de risco" className="flex flex-wrap gap-1.5">
-                {l.tags.map((t) => (
-                  <li key={t.label}>
-                    <Tag {...t} />
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul aria-label="Tags de risco" className="flex flex-wrap gap-1.5">
+                  {l.tags.map((t) => (
+                    <li key={t.label}>
+                      <Tag {...t} />
+                    </li>
+                  ))}
+                </ul>
+                <ReviewTags tags={l.tagsEmRevisao} />
+              </>
             )}
           </div>
           {lente && (

@@ -27,9 +27,64 @@ export const LUNETA_PRICE = PLANS.plans.find((p) => p.id === "luneta")?.price ??
 
 const RINGS = ["", "1 anel", "2 anéis", "3 anéis"] as const;
 
-/** "Alvo · 3 anéis", "Na Mira · 2 anéis", "Promissor · 1 anel" ou "Sem selo". */
+/** "Alvo · 3 anéis", "Na Mira · 2 anéis", "Promissor · 1 anel", "Sem selo" ou, nos casos reais, "Selo em análise". */
 export function sealLabel(l: Listing) {
+  if (l.sealPending) return "Selo em análise";
   return l.seal === 0 ? SEAL_NAMES[0] : `${SEAL_NAMES[l.seal]} · ${RINGS[l.seal]}`;
+}
+
+/**
+ * De onde vem a lista: os textos que mudam entre os exemplos da /assinante e os casos reais da /previa
+ * (contagem, nome da lista para leitores de tela, nota sob a lista e o complemento do título).
+ */
+export type ListOrigin = {
+  one: string;
+  other: string;
+  subtitle: string;
+  listLabel: string;
+  note: string;
+};
+
+/** Praça como a fonte informou; casos reais sem praça dizem isso, sem adivinhar. */
+export const pracaLabel = (l: Listing) => l.praca ?? "Praça não informada pela fonte";
+
+/**
+ * Deságio para mostrar. Positivo: "−48%". Casos reais podem ter lance acima da avaliação (deságio
+ * negativo): "+46%" com a nota "lance acima da avaliação", sem sinal de menos que confunda.
+ */
+export function desagioView(l: Listing): { value: string; note?: string; short: string } {
+  if (l.desagio > 0) return { value: `−${l.desagio}%`, short: `−${l.desagio}%` };
+  if (l.desagio === 0) return { value: "0%", note: "lance igual à avaliação", short: "lance igual à avaliação" };
+  const acima = Math.abs(l.desagio);
+  return { value: `+${acima}%`, note: "lance acima da avaliação", short: `lance ${acima}% acima da avaliação` };
+}
+
+const MODALIDADES: Record<string, string> = {
+  leilao: "Leilão",
+  venda_direta: "Venda direta",
+  venda_online: "Venda online",
+  licitacao_aberta: "Licitação aberta",
+};
+
+/** "venda_direta" → "Venda direta" (modalidade como está na base). */
+export function modalidadeLabel(m: string) {
+  const s = m.replace(/_/g, " ");
+  return MODALIDADES[m] ?? s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+const two = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * Data e hora da praça em Brasília ("16/10/2026 às 14:00"), igual no servidor e no navegador
+ * (UTC−3 fixo: o Brasil não tem horário de verão desde 2019). Só a data quando a fonte não dá a hora.
+ */
+export function dataPracaLabel(iso: string | null | undefined) {
+  if (!iso) return "não informada pela fonte";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso.split("-").reverse().join("/");
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return "não informada pela fonte";
+  const d = new Date(t - 3 * 3600 * 1000);
+  return `${two(d.getUTCDate())}/${two(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} às ${two(d.getUTCHours())}:${two(d.getUTCMinutes())}`;
 }
 
 /** "Vila Mariana · São Paulo/SP" → bairro e cidade/UF. */

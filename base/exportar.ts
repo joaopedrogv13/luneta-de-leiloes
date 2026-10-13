@@ -259,8 +259,8 @@ export function exportar(db: Banco, caminho: string = SAIDA_PADRAO, opcoes: Opco
 //   `tagsEmRevisao` e não devem aparecer como fato;
 // - `seal` é sempre 0 (sem selo): os critérios dos selos estão pendentes;
 // - `photo` é a URL na fonte (sem download); `photoFonte.origem = "padrao_url"` quer dizer URL
-//   montada por padrão conhecido e ainda não verificada. Para o next/image, o domínio da fonte
-//   precisa estar em images.remotePatterns do next.config.
+//   montada por padrão conhecido e ainda não verificada. O site a mostra com <img> simples, sem o
+//   otimizador do next/image (que baixaria e re-hospedaria a foto): ver base/FASE1-SITE.md.
 //
 // estatisticas-uf.json: contagens e medianas por UF (e do Brasil) sobre os mesmos imóveis da
 // exportação completa (ativos, sem praça vencida).

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import { formatDate, listingLabel, brl, type Listing } from "@/content/examples";
 import { Tag } from "@/components/ui/Tag";
-import { FavButton, LensFrame, LockIcon, SealBadge, TagPlaceholders } from "./parts";
-import { lockFilter, type Plan } from "./shared";
+import { FavButton, LensFrame, LockIcon, ReviewTags, SealBadge, TagPlaceholders } from "./parts";
+import { dataPracaLabel, desagioView, lockFilter, modalidadeLabel, type Plan } from "./shared";
 import { useDialog } from "./useDialog";
 
 /**
@@ -13,6 +13,8 @@ import { useDialog } from "./useDialog";
  * cubic-bezier(.2,.7,.2,1), com o fundo escurecendo. Fica montado o tempo todo (para animar a saída)
  * e, fechado, fica `inert` e invisível. As tags entram em cascata a cada abertura.
  * No Lente, tags e explicação reais não vão para o DOM: só marcadores neutros sob o cartão de bloqueio.
+ * Casos reais (/previa) mostram também modalidade, praça e data como a fonte informou, as tags em
+ * revisão à parte e o link para o anúncio na fonte.
  */
 export function DetailDrawer({
   open,
@@ -67,6 +69,14 @@ export function DetailDrawer({
     requestAnimationFrame(() => tagsHeading.current?.focus({ preventScroll: true }));
   };
 
+  const des = desagioView(l);
+  // nome do placeholder: foto que não carregou da fonte, fonte sem foto, ou exemplo sem foto
+  const photoLabel = l.photo
+    ? `Foto do imóvel (não carregou do site da fonte): ${l.title}`
+    : l.source
+      ? `A fonte não publicou foto deste imóvel: ${l.title}`
+      : `Foto do imóvel (ainda não disponível): ${l.title}`;
+
   return (
     <>
       <div
@@ -104,7 +114,7 @@ export function DetailDrawer({
           </div>
 
           <div className="flex items-center gap-4">
-            <LensFrame listing={l} plan={plan} size={112} sizeClass="size-24 sm:size-28" label={`Foto do imóvel (ainda não disponível): ${l.title}`} />
+            <LensFrame listing={l} plan={plan} size={112} sizeClass="size-24 sm:size-28" label={photoLabel} />
             <div className="min-w-0">
               <SealBadge listing={l} plan={plan} size={28} reverse />
               <h2 id="detalhe-titulo" className="mt-2 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em]">
@@ -118,12 +128,13 @@ export function DetailDrawer({
             <div className="card-on-tinta !rounded-[14px] p-3.5">
               <dt className="text-[11px] font-medium text-nevoa">Deságio</dt>
               <dd
-                className={`mt-1.5 font-display text-[34px] leading-none font-bold tracking-[-0.04em] ${
-                  lente ? "text-luar" : l.seal === 3 ? "text-pos" : l.seal === 0 ? "text-nevoa" : "text-luar"
+                className={`mt-1.5 font-display ${des.note ? "text-[28px]" : "text-[34px]"} leading-none font-bold tracking-[-0.04em] ${
+                  des.note ? "text-nevoa" : lente ? "text-luar" : l.seal === 3 ? "text-pos" : l.seal === 0 ? "text-nevoa" : "text-luar"
                 }`}
               >
-                −{l.desagio}%
+                {des.note ? des.value : <>−{l.desagio}%</>}
               </dd>
+              {des.note && <dd className="mt-1 text-[11px] leading-snug text-nevoa">{des.note}</dd>}
             </div>
             <div className="card-on-tinta !rounded-[14px] p-3.5">
               <dt className="text-[11px] font-medium text-nevoa">Lance mínimo</dt>
@@ -132,12 +143,26 @@ export function DetailDrawer({
             </div>
           </dl>
 
-          <p className="card-on-tinta flex items-center gap-2.5 !rounded-[14px] px-3.5 py-3 text-[13px] leading-snug">
-            <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-latao" />
-            <span>
-              <strong className="font-semibold">{l.praca}</strong> · encerra {l.date}
-            </span>
-          </p>
+          {l.modalidade ? (
+            <dl className="card-on-tinta grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 !rounded-[14px] px-3.5 py-3 text-[13px] leading-snug">
+              <dt className="text-nevoa">Modalidade</dt>
+              <dd className="font-semibold">{modalidadeLabel(l.modalidade)}</dd>
+              <dt className="text-nevoa">Praça</dt>
+              <dd className={l.praca ? "font-semibold" : ""}>{l.praca ?? "não informada pela fonte"}</dd>
+              <dt className="text-nevoa">Data da praça</dt>
+              <dd>
+                {dataPracaLabel(l.dataPraca)}
+                {l.dataPraca && /T/.test(l.dataPraca) && <span className="text-nevoa"> (Brasília)</span>}
+              </dd>
+            </dl>
+          ) : (
+            <p className="card-on-tinta flex items-center gap-2.5 !rounded-[14px] px-3.5 py-3 text-[13px] leading-snug">
+              <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-latao" />
+              <span>
+                <strong className="font-semibold">{l.praca}</strong> · encerra {l.date}
+              </span>
+            </p>
+          )}
 
           <section aria-labelledby="detalhe-tags">
             <h3
@@ -175,6 +200,7 @@ export function DetailDrawer({
                         </li>
                       ))}
                     </ul>
+                    <ReviewTags tags={l.tagsEmRevisao} large />
                     <p className="mt-3 text-[13px] leading-relaxed text-nevoa">{l.why}</p>
                   </>
                 )}
@@ -207,12 +233,10 @@ export function DetailDrawer({
                   rel="noopener noreferrer"
                   className="btn-outline w-full !whitespace-normal text-center"
                 >
-                  Ver este leilão no {l.source.leiloeiro} <span aria-hidden="true">↗</span>
-                  <span className="sr-only"> (abre em nova aba)</span>
+                  Ver no site da fonte <span aria-hidden="true">↗</span>
+                  <span className="sr-only"> ({l.source.leiloeiro}, abre em nova aba)</span>
                 </a>
-                <p className="-mt-1 text-center text-xs text-nevoa">
-                  Dados coletados em {formatDate(l.source.coletadoEm)}. Preços e datas podem mudar: confira o edital.
-                </p>
+                <p className="-mt-1 text-center text-xs text-nevoa">Dados de {formatDate(l.source.coletadoEm)} · confira o edital</p>
               </>
             ) : (
               <>

@@ -42,17 +42,21 @@ export function FilterBar({
   count,
   onToggle,
   onLocked,
+  noun = ["exemplo", "exemplos"],
 }: {
   plan: Plan;
   filters: Filters;
   count: number;
   onToggle: (k: FilterKey) => void;
   onLocked: (opener: HTMLElement) => void;
+  /** singular e plural da contagem ("exemplo", "imóvel"…) */
+  noun?: readonly [string, string];
 }) {
   const lente = plan === "lente";
   const lock = useRef<HTMLSpanElement>(null);
   const shown = useCountTo(count);
-  const summary = `${count} ${count === 1 ? "exemplo" : "exemplos"} · ordenado por maior deságio`;
+  const word = count === 1 ? noun[0] : noun[1];
+  const summary = `${count} ${word} · ordenado por maior deságio`;
 
   const onSeal = (e: MouseEvent<HTMLButtonElement>) => {
     if (!lente) return onToggle("selo");
@@ -102,7 +106,7 @@ export function FilterBar({
       <p className="w-full text-[13px] leading-none text-nevoa md:w-auto">
         <span aria-hidden="true">
           <strong className="font-display text-base font-bold text-luar tabular-nums">{shown}</strong>{" "}
-          {count === 1 ? "exemplo" : "exemplos"} · ordenado por maior deságio
+          {word} · ordenado por maior deságio
         </span>
         <span className="sr-only" aria-live="polite">
           {summary}

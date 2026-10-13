@@ -112,11 +112,13 @@ Regras da amostra:
 - escolha determinística, variando nessa ordem fonte, modalidade, risco (grave, atenção, sem risco), UF e tipo; desempate pelo hash do id. Mesma base, mesma amostra; o arquivo sai ordenado por UF e id;
 - `seal` é sempre 0 (sem selo) e `why` explica que os critérios dos selos estão pendentes;
 - `tags` leva só as tags "sim" que não aguardam leitura humana; as que aguardam vão em `tagsEmRevisao` e **não devem aparecer como fato**;
-- `praca` é `null` quando a fonte não diz a praça (Leilão SFI da Caixa sem ficha; lote da LJ com regra "seg_nulo"), e `desagio` é negativo quando o lance passa da avaliação. O tipo do site não prevê esses dois casos: quem integrar precisa tratar ("praça não informada", "acima da avaliação");
+- `praca` é `null` quando a fonte não diz a praça (Leilão SFI da Caixa sem ficha; lote da LJ com regra "seg_nulo"), e `desagio` é negativo quando o lance passa da avaliação. O tipo `Listing` do site trata os dois casos ("Praça não informada pela fonte", "lance acima da avaliação");
 - `source.leiloeiro` é o portal ("Caixa", "Leilões Judiciais"), e `coletadoEm` é a data de geração na fonte (em Brasília);
-- `photo` é a URL na fonte, nunca baixada. Na Caixa é JPG montado por padrão e não verificado; para o `next/image`, o domínio precisa entrar em `images.remotePatterns`.
+- `photo` é a URL na fonte, nunca baixada. Na Caixa é JPG montado por padrão e não verificado. O site a mostra com `<img>` simples, sem o otimizador do `next/image` (que baixaria e re-hospedaria a foto), e cai no placeholder se ela não carregar.
 
 Amostra atual (dados de 08/10 e 11/10/2026): 60 imóveis de 27 UFs, 15 por modalidade (venda direta, venda online, licitação aberta e leilão), 57 da Caixa e 3 da LJ; apartamento 16, casa 15, terreno 15, comercial 14; praça única 45, não informada 12, 2ª praça 2, 1ª praça 1; 13 com tag grave (12 delas em revisão), 33 sem tag grave ou de atenção, 10 com lance acima da avaliação, 59 com foto. Nenhum dado pessoal: título, lugar, valores, tags e links. Os nomes de leiloeiro da fixture da LJ são sintéticos e por isso não vão para a amostra.
+
+O site usa este instantâneo na prévia interna `/previa` (mesma tela da `/assinante`, com os 60 imóveis reais). O que ela mostra e o caminho para produção estão em **`base/FASE1-SITE.md`**.
 
 A exportação completa (`base/dados/exportacao/imoveis.json`, compacta, ~59 MB) continua fora do Git.
 

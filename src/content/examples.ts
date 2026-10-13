@@ -18,9 +18,12 @@ export type ListingSource = {
   coletadoEm: string;
 };
 
+export type ListingTag = { label: string; severity: Severity };
+
 export type Listing = {
   id: string;
   title: string;
+  /** "Bairro · Cidade/UF", ou só "Cidade/UF" quando a fonte não traz o bairro. */
   place: string;
   uf: string;
   /** Posição no mapa (viewBox 400×400): BRAZIL_PINS.x para capitais ou latLonToMap(lat, lon). */
@@ -28,18 +31,32 @@ export type Listing = {
   type: "apartamento" | "casa" | "comercial" | "terreno";
   avaliacao: number;
   lance: number;
+  /** Deságio em % inteiro; negativo quando o lance passa da avaliação (casos reais). */
   desagio: number;
-  praca: "1ª praça" | "2ª praça" | "Praça única";
+  /** null: a fonte não diz a praça (casos reais da base, ex.: Leilão SFI da Caixa sem ficha). */
+  praca: "1ª praça" | "2ª praça" | "Praça única" | null;
   date: string;
   seal: SealLevel;
   desocupado: boolean;
-  tags: { label: string; severity: Severity }[];
+  tags: ListingTag[];
   /** Por que recebeu (ou não) o selo. */
   why: string;
-  /** Foto real em WebP, quando houver (renderizada com next/image dentro da moldura de lente). */
+  /**
+   * Foto na fonte (URL do leiloeiro), mostrada com <img> simples dentro da moldura de lente: nunca passa
+   * pelo otimizador do next/image, que baixaria e re-hospedaria a foto. Sem foto (ou se ela falhar), placeholder.
+   */
   photo?: string;
   /** Origem, quando o caso é real. */
   source?: ListingSource;
+  // Casos reais da base (base/saida/amostra-site.json), usados na /previa:
+  /** Tags calculadas automaticamente que aguardam leitura humana: aparecem à parte, nunca como fato. */
+  tagsEmRevisao?: ListingTag[];
+  /** Selo ainda não avaliado (critérios pendentes): "Selo em análise" em vez de "Sem selo". */
+  sealPending?: boolean;
+  /** Modalidade na base: leilao, venda_direta, venda_online, licitacao_aberta… */
+  modalidade?: string;
+  /** Data e hora da praça (ISO); null quando a fonte não informa. */
+  dataPraca?: string | null;
 };
 
 export const LISTINGS: Listing[] = [

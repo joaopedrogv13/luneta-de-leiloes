@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LISTINGS } from "@/content/examples";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
+import { LISTINGS, type Listing } from "@/content/examples";
 import { RichText } from "@/components/ui/RichText";
 import { AppHeader } from "./AppHeader";
 import { DetailDrawer } from "./DetailDrawer";
@@ -9,7 +10,7 @@ import { FilterBar } from "./FilterBar";
 import { ListingRow } from "./ListingRow";
 import { MapPanel } from "./MapPanel";
 import { RingsIcon } from "./parts";
-import { LUNETA_PRICE, NO_FILTERS, OPEN_FILTERS, matchesQuery, type FilterKey, type Filters, type Plan } from "./shared";
+import { LUNETA_PRICE, NO_FILTERS, OPEN_FILTERS, matchesQuery, type FilterKey, type Filters, type ListOrigin, type Plan } from "./shared";
 import { UpgradeModal } from "./UpgradeModal";
 
 type Toast = { id: number; text: string; leaving: boolean };
@@ -17,20 +18,49 @@ type Toast = { id: number; text: string; leaving: boolean };
 const TOAST_FAV = "Você será avisado por e-mail quando a praça mudar (demonstração).";
 const TOAST_PLAN = "Plano Luneta ativado nesta demonstração: tags e selos nítidos. Nenhuma cobrança foi feita.";
 
+/** Padrão da /assinante: os exemplos fictícios de src/content/examples.ts. */
+const EXEMPLOS: ListOrigin = {
+  one: "exemplo",
+  other: "exemplos",
+  subtitle: "área do assinante",
+  listLabel: "Exemplos fictícios de leilões, por maior deságio",
+  note: "Exemplos fictícios, só para demonstrar a área do assinante. Na assinatura, a lista traz os leilões reais da base.",
+};
+
 /**
  * Área do assinante (demonstração, só front-end): filtros, busca, lista em linhas, mapa e detalhe,
  * vista como plano Lente (tags e selos desfocados) ou Luneta (tudo nítido). Começa na Luneta;
- * ?plano=lente na URL começa no Lente. Usa só os exemplos fictícios de src/content/examples.ts.
+ * ?plano=lente na URL começa no Lente. Sem `listings`, usa os exemplos fictícios de src/content/examples.ts;
+ * a /previa passa os casos reais da base, com `origin` e `planOnServer`.
  */
-export function AssinanteApp({ initialPlan }: { initialPlan: Plan }) {
+export function AssinanteApp({
+  initialPlan,
+  listings = LISTINGS,
+  origin = EXEMPLOS,
+  planOnServer = false,
+}: {
+  initialPlan: Plan;
+  listings?: Listing[];
+  origin?: ListOrigin;
+  /**
+   * A lista vem do servidor já no formato do plano (no Lente, sem tags nem explicação): trocar de plano
+   * pede a página de novo (?plano=lente) e o plano mostrado é o da lista recebida, nunca à frente dela.
+   */
+  planOnServer?: boolean;
+}) {
   // O plano inicial vem do servidor (page.tsx lê ?plano=lente), para o Lente já sair no HTML:
   // sem pintar a Luneta primeiro e trocar na hidratação (sem flash nem salto do banner).
-  const [plan, setPlanState] = useState<Plan>(initialPlan);
+  const [localPlan, setLocalPlan] = useState<Plan>(initialPlan);
+  const plan = planOnServer ? initialPlan : localPlan;
+  // planOnServer: o botão do cabeçalho troca na hora; lista, tags e banner mudam quando a página nova chega
+  const [headerPlan, setHeaderPlan] = useOptimistic(plan);
+  const [switching, startSwitch] = useTransition();
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [shownId, setShownId] = useState(LISTINGS[0].id);
+  const [shownId, setShownId] = useState(listings[0].id);
   const [openSeq, setOpenSeq] = useState(0);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [favs, setFavs] = useState<Record<string, boolean>>({});
@@ -55,25 +85,38 @@ export function AssinanteApp({ initialPlan }: { initialPlan: Plan }) {
 
   const showToast = (text: string) => setToast({ id: Date.now(), text, leaving: false });
 
-  const setPlan = useCallback((p: Plan) => {
-    setPlanState(p);
-    // "Só com selo" revelaria quem tem selo: no Lente o filtro é desligado.
-    if (p === "lente") setFilters((f) => ({ ...f, selo: false }));
-    const url = new URL(window.location.href);
-    if (p === "lente") url.searchParams.set("plano", "lente");
-    else url.searchParams.delete("plano");
-    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
-  }, []);
+  const setPlan = useCallback(
+    (p: Plan) => {
+      // "Só com selo" revelaria quem tem selo: no Lente o filtro é desligado.
+      if (p === "lente") setFilters((f) => ({ ...f, selo: false }));
+      const url = new URL(window.location.href);
+      if (p === "lente") url.searchParams.set("plano", "lente");
+      else url.searchParams.delete("plano");
+      const href = url.pathname + url.search + url.hash;
+      if (planOnServer) {
+        startSwitch(() => {
+          setHeaderPlan(p);
+          router.replace(href, { scroll: false });
+        });
+        return;
+      }
+      setLocalPlan(p);
+      window.history.replaceState(null, "", href);
+    },
+    [planOnServer, router, setHeaderPlan],
+  );
 
   const results = useMemo(
     () =>
-      LISTINGS.filter(
-        (l) =>
-          OPEN_FILTERS.every((f) => !filters[f.key] || f.test(l)) &&
-          (!filters.selo || lente || l.seal > 0) &&
-          matchesQuery(l, query),
-      ).sort((a, b) => b.desagio - a.desagio),
-    [filters, lente, query],
+      listings
+        .filter(
+          (l) =>
+            OPEN_FILTERS.every((f) => !filters[f.key] || f.test(l)) &&
+            (!filters.selo || lente || l.seal > 0) &&
+            matchesQuery(l, query),
+        )
+        .sort((a, b) => b.desagio - a.desagio),
+    [listings, filters, lente, query],
   );
 
   const openDetail = (id: string, opener: HTMLElement) => {
@@ -113,23 +156,27 @@ export function AssinanteApp({ initialPlan }: { initialPlan: Plan }) {
     requestAnimationFrame(() => listRef.current?.querySelector<HTMLElement>("[data-open]")?.focus());
   };
 
-  const shown = LISTINGS.find((l) => l.id === shownId) ?? LISTINGS[0];
+  const shown = listings.find((l) => l.id === shownId) ?? listings[0];
   const activeId = hoverId ?? openId;
 
   return (
     <>
-      <AppHeader plan={plan} onPlan={setPlan} query={query} onQuery={setQuery} lunetaBtnRef={lunetaBtn} />
+      <AppHeader plan={headerPlan} onPlan={setPlan} query={query} onQuery={setQuery} lunetaBtnRef={lunetaBtn} />
 
       <main id="conteudo" tabIndex={-1} className="outline-none">
         <div className="border-b border-nevoa/12 px-4 py-4 sm:px-6 lg:px-8">
           <h1 className="mb-3.5 font-display text-[13px] leading-none font-bold tracking-[-0.005em] text-luar">
-            Leilões de imóveis <span className="font-medium text-nevoa">· área do assinante</span>
+            Leilões de imóveis <span className="font-medium text-nevoa">{`· ${origin.subtitle}`}</span>
           </h1>
-          <FilterBar plan={plan} filters={filters} count={results.length} onToggle={toggleFilter} onLocked={openUpsell} />
+          <FilterBar plan={plan} filters={filters} count={results.length} onToggle={toggleFilter} onLocked={openUpsell} noun={[origin.one, origin.other]} />
         </div>
 
         <div className="lg:grid lg:min-h-[calc(100svh-4rem)] lg:grid-cols-[minmax(0,1fr)_400px] 2xl:grid-cols-[minmax(0,1fr)_520px]">
-          <div ref={listRef} className="flex min-w-0 flex-col gap-3 px-4 pt-4 pb-10 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8">
+          <div
+            ref={listRef}
+            aria-busy={switching || undefined}
+            className={`flex min-w-0 flex-col gap-3 px-4 pt-4 pb-10 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8 ${switching ? "opacity-60 transition-opacity" : ""}`.trim()}
+          >
             {lente && (
               <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-latao/45 bg-tinta p-4 transition-[opacity,translate] duration-300 ease-out starting:-translate-y-1 starting:opacity-0 sm:px-[18px]">
                 <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-latao blur-[0.8px]">
@@ -152,7 +199,7 @@ export function AssinanteApp({ initialPlan }: { initialPlan: Plan }) {
             )}
 
             {results.length > 0 ? (
-              <ul className="flex flex-col gap-3" aria-label="Exemplos fictícios de leilões, por maior deságio">
+              <ul className="flex flex-col gap-3" aria-label={origin.listLabel}>
                 {results.map((l) => (
                   <ListingRow
                     key={l.id}
@@ -170,7 +217,7 @@ export function AssinanteApp({ initialPlan }: { initialPlan: Plan }) {
             ) : (
               <div className="rounded-[18px] border border-dashed border-nevoa/35 px-6 py-10 text-center">
                 <RingsIcon rings={2} size={28} className="mx-auto text-nevoa" />
-                <p className="mt-3 font-display text-lg font-bold">Nenhum exemplo com esses filtros.</p>
+                <p className="mt-3 font-display text-lg font-bold">{`Nenhum ${origin.one} com esses filtros.`}</p>
                 <p className="mx-auto mt-1 max-w-[42ch] text-sm leading-normal text-nevoa">
                   Tire um filtro ou mude a busca para abrir o foco da luneta.
                 </p>
@@ -180,12 +227,10 @@ export function AssinanteApp({ initialPlan }: { initialPlan: Plan }) {
               </div>
             )}
 
-            <p className="px-1 pt-2 text-xs leading-normal text-nevoa">
-              Exemplos fictícios, só para demonstrar a área do assinante. Na assinatura, a lista traz os leilões reais da base.
-            </p>
+            <p className="px-1 pt-2 text-xs leading-normal text-nevoa">{origin.note}</p>
           </div>
 
-          <MapPanel results={results} plan={plan} activeId={activeId} onHover={setHoverId} onOpen={openDetail} />
+          <MapPanel results={results} plan={plan} activeId={activeId} onHover={setHoverId} onOpen={openDetail} noun={[origin.one, origin.other]} />
         </div>
 
         <DetailDrawer

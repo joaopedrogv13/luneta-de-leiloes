@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Listing } from "@/content/examples";
 import { BrazilMap } from "@/components/ui/BrazilMap";
-import type { Plan } from "./shared";
+import { desagioView, type Plan } from "./shared";
 
 /** Distância mínima entre centros de pinos, em px: as áreas de toque (círculos de 24px) não se encostam. */
 const MIN_GAP = 26;
@@ -54,12 +54,15 @@ export function MapPanel({
   activeId,
   onHover,
   onOpen,
+  noun = ["exemplo", "exemplos"],
 }: {
   results: Listing[];
   plan: Plan;
   activeId: string | null;
   onHover: (id: string | null) => void;
   onOpen: (id: string, opener: HTMLElement) => void;
+  /** singular e plural do que a lista mostra ("exemplo", "imóvel"…) */
+  noun?: readonly [string, string];
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [mapPx, setMapPx] = useState(0);
@@ -75,19 +78,19 @@ export function MapPanel({
   const focus = results.find((l) => l.id === activeId);
   const n = results.length;
   const caption = focus
-    ? `${focus.title} · ${focus.place} · −${focus.desagio}%`
+    ? `${focus.title} · ${focus.place} · ${desagioView(focus).short}`
     : `${n} ${n === 1 ? "leilão" : "leilões"} no mapa · passe o mouse sobre um cartão`;
 
   return (
     <aside
-      aria-label="Mapa dos exemplos"
+      aria-label={`Mapa dos ${noun[1]}`}
       className="sticky top-16 hidden h-[calc(100svh-4rem)] self-start overflow-hidden border-l border-nevoa/15 bg-[radial-gradient(circle_at_50%_45%,#16224A,#0F1830_70%)] lg:block"
     >
       <div aria-hidden="true" className="grid-lines absolute inset-0" />
       {/* lg–2xl: coluna de 400px; com px-4 o mapa ganha 32px (336 → 368px) e os pinos do Sudeste respiram */}
       <div className="absolute inset-x-0 top-0 bottom-20 flex items-center justify-center px-4 2xl:px-8">
         <div ref={box} className="relative aspect-square w-[min(100%,calc(100svh-12rem))]">
-          <BrazilMap pins={[]} label={`Mapa do Brasil com ${n} ${n === 1 ? "exemplo" : "exemplos"} da lista`} />
+          <BrazilMap pins={[]} label={`Mapa do Brasil com ${n} ${n === 1 ? noun[0] : noun[1]} da lista`} />
           {results.map((l, i) => {
             const [x, y] = spots[i];
             const lit = l.id === activeId;

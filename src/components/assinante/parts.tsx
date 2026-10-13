@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
-import { useRef, type MouseEvent } from "react";
-import type { Listing } from "@/content/examples";
+import { useCallback, useRef, useState, type MouseEvent } from "react";
+import type { Listing, ListingTag } from "@/content/examples";
 import { Seal } from "@/components/ui/Seal";
 import { lockFilter, prefersReducedMotion, sealLabel, type Plan } from "./shared";
 
@@ -26,10 +25,14 @@ export function RingsIcon({ rings = 1, size = 14, className = "" }: { rings?: 1 
   );
 }
 
+/** Fotos que já falharam nesta visita: a moldura que volta (filtro, gaveta) vai direto ao placeholder, sem pedir de novo. */
+const failedPhotos = new Set<string>();
+
 /**
  * Foto do imóvel em moldura de lente. No plano Luneta a moldura ganha um anel por selo
  * (Na Mira 1 externo, Alvo 2 + brilho de luar); no Lente todas são iguais, para não entregar o selo.
  * No hover do cartão a moldura ganha um anel externo e a foto faz um zoom sutil.
+ * A foto vem direto da URL da fonte (sem referrer, preguiçosa); se não carregar, volta o placeholder listrado.
  */
 export function LensFrame({
   listing,
@@ -40,13 +43,25 @@ export function LensFrame({
 }: {
   listing: Listing;
   plan: Plan;
-  /** tamanho máximo em px (também usado no `sizes` da foto real) */
+  /** tamanho máximo em px (decide o texto do placeholder) */
   size: number;
   /** tamanho responsivo em classes Tailwind; sem ele, usa `size` fixo */
   sizeClass?: string;
-  /** texto alternativo; sem ele a foto é decorativa (o título já está ao lado) */
+  /** nome do placeholder para leitores de tela; sem ele o placeholder é decorativo (o título já está ao lado) */
   label?: string;
 }) {
+  // src da foto que falhou: com outro imóvel na mesma moldura (drawer), a foto nova tem a sua chance
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const photo = listing.photo && listing.photo !== failedSrc && !failedPhotos.has(listing.photo) ? listing.photo : null;
+  const fail = useCallback((src: string | null) => {
+    if (!src) return;
+    failedPhotos.add(src);
+    setFailedSrc(src);
+  }, []);
+  // A foto pode ter falhado antes da hidratação, quando o onError ainda não existia: confere ao montar.
+  const checkBroken = useCallback((img: HTMLImageElement | null) => {
+    if (img?.complete && img.naturalWidth === 0) fail(img.getAttribute("src"));
+  }, [fail]);
   const seal = plan === "lente" ? -1 : listing.seal;
   const ring =
     seal === 3
@@ -62,13 +77,17 @@ export function LensFrame({
       className={`relative shrink-0 overflow-hidden rounded-full transition-[box-shadow,border-color] duration-500 ease-out ${ring} ${sizeClass ?? ""}`}
       style={sizeClass ? undefined : { width: size, height: size }}
     >
-      {listing.photo ? (
-        <Image
-          src={listing.photo}
-          alt={label ?? ""}
-          fill
-          sizes={`${size}px`}
-          className="object-cover transition-[scale] duration-500 ease-out group-hover:scale-[1.04]"
+      {photo ? (
+        // eslint-disable-next-line @next/next/no-img-element -- a foto fica na fonte: o otimizador do next/image a baixaria e re-hospedaria na Vercel
+        <img
+          ref={checkBroken}
+          src={photo}
+          alt={`Foto do imóvel${listing.source ? ` no site da fonte (${listing.source.leiloeiro})` : ""}: ${listing.title}, ${listing.place}`}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => fail(photo)}
+          className="absolute inset-0 size-full object-cover transition-[scale] duration-500 ease-out group-hover:scale-[1.04]"
         />
       ) : (
         <div
@@ -152,6 +171,33 @@ export function TagPlaceholders({ large = false }: { large?: boolean }) {
       {TAG_SLOTS.map((w) => (
         <span key={w} className={`block rounded-full border border-nevoa/45 bg-nevoa/10 ${large ? "h-[31px]" : "h-[26px]"} ${w}`} />
       ))}
+    </div>
+  );
+}
+
+/**
+ * Tags calculadas automaticamente que ainda aguardam leitura humana (casos reais): ficam à parte, sob
+ * o rótulo "em revisão", em estilo neutro (borda tracejada, sem cor nem ícone de gravidade), nunca como fato.
+ */
+export function ReviewTags({ tags, large = false }: { tags: ListingTag[] | undefined; large?: boolean }) {
+  if (!tags?.length) return null;
+  return (
+    <div className={`flex flex-wrap items-center gap-1.5 ${large ? "mt-3" : "mt-2"}`}>
+      <p className="mr-0.5 text-[11px] leading-snug font-medium text-nevoa">Em revisão (classificação automática):</p>
+      <ul aria-label="Tags em revisão (classificação automática)" className="flex flex-wrap gap-1.5">
+        {tags.map((t) => (
+          <li key={t.label}>
+            <span
+              className={`inline-flex items-center rounded-full border border-dashed border-nevoa/60 leading-none font-medium whitespace-nowrap text-nevoa ${
+                large ? "px-3 py-2 text-[13px]" : "px-2.5 py-1.5 text-xs"
+              }`}
+            >
+              <span className="sr-only">Em revisão: </span>
+              {t.label}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
