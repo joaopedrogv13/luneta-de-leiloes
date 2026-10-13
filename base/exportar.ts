@@ -4,12 +4,19 @@
  *
  * Fica de fora: imóvel removido ou encerrado, praça que já passou há mais de 1 dia e foto
  * reprovada na verificação. A gravação é atômica (arquivo temporário + rename).
+ *
+ * Posição: `lat`/`lon` com `precisao_geo` ("cidade" = sede do município, quando a fonte não traz
+ * coordenada), `codigo_ibge` do município e `mapa` = [x, y] no viewBox 400×400 do mapa do site
+ * (mesma projeção de src/lib/brazil.ts, latLonToMap). Imóvel gravado sem coordenada é
+ * geocodificado na hora pela cidade.
  */
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { carregarImoveis } from "./consultas.ts";
 import { lerBool, lerTexto, type Banco } from "./db.ts";
+import { geocodificar } from "./geo/geocodificar.ts";
+import { posicaoNoMapa } from "./geo/mapa.ts";
 import { consolidarTags, type LinhaRisco } from "./riscos/motor.ts";
 import { CATEGORIAS, definicaoTag } from "./riscos/tags.ts";
 import type { Confianca, ImovelGravado, ValorRisco } from "./tipos.ts";
@@ -48,7 +55,12 @@ export interface ImovelExportado {
   cep: string | null;
   lat: number | null;
   lon: number | null;
+  /** exata | rua | cep | bairro | cidade ("cidade" = sede do município). */
   precisao_geo: string | null;
+  /** Código IBGE do município (7 dígitos), ou null se a cidade não foi reconhecida. */
+  codigo_ibge: string | null;
+  /** [x, y] no viewBox 400×400 do mapa do site (src/lib/brazil.ts), ou null sem coordenada. */
+  mapa: [number, number] | null;
   area_total: number | null;
   area_privativa: number | null;
   area_terreno: number | null;
@@ -143,6 +155,8 @@ export function montarExportacao(db: Banco, opcoes: OpcoesExportar = {}): Export
           origem: t.origem,
         };
       });
+    // Gravado antes da geocodificação (ou sem ela): resolve agora pela cidade.
+    const geo = geocodificar({ uf: i.uf, cidade: i.cidade, lat: i.lat, lon: i.lon, precisao_geo: i.precisao_geo });
     imoveis.push({
       id: i.id,
       fonte: i.fonte_id,
@@ -156,9 +170,11 @@ export function montarExportacao(db: Banco, opcoes: OpcoesExportar = {}): Export
       bairro: i.bairro ?? null,
       endereco: i.endereco ?? null,
       cep: i.cep ?? null,
-      lat: i.lat ?? null,
-      lon: i.lon ?? null,
-      precisao_geo: i.precisao_geo ?? null,
+      lat: geo.lat,
+      lon: geo.lon,
+      precisao_geo: geo.precisao_geo,
+      codigo_ibge: geo.codigo_ibge,
+      mapa: posicaoNoMapa(geo.lat, geo.lon),
       area_total: i.area_total ?? null,
       area_privativa: i.area_privativa ?? null,
       area_terreno: i.area_terreno ?? null,

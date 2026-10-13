@@ -10,10 +10,14 @@
  * - Praças, fotos e documentos refletem o estado atual da fonte; a verificação de uma foto
  *   (verificada_em, ok) é preservada enquanto a URL continuar a mesma.
  * - Títulos, descrições e textos são limpos de HTML e mascarados (LGPD) antes de gravar.
+ * - Coordenada: a da fonte, conferida, ou a sede do município com precisão "cidade" (base/geo).
+ *   Chaves de deduplicação por matrícula + cartório ou por endereço (base/dedup).
  *
  * Tudo roda numa transação: se algo falhar, nada é gravado.
  */
 import { lerNumero, lerTexto, sqlBool, transacao, type Banco, type ValorSql } from "./db.ts";
+import { chaveDedup, chaveEndereco } from "./dedup/index.ts";
+import { geocodificar } from "./geo/geocodificar.ts";
 import type {
   Conector,
   Documento,
@@ -26,7 +30,6 @@ import type {
   Uf,
 } from "./tipos.ts";
 import { instanteDe } from "./util/data.ts";
-import { chaveDedup, chaveEndereco } from "./util/dedup.ts";
 import { hashEstavel } from "./util/hash.ts";
 import { mascararDadosPessoais, mascararDocumentos } from "./util/lgpd.ts";
 import { arredondar } from "./util/numero.ts";
@@ -108,6 +111,8 @@ export interface ImovelPreparado {
   fotos: Array<Required<Foto>>;
   documentos: Array<Required<Documento>>;
   hash: string;
+  /** Problema da geocodificação (cidade não reconhecida, coordenada da fonte descartada), para o log. */
+  alertaGeo: string | null;
 }
 
 function dinheiro(valor: number | null | undefined): number | null {
@@ -191,7 +196,10 @@ export function prepararImovel(imovel: ImovelNormalizado, agora: Date = new Date
       publicado_em: d.publicado_em ?? null,
     }));
 
-  const dadosChave = { uf: imovel.uf, cidade, endereco, matricula, cartorio };
+  // Coordenada da fonte conferida, senão a sede do município (precisão "cidade"); ver base/geo.
+  const geo = geocodificar({ uf: imovel.uf, cidade, lat: imovel.lat, lon: imovel.lon, precisao_geo: imovel.precisao_geo });
+  const bairro = textoOuNulo(imovel.bairro);
+  const dadosChave = { uf: imovel.uf, cidade, codigo_ibge: geo.codigo_ibge, bairro, endereco, matricula, cartorio };
   const linha: LinhaImovel = {
     id_na_fonte: imovel.id_na_fonte.trim(),
     url: imovel.url.trim(),
@@ -200,12 +208,12 @@ export function prepararImovel(imovel: ImovelNormalizado, agora: Date = new Date
     uf: imovel.uf,
     cidade,
     cidade_norm: slug(cidade),
-    bairro: textoOuNulo(imovel.bairro),
+    bairro,
     endereco,
     cep: cepDigitos.length === 8 ? cepDigitos : null,
-    lat: imovel.lat ?? null,
-    lon: imovel.lon ?? null,
-    precisao_geo: imovel.lat === null || imovel.lat === undefined ? null : (imovel.precisao_geo ?? null),
+    lat: geo.lat,
+    lon: geo.lon,
+    precisao_geo: geo.precisao_geo,
     area_total: imovel.area_total ?? null,
     area_privativa: imovel.area_privativa ?? null,
     area_terreno: imovel.area_terreno ?? null,
@@ -243,7 +251,7 @@ export function prepararImovel(imovel: ImovelNormalizado, agora: Date = new Date
     fotos: fotos.map(({ url, ordem, tamanho, origem }) => ({ url, ordem, tamanho, origem })),
     documentos,
   });
-  return { linha, pracas, fotos, documentos, hash };
+  return { linha, pracas, fotos, documentos, hash, alertaGeo: geo.alerta };
 }
 
 // ---------------------------------------------------------------------------
@@ -418,8 +426,10 @@ export function gravarImoveis(
       db.prepare(`SELECT count(*) AS n FROM imovel WHERE fonte_id = ? AND status = 'ativo'${filtroUf}`).get(...parametrosEscopo)?.n ?? 0,
     );
 
+    const alertasGeo: string[] = [];
     for (const [idNaFonte, imovel] of porId) {
       const preparado = prepararImovel(imovel, agora);
+      if (preparado.alertaGeo) alertasGeo.push(`${idNaFonte}: ${preparado.alertaGeo}`);
       const linha = preparado.linha;
       const bruto = buscar.get(fonteId, idNaFonte);
       if (!bruto) {
@@ -472,6 +482,10 @@ export function gravarImoveis(
 
     if (resultado.antigos > 0) {
       resultado.avisos.push(`${resultado.antigos} imóvel(is) ignorado(s): o gravado veio de uma geração mais nova da fonte.`);
+    }
+    if (alertasGeo.length > 0) {
+      const amostra = alertasGeo.slice(0, 5).join(" | ");
+      resultado.avisos.push(`Geo: ${alertasGeo.length} imóvel(is) com alerta (${amostra}${alertasGeo.length > 5 ? " | ..." : ""}). Cidade nova vira apelido em base/geo/apelidos.csv.`);
     }
     if (!opcoes.completa) return;
     const vistos = new Set<string>([...porId.keys(), ...(opcoes.idsProtegidos ?? [])]);

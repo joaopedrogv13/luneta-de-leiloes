@@ -15,6 +15,9 @@ npm run base:exportar -- --saida /tmp/imoveis.json    # JSON para o site
 npm run base:status                                   # contagens e última coleta de cada fonte
 npm run base:testar                                   # testes
 npx tsc -p base/tsconfig.json --noEmit && npx eslint base --max-warnings=0
+node --experimental-strip-types base/geo/atualizar.ts --simular         # confere a tabela de municípios (GitHub)
+node --experimental-strip-types base/geo/medir.ts --arquivo lista.csv   # cidades da fonte × municípios do IBGE
+node --experimental-strip-types base/dedup/medir.ts --arquivo lista.csv # cobertura e precisão da deduplicação
 ```
 
 Opções de `coletar`: `--uf`, `--arquivo` (ou `--fixture`), `--limite`, `--detalhes`. Em qualquer comando, `--banco <arquivo>` ou `LUNETA_DB` troca o banco; `LUNETA_USER_AGENT` troca o User-Agent. `base/dados/` é ignorada pelo git.
@@ -42,6 +45,8 @@ base/
   riscos/medir.ts     distribuição das tags sobre o CSV da Caixa e respostas da Leilões Judiciais
   util/               numero, data, texto, hash, dedup, lgpd, http, robots, csv, arquivo, uf, classificar
   testes/apoio.ts     banco em memória, imóvel de exemplo, conector falso
+  geo/                municípios do IBGE (sede e raio), apelidos, geocodificação, posição no mapa do site
+  dedup/              chaves de deduplicação: matrícula + cartório, endereço em partes (README com a precisão)
   migracoes/          (crie quando precisar) 002-descricao.sql, 003-...
 ```
 
@@ -77,6 +82,7 @@ export const minhaFonte: Conector<LinhaBruta> = {
 - `coletar` lê os registros brutos, da rede (sempre por `op.http`) ou de `op.arquivo`. Valida o conteúdo (assinatura, formato, volume) e **lança erro** se vier uma página de bloqueio ou um arquivo truncado. Não grava nada.
 - `normalizar` converte um registro: devolve `null` para descartar (fora de escopo) e lança erro só se o registro estiver quebrado. Sem rede, sem banco.
 - Datas: `AAAA-MM-DD` ou ISO UTC (`util/data.ts` converte "08/10/2026 10:00" de Brasília). Dinheiro em reais, áreas em m². Campo que a fonte não informa fica `null`.
+- Coordenadas: só as da fonte, em `lat`/`lon` com `precisao_geo` (`exata` se omitida). Sem elas, o núcleo põe a sede do município pela cidade + UF (`precisao_geo = "cidade"`); não geocodifique no conector.
 - `preco` = valor mínimo vigente; se faltar, o núcleo usa a praça atual. `praca_atual` é deduzida pelas datas se faltar; com `praca_incerta: true` (a fonte não diz qual praça vale), ela fica `null` e, havendo uma praça só, a data dela vai para `data_praca`. O desconto é sempre calculado pelo núcleo (preço × avaliação), nunca copiado da fonte.
 - Fotos e documentos: só a URL da fonte, com `origem` ("api", "ficha", "padrao_url") e, quando houver, `verificada_em`/`ok`. Nada é baixado.
 - Utilitários prontos: `lerNumeroBR`, `lerDataBR`/`lerDataHoraBR`, `semHtml`, `capitalizarNome`, `normalizarUf`, `inferirTipoImovel`, `classificarModalidade`, `lerCsv`, `decodificar` (CP1252 correto; o `TextDecoder("windows-1252")` do Node 22 erra os bytes 0x80–0x9F).
@@ -88,7 +94,8 @@ export const minhaFonte: Conector<LinhaBruta> = {
 - **Imóveis nunca são apagados.** Numa coleta completa e válida (`listaCompleta`, sem `--limite`, sem falha de normalização), o que estava ativo e sumiu vira `removido` (só dentro da UF com `--uf`). Se mais de 50% dos ativos sumirem de uma vez, a remoção é bloqueada e fica um aviso (o conector pode mudar o limite com `maxFracaoRemocao`). Quem reaparece é reativado.
 - **Histórico** (`preco_historico`): uma linha quando o imóvel entra e a cada mudança de preço, avaliação, modalidade, praça ou status.
 - **Geração da fonte**: um imóvel gravado a partir de um arquivo mais novo nunca é alterado, reativado nem removido por um arquivo mais antigo (ex.: CSV geral da Caixa, que atrasa um dia em relação ao da UF).
-- **Deduplicação**: `chave_dedup` (matrícula + cartório, senão endereço) e `chave_endereco` (endereço normalizado + cidade + UF) em todo imóvel.
+- **Deduplicação** (`dedup/`): `chave_dedup` (matrícula + cartório, senão endereço) e `chave_endereco` (logradouro, número e unidades no município do IBGE, mais o bairro quando a rua é genérica e o endereço pouco específico) em todo imóvel. Endereço sem número nem unidade, ou fração de lote, não gera chave. Precisão medida em `dedup/README.md`.
+- **Geocodificação** (`geo/`): coordenada da fonte conferida contra o município (fora do Brasil, invertida ou longe demais é corrigida ou trocada pela sede); sem coordenada, a sede do município do IBGE com `precisao_geo = "cidade"` (99,99% das linhas do CSV da Caixa casam). A exportação leva `codigo_ibge` e `mapa` ([x, y] do mapa do site). Detalhes em `geo/README.md`.
 - **Coleta educada** (`util/http.ts`): User-Agent `LunetaDeLeiloes/0.1 (+contato)`, timeout (30 s por tentativa, com o corpo; ajustável por requisição com `timeoutMs`, para arquivos grandes), até 3 tentativas com espera exponencial e `Retry-After`, 2 s entre requisições ao mesmo host (mais, se o `Crawl-delay` pedir), robots.txt respeitado (RFC 9309: robots inacessível por erro do servidor bloqueia por precaução), limite de tamanho e validação antes de devolver. Não contorna anti-robô.
 
 ## Regras de risco

@@ -55,7 +55,10 @@ test("praça atual, preço e desconto derivados", () => {
   assert.equal(p.linha.data_praca, "2026-10-20T13:00:00.000Z");
   assert.equal(p.linha.cep, "04101000");
   assert.equal(p.linha.cidade_norm, "sao-paulo");
-  assert.equal(p.linha.chave_endereco, "end:sp:sao-paulo:rua exemplo 100 ap 21");
+  assert.equal(p.linha.chave_endereco, "end:3550308:rua exemplo:100:ap 21");
+  // Sem coordenada na fonte: sede do município (base/geo), com precisão "cidade".
+  assert.deepEqual([p.linha.lat, p.linha.lon, p.linha.precisao_geo], [-23.5329, -46.6395, "cidade"]);
+  assert.equal(p.alertaGeo, null);
   const explicito = prepararImovel(imovelExemplo({ pracas, preco: 300000, praca_atual: 1 }), T1);
   assert.equal(explicito.linha.preco, 300000, "preço informado pelo conector vence");
   assert.equal(explicito.linha.praca_atual, 1);

@@ -1,6 +1,6 @@
 /**
  * Relatório de situação da base: contagens por fonte, UF, modalidade e tag, cobertura de
- * fotos e a última coleta de cada fonte.
+ * fotos e de coordenadas, duplicatas e a última coleta de cada fonte.
  */
 import { lerTexto, versaoDoBanco, type Banco } from "./db.ts";
 import { definicaoTag } from "./riscos/tags.ts";
@@ -40,6 +40,10 @@ export interface RelatorioStatus {
   porModalidade: Array<{ modalidade: string; ativos: number }>;
   porTag: Array<{ tag: string; rotulo: string; imoveis: number; revisaoPendente: number }>;
   fotos: { ativosComFoto: number; ativos: number; percentual: number };
+  /** Ativos por precisão da coordenada ("cidade" = sede do município; "sem" = cidade não reconhecida). */
+  geo: Array<{ precisao: string; ativos: number }>;
+  /** Ativos que dividem a chave_dedup com outro ativo (mesmo imóvel em mais de um anúncio). */
+  duplicatas: { grupos: number; imoveis: number; gruposEntreFontes: number };
 }
 
 function contagem(db: Banco, sql: string, ...parametros: Array<string | number>): number {
@@ -113,6 +117,17 @@ export function relatorioStatus(db: Banco): RelatorioStatus {
     `SELECT count(*) AS n FROM imovel i WHERE i.status = 'ativo'
        AND EXISTS (SELECT 1 FROM foto f WHERE f.imovel_id = i.id AND (f.ok IS NULL OR f.ok = 1))`,
   );
+  const geo = db
+    .prepare("SELECT coalesce(precisao_geo, 'sem') AS p, count(*) AS n FROM imovel WHERE status = 'ativo' GROUP BY p ORDER BY n DESC, p")
+    .all()
+    .map((l) => ({ precisao: String(l.p), ativos: Number(l.n) }));
+  const dup = db
+    .prepare(
+      `SELECT count(*) AS grupos, coalesce(sum(n), 0) AS imoveis, coalesce(sum(fontes > 1), 0) AS entre_fontes FROM (
+         SELECT chave_dedup, count(*) AS n, count(DISTINCT fonte_id) AS fontes FROM imovel
+         WHERE status = 'ativo' AND chave_dedup IS NOT NULL GROUP BY chave_dedup HAVING count(*) > 1)`,
+    )
+    .get();
   return {
     versaoBanco: versaoDoBanco(db),
     totais: {
@@ -126,6 +141,8 @@ export function relatorioStatus(db: Banco): RelatorioStatus {
     porModalidade,
     porTag,
     fotos: { ativosComFoto: comFoto, ativos, percentual: ativos > 0 ? Math.round((comFoto / ativos) * 1000) / 10 : 0 },
+    geo,
+    duplicatas: { grupos: Number(dup?.grupos ?? 0), imoveis: Number(dup?.imoveis ?? 0), gruposEntreFontes: Number(dup?.entre_fontes ?? 0) },
   };
 }
 
@@ -160,6 +177,8 @@ export function formatarStatus(r: RelatorioStatus): string {
   linhas.push(`Por UF (ativos): ${r.porUf.length ? r.porUf.map((u) => `${u.uf} ${n(u.ativos)}`).join(" · ") : "—"}`);
   linhas.push(`Por modalidade (ativos): ${r.porModalidade.length ? r.porModalidade.map((m) => `${m.modalidade} ${n(m.ativos)}`).join(" · ") : "—"}`);
   linhas.push(`Fotos: ${r.fotos.percentual.toLocaleString("pt-BR")}% dos ativos com ao menos uma foto (${n(r.fotos.ativosComFoto)} de ${n(r.fotos.ativos)})`);
+  linhas.push(`Coordenadas (ativos, por precisão): ${r.geo.length ? r.geo.map((g) => `${g.precisao} ${n(g.ativos)}`).join(" · ") : "—"}`);
+  linhas.push(`Duplicatas (mesma chave_dedup): ${n(r.duplicatas.grupos)} grupo(s) com ${n(r.duplicatas.imoveis)} anúncios, ${n(r.duplicatas.gruposEntreFontes)} entre fontes diferentes`);
   linhas.push("Tags (imóveis ativos com valor sim):");
   if (r.porTag.length === 0) linhas.push("  (nenhuma tag detectada; rode `riscos` depois de registrar regras)");
   for (const t of r.porTag) {
