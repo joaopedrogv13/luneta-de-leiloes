@@ -23,7 +23,9 @@
  *
  * Variáveis de ambiente: LUNETA_DJEN_TRIBUNAIS (siglas separadas por vírgula; vazio = todos),
  * LUNETA_DJEN_TERMOS (padrão "leilão, hasta pública") e a janela de config.ts. Com --uf, consulta
- * o TJ, os TRTs e o TRF daquela UF.
+ * o TJ, os TRTs e o TRF daquela UF e descarta o que o texto ou o órgão põe em outra UF (o TRF1
+ * cobre 13 UFs). Intimação da arrematação, homologação e "arrematado por Fulano" são
+ * descartados (não anunciam leilão e trazem o nome de quem arrematou).
  *
  * Sem teste ao vivo (rede bloqueada). A fixture tem a estrutura real das amostras arquivadas
  * (scratchpad/djen/samples, respostas de 30/04/2026), com textos e nomes fictícios.
@@ -33,12 +35,12 @@
 import type { Conector, EditalNormalizado, OpcoesColeta, Uf } from "../../../tipos.ts";
 import { lerDataBR } from "../../../util/data.ts";
 import { mascararDadosPessoais } from "../../../util/lgpd.ts";
-import { capitalizarNome, semAcento, semHtml } from "../../../util/texto.ts";
+import { capitalizarNome, colapsarEspacos, semAcento, semHtml } from "../../../util/texto.ts";
 import { ehUf } from "../../../util/uf.ts";
 import { comNovaTentativa, ehObjeto, esperarPadrao, exigirObjeto, lerJsonLocal, montarUrl, obterJson, texto, urlOuNulo, type Esperar } from "../comum.ts";
 import { diasDaJanela, janelaDoAmbiente, listaDoAmbiente, robotsLigado, termosDoAmbiente, type Ambiente, type Janela } from "../config.ts";
-import { analisarLeilaoImovel } from "../filtro.ts";
-import { extrairDataLeilao, extrairLocal, mascararNomesConhecidos, resumoRelevante } from "../texto.ts";
+import { analisarLeilaoImovel, motivoSemLeilaoFuturo } from "../filtro.ts";
+import { extrairDataLeilao, extrairLocal, mascararNomesConhecidos, resumoRelevante, type Local } from "../texto.ts";
 
 export const URL_DJEN = "https://comunicaapi.pje.jus.br/api/v1/comunicacao";
 /** A API só aceita 5 ou 100 itens por página. */
@@ -82,39 +84,88 @@ export function tribunaisDaUf(uf: Uf): string[] {
 
 const PARADAS_ORGAO = new Set(
   (
-    "VARA VARAS CIVEL CIVEIS CRIMINAL TRABALHO JUIZADO JUIZADOS ESPECIAL ESPECIAIS FAZENDA PUBLICA PUBLICAS FAMILIA " +
-    "SUCESSOES EXECUCOES EXECUCAO FISCAIS FISCAL REGISTROS PUBLICOS FALENCIAS RECUPERACAO JUDICIAL JUDICIAIS INFANCIA " +
-    "JUVENTUDE ORFAOS ACIDENTES PRECATORIAS FEDERAL REGIONAL COMARCA FORO TURMA TURMAS CEJUSC GRAU NUCLEO CENTRAL UNICA " +
-    "UNIDADE SECRETARIA GABINETE CAMARA TRIBUNAL SECAO DISTRITAL CAPITAL"
+    "VARA VARAS CIVEL CIVEIS CRIMINAL CRIMINAIS TRABALHO JUIZADO JUIZADOS ESPECIAL ESPECIAIS FAZENDA PUBLICA PUBLICAS " +
+    "FAMILIA SUCESSOES EXECUCOES EXECUCAO FISCAIS FISCAL REGISTROS PUBLICOS FALENCIAS RECUPERACAO RECUPERACOES JUDICIAL " +
+    "JUDICIAIS INFANCIA JUVENTUDE ORFAOS ACIDENTES PRECATORIAS FEDERAL FEDERAIS REGIONAL COMARCA FORO FORUM TURMA TURMAS " +
+    "CEJUSC GRAU NUCLEO CENTRAL UNICA UNIDADE SECRETARIA GABINETE CAMARA CAMARAS TRIBUNAL SECAO SUBSECAO DISTRITAL CAPITAL " +
+    "MUNICIPAIS MUNICIPAL ESTADUAIS ESTADUAL AMBIENTAL ADJUNTO ADJUNTA EMPRESARIAL EMPRESARIAIS UNIFICADA UNIFICADAS " +
+    "HASTA HASTAS RECURSAL RECURSAIS AUXILIAR CONCILIACAO MEDIACAO COMERCIAL TRIBUTARIA PREVIDENCIARIA AGRARIA BANCARIA " +
+    "MILITAR ELEITORAL REGIAO CIRCUNSCRICAO JUDICIARIA PLANTAO DIGITAL VIRTUAL ESPECIALIZADA ESPECIALIZADO PRIVATIVA " +
+    "CONSUMO CONSUMIDOR VIOLENCIA DOMESTICA MULHER IDOSO SAUDE INQUERITOS CARTAS ACERVO"
   ).split(" "),
 );
 const PARTICULAS = new Set(["de", "da", "do", "das", "dos"]);
+/** Siglas do Judiciário que não são cidade ("SJMA", "SSJ", "TJMG", "TRT15", "CON2", "JEF"). */
+const SIGLA_JUDICIARIA = /^(?:S?SJ[A-Z]{0,3}|TJ[A-Z]{0,4}|TRT\d*|TRF\d*|TRE[A-Z]{0,2}|JEF|JF|JECC?|JECRIM|CEJUSC\S*|CEJUS|NUPEMEC|CON\d*|VT|VF|STJ|STF|TST|TSE)$/;
+/** Nome de pessoa no órgão ("Gabinete do Des. Fulano"): nada ali é cidade. */
+const PESSOA_NO_ORGAO = /(?:^|\s)(?:gabinete|des\.?|desembargador[a]?|dr\.?|dra\.?|ju[íi]z[a]?|ministr[oa]|relator[a]?|conselheir[oa])(?=\s|$)/i;
 
-/** Cidade a partir do nome do órgão ("Vara Cível de Quedas do Iguaçu", "Cacoal - 3ª Vara Cível"). */
+/** Confere um nome candidato a cidade: sem número, sigla, UF ou palavra de órgão. */
+function cidadeCandidata(nome: string): string | null {
+  const palavras = nome.split(/\s+/).filter((p) => p !== "");
+  if (palavras.length === 0) return null;
+  for (const palavra of palavras) {
+    if (PARTICULAS.has(palavra.toLowerCase())) continue;
+    const chave = semAcento(palavra).toUpperCase().replace(/[.'’]/g, "");
+    if (/\d/.test(palavra) || !/^\p{Lu}/u.test(palavra) || ehUf(palavra) || SIGLA_JUDICIARIA.test(palavra) || PARADAS_ORGAO.has(chave)) return null;
+  }
+  const cidade = palavras.join(" ");
+  return cidade.length >= 3 ? capitalizarNome(cidade) : null;
+}
+
+/**
+ * Cidade a partir do nome do órgão, só nos formatos conhecidos:
+ * - "Vara Cível de Quedas do Iguaçu", "1ª Vara do Trabalho de Palmas - TO" (cidade depois de
+ *   "de/da/do", no fim do nome);
+ * - "Cacoal - 3ª Vara Cível", "Ji-Paraná - 3ª Vara Cível" (cidade antes de " - nª Vara");
+ * - "CON2 - Jundiaí" (cidade depois de " - ", no fim).
+ * Recusa siglas ("SJMA", "TJMG"), UF solta ("7ª Vara Federal RN" dá só a UF), adjetivos
+ * ("Fiscais Municipais", "Cível e Ambiental", "Empresarial") e nome de pessoa ("Gabinete do Des.").
+ */
 export function cidadeDoOrgao(nomeOrgao: string | null): { cidade: string | null; uf: Uf | null } {
   if (!nomeOrgao) return { cidade: null, uf: null };
-  let nome = nomeOrgao.trim();
+  let nome = colapsarEspacos(nomeOrgao);
   let uf: Uf | null = null;
-  const sufixo = /\s+[-–]\s+(\p{Lu}{2})$/u.exec(nome);
+  const sufixo = /(?:\s*[-–]\s*|\s+)(\p{Lu}{2})$/u.exec(nome);
   if (sufixo?.[1] && ehUf(sufixo[1])) {
     uf = sufixo[1];
     nome = nome.slice(0, sufixo.index);
   }
-  const prefixo = /^([^-–\d]+?)\s+[-–]\s+\d/.exec(nome);
-  if (prefixo?.[1]) return { cidade: capitalizarNome(prefixo[1]), uf };
+  const prefixo = /^(\p{L}[\p{L}'’.]*(?:[- ]\p{L}[\p{L}'’.]*)*)\s+[-–]\s+\d/u.exec(nome);
+  const doPrefixo = prefixo?.[1] ? cidadeCandidata(prefixo[1]) : null;
+  if (doPrefixo) return { cidade: doPrefixo, uf };
+  const final = /\s+[-–]\s+(\p{Lu}[\p{L}'’]*(?:\s+(?:d[aeo]s?\s+)?\p{Lu}[\p{L}'’]*)*)$/u.exec(nome);
+  const doFinal = final?.[1] ? cidadeCandidata(final[1]) : null;
+  if (doFinal) return { cidade: doFinal, uf };
+  if (PESSOA_NO_ORGAO.test(nome)) return { cidade: null, uf };
+
   const palavras = nome.split(/\s+/);
-  const cidade: string[] = [];
+  const coletadas: string[] = [];
   for (let i = palavras.length - 1; i >= 0; i--) {
     const palavra = palavras[i] ?? "";
     if (PARTICULAS.has(palavra.toLowerCase())) {
-      cidade.unshift(palavra);
+      coletadas.unshift(palavra);
       continue;
     }
-    if (/\d/.test(palavra) || !/^\p{Lu}/u.test(palavra) || PARADAS_ORGAO.has(semAcento(palavra).toUpperCase())) break;
-    cidade.unshift(palavra);
+    const chave = semAcento(palavra).toUpperCase();
+    if (/\d/.test(palavra) || !/^\p{Lu}/u.test(palavra) || PARADAS_ORGAO.has(chave) || SIGLA_JUDICIARIA.test(palavra)) break;
+    coletadas.unshift(palavra);
   }
-  while (cidade.length > 0 && PARTICULAS.has((cidade[0] ?? "").toLowerCase())) cidade.shift();
-  return { cidade: cidade.length > 0 ? capitalizarNome(cidade.join(" ")) : null, uf };
+  // A cidade precisa vir depois de "de/da/do" ("Vara Cível de X"); sem isso é adjetivo do órgão.
+  let depoisDeParticula = false;
+  while (coletadas.length > 0 && PARTICULAS.has((coletadas[0] ?? "").toLowerCase())) {
+    coletadas.shift();
+    depoisDeParticula = true;
+  }
+  if (!depoisDeParticula || coletadas.length === 0) return { cidade: null, uf };
+  // "Feira de Santana-BA": a UF colada por hífen vira a UF.
+  const ultima = coletadas[coletadas.length - 1] ?? "";
+  const colada = /^(.+?)[-–](\p{Lu}{2})$/u.exec(ultima);
+  if (colada?.[1] && colada[2] && ehUf(colada[2])) {
+    coletadas[coletadas.length - 1] = colada[1];
+    uf = uf ?? colada[2];
+  }
+  return { cidade: cidadeCandidata(coletadas.join(" ")), uf };
 }
 
 // ---------------------------------------------------------------------------
@@ -196,6 +247,25 @@ export function textoMascarado(c: ComunicacaoDjen): string {
   return mascararDadosPessoais(mascararNomesConhecidos(semHtml(c.texto ?? ""), nomesRotulados(c)));
 }
 
+/**
+ * UF e cidade do edital: a UF do tribunal quando ele tem uma só; senão a do texto ou a do
+ * órgão (dentro da jurisdição). A cidade vem do texto ou do nome do órgão.
+ */
+export function localDaComunicacao(c: ComunicacaoDjen, texto: string = textoMascarado(c)): Local {
+  const ufsTribunal = ufsDoTribunal(typeof c.siglaTribunal === "string" ? c.siglaTribunal : null);
+  const doTexto = extrairLocal(texto, ufsTribunal ?? undefined);
+  const doOrgao = cidadeDoOrgao(typeof c.nomeOrgao === "string" ? c.nomeOrgao : null);
+  const ufOrgao = doOrgao.uf && (!ufsTribunal || ufsTribunal.includes(doOrgao.uf)) ? doOrgao.uf : null;
+  const uf = ufsTribunal?.length === 1 ? (ufsTribunal[0] ?? null) : (doTexto.uf ?? ufOrgao);
+  return { uf, cidade: doTexto.cidade ?? doOrgao.cidade };
+}
+
+/** Com --uf: a comunicação é de outra UF? UF desconhecida passa (não dá para saber). */
+function foraDaUfPedida(c: ComunicacaoDjen, uf: Uf): boolean {
+  const local = localDaComunicacao(c);
+  return local.uf !== null && local.uf !== uf;
+}
+
 // ---------------------------------------------------------------------------
 // Conector
 // ---------------------------------------------------------------------------
@@ -218,6 +288,8 @@ export function criarConectorDjen(config: ConfigDjen = {}): Conector<Comunicacao
       origem: `${URL_DJEN} (meio=E; ${tribunais.every((t) => t === null) ? "todos os tribunais" : tribunais.join(", ")}; termos: ${termos.join(", ")}; ${janela.desde} a ${janela.ate})`,
     });
     const vistos = new Set<string>();
+    let entregues = 0;
+    let foraDaUf = 0;
     // Um dia por consulta: mantém cada consulta longe do teto de 10.000 resultados.
     for (const dia of diasDaJanela(janela)) {
       for (const tribunal of tribunais) {
@@ -246,6 +318,13 @@ export function criarConectorDjen(config: ConfigDjen = {}): Conector<Comunicacao
               const id = texto(item.id);
               if (id && vistos.has(id)) continue;
               if (id) vistos.add(id);
+              // Com --uf, o tribunal pode cobrir várias UFs (o TRF1 cobre 13): fica só o que é da
+              // UF pedida ou não diz a UF.
+              if (op.uf && foraDaUfPedida(item, op.uf)) {
+                foraDaUf++;
+                continue;
+              }
+              entregues++;
               yield item;
             }
             const restantes = Number(resposta.cabecalhos.get("x-ratelimit-remaining"));
@@ -259,22 +338,28 @@ export function criarConectorDjen(config: ConfigDjen = {}): Conector<Comunicacao
         }
       }
     }
+    if (foraDaUf > 0) op.informar({ aviso: `DJEN: ${foraDaUf} comunicação(ões) de outra UF ignorada(s) (tribunal com várias UFs).` });
+    // Todas as consultas responderam e nada veio: janela vazia, não falha.
+    if (entregues === 0) op.informar({ vazioLegitimo: true });
   }
 
   async function* daArquivo(op: OpcoesColeta, arquivo: string): AsyncGenerator<ComunicacaoDjen> {
     op.informar({ origem: arquivo });
-    const ufs = op.uf ? new Set(tribunaisDaUf(op.uf)) : null;
+    const tribunais = op.uf ? new Set(tribunaisDaUf(op.uf)) : null;
+    let entregues = 0;
     for (const doc of await lerJsonLocal(arquivo)) {
       const respostas = Array.isArray(doc.dados) ? doc.dados : [doc.dados];
       for (const resposta of respostas) {
         const recusa = validarResposta(resposta);
         if (recusa) throw new Error(`Arquivo do DJEN fora do formato da API (${doc.arquivo}): ${recusa}`);
         for (const item of itensDe(resposta as RespostaDjen)) {
-          if (ufs && !ufs.has(String(item.siglaTribunal ?? "").toUpperCase())) continue;
+          if (op.uf && (!tribunais?.has(String(item.siglaTribunal ?? "").toUpperCase()) || foraDaUfPedida(item, op.uf))) continue;
+          entregues++;
           yield item;
         }
       }
     }
+    if (entregues === 0) op.informar({ vazioLegitimo: true });
   }
 
   return {
@@ -299,15 +384,15 @@ export function criarConectorDjen(config: ConfigDjen = {}): Conector<Comunicacao
 
       const analise = analisarLeilaoImovel(textoMascarado(c));
       if (!analise.aceito) return null;
+      const publicado = lerDataBR(texto(c.data_disponibilizacao)) ?? lerDataBR(texto(c.datadisponibilizacao));
+      const dataLeilao = extrairDataLeilao(analise.texto, publicado, agora());
+      // Intimação da arrematação, homologação, "arrematado por Fulano": não anuncia leilão futuro.
+      // A busca roda no texto sem máscara (só para decidir; nada dele é gravado).
+      if (motivoSemLeilaoFuturo(null, { texto: semHtml(c.texto ?? ""), dataLeilao })) return null;
 
       const sigla = texto(c.siglaTribunal)?.toUpperCase() ?? null;
-      const ufsTribunal = ufsDoTribunal(sigla);
       const orgaoNome = texto(c.nomeOrgao);
-      const doTexto = extrairLocal(analise.texto, ufsTribunal ?? undefined);
-      const doOrgao = cidadeDoOrgao(orgaoNome);
-      const uf = ufsTribunal?.length === 1 ? (ufsTribunal[0] ?? null) : (doTexto.uf ?? (doOrgao.uf && (!ufsTribunal || ufsTribunal.includes(doOrgao.uf)) ? doOrgao.uf : null));
-      const cidade = doTexto.cidade ?? doOrgao.cidade;
-      const publicado = lerDataBR(texto(c.data_disponibilizacao)) ?? lerDataBR(texto(c.datadisponibilizacao));
+      const { uf, cidade } = localDaComunicacao(c, analise.texto);
       const processo = texto(c.numeroprocessocommascara) ?? texto(c.numero_processo);
       const url =
         urlOuNulo(c.link) ??
@@ -332,7 +417,7 @@ export function criarConectorDjen(config: ConfigDjen = {}): Conector<Comunicacao
         uf,
         cidade,
         publicado_em: publicado,
-        data_leilao: extrairDataLeilao(analise.texto, publicado),
+        data_leilao: dataLeilao,
         url,
         resumo: `${cabecalho.length > 0 ? cabecalho.join("; ") + ".\n" : ""}${resumoRelevante(analise)}`,
       };

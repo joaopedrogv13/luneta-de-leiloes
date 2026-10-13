@@ -13,7 +13,9 @@
  *
  * Cada diário que casa vira UM edital (id = território + data + arquivo), com os trechos
  * (excerpts) como resumo. O filtro local (filtro.ts) confirma que os trechos falam de leilão
- * de imóvel, já que a busca do OpenSearch casa palavras soltas.
+ * de imóvel, já que a busca do OpenSearch casa palavras soltas. Trecho com marca de resultado
+ * (resultado, homologação, "arrematado por Fulano", "sendo vencedor") sai antes do filtro e do
+ * resumo: não anuncia leilão futuro e costuma trazer o nome de quem arrematou (LGPD).
  *
  * Variáveis de ambiente: LUNETA_QD_TERRITORIOS (códigos IBGE de 7 dígitos, separados por
  * vírgula; vazio = todos os municípios cobertos) e a janela de config.ts. Com --uf, só ficam os
@@ -33,7 +35,7 @@ import { colapsarEspacos } from "../../../util/texto.ts";
 import { normalizarUf } from "../../../util/uf.ts";
 import { diaBr, ehObjeto, exigirObjeto, lerJsonLocal, montarUrl, obterJson, texto, urlOuNulo } from "../comum.ts";
 import { janelaDoAmbiente, listaDoAmbiente, robotsLigado, type Ambiente, type Janela } from "../config.ts";
-import { analisarLeilaoImovel, type AnaliseLeilaoImovel } from "../filtro.ts";
+import { analisarLeilaoImovel, sinaisDeResultado, type AnaliseLeilaoImovel } from "../filtro.ts";
 import { extrairDataLeilao, numeroDoAviso, resumoRelevante } from "../texto.ts";
 
 export const URL_QUERIDO_DIARIO = "https://api.queridodiario.ok.org.br/gazettes";
@@ -93,9 +95,19 @@ function validarResposta(dados: unknown): string | null {
   return null;
 }
 
-function analisar(diario: DiarioQd): AnaliseLeilaoImovel {
-  const trechos = (Array.isArray(diario.excerpts) ? diario.excerpts : []).filter((t): t is string => typeof t === "string");
-  return analisarLeilaoImovel(trechos.join("\n…\n"));
+/**
+ * Trechos que podem anunciar leilão futuro: os de resultado (homologação, "arrematado por",
+ * "sendo vencedor") saem aqui, antes do filtro e do resumo.
+ */
+export function trechosSemResultado(diario: DiarioQd): string[] {
+  return (Array.isArray(diario.excerpts) ? diario.excerpts : [])
+    .filter((t): t is string => typeof t === "string" && t.trim() !== "")
+    .filter((t) => sinaisDeResultado(t).length === 0);
+}
+
+function analisar(diario: DiarioQd): AnaliseLeilaoImovel | null {
+  const trechos = trechosSemResultado(diario);
+  return trechos.length > 0 ? analisarLeilaoImovel(trechos.join("\n…\n")) : null;
 }
 
 /** Nome do arquivo na URL, sem extensão (o QD usa o checksum do arquivo como nome). */
@@ -124,6 +136,7 @@ export function criarConectorQueridoDiario(config: ConfigQueridoDiario = {}): Co
     op.informar({ origem: `${URL_QUERIDO_DIARIO} (${querystring}; ${janela.desde} a ${janela.ate}${territorios.length ? `; ${territorios.length} município(s)` : ""})` });
 
     let total: number | null = null;
+    let entregues = 0;
     for (let offset = 0; ; offset += tamanho) {
       if (offset + tamanho > maxResultados) {
         op.informar({ aviso: `Querido Diário: parou em ${offset} de ${total ?? "?"} diários (trava de ${maxResultados}); estreite a janela ou os municípios.` });
@@ -148,14 +161,18 @@ export function criarConectorQueridoDiario(config: ConfigQueridoDiario = {}): Co
       }
       for (const diario of dados.gazettes) {
         if (op.uf && normalizarUf(diario.state_code) !== op.uf) continue;
+        entregues++;
         yield diario;
       }
       if (dados.gazettes.length < tamanho || offset + tamanho >= dados.total_gazettes) break;
     }
+    // Todas as respostas conferidas e nenhum diário na janela (ou na UF): consulta válida e vazia.
+    if (entregues === 0) op.informar({ vazioLegitimo: true });
   }
 
   async function* daArquivo(op: OpcoesColeta, arquivo: string): AsyncGenerator<DiarioQd> {
     op.informar({ origem: arquivo });
+    let entregues = 0;
     for (const doc of await lerJsonLocal(arquivo)) {
       const respostas = Array.isArray(doc.dados) ? doc.dados : [doc.dados];
       for (const resposta of respostas) {
@@ -163,10 +180,12 @@ export function criarConectorQueridoDiario(config: ConfigQueridoDiario = {}): Co
         if (recusa) throw new Error(`Arquivo do Querido Diário fora do formato da API (${doc.arquivo}): ${recusa}`);
         for (const diario of (resposta as RespostaQd).gazettes) {
           if (op.uf && normalizarUf(diario.state_code) !== op.uf) continue;
+          entregues++;
           yield diario;
         }
       }
     }
+    if (entregues === 0) op.informar({ vazioLegitimo: true });
   }
 
   return {
@@ -190,7 +209,7 @@ export function criarConectorQueridoDiario(config: ConfigQueridoDiario = {}): Co
       const data = lerDataBR(texto(diario.date));
       if (!url || !territorio || !data) throw new Error(`diário sem url, território ou data: ${JSON.stringify(diario).slice(0, 120)}`);
       const analise = analisar(diario);
-      if (!analise.aceito) return null;
+      if (!analise?.aceito) return null;
 
       const cidade = texto(diario.territory_name);
       const uf = normalizarUf(diario.state_code);
@@ -209,7 +228,7 @@ export function criarConectorQueridoDiario(config: ConfigQueridoDiario = {}): Co
         uf,
         cidade,
         publicado_em: data,
-        data_leilao: extrairDataLeilao(analise.texto, data),
+        data_leilao: extrairDataLeilao(analise.texto, data, agora()),
         url,
         resumo: colapsarEspacos(resumoRelevante(analise)) + "\nFonte: Querido Diário – Open Knowledge Brasil.",
       };

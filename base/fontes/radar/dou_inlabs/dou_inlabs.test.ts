@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { executarColeta } from "../../../coleta.ts";
@@ -81,6 +81,72 @@ test("normalizar: outra seção, cabeçalho de resultado, sem id e sem pdfPage",
   const semPdf = douInlabs.normalizar(base);
   assert.ok(semPdf && semPdf.registro === "edital");
   assert.equal(semPdf.url, "https://www.in.gov.br/leiturajornal?data=09-10-2026&secao=do3");
+});
+
+function xmlDeMateria(id: string, cabecalho: string, corpo: string): string {
+  return (
+    `<xml><article id="${id}" pubName="DO3" pubDate="09/10/2026" pdfPage="http://pesquisa.in.gov.br/x?p=${id}" ` +
+    `artCategory="Ministério X/Secretaria do Patrimônio da União/Superintendência do Patrimônio da União em Goiás"><body>` +
+    `<Identifica><![CDATA[${cabecalho}]]></Identifica><Texto><![CDATA[<p>${corpo}</p>]]></Texto></body></article></xml>`
+  );
+}
+
+test("resultado, homologação, ata e arrematação são descartados; nenhum nome de quem arrematou chega ao banco", async () => {
+  const corpo = "Leilão nº 3/2026 do imóvel (terreno urbano, lote 4 da quadra 9) arrematado por Ricardo Alves Moreira pelo lance de R$ 90.000,00.";
+  const cabecalhos = ["TERMO DE HOMOLOGAÇÃO", "ATA DE LEILÃO Nº 3/2026", "AVISO DE ARREMATAÇÃO", "RESULTADO DE JULGAMENTO", "AVISO DE LEILÃO Nº 3/2026"];
+  for (const cab of cabecalhos) {
+    const [artigo] = lerArtigosDou(xmlDeMateria("1", cab, corpo), "t.xml");
+    assert.ok(artigo);
+    assert.equal(douInlabs.normalizar(artigo), null, `${cab}: corpo com "arrematado por Fulano" também sai`);
+  }
+  const pasta = mkdtempSync(join(tmpdir(), "luneta-dou-"));
+  try {
+    cabecalhos.forEach((cab, i) => writeFileSync(join(pasta, `m${i}.xml`), xmlDeMateria(String(i + 1), cab, corpo)));
+    writeFileSync(join(pasta, "m9.xml"), xmlDeMateria("9", "AVISO DE LEILÃO Nº 4/2026", "Leilão de terreno urbano de 300 m². Sessão pública em 20/11/2026, às 10h."));
+    const db = bancoEmMemoria();
+    const r = await executarColeta(db, douInlabs, { arquivo: pasta, http: httpProibido() });
+    assert.equal(r.status, "sucesso", r.erro ?? "");
+    assert.equal(r.editais, 1);
+    assert.doesNotMatch(JSON.stringify(db.prepare("SELECT * FROM edital").all()), /Ricardo|Alves|Moreira/);
+  } finally {
+    rmSync(pasta, { recursive: true, force: true });
+  }
+});
+
+test("retificação, errata e leilão deserto com data nova ficam como edital próprio; sem data nova, saem", () => {
+  const comData = "Leilão do imóvel (apartamento nº 3 do Edifício Sol). Nova data do 1º leilão: 25/11/2026, às 10h.";
+  for (const cab of ["AVISO DE RETIFICAÇÃO - LEILÃO Nº 1/2026", "ERRATA - EDITAL DE LEILÃO 2/2026", "AVISO DE LEILÃO DESERTO E NOVA DATA"]) {
+    const [artigo] = lerArtigosDou(xmlDeMateria("5", cab, comData), "r.xml");
+    assert.ok(artigo);
+    const e = douInlabs.normalizar(artigo);
+    assert.ok(e && e.registro === "edital", cab);
+    assert.equal(e.data_leilao, "2026-11-25T13:00:00.000Z");
+    assert.equal(e.uf, "GO");
+    const [semData] = lerArtigosDou(xmlDeMateria("6", cab, "Leilão do imóvel (apartamento nº 3). Onde se lê 30%, leia-se 40%."), "s.xml");
+    assert.ok(semData);
+    assert.equal(douInlabs.normalizar(semData), null, `${cab} sem data nova`);
+  }
+});
+
+test("rede: fim de semana sem DOU (404) é coleta vazia legítima; uma semana inteira sem DOU é inválida", async () => {
+  const conector = (desde: string, ate: string) =>
+    criarConectorDouInlabs({
+      janela: { desde, ate },
+      fetchLogin: loginFalso([LOGIN_OK]).fetchLogin,
+      esperar: async () => undefined,
+      ambiente: { INLABS_EMAIL: "a@b.test", INLABS_SENHA: SENHA },
+    });
+  // 10 e 11/10/2026: sábado e domingo.
+  const fds = await executarColeta(bancoEmMemoria(), conector("2026-10-10", "2026-10-11"), { http: httpFalso(() => respostaVazia(404)).http });
+  assert.equal(fds.status, "sucesso", fds.erro ?? "");
+  assert.equal(fds.lidos, 0);
+  // Domingo e segunda (edição de segunda ainda não publicada): aviso, mas vale.
+  const segunda = await executarColeta(bancoEmMemoria(), conector("2026-10-11", "2026-10-12"), { http: httpFalso(() => respostaVazia(404)).http });
+  assert.equal(segunda.status, "sucesso", segunda.erro ?? "");
+  assert.match(segunda.avisos.join(" "), /Dia\(s\) útil\(eis\) sem DO3: 2026-10-12/);
+  // Segunda a sexta sem nenhuma edição: algo mudou na fonte.
+  const semana = await executarColeta(bancoEmMemoria(), conector("2026-10-05", "2026-10-09"), { http: httpFalso(() => respostaVazia(404)).http });
+  assert.equal(semana.status, "invalida");
 });
 
 test("entrada local em ZIP: lê só os XML e confere o pacote", async () => {

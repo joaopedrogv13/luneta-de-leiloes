@@ -262,3 +262,38 @@ test("editais do radar: upsert, inalterado e vínculo com imóvel", () => {
   assert.equal(e?.resumo, "Leilão de imóvel. Executado: [NOME].");
   assert.equal(e?.cidade_norm, "sao-paulo");
 });
+
+test("arquivos do edital: só trocam quando a coleta os consultou; sem consulta, ficam os gravados", () => {
+  const db = novoBanco();
+  const edital = {
+    registro: "edital" as const,
+    id_na_fonte: "pncp-9",
+    titulo: "Leilão de imóvel",
+    url: "https://exemplo.test/edital/9",
+    resumo: "Alienação de terreno urbano.",
+  };
+  const docs = [
+    { tipo: "edital" as const, titulo: "Edital do Leilão nº 3/2026", url: "https://exemplo.test/arquivos/1", publicado_em: "2026-10-08" },
+    { tipo: "outro" as const, titulo: "Laudo", url: "https://exemplo.test/arquivos/2" },
+    { tipo: "outro" as const, titulo: "Repetido", url: "https://exemplo.test/arquivos/2" },
+  ];
+  const ler = (): unknown => JSON.parse(String(db.prepare("SELECT documentos FROM edital WHERE id_na_fonte = 'pncp-9'").get()?.documentos ?? "null"));
+
+  assert.equal(gravarEditais(db, "falso", [edital], { agora: T1 }).novos, 1);
+  assert.equal(ler(), null, "nunca consultados");
+  assert.equal(gravarEditais(db, "falso", [{ ...edital, documentos: docs }], { agora: T2 }).atualizados, 1, "só os arquivos mudaram");
+  const gravados = [
+    { tipo: "edital", titulo: "Edital do Leilão nº 3/2026", url: "https://exemplo.test/arquivos/1", publicado_em: "2026-10-08" },
+    { tipo: "outro", titulo: "Laudo", url: "https://exemplo.test/arquivos/2", publicado_em: null },
+  ];
+  assert.deepEqual(ler(), gravados);
+  // Coleta comum, sem consultar os arquivos: nada se perde.
+  assert.equal(gravarEditais(db, "falso", [edital], { agora: T3 }).inalterados, 1);
+  assert.equal(gravarEditais(db, "falso", [{ ...edital, resumo: "Alienação de terreno urbano com 300 m²." }], { agora: T3 }).atualizados, 1);
+  assert.deepEqual(ler(), gravados, "resumo novo não apaga os arquivos");
+  assert.equal(gravarEditais(db, "falso", [{ ...edital, documentos: docs }], { agora: T3 }).atualizados, 1, "resumo voltou ao anterior");
+  assert.equal(gravarEditais(db, "falso", [{ ...edital, documentos: docs }], { agora: T3 }).inalterados, 1);
+  // Consultados e vazios: a fonte tirou os arquivos.
+  gravarEditais(db, "falso", [{ ...edital, documentos: [] }], { agora: T3 });
+  assert.deepEqual(ler(), []);
+});

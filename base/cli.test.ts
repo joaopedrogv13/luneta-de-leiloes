@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { principal } from "./cli.ts";
+import { listarMigracoes } from "./db.ts";
 import type { Exportacao } from "./exportar.ts";
 import { conferirRegistro, CONECTORES } from "./fontes/index.ts";
 import type { RelatorioStatus } from "./status.ts";
@@ -42,8 +43,9 @@ test("ponta a ponta: migrar, coletar, riscos, exportar e status", async () => {
 
     const m = await rodar(["migrar", "--banco", banco]);
     assert.equal(m.codigo, 0);
-    assert.match(m.saida, /versão 0 → 1/);
-    assert.match((await rodar(["migrar", "--banco", banco])).saida, /já está na versão 1/);
+    const versao = listarMigracoes().length;
+    assert.match(m.saida, new RegExp(`versão 0 → ${versao} \\(aplicadas: esquema\\.sql`));
+    assert.match((await rodar(["migrar", "--banco", banco])).saida, new RegExp(`já está na versão ${versao}`));
 
     const c = await rodar(["coletar", "falso", "--banco", banco, "--fixture", "fixture.json"], { conectores });
     assert.equal(c.codigo, 0, c.erro);
@@ -69,7 +71,7 @@ test("ponta a ponta: migrar, coletar, riscos, exportar e status", async () => {
 
     const s = await rodar(["status", "--banco", banco, "--json"]);
     const rel = JSON.parse(s.saida) as RelatorioStatus;
-    assert.equal(rel.versaoBanco, 1);
+    assert.equal(rel.versaoBanco, listarMigracoes().length);
     assert.equal(rel.totais.ativos, 4);
     assert.deepEqual(rel.porUf, [{ uf: "SP", ativos: 4 }]);
     assert.equal(rel.fotos.percentual, 100);

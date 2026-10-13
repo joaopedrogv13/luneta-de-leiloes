@@ -138,5 +138,15 @@ export function validarEdital(edital: EditalNormalizado): string[] {
   p(dataOuAusente(edital.publicado_em), "publicado_em fora do padrão");
   p(dataOuAusente(edital.data_leilao), "data_leilao fora do padrão");
   p(ausente(edital.imovel_id) || (typeof edital.imovel_id === "number" && Number.isInteger(edital.imovel_id)), "imovel_id inválido");
+  if (!ausente(edital.documentos)) {
+    if (!Array.isArray(edital.documentos)) problemas.push("documentos deve ser lista ou null");
+    else {
+      for (const doc of edital.documentos) {
+        p((TIPOS_DOCUMENTO as readonly string[]).includes(doc.tipo), `documento com tipo inválido: ${String(doc.tipo)}`);
+        p(ehUrl(doc.url), `documento com url inválida: ${String(doc.url)}`);
+        p(dataOuAusente(doc.publicado_em), "documento com publicado_em fora do padrão");
+      }
+    }
+  }
   return problemas;
 }

@@ -20,6 +20,28 @@ test("data do leilão: ignora datas antes da publicação e datas fora do contex
   assert.equal(extrairDataLeilao("Leilão em 31/02/2026.", null), null, "data inexistente");
 });
 
+test("data do leilão: gatilho específico vence; edital, impugnação, entrega de propostas e processo não são data do leilão", () => {
+  // Modelo do aviso do Compras.gov.br no DOU.
+  const comprasnet =
+    "AVISO DE LEILÃO Nº 1/2026 - UASG 170123. Objeto: Alienação de imóvel da União situado em Brasília/DF. Edital: 09/10/2026 das 08h00 às 12h00 e de 14h00 às 17h00. " +
+    "Endereço: Esplanada dos Ministérios, Bloco K. Entrega das Propostas: a partir de 09/10/2026 às 08h00 no site www.gov.br/compras. Abertura das Propostas: 20/10/2026 às 09h00 no site www.gov.br/compras.";
+  assert.equal(extrairDataLeilao(comprasnet, "2026-10-09"), "2026-10-20T12:00:00.000Z");
+  assert.equal(extrairDataLeilao("EDITAL DE LEILÃO. O leilão do imóvel terá impugnações até 15/10/2026. 1º leilão em 30/10/2026 às 14h.", "2026-10-09"), "2026-10-30T17:00:00.000Z");
+  assert.equal(extrairDataLeilao("Leilão de imóvel. Esclarecimentos até 20/10/2026. Sessão pública: 05/11/2026, às 10h.", "2026-10-09"), "2026-11-05T13:00:00.000Z");
+  assert.equal(extrairDataLeilao("Leilão de imóvel. Cadastro dos interessados até 19/11/2026.", "2026-10-09"), null);
+  // "Vila Exemplo, 7 de outubro de 2026" é a assinatura, mesmo perto de "leilão".
+  assert.equal(extrairDataLeilao("Edital do leilão disponível na Prefeitura. Vila Exemplo, 9 de outubro de 2026.", "2026-10-09"), null);
+});
+
+test("data do leilão: sem publicação, recusa datas antes da coleta; aceita ano com 2 dígitos e hora no extenso", () => {
+  const texto = "Leilão do imóvel, processo 0709098-48.2018.8.07.0007 de 01/02/2019, leilão em 12/11/2026";
+  assert.equal(extrairDataLeilao(texto, null), "2026-11-12", "a data do processo não é do leilão");
+  assert.equal(extrairDataLeilao("Leilão do imóvel em 01/02/2019.", null, new Date("2026-10-12T12:00:00Z")), null, "antes da coleta");
+  assert.equal(extrairDataLeilao("Leilão do imóvel em 01/02/2019.", null), "2019-02-01", "sem referência nenhuma, a data fica");
+  assert.equal(extrairDataLeilao("LEILÃO DE IMÓVEL em 12/11/26 às 10h", "2026-10-08"), "2026-11-12T13:00:00.000Z");
+  assert.equal(extrairDataLeilao("O leilão será realizado no dia 10 de novembro de 2026, às 10 horas.", "2026-10-09"), "2026-11-10T13:00:00.000Z");
+});
+
 test("cidade e UF: comarca/município de X, X/UF e Estado de", () => {
   // Endereços públicos de imóveis em leilão (amostra real da Leilões Judiciais).
   assert.deepEqual(
@@ -34,6 +56,14 @@ test("cidade e UF: comarca/município de X, X/UF e Estado de", () => {
   assert.deepEqual(extrairLocal("Superintendência no Estado do Rio de Janeiro"), { uf: "RJ", cidade: null });
   assert.deepEqual(extrairLocal("Advogado OAB/SP 123.456, CRECI/SP 9"), { uf: null, cidade: null });
   assert.deepEqual(extrairLocal("Sem local nenhum."), { uf: null, cidade: null });
+  // Sonda arquivada da Leilões Judiciais: "15ª REGIÃO DE PIRACICABA/SP" era "Região de Piracicaba".
+  assert.deepEqual(extrairLocal("TRIBUNAL REGIONAL DO TRABALHO DA 15ª REGIÃO DE PIRACICABA/SP"), { uf: "SP", cidade: "Piracicaba" });
+  // Nome de rua antes de "/UF" não é cidade.
+  assert.deepEqual(extrairLocal("CNPJ/MF nº 00.000.000/0001-00, com sede na Av. Paulista/SP"), { uf: null, cidade: null });
+  assert.deepEqual(extrairLocal("situado na Rua Bahia/SP, em Campinas/SP"), { uf: "SP", cidade: "Campinas" });
+  assert.deepEqual(extrairLocal("Superintendência do Patrimônio da União em Minas Gerais"), { uf: "MG", cidade: null });
+  assert.deepEqual(extrairLocal("Superintendência do Patrimônio da União no Distrito Federal"), { uf: "DF", cidade: null });
+  assert.deepEqual(extrairLocal("Defeito no para-raios do prédio."), { uf: null, cidade: null }, "'para' sem acento não é o Pará");
 });
 
 test("cidade e UF: respeita as UFs permitidas (ex.: jurisdição do tribunal)", () => {

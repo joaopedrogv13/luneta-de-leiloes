@@ -14,17 +14,21 @@ function tabelas(db: ReturnType<typeof abrirBanco>): string[] {
     .map((l) => String(l.name));
 }
 
-test("migração cria o esquema v1 e é idempotente", () => {
+test("migração cria o esquema v1, aplica as migrações do repositório e é idempotente", () => {
   const db = abrirBanco(":memory:", { migrar: false });
   assert.equal(versaoDoBanco(db), 0);
   const primeira = migrar(db);
-  assert.deepEqual(primeira, { de: 0, para: 1, aplicadas: ["esquema.sql"] });
+  const ultima = listarMigracoes().length;
+  assert.deepEqual(primeira, { de: 0, para: ultima, aplicadas: listarMigracoes().map((m) => m.nome) });
+  assert.equal(primeira.aplicadas[0], "esquema.sql");
+  assert.ok(primeira.aplicadas.includes("002-edital-documentos.sql"));
+  assert.ok(db.prepare("PRAGMA table_info(edital)").all().some((c) => c.name === "documentos"));
   const antes = tabelas(db);
   for (const t of ["fonte", "coleta", "imovel", "praca", "preco_historico", "foto", "documento", "risco", "edital", "imovel_busca", "edital_busca"]) {
     assert.ok(antes.includes(t), `falta a tabela ${t}`);
   }
   const segunda = migrar(db);
-  assert.deepEqual(segunda, { de: 1, para: 1, aplicadas: [] });
+  assert.deepEqual(segunda, { de: ultima, para: ultima, aplicadas: [] });
   assert.deepEqual(tabelas(db), antes);
   // Rodar o esquema de novo "à força" também não quebra (IF NOT EXISTS em tudo).
   db.exec(listarMigracoes()[0]!.sql);

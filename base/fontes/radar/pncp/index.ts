@@ -8,7 +8,9 @@
  * - GET /api/consulta/v1/contratacoes/proposta?dataFinal=AAAAMMDD&codigoModalidadeContratacao=N...
  *   contratações com recebimento de propostas em aberto (pega leilão publicado antes da janela).
  * - GET /api/pncp/v1/orgaos/{cnpj}/compras/{ano}/{seq}/arquivos (com --detalhes): arquivos do
- *   edital (edital, anexos), só para o que passou no filtro de imóvel.
+ *   edital (edital, anexos), só para o que passou no filtro de imóvel. Vão no campo
+ *   `documentos` do edital (coluna própria, migração 002), não no resumo: uma coleta sem
+ *   --detalhes não apaga os arquivos já gravados.
  * Envelope das consultas: {data[], totalRegistros, totalPaginas, numeroPagina, paginasRestantes,
  * empty}; 204 = nada no período; 404 em /arquivos = lista vazia. O servidor trunca páginas sem
  * avisar, por isso a paginação vai até paginasRestantes = 0 (pncp-cli, pagination.py).
@@ -19,14 +21,18 @@
  * com 1 e 13 e conferimos em toda coleta: se o PNCP devolver modalidade que não seja leilão para
  * esses códigos, a coleta para com erro e nada é gravado (confira /api/pncp/v1/modalidades).
  *
- * Grava na tabela `edital` (finalidade radar), nunca em `imovel`: o PNCP dá o município do ÓRGÃO,
- * não o do imóvel, e o lote só aparece descrito no PDF do edital.
+ * Grava na tabela `edital` (finalidade radar), nunca em `imovel`: o lote só aparece descrito no
+ * PDF do edital. UF e cidade: primeiro as que o objeto cita ("situado no Município de
+ * Recife/PE"); sem isso, a do órgão só quando ele é municipal (UF e cidade) ou estadual (só a
+ * UF). Órgão federal sem local no texto fica sem UF: a sede do órgão não é o lugar do imóvel.
+ * --uf filtra no servidor pela UF do ÓRGÃO; o que o texto põe em outra UF é descartado. Um
+ * órgão federal de outra UF que venda imóvel na UF pedida só aparece na coleta sem --uf.
  *
  * Sem teste ao vivo (rede bloqueada neste ambiente). A fixture foi construída a partir do
  * esquema documentado (nomes de campo do pncp-cli, pipeworx, pypncp e da arquitetura da tabela
  * br_mgi_pncp.contratacao da Base dos Dados), com dados fictícios.
  */
-import type { Conector, EditalNormalizado, OpcoesColeta } from "../../../tipos.ts";
+import type { Conector, Documento, EditalNormalizado, OpcoesColeta, TipoDocumento, Uf } from "../../../tipos.ts";
 import { lerDataBR, lerDataHoraBR } from "../../../util/data.ts";
 import { formatarMoedaBR } from "../../../util/numero.ts";
 import { colapsarEspacos, semAcento, truncar } from "../../../util/texto.ts";
@@ -46,7 +52,7 @@ import {
 } from "../comum.ts";
 import { diaCompacto, janelaDoAmbiente, robotsLigado, somarDias, type Ambiente, type Janela } from "../config.ts";
 import { analisarLeilaoImovel, type AnaliseLeilaoImovel } from "../filtro.ts";
-import { extrairDataLeilao } from "../texto.ts";
+import { extrairDataLeilao, extrairLocal, type Local } from "../texto.ts";
 
 export const BASE_PNCP = "https://pncp.gov.br";
 
@@ -72,6 +78,7 @@ export interface ContratacaoPncp {
   modalidadeNome?: string;
   modoDisputaNome?: string | null;
   situacaoCompraNome?: string | null;
+  /** esferaId: F federal, E estadual, M municipal, D distrital, N não se aplica. */
   orgaoEntidade?: { cnpj?: string; razaoSocial?: string; esferaId?: string; poderId?: string } | null;
   unidadeOrgao?: { ufSigla?: string; ufNome?: string; municipioNome?: string; codigoIbge?: string; nomeUnidade?: string; codigoUnidade?: string } | null;
   dataPublicacaoPncp?: string | null;
@@ -149,9 +156,80 @@ export function linkDoEdital(controle: string): string | null {
   return p ? `${BASE_PNCP}/app/editais/${p.cnpj}/${p.ano}/${p.sequencial}` : null;
 }
 
+function textoDaContratacao(c: ContratacaoPncp): string {
+  return [texto(c.objetoCompra), texto(c.informacaoComplementar)].filter((t): t is string => t !== null).join("\n");
+}
+
 function analisar(c: ContratacaoPncp): AnaliseLeilaoImovel {
-  const partes = [texto(c.objetoCompra), texto(c.informacaoComplementar)].filter((t): t is string => t !== null);
-  return analisarLeilaoImovel(partes.join("\n"), { leilaoGarantido: true });
+  return analisarLeilaoImovel(textoDaContratacao(c), { leilaoGarantido: true });
+}
+
+/** Esfera do órgão: o campo esferaId, ou a razão social quando ele falta. */
+function esferaDoOrgao(c: ContratacaoPncp): "F" | "E" | "M" | "D" | null {
+  const id = texto(c.orgaoEntidade?.esferaId)?.toUpperCase();
+  if (id === "F" || id === "E" || id === "M" || id === "D") return id;
+  if (id === "N") return null;
+  const nome = semAcento(texto(c.orgaoEntidade?.razaoSocial) ?? "").toUpperCase();
+  if (/\b(?:MUNICIPIO|MUNICIPAL|PREFEITURA)\b/.test(nome)) return "M";
+  if (/\bDISTRITO FEDERAL\b/.test(nome)) return "D";
+  if (/\b(?:ESTADO|ESTADUAL)\b/.test(nome)) return "E";
+  if (/\b(?:UNIAO|FEDERAL|MINISTERIO|NACIONAL)\b/.test(nome)) return "F";
+  return null;
+}
+
+/**
+ * Onde fica o imóvel: o local citado no objeto ou na informação complementar; sem isso, o
+ * município do órgão municipal (ou distrital) e só a UF do órgão estadual. Federal ou esfera
+ * desconhecida sem local no texto: nulos.
+ */
+export function localDoEdital(c: ContratacaoPncp): Local {
+  const doTexto = extrairLocal(textoDaContratacao(c));
+  const esfera = esferaDoOrgao(c);
+  const ufOrgao = normalizarUf(c.unidadeOrgao?.ufSigla);
+  const cidadeOrgao = texto(c.unidadeOrgao?.municipioNome);
+  if (doTexto.uf || doTexto.cidade) {
+    // Cidade sem UF no texto: a UF do órgão municipal ou estadual vale (vende o que é seu).
+    const uf = doTexto.uf ?? (esfera === "M" || esfera === "E" || esfera === "D" ? ufOrgao : null);
+    return { uf, cidade: doTexto.cidade };
+  }
+  if (esfera === "M" || esfera === "D") return { uf: ufOrgao, cidade: cidadeOrgao };
+  if (esfera === "E") return { uf: ufOrgao, cidade: null };
+  return { uf: null, cidade: null };
+}
+
+/** Com --uf: o texto põe o imóvel em outra UF? UF desconhecida passa. */
+function foraDaUfPedida(c: ContratacaoPncp, uf: Uf): boolean {
+  const local = localDoEdital(c);
+  return local.uf !== null && local.uf !== uf;
+}
+
+function tipoDoArquivo(a: ArquivoPncp): TipoDocumento {
+  const tipo = semAcento(texto(a.tipoDocumentoNome) ?? "").toLowerCase();
+  const titulo = semAcento(texto(a.titulo) ?? "").toLowerCase();
+  if (/\bedital\b/.test(tipo) || /^edital\b/.test(titulo)) return "edital";
+  if (/\bmatricula\b/.test(titulo)) return "matricula";
+  if (/\blaudo\b/.test(titulo)) return "laudo";
+  if (/\bavaliacao\b/.test(titulo)) return "avaliacao";
+  return "outro";
+}
+
+/** Arquivos ativos de /arquivos como documentos do edital; `null` = não consultados. */
+export function documentosDoPncp(arquivos: readonly ArquivoPncp[] | null): Documento[] | null {
+  if (arquivos === null) return null;
+  const documentos: Documento[] = [];
+  for (const a of arquivos) {
+    if (!ehObjeto(a) || a.statusAtivo === false) continue;
+    const url = urlOuNulo(a.url ?? a.uri);
+    if (!url) continue;
+    documentos.push({
+      tipo: tipoDoArquivo(a),
+      titulo: texto(a.titulo) ?? texto(a.tipoDocumentoNome) ?? `Documento ${a.sequencialDocumento ?? ""}`.trim(),
+      url,
+      publicado_em: lerDataBR(texto(a.dataPublicacaoPncp)),
+    });
+    if (documentos.length >= 20) break;
+  }
+  return documentos;
 }
 
 function validarPagina(dados: unknown): string | null {
@@ -257,6 +335,8 @@ export function criarConectorPncp(config: ConfigPncp = {}): Conector<BrutoPncp> 
     });
     const vistos = new Set<string>();
     let total = 0;
+    let entregues = 0;
+    let foraDaUf = 0;
     for (const modalidade of modalidades) {
       for (const consulta of consultas) {
         for (let pagina = 1; ; pagina++) {
@@ -287,7 +367,13 @@ export function criarConectorPncp(config: ConfigPncp = {}): Conector<BrutoPncp> 
             const controle = texto(c.numeroControlePNCP);
             if (controle && vistos.has(controle)) continue;
             if (controle) vistos.add(controle);
+            // O servidor filtra pela UF do órgão; o texto pode pôr o imóvel em outra UF.
+            if (op.uf && foraDaUfPedida(c, op.uf)) {
+              foraDaUf++;
+              continue;
+            }
             const arquivos = op.detalhes && analisar(c).aceito ? await buscarArquivos(op, c, robots) : null;
+            entregues++;
             yield { contratacao: c, arquivos, consulta };
           }
           const restantes = typeof dados.paginasRestantes === "number" ? dados.paginasRestantes : null;
@@ -297,21 +383,28 @@ export function criarConectorPncp(config: ConfigPncp = {}): Conector<BrutoPncp> 
       }
     }
     op.informar({ totalNaFonte: total });
+    if (foraDaUf > 0) op.informar({ aviso: `PNCP: ${foraDaUf} edital(is) com imóvel em outra UF ignorado(s).` });
+    // Todas as consultas responderam (204 ou páginas vazias): janela sem leilão, não falha.
+    if (entregues === 0) op.informar({ vazioLegitimo: true });
   }
 
   async function* daFixture(op: OpcoesColeta, arquivo: string): AsyncGenerator<BrutoPncp> {
     op.informar({ origem: arquivo });
+    let entregues = 0;
     for (const doc of await lerJsonLocal(arquivo)) {
       const { paginas, arquivos } = interpretarFixture(doc.dados, doc.arquivo);
       for (const pagina of paginas) {
         for (const c of pagina.data) {
-          if (op.uf && normalizarUf(c.unidadeOrgao?.ufSigla) !== op.uf) continue;
+          // Como na rede: UF do órgão (filtro do servidor) e, depois, a do texto.
+          if (op.uf && (normalizarUf(c.unidadeOrgao?.ufSigla) !== op.uf || foraDaUfPedida(c, op.uf))) continue;
           conferirModalidade(c, null);
           const controle = texto(c.numeroControlePNCP) ?? "";
+          entregues++;
           yield { contratacao: c, arquivos: op.detalhes ? (arquivos[controle] ?? []) : null, consulta: "arquivo" };
         }
       }
     }
+    if (entregues === 0) op.informar({ vazioLegitimo: true });
   }
 
   return {
@@ -366,26 +459,24 @@ export function criarConectorPncp(config: ConfigPncp = {}): Conector<BrutoPncp> 
       if (amparo) linhas.push(`Amparo legal: ${amparo}.`);
       const origem = urlOuNulo(c.linkSistemaOrigem);
       if (origem) linhas.push(`Sistema de origem: ${origem}`);
-      const arquivos = (bruto.arquivos ?? [])
-        .filter((a) => ehObjeto(a) && a.statusAtivo !== false && urlOuNulo(a.url ?? a.uri))
-        .slice(0, 8)
-        .map((a) => `${texto(a.titulo) ?? texto(a.tipoDocumentoNome) ?? `Documento ${a.sequencialDocumento ?? ""}`.trim()} (${urlOuNulo(a.url ?? a.uri)})`);
-      if (arquivos.length > 0) linhas.push(`Arquivos do edital: ${arquivos.join("; ")}.`);
       const complemento = texto(c.informacaoComplementar);
       if (complemento) linhas.push(truncar(colapsarEspacos(complemento), 600));
 
+      const local = localDoEdital(c);
       return {
         registro: "edital",
         id_na_fonte: controle,
         titulo,
         orgao,
-        uf: normalizarUf(c.unidadeOrgao?.ufSigla),
-        cidade: texto(c.unidadeOrgao?.municipioNome),
+        uf: local.uf,
+        cidade: local.cidade,
         publicado_em: publicado,
         // Leilão eletrônico: a disputa abre quando o recebimento de propostas encerra.
-        data_leilao: encerramento ?? abertura ?? extrairDataLeilao(analise.texto, publicado),
+        data_leilao: encerramento ?? abertura ?? extrairDataLeilao(analise.texto, publicado, agora()),
         url,
         resumo: linhas.join("\n"),
+        // null (sem --detalhes): o núcleo mantém os arquivos já gravados.
+        documentos: documentosDoPncp(bruto.arquivos),
       };
     },
   };

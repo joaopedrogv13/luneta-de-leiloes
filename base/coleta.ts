@@ -149,6 +149,7 @@ export async function executarColeta(db: Banco, conector: Conector, opcoes: Opco
         }
         if (m.origem !== undefined) meta.origem = m.origem;
         if (m.totalNaFonte !== undefined) meta.totalNaFonte = m.totalNaFonte;
+        if (m.vazioLegitimo !== undefined) meta.vazioLegitimo = m.vazioLegitimo;
       },
     });
     for await (const bruto of fluxo) {
@@ -198,7 +199,14 @@ export async function executarColeta(db: Banco, conector: Conector, opcoes: Opco
   // Validação do lote, antes de qualquer gravação.
   const uteis = resumo.lidos - resumo.descartados;
   const maxInvalidos = opcoes.maxFracaoInvalidos ?? 0.05;
-  if (resumo.lidos === 0) return fechar("invalida", "A fonte não devolveu nenhum registro.");
+  if (resumo.lidos === 0) {
+    // Janela sem nada publicado (domingo sem DOU, PNCP 204): o conector declara e a coleta vale.
+    if (meta.vazioLegitimo === true && !conector.capacidades.listaCompleta) {
+      avisar("Nenhum registro no período consultado (a fonte respondeu normalmente).");
+      return fechar("sucesso");
+    }
+    return fechar("invalida", "A fonte não devolveu nenhum registro.");
+  }
   if (uteis > 0 && imoveis.length + editais.length === 0) return fechar("invalida", "Nenhum registro válido na coleta.");
   // Até 2 inválidos são tolerados em qualquer lote (lotes pequenos, como uma UF com 20 imóveis).
   if (uteis > 0 && resumo.invalidos > Math.max(2, uteis * maxInvalidos)) {

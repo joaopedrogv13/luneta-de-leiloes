@@ -130,6 +130,21 @@ test("cancelamento no meio não grava nada", async () => {
   assert.equal(contar(db, "SELECT count(*) AS n FROM imovel"), 0);
 });
 
+test("janela vazia declarada pelo conector vale como sucesso; sem a declaração ou em lista completa, é inválida", async () => {
+  const db = bancoEmMemoria();
+  const declarar = (o: OpcoesColeta): void => o.informar({ vazioLegitimo: true });
+  const radar = await executarColeta(db, conectorFalso({ registros: () => [], listaCompleta: false, espiar: declarar }), { agora: T1, http: httpProibido() });
+  assert.equal(radar.status, "sucesso");
+  assert.equal(radar.lidos, 0);
+  assert.match(radar.avisos.join(" "), /Nenhum registro no período/);
+  assert.equal(ultimaColeta(db)?.status, "sucesso");
+
+  const semDeclarar = await executarColeta(db, conectorFalso({ registros: () => [], listaCompleta: false }), { agora: T1, http: httpProibido() });
+  assert.equal(semDeclarar.status, "invalida");
+  const completa = await executarColeta(db, conectorFalso({ registros: () => [], espiar: declarar }), { agora: T1, http: httpProibido() });
+  assert.equal(completa.status, "invalida", "lista completa com zero registros é sempre suspeita");
+});
+
 test("editais vão para a tabela do radar", async () => {
   const db = bancoEmMemoria();
   const edital = { registro: "edital", id_na_fonte: "e1", titulo: "Aviso de leilão", url: "https://exemplo.test/e1", uf: "SP", publicado_em: "2026-10-01" };

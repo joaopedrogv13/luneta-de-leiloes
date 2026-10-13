@@ -83,7 +83,7 @@ export const minhaFonte: Conector<LinhaBruta> = {
 
 ## O que o núcleo garante
 
-- **Nada é gravado se a coleta falhar.** Tudo é lido e validado em memória e gravado numa transação só. Coleta com erro, sem registros, com mais de 5% de registros inválidos (até 2 sempre passam), abaixo do `volumeMinimo` ou com arquivo mais antigo que o último gravado vira `invalida`/`erro` no log e não toca nos dados.
+- **Nada é gravado se a coleta falhar.** Tudo é lido e validado em memória e gravado numa transação só. Coleta com erro, sem registros, com mais de 5% de registros inválidos (até 2 sempre passam), abaixo do `volumeMinimo` ou com arquivo mais antigo que o último gravado vira `invalida`/`erro` no log e não toca nos dados. Exceção: fonte sem lista completa (radar, busca por janela) que respondeu normalmente e não tinha nada no período informa `vazioLegitimo: true` e a coleta vazia fecha como `sucesso` (ex.: domingo sem DOU, PNCP respondendo 204).
 - **Imóveis nunca são apagados.** Numa coleta completa e válida (`listaCompleta`, sem `--limite`, sem falha de normalização), o que estava ativo e sumiu vira `removido` (só dentro da UF com `--uf`). Se mais de 50% dos ativos sumirem de uma vez, a remoção é bloqueada e fica um aviso (o conector pode mudar o limite com `maxFracaoRemocao`). Quem reaparece é reativado.
 - **Histórico** (`preco_historico`): uma linha quando o imóvel entra e a cada mudança de preço, avaliação, modalidade, praça ou status.
 - **Geração da fonte**: um imóvel gravado a partir de um arquivo mais novo nunca é alterado, reativado nem removido por um arquivo mais antigo (ex.: CSV geral da Caixa, que atrasa um dia em relação ao da UF).
@@ -96,12 +96,12 @@ export const minhaFonte: Conector<LinhaBruta> = {
 
 ## Banco
 
-Tabelas: `fonte`, `coleta` (log de cada execução), `imovel`, `praca`, `preco_historico`, `foto`, `documento`, `risco`, `edital`, mais `imovel_busca`/`edital_busca` (FTS5, sem acento). Migrações: `esquema.sql` é a versão 1 e não muda mais depois de publicado; cada mudança nova vai em `base/migracoes/NNN-descricao.sql` (002, 003...) e `migrar` aplica em ordem, cada uma na sua transação. O topo de `esquema.sql` diz como portar para Postgres.
+Tabelas: `fonte`, `coleta` (log de cada execução), `imovel`, `praca`, `preco_historico`, `foto`, `documento`, `risco`, `edital`, mais `imovel_busca`/`edital_busca` (FTS5, sem acento). Migrações: `esquema.sql` é a versão 1 e não muda mais depois de publicado; cada mudança nova vai em `base/migracoes/NNN-descricao.sql` (002, 003...) e `migrar` aplica em ordem, cada uma na sua transação. `002-edital-documentos.sql` acrescenta `edital.documentos` (JSON com os links dos arquivos do edital); uma coleta que não consulta os arquivos (`documentos` ausente) mantém os gravados. O topo de `esquema.sql` diz como portar para Postgres.
 
 ## LGPD
 
 - Nunca mapear nome, CPF/CNPJ, e-mail ou IP de devedor, executado, exequente, depositário, licitante ou arrematante (ex.: `nm_usuario`, `id_usuario`, lances com IP).
-- O núcleo limpa e mascara (`util/lgpd.ts`) título, descrição, textos extras, resumos de edital e trechos de evidência antes de gravar: CPF, CNPJ, RG, e-mail e IP viram `[CPF]`, `[CNPJ]`, `[RG]`, `[E-MAIL]`, `[IP]`; nomes depois de papéis ("Executado:", "devedor fiduciante", "em face de", "Sr."...) e de frases de ocupação ("ocupado por", "na posse de", "locado para", "reside no imóvel") e partes em "FULANO x BELTRANO" viram `[NOME]`. É heurística e prefere mascarar demais.
+- O núcleo limpa e mascara (`util/lgpd.ts`) título, descrição, textos extras, resumos de edital e trechos de evidência antes de gravar: CPF, CNPJ, RG, e-mail e IP viram `[CPF]`, `[CNPJ]`, `[RG]`, `[E-MAIL]`, `[IP]`; nomes depois de papéis ("Executado:", "devedor fiduciante", "em face de", "Sr."...), de quem ganhou o leilão ("arrematado por", "adjudicado a", "adquirido por", "vencedor"), de frases de ocupação ("ocupado por", "na posse de", "locado para", "reside no imóvel") e partes em "FULANO x BELTRANO" viram `[NOME]`. É heurística e prefere mascarar demais.
 - Endereço, bairro, cartório, matrícula e comitente **não** passam pela máscara de nomes (só pela de documentos, no comitente). Se o conector tira esses campos de texto livre, ele mesmo precisa garantir que não levam nomes (ver `campoSemPessoa` no conector da Leilões Judiciais).
 - Registros brutos não são guardados. Fixtures commitadas devem ser pequenas e já mascaradas.
 - Dados com `ai-train=no` (Leilões Judiciais) não podem treinar modelos.

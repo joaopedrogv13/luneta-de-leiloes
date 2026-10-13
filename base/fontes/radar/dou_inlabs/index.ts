@@ -25,7 +25,12 @@
  * 3 tentativas e uma pausa antes do primeiro download. Os downloads passam pelo cliente educado.
  *
  * LGPD: o parágrafo de assinatura (<p class="assina"> e "cargo") é removido antes do filtro e do
- * resumo; o resto passa pela máscara do núcleo.
+ * resumo; o resto passa pela máscara do núcleo. Avisos de resultado (cabeçalho ou corpo com
+ * "arrematado por Fulano", "homologo") são descartados: não anunciam leilão e trazem nomes.
+ *
+ * Dia sem DOU (fim de semana, feriado, edição ainda não publicada) responde 404 e é pulado.
+ * Janela inteira sem edição vale como coleta vazia legítima (sucesso) se no máximo 2 dias
+ * úteis ficaram sem a seção principal; mais do que isso é suspeito e a coleta fica inválida.
  *
  * Sem teste ao vivo (rede bloqueada e sem conta). As fixtures foram construídas a partir do
  * esquema acima (não há XML real do INLABS no material); o ZIP dos testes é montado em memória.
@@ -38,7 +43,7 @@ import { lerDataBR } from "../../../util/data.ts";
 import { colapsarEspacos, decodificarEntidades, semHtml } from "../../../util/texto.ts";
 import { esperarPadrao, exigirObjeto, texto, urlOuNulo, type Esperar } from "../comum.ts";
 import { diasDaJanela, janelaDoAmbiente, listaDoAmbiente, robotsLigado, type Ambiente, type Janela } from "../config.ts";
-import { analisarLeilaoImovel, ehAvisoSemLeilaoFuturo } from "../filtro.ts";
+import { analisarLeilaoImovel, ehCabecalhoDeResultado, motivoSemLeilaoFuturo } from "../filtro.ts";
 import { extrairDataLeilao, extrairLocal, resumoRelevante } from "../texto.ts";
 import { lerZip, pareceZip } from "../zip.ts";
 
@@ -47,6 +52,14 @@ const URL_LOGIN = `${URL_INLABS}/logar.php`;
 /** Valor do cabeçalho `origem` dos scripts oficiais ("script" em hexadecimal). */
 const ORIGEM_SCRIPT = "736372697074";
 const NOME_COOKIE = "inlabs_session_cookie";
+/** Dias úteis sem a seção principal que ainda contam como janela vazia legítima. */
+const MAX_DIAS_UTEIS_SEM_EDICAO = 2;
+
+/** Segunda a sexta ("AAAA-MM-DD"). Feriados não são conhecidos aqui. */
+function ehDiaUtil(dia: string): boolean {
+  const semana = new Date(`${dia}T12:00:00Z`).getUTCDay();
+  return semana >= 1 && semana <= 5;
+}
 
 // ---------------------------------------------------------------------------
 // XML das matérias
@@ -251,6 +264,10 @@ export function criarConectorDouInlabs(config: ConfigDouInlabs = {}): Conector<A
     await esperar(config.pausaAposLoginMs ?? 2_000);
     const avisar = (aviso: string): void => op.informar({ aviso });
     let baixados = 0;
+    let entregues = 0;
+    /** Dias úteis em que a seção principal (não extra) respondeu 404. */
+    const diasUteisSemEdicao = new Set<string>();
+    const principais = secoes.filter((s) => !/E$/i.test(s));
     for (const dia of diasDaJanela(janela)) {
       for (const secao of secoes) {
         const url = `${URL_INLABS}/index.php?p=${dia}&dl=${dia}-${secao}.zip`;
@@ -263,6 +280,7 @@ export function criarConectorDouInlabs(config: ConfigDouInlabs = {}): Conector<A
         });
         if (resposta.status === 404) {
           op.log(`DOU ${dia} ${secao}: sem edição (404).`);
+          if (principais.includes(secao) && ehDiaUtil(dia)) diasUteisSemEdicao.add(dia);
           continue;
         }
         if (!pareceZip(resposta.bytes)) {
@@ -275,19 +293,30 @@ export function criarConectorDouInlabs(config: ConfigDouInlabs = {}): Conector<A
         baixados++;
         for (const artigo of artigosDoZip(resposta.bytes, `${dia}-${secao}.zip`, avisar)) {
           if (op.uf && ufDoArtigo(artigo) !== op.uf) continue;
+          entregues++;
           yield artigo;
         }
       }
     }
+    if (diasUteisSemEdicao.size > 0) {
+      op.informar({ aviso: `Dia(s) útil(eis) sem ${principais.join("/")}: ${[...diasUteisSemEdicao].join(", ")} (feriado ou edição ainda não publicada?).` });
+    }
     if (baixados === 0) op.informar({ aviso: `Nenhuma edição de ${secoes.join("/")} entre ${janela.desde} e ${janela.ate} (dias sem DOU?).` });
+    // Janela vazia legítima: edições baixadas sem nada da UF pedida, ou só fim de semana/feriado
+    // sem edição. Muitos dias úteis sem DOU apontam outro problema (URL mudou?): fica inválida.
+    if (entregues === 0 && (baixados > 0 || diasUteisSemEdicao.size <= MAX_DIAS_UTEIS_SEM_EDICAO)) op.informar({ vazioLegitimo: true });
   }
 
   async function* daArquivo(op: OpcoesColeta, arquivo: string): AsyncGenerator<ArtigoDou> {
     op.informar({ origem: arquivo });
+    let entregues = 0;
     for (const artigo of await artigosLocais(arquivo, (aviso) => op.informar({ aviso }))) {
       if (op.uf && ufDoArtigo(artigo) !== op.uf) continue;
+      entregues++;
       yield artigo;
     }
+    // Arquivo válido (com matérias), mas nada da UF pedida.
+    if (entregues === 0) op.informar({ vazioLegitimo: true });
   }
 
   return {
@@ -310,7 +339,8 @@ export function criarConectorDouInlabs(config: ConfigDouInlabs = {}): Conector<A
       const secao = texto(a.pubName);
       if (secao && !/^DO3/i.test(secao)) return null;
       const cabeca = colapsarEspacos(semHtml(artigo.identifica ?? artigo.titulo ?? a.name ?? ""));
-      if (ehAvisoSemLeilaoFuturo(cabeca)) return null;
+      // Resultado, homologação, ata, arrematação: descartado já pelo cabeçalho.
+      if (ehCabecalhoDeResultado(cabeca)) return null;
 
       // O corpo repete o cabeçalho em <p class="identifica">; fica só o do campo Identifica.
       const corpo = semAssinatura(artigo.texto ?? "");
@@ -322,6 +352,10 @@ export function criarConectorDouInlabs(config: ConfigDouInlabs = {}): Conector<A
       const id = texto(a.id) ?? texto(a.idMateria);
       if (!id) throw new Error(`matéria sem id (${artigo.arquivo})`);
       const publicado = lerDataBR(texto(a.pubDate));
+      const dataLeilao = extrairDataLeilao(analise.texto, publicado, agora());
+      // Retificação, errata, adiamento ou leilão deserto só ficam com data nova de leilão; corpo
+      // com marca de resultado ("arrematado por Fulano", "fica homologado") sai.
+      if (motivoSemLeilaoFuturo(cabeca, { texto: analise.texto, dataLeilao })) return null;
       const leitura = publicado ? `https://www.in.gov.br/leiturajornal?data=${publicado.split("-").reverse().join("-")}&secao=do3` : null;
       const url = urlOuNulo(a.pdfPage) ?? leitura;
       if (!url) throw new Error(`matéria ${id} sem pdfPage nem pubDate`);
@@ -339,7 +373,7 @@ export function criarConectorDouInlabs(config: ConfigDouInlabs = {}): Conector<A
         uf,
         cidade: local.cidade,
         publicado_em: publicado,
-        data_leilao: extrairDataLeilao(analise.texto, publicado),
+        data_leilao: dataLeilao,
         url,
         resumo: resumoRelevante(analise),
       };

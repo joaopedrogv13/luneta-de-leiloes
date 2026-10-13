@@ -84,6 +84,30 @@ test("frases de ocupação e posse de edital judicial", () => {
   for (const [entrada, esperado] of casos) assert.equal(mascararDadosPessoais(entrada), esperado, entrada);
 });
 
+test("quem ganhou o leilão: arrematado por, adjudicado a, adquirido por e vencedor, sem dois-pontos", () => {
+  const casos: Array<[string, string]> = [
+    ["Lote 01: terreno urbano, arrematado por João Carlos Pereira pelo valor de R$ 50.000,00.", "Lote 01: terreno urbano, arrematado por [NOME] pelo valor de R$ 50.000,00."],
+    ["Lote 02: casa, arrematada por Maria Aparecida Souza.", "Lote 02: casa, arrematada por [NOME]."],
+    ["o imóvel foi arrematado em leilão por Carlos Eduardo Mendes, pelo valor", "o imóvel foi arrematado em leilão por [NOME], pelo valor"],
+    ["arrematado pelo Sr. Ricardo Alves Moreira", "arrematado pelo Sr. [NOME]"],
+    ["Leilão nº 4/2026, lote 7 da quadra 2, adjudicado a Pedro Henrique Alves.", "Leilão nº 4/2026, lote 7 da quadra 2, adjudicado a [NOME]."],
+    ["bem adjudicado à exequente ANA PAULA COSTA", "bem adjudicado à exequente [NOME]"],
+    ["imóvel adquirido por Fulano Beltrano de Tal em 2010", "imóvel adquirido por [NOME] em 2010"],
+    ["Lote 02: casa, sendo vencedor JOSÉ ANTÔNIO FERREIRA, com lance de R$ 80.000,00.", "Lote 02: casa, sendo vencedor [NOME], com lance de R$ 80.000,00."],
+    ["declarada vencedora Maria de Souza Pereira", "declarada vencedora [NOME]"],
+    ["entregue ao arrematante JOÃO DA SILVA", "entregue ao arrematante [NOME]"],
+  ];
+  for (const [entrada, esperado] of casos) assert.equal(mascararDadosPessoais(entrada), esperado, entrada);
+  // Sem nome próprio depois do papel, o texto genérico do edital fica como está.
+  const genericos = [
+    "Será considerado vencedor o licitante que oferecer o maior lance.",
+    "O bem será arrematado por quem oferecer o maior lance, ou arrematado pelo valor mínimo.",
+    "O VENCEDOR DO LEILÃO DEVERÁ PAGAR À VISTA. O ARREMATANTE DEVERÁ ASSINAR O AUTO.",
+    "adjudicado ao exequente pelo valor da avaliação",
+  ];
+  for (const t of genericos) assert.equal(mascararDadosPessoais(t), t, t);
+});
+
 test("partes no formato A x B", () => {
   assert.equal(
     mascararDadosPessoais("Processo 1000818-76.2020.5.02.0090 - JOÃO DA SILVA x BANCO DO BRASIL S.A."),

@@ -239,6 +239,12 @@ export interface EditalNormalizado {
   resumo?: string | null;
   /** Imóvel da base a que o edital se refere, quando já se sabe. */
   imovel_id?: number | null;
+  /**
+   * Arquivos do edital publicados pela fonte (só o link, sem download). `undefined` ou `null` =
+   * não consultados nesta coleta: o núcleo mantém os já gravados. Uma lista, mesmo vazia,
+   * substitui a anterior (a fonte foi consultada).
+   */
+  documentos?: Documento[] | null;
 }
 
 export type RegistroNormalizado = ImovelNormalizado | EditalNormalizado;
@@ -286,6 +292,14 @@ export interface MetaColeta {
   totalNaFonte?: number;
   /** Alerta não fatal (ex.: "3 linhas sem UF ignoradas"). */
   aviso?: string;
+  /**
+   * A consulta foi válida e a fonte não tinha nada no período (ex.: domingo sem DOU, PNCP
+   * respondendo 204). Com zero registros lidos, a coleta fecha como "sucesso" em vez de
+   * "invalida". Só vale para fonte sem lista completa (radar, buscas por janela): numa lista
+   * completa, zero registros é sempre suspeito. Informe só depois de todas as respostas
+   * conferidas, nunca quando uma consulta falhou.
+   */
+  vazioLegitimo?: boolean;
 }
 
 export interface OpcoesColeta {

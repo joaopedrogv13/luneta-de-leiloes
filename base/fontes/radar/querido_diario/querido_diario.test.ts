@@ -1,7 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { principal } from "../../../cli.ts";
 import { executarColeta } from "../../../coleta.ts";
+import { abrirBanco } from "../../../db.ts";
 import { bancoEmMemoria, httpProibido } from "../../../testes/apoio.ts";
 import type { EditalNormalizado, MetaColeta, OpcoesColeta } from "../../../tipos.ts";
 import type { ClienteHttp } from "../../../util/http.ts";
@@ -111,6 +115,77 @@ test("rede: trava de resultados avisa; resposta fora do formato e município inv
     coletarTudo(criarConectorQueridoDiario({ janela: JANELA, ambiente: { LUNETA_QD_TERRITORIOS: "35501" } }), opcoes(httpProibido())),
     /Código IBGE inválido/,
   );
+});
+
+test("aviso de resultado (arrematado por, vencedor, homologação) não vira edital e nenhum nome chega ao banco", async () => {
+  const resultado: DiarioQd = {
+    ...diario(1),
+    excerpts: [
+      "RESULTADO DO LEILÃO Nº 2/2026. Lote 01: terreno urbano com 300 m², arrematado por João Carlos Pereira pelo valor de R$ 50.000,00. " +
+        "Lote 02: casa, sendo vencedor JOSÉ ANTÔNIO FERREIRA.",
+    ],
+  };
+  const homologacao: DiarioQd = { ...diario(2), excerpts: ["HOMOLOGAÇÃO. Fica homologado o leilão nº 3/2026 do imóvel (terreno), sendo vencedor JOSÉ ANTÔNIO FERREIRA."] };
+  const adjudicacao: DiarioQd = { ...diario(3), excerpts: ["TERMO DE ADJUDICAÇÃO. Leilão nº 4/2026, imóvel lote 7 da quadra 2, adjudicado a Pedro Henrique Alves."] };
+  // Diário com um resultado e um leilão novo: fica só o trecho do leilão novo.
+  const misto: DiarioQd = {
+    ...diario(4),
+    excerpts: [
+      "RESULTADO DO LEILÃO Nº 1/2026: o terreno do lote 3 foi arrematado por Maria Aparecida Souza.",
+      "EDITAL DE LEILÃO Nº 5/2026. Leilão de terreno urbano com 360 m² em 25/11/2026, às 10h.",
+    ],
+  };
+  for (const d of [resultado, homologacao, adjudicacao]) assert.equal(queridoDiario.normalizar(d), null, d.excerpts?.[0]);
+  const e = queridoDiario.normalizar(misto);
+  assert.ok(e && e.registro === "edital");
+  assert.doesNotMatch(e.resumo ?? "", /RESULTADO|Maria|Aparecida/);
+  assert.equal(e.data_leilao, "2026-11-25T13:00:00.000Z");
+
+  const pasta = mkdtempSync(join(tmpdir(), "luneta-qd-"));
+  const banco = join(pasta, "luneta.db");
+  try {
+    const arquivo = join(pasta, "resultado.json");
+    writeFileSync(arquivo, JSON.stringify({ total_gazettes: 4, gazettes: [resultado, homologacao, adjudicacao, misto] }));
+    const saida: string[] = [];
+    const codigo = await principal(["coletar", "querido_diario", "--arquivo", arquivo, "--banco", banco], {
+      http: httpProibido(),
+      agora: new Date("2026-10-12T12:00:00Z"),
+      saida: (t) => saida.push(t),
+      erro: (t) => saida.push(t),
+    });
+    assert.equal(codigo, 0, saida.join("\n"));
+    assert.match(saida.join("\n"), /sucesso[\s\S]*editais 1/);
+    const db = abrirBanco(banco);
+    try {
+      const tudo = JSON.stringify(db.prepare("SELECT * FROM edital").all());
+      assert.doesNotMatch(tudo, /Jo[aã]o Carlos|Pereira|JOS[EÉ] ANT[OÔ]NIO|FERREIRA|Pedro Henrique|Maria Aparecida|Souza/i);
+    } finally {
+      db.close();
+    }
+  } finally {
+    rmSync(pasta, { recursive: true, force: true });
+  }
+});
+
+test("resposta válida sem diários (janela vazia) é coleta vazia legítima, inclusive pela CLI com --arquivo", async () => {
+  const { http } = httpFalso(() => respostaJson({ total_gazettes: 0, gazettes: [] }));
+  const r = await executarColeta(bancoEmMemoria(), criarConectorQueridoDiario({ janela: JANELA }), { http });
+  assert.equal(r.status, "sucesso", r.erro ?? "");
+  const pasta = mkdtempSync(join(tmpdir(), "luneta-qd-"));
+  try {
+    const arquivo = join(pasta, "vazio.json");
+    writeFileSync(arquivo, JSON.stringify({ total_gazettes: 0, gazettes: [] }));
+    const saida: string[] = [];
+    const codigo = await principal(["coletar", "querido_diario", "--arquivo", arquivo, "--banco", join(pasta, "b.db")], {
+      http: httpProibido(),
+      saida: (t) => saida.push(t),
+      erro: (t) => saida.push(t),
+    });
+    assert.equal(codigo, 0, saida.join("\n"));
+    assert.match(saida.join("\n"), /sucesso/);
+  } finally {
+    rmSync(pasta, { recursive: true, force: true });
+  }
 });
 
 test("coleta pelo núcleo com --arquivo grava o edital", async () => {

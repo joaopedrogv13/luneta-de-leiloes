@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { executarColeta } from "../../../coleta.ts";
 import { bancoEmMemoria, httpProibido } from "../../../testes/apoio.ts";
@@ -7,7 +8,7 @@ import type { EditalNormalizado, MetaColeta, OpcoesColeta } from "../../../tipos
 import type { ClienteHttp } from "../../../util/http.ts";
 import { validarEdital } from "../../../validar.ts";
 import { DIR_FIXTURES, httpFalso, respostaJson, respostaVazia, type Rota } from "../testes.ts";
-import { criarConectorPncp, linkDoEdital, partesDoControle, pncp, type BrutoPncp, type ContratacaoPncp } from "./index.ts";
+import { criarConectorPncp, linkDoEdital, localDoEdital, partesDoControle, pncp, type BrutoPncp, type ContratacaoPncp } from "./index.ts";
 
 const FIXTURE = join(DIR_FIXTURES, "pncp", "publicacao.json");
 const JANELA = { desde: "2026-10-01", ate: "2026-10-08" };
@@ -68,10 +69,16 @@ test("fixture: leilão de imóvel vira edital válido; veículos e concessão de
   assert.equal(imovel.orgao, "MUNICIPIO DE EXEMPLOPOLIS – PREFEITURA MUNICIPAL DE EXEMPLOPOLIS");
   assert.match(imovel.titulo, /^Leilão - Eletrônico nº 3\/2026 – MUNICIPIO DE EXEMPLOPOLIS: Alienação/);
   assert.match(imovel.resumo ?? "", /Valor total estimado: R\$ 185\.000,00\./);
-  assert.match(imovel.resumo ?? "", /Arquivos do edital: Edital do Leilão nº 3\/2026 \(https:\/\/pncp\.gov\.br\/pncp-api\/v1\/orgaos\/11222333000181\/compras\/2026\/45\/arquivos\/1\); Anexo I/);
-  assert.doesNotMatch(imovel.resumo ?? "", /Minuta substituída/, "arquivo inativo fica de fora");
+  // Arquivos do edital no campo próprio (não no resumo), sem o inativo.
+  assert.deepEqual(imovel.documentos, [
+    { tipo: "edital", titulo: "Edital do Leilão nº 3/2026", url: "https://pncp.gov.br/pncp-api/v1/orgaos/11222333000181/compras/2026/45/arquivos/1", publicado_em: "2026-10-08" },
+    { tipo: "laudo", titulo: "Anexo I - Laudo de avaliação", url: "https://pncp.gov.br/pncp-api/v1/orgaos/11222333000181/compras/2026/45/arquivos/2", publicado_em: "2026-10-08" },
+  ]);
+  assert.doesNotMatch(imovel.resumo ?? "", /Arquivos do edital|Minuta substituída/);
+  assert.deepEqual(misto.documentos, [], "--detalhes sem arquivos na fixture: consultado e vazio");
   assert.equal(misto.data_leilao, "2026-11-20T12:30:00.000Z", "sem encerramento, vale a abertura");
-  assert.equal(misto.uf, "MG");
+  assert.equal(misto.uf, "MG", "órgão estadual sem local no texto: a UF do órgão");
+  assert.equal(misto.cidade, null, "mas não a cidade da sede");
   assert.deepEqual(op.metas[0], { origem: FIXTURE });
 });
 
@@ -80,7 +87,7 @@ test("fixture sem --detalhes não lista arquivos; --uf filtra pelo órgão", asy
   assert.ok(semDetalhes.every((b) => b.arquivos === null));
   const primeiro = pncp.normalizar(semDetalhes[0] as BrutoPncp);
   assert.ok(primeiro && primeiro.registro === "edital");
-  assert.doesNotMatch(primeiro.resumo ?? "", /Arquivos do edital/);
+  assert.equal(primeiro.documentos, null, "sem --detalhes: arquivos não consultados");
   const soMg = await coletarTudo(pncp, opcoes(httpProibido(), { arquivo: FIXTURE, uf: "MG" }));
   assert.deepEqual(soMg.map((b) => b.contratacao.sequencialCompra), [7, 8]);
 });
@@ -187,4 +194,64 @@ test("coleta completa pelo núcleo: grava só editais, repete sem duplicar e fal
   assert.equal(r3.status, "erro");
   assert.match(r3.erro ?? "", /HTTP 503/);
   assert.equal(Number(db.prepare("SELECT count(*) AS n FROM edital").get()?.n), 2);
+});
+
+test("local do imóvel: o texto vence a sede do órgão; sem texto, só órgão municipal dá cidade e estadual dá UF", () => {
+  const federal = (objeto: string): ContratacaoPncp => ({
+    ...contratacao(10, objeto),
+    orgaoEntidade: { cnpj: "00489828000155", razaoSocial: "MINISTERIO DA GESTAO E DA INOVACAO EM SERVICOS PUBLICOS", esferaId: "F" },
+    unidadeOrgao: { ufSigla: "DF", municipioNome: "Brasília", nomeUnidade: "SECRETARIA DO PATRIMONIO DA UNIAO" },
+  });
+  assert.deepEqual(localDoEdital(federal("Alienação de imóvel da União localizado no Município de Recife/PE, com área de 500,00 m².")), { uf: "PE", cidade: "Recife" });
+  assert.deepEqual(localDoEdital(federal("Alienação de imóvel da União, com área de 500,00 m².")), { uf: null, cidade: null }, "a sede do ministério não é o lugar do imóvel");
+  assert.deepEqual(localDoEdital(contratacao(11, "Alienação de imóvel urbano do Município.")), { uf: "SP", cidade: "Exemplópolis" }, "órgão municipal");
+  const estadual: ContratacaoPncp = { ...contratacao(12, "Alienação de imóvel do Estado."), orgaoEntidade: { razaoSocial: "SECRETARIA DE ESTADO DE ADMINISTRACAO", esferaId: "E" } };
+  assert.deepEqual(localDoEdital(estadual), { uf: "SP", cidade: null }, "órgão estadual: só a UF");
+  const e = pncp.normalizar({ contratacao: federal("Alienação de imóvel da União localizado no Município de Recife/PE."), arquivos: null, consulta: "arquivo" });
+  assert.ok(e && e.registro === "edital");
+  assert.deepEqual([e.uf, e.cidade], ["PE", "Recife"]);
+});
+
+test("rede: com --uf, edital cujo texto põe o imóvel em outra UF sai; 204 em tudo é janela vazia legítima", async () => {
+  const noDf = { ...contratacao(20, "Alienação de imóvel situado em Brasília/DF."), unidadeOrgao: { ufSigla: "SP", municipioNome: "Exemplópolis" } };
+  const emSp = contratacao(21, "Alienação de terreno urbano com 300 m².");
+  const { http } = httpFalso((url) =>
+    url.searchParams.get("codigoModalidadeContratacao") === "1" && url.pathname.endsWith("/publicacao") ? envelope([noDf, emSp], 0) : respostaVazia(204),
+  );
+  const op = opcoes(http, { uf: "SP" });
+  const brutos = await coletarTudo(criarConectorPncp({ janela: JANELA }), op);
+  assert.deepEqual(brutos.map((b) => b.contratacao.sequencialCompra), [21]);
+  assert.ok(op.metas.some((m) => /1 edital\(is\) com imóvel em outra UF/.test(m.aviso ?? "")));
+
+  const vazio = httpFalso(() => respostaVazia(204));
+  const db = bancoEmMemoria();
+  const r = await executarColeta(db, criarConectorPncp({ janela: JANELA }), { http: vazio.http, agora: new Date("2026-10-12T12:00:00Z") });
+  assert.equal(r.status, "sucesso", r.erro ?? "");
+  assert.equal(r.lidos, 0);
+  assert.match(r.avisos.join(" "), /Nenhum registro no período/);
+});
+
+test("arquivos do edital: coleta sem --detalhes (ou pela /proposta) não apaga o que --detalhes gravou", async () => {
+  const db = bancoEmMemoria();
+  const documentos = (): Array<[unknown, unknown]> =>
+    db.prepare("SELECT id_na_fonte, documentos FROM edital ORDER BY id_na_fonte").all().map((l) => [l.id_na_fonte, JSON.parse(String(l.documentos ?? "null"))]);
+  const r1 = await executarColeta(db, pncp, { arquivo: FIXTURE, detalhes: true, http: httpProibido(), agora: new Date("2026-10-12T12:00:00Z") });
+  assert.equal(r1.status, "sucesso", r1.erro ?? "");
+  const comArquivos = documentos();
+  assert.equal(comArquivos[0]?.[0], "11222333000181-1-000045/2026");
+  assert.equal((comArquivos[0]?.[1] as unknown[]).length, 2);
+
+  const r2 = await executarColeta(db, pncp, { arquivo: FIXTURE, http: httpProibido(), agora: new Date("2026-10-13T12:00:00Z") });
+  assert.equal(r2.status, "sucesso", r2.erro ?? "");
+  assert.deepEqual(documentos(), comArquivos, "sem --detalhes, os arquivos ficam");
+
+  // Rede: o mesmo edital volta pela /proposta, sem --detalhes.
+  const doFixture = (JSON.parse(readFileSync(FIXTURE, "utf8")) as { paginas: Array<{ data: ContratacaoPncp[] }> }).paginas[0]?.data[0];
+  assert.ok(doFixture);
+  const { http } = httpFalso((url) =>
+    url.pathname.endsWith("/proposta") && url.searchParams.get("codigoModalidadeContratacao") === "1" ? envelope([doFixture], 0) : respostaVazia(204),
+  );
+  const r3 = await executarColeta(db, criarConectorPncp({ janela: JANELA }), { http, agora: new Date("2026-10-14T12:00:00Z") });
+  assert.equal(r3.status, "sucesso", r3.erro ?? "");
+  assert.deepEqual(documentos(), comArquivos);
 });

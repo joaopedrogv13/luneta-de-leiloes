@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { executarColeta } from "../../../coleta.ts";
 import { bancoEmMemoria, httpProibido } from "../../../testes/apoio.ts";
@@ -51,6 +53,24 @@ test("cidade pelo nome do órgão", () => {
   assert.deepEqual(cidadeDoOrgao("Vara de Execuções Fiscais de São Paulo"), { cidade: "São Paulo", uf: null });
   assert.deepEqual(cidadeDoOrgao("CEJUSC-JT de 2º Grau"), { cidade: null, uf: null });
   assert.deepEqual(cidadeDoOrgao(null), { cidade: null, uf: null });
+  // Nomes reais das amostras arquivadas do DJEN.
+  assert.deepEqual(cidadeDoOrgao("Ji-Paraná - 3ª Vara Cível"), { cidade: "Ji-Paraná", uf: null });
+  assert.deepEqual(cidadeDoOrgao("CON2 - Jundiaí"), { cidade: "Jundiaí", uf: null });
+  assert.deepEqual(cidadeDoOrgao("4º Juizado Especial Cível da Capital e de Cabedelo"), { cidade: "Cabedelo", uf: null });
+  assert.deepEqual(cidadeDoOrgao("1ª Vara Cível da Comarca de Natal"), { cidade: "Natal", uf: null });
+  assert.deepEqual(cidadeDoOrgao("7ª Vara Federal de Juizado Especial Cível da SJMA"), { cidade: null, uf: null });
+  assert.deepEqual(cidadeDoOrgao("7ª Vara Federal RN"), { cidade: null, uf: "RN" });
+  assert.deepEqual(cidadeDoOrgao("TJMG - 7ª CÂMARA CÍVEL"), { cidade: null, uf: null });
+  assert.deepEqual(cidadeDoOrgao("2ª Turma Recursal - Gabinete 02"), { cidade: null, uf: null });
+  // Construídos: adjetivos e nome de pessoa não viram cidade.
+  for (const nome of [
+    "Vara das Execuções Fiscais Municipais", "Vara de Execuções Fiscais Estaduais", "Vara Cível e Ambiental", "Juizado Especial Cível e Criminal Adjunto",
+    "1ª Vara Empresarial", "Central de Hastas Públicas Unificadas", "Núcleo de Hastas Públicas", "Vara de Falências e Recuperações Judiciais",
+    "Gabinete do Des. João da Silva",
+  ]) {
+    assert.deepEqual(cidadeDoOrgao(nome), { cidade: null, uf: null }, nome);
+  }
+  assert.deepEqual(cidadeDoOrgao("1ª Vara Federal Cível e Criminal da SSJ de Feira de Santana-BA"), { cidade: "Feira de Santana", uf: "BA" });
 });
 
 test("fixture: só editais ativos de leilão de imóvel viram edital, sem nomes nem CPF", async () => {
@@ -98,6 +118,63 @@ test("o texto é mascarado antes do filtro: nomes rotulados somem mesmo sem pape
 test("--uf com arquivo local fica só com os tribunais da UF", async () => {
   const soSp = await coletarTudo(djen, opcoes(httpProibido(), { arquivo: FIXTURE, uf: "SP" }));
   assert.deepEqual(soSp.map((c) => c.siglaTribunal), ["TRT2", "TJSP", "TRT15"]);
+});
+
+test("--uf: tribunal de várias UFs (TRF1) só entrega o que é da UF pedida ou não diz a UF", async () => {
+  const deFeira = { ...item(1, "EDITAL DE LEILÃO. 1º leilão em 20/11/2026 às 10h. Bem: casa residencial situada na Rua A, nº 1, Feira de Santana/BA, matrícula nº 1.234.", "TRF1"), nomeOrgao: "1ª Vara Federal Cível e Criminal da SSJ de Feira de Santana-BA" };
+  const semUf = { ...item(2, "EDITAL DE LEILÃO. 1º leilão em 20/11/2026. Bem: terreno urbano de 300 m².", "TRF1"), nomeOrgao: "Vara Federal Cível" };
+  const deRioBranco = { ...item(3, "EDITAL DE LEILÃO. Bem: apartamento situado em Rio Branco/AC.", "TRF1"), nomeOrgao: "Vara Federal Cível" };
+  const { http } = httpFalso(() => respostaJson({ status: "success", count: 3, items: [deFeira, semUf, deRioBranco] }));
+  const op = opcoes(http, { uf: "AC" });
+  const lidos = await coletarTudo(criarConectorDjen({ janela: { desde: "2026-10-08", ate: "2026-10-08" }, termos: ["leilão"] }), op);
+  assert.deepEqual(lidos.map((c) => c.id), [2, 3], "a casa de Feira de Santana/BA fica de fora");
+  assert.ok(op.metas.some((m) => /1 comunicação\(ões\) de outra UF/.test(m.aviso ?? "")));
+
+  const db = bancoEmMemoria();
+  const pasta = mkdtempSync(join(tmpdir(), "luneta-djen-"));
+  try {
+    const arquivo = join(pasta, "trf1.json");
+    writeFileSync(arquivo, JSON.stringify({ status: "success", count: 1, items: [deFeira] }));
+    const r = await executarColeta(db, djen, { arquivo, uf: "AC", http: httpProibido() });
+    assert.equal(r.status, "sucesso", r.erro ?? "");
+    assert.equal(r.editais, 0);
+    assert.equal(Number(db.prepare("SELECT count(*) AS n FROM edital").get()?.n), 0, "nada da BA gravado numa coleta da UF AC");
+  } finally {
+    rmSync(pasta, { recursive: true, force: true });
+  }
+});
+
+test("intimação da arrematação e resultado não viram edital, e o nome de quem arrematou não chega ao banco", async () => {
+  const arrematacao: ComunicacaoDjen = {
+    ...item(10, "EDITAL DE INTIMAÇÃO DA ARREMATAÇÃO. Fica intimado o executado de que o imóvel (apartamento nº 12) foi arrematado em leilão por Carlos Eduardo Mendes, pelo valor de R$ 200.000,00."),
+    destinatarios: [{ nome: "OUTRA PESSOA QUALQUER", polo: "P" }],
+  };
+  const homologacao = item(11, "Leilão do imóvel (terreno urbano, lote 4 da quadra 9). HOMOLOGO a arrematação em favor do licitante Ricardo Alves Moreira.");
+  const futuro = item(12, "EDITAL DE LEILÃO. 1º leilão em 20/11/2026. Será considerado vencedor o licitante que oferecer o maior lance. Bem: apartamento nº 3.");
+  assert.equal(djen.normalizar(arrematacao), null);
+  assert.equal(djen.normalizar(homologacao), null);
+  assert.ok(djen.normalizar(futuro), "edital futuro com 'vencedor' genérico continua");
+
+  const db = bancoEmMemoria();
+  const pasta = mkdtempSync(join(tmpdir(), "luneta-djen-"));
+  try {
+    const arquivo = join(pasta, "resultado.json");
+    writeFileSync(arquivo, JSON.stringify({ status: "success", count: 3, items: [arrematacao, homologacao, futuro] }));
+    const r = await executarColeta(db, djen, { arquivo, http: httpProibido() });
+    assert.equal(r.status, "sucesso", r.erro ?? "");
+    assert.equal(r.editais, 1);
+    assert.equal(r.descartados, 2);
+    assert.doesNotMatch(JSON.stringify(db.prepare("SELECT * FROM edital").all()), /Carlos|Eduardo|Mendes|Ricardo|Moreira/);
+  } finally {
+    rmSync(pasta, { recursive: true, force: true });
+  }
+});
+
+test("janela sem comunicações: coleta vazia legítima, não inválida", async () => {
+  const { http } = httpFalso(() => respostaJson({ status: "success", count: 0, items: [] }));
+  const r = await executarColeta(bancoEmMemoria(), criarConectorDjen({ janela: JANELA, termos: ["leilão"] }), { http });
+  assert.equal(r.status, "sucesso", r.erro ?? "");
+  assert.equal(r.lidos, 0);
 });
 
 test("rede: meio=E, um dia por consulta, termos e tribunais; deduplica entre termos e pagina de 100 em 100", async () => {

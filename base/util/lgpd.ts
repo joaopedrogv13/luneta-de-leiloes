@@ -10,6 +10,8 @@
  *   "reside no imóvel", "moradora") → "[NOME]";
  * - nomes de licitante, arrematante, comprador e proponente, quando vêm depois de dois-pontos
  *   ("Arrematante: Fulano"); sem dois-pontos essas palavras são genéricas no edital;
+ * - quem ganhou o leilão, mesmo sem dois-pontos, quando o nome tem duas palavras ou mais:
+ *   "arrematado por", "adjudicado a", "adquirido por", "vencedor", "arrematante";
  * - partes no formato "FULANO DE TAL x BELTRANO" (título de processo).
  *
  * É heurística: prefere mascarar demais (um nome de empresa ou de rua perto de um papel)
@@ -122,8 +124,22 @@ function regexPapeis(lista: string[]): RegExp {
   return new RegExp(`(?<![\\p{L}\\p{M}])(?:${lista.join("|")})(?![\\p{L}\\p{M}])`, "giu");
 }
 
+/**
+ * Quem ganhou o leilão, sem separador: "arrematado por FULANO", "adjudicado a BELTRANA",
+ * "adquirido por", "sendo vencedor CICRANO", "ao arrematante FULANO". Como nos papéis
+ * processuais, sem dois-pontos só mascara nome de duas palavras ou mais ("vencedor o licitante
+ * que...", "arrematado pelo maior lance" e "o arrematante deverá" ficam como estão).
+ */
+const PAPEIS_RESULTADO = [
+  "arrematad[oa]s?(?:\\s+em\\s+(?:leil[ãa]o|hasta\\s+p[úu]blica|pra[çc]a))?\\s+(?:por|pel[oa]s?)",
+  "adjudicad[oa]s?\\s+(?:a|ao|aos|[àá]|[àá]s|em\\s+favor\\s+de|para|por|pel[oa]s?)",
+  "adquirid[oa]s?\\s+(?:por|pel[oa]s?)",
+  "vencedor(?:a|es|as)?", "arrematantes?", "adjudicat[áa]ri[oa]s?",
+];
+
 const RE_PAPEIS = regexPapeis(PAPEIS);
 const RE_PAPEIS_SEPARADOR = regexPapeis(PAPEIS_COM_SEPARADOR);
+const RE_PAPEIS_RESULTADO = regexPapeis(PAPEIS_RESULTADO);
 /** Uma palavra que é ela mesma um papel ("EXECUTADOS") nunca conta como nome. */
 const RE_PALAVRA_PAPEL = new RegExp(`^(?:${[...PAPEIS, ...PAPEIS_COM_SEPARADOR].join("|")})$`, "iu");
 
@@ -296,6 +312,7 @@ function intervalosDeNome(texto: string): Array<[number, number]> {
   };
   aposPapel(RE_PAPEIS, false);
   aposPapel(RE_PAPEIS_SEPARADOR, true);
+  aposPapel(RE_PAPEIS_RESULTADO, false);
 
   // "FULANA DE TAL, CPF ..." / "BELTRANO, brasileiro, casado": o nome vem antes da âncora.
   for (const achado of texto.matchAll(ANCORAS_APOS_NOME)) {
