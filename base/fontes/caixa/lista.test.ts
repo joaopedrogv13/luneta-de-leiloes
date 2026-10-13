@@ -64,11 +64,38 @@ test("arquivo truncado: última linha com menos colunas ou link cortado sem queb
   assert.equal(interpretarLista(inteiro.trimEnd()).registros.length, 2);
 });
 
-test("linha com colunas a mais no meio vira problema da linha (não derruba o arquivo)", () => {
+test("linha com colunas a mais e sem âncora vira problema da linha (não derruba o arquivo)", () => {
   const lista = interpretarLista(csv(linha("10005120"), linha("10005121", ";sobra"), linha("10005122")));
   assert.equal(lista.registros.length, 3);
   assert.match(lista.registros[1]?.problema ?? "", /13 colunas/);
   assert.equal(lista.registros[2]?.problema, null);
+});
+
+test("linha com \";\" dentro do endereço ou da descrição é recuperada pelas âncoras", () => {
+  const noEndereco = linha("10005121").replace("RUA A, N. 1 ;", "RUA A, N. 1 ; FUNDOS ;");
+  const naDescricao = linha("10005122").replace("área do terreno.;", "área do terreno; churrasqueira.;");
+  const nosDois = linha("10005123").replace("RUA A, N. 1 ;", "RUA A; N. 1 ;").replace("área do terreno.;", "área do terreno; piscina.;");
+  const lista = interpretarLista(csv(linha("10005120"), noEndereco, naDescricao, nosDois));
+  const [, a, b, c] = lista.registros;
+  assert.equal(a?.problema, null);
+  assert.equal(a?.recuperada, "Endereço");
+  assert.equal(a?.campos.endereco, "RUA A, N. 1 ; FUNDOS");
+  assert.equal(a?.campos.preco, "100.000,00");
+  assert.equal(a?.campos.modalidade, "Venda Direta Online");
+  assert.equal(b?.recuperada, "Descrição");
+  assert.equal(b?.campos.descricao, "Casa, 0.00 de área total, 50.00 de área privativa, 0.00 de área do terreno; churrasqueira.");
+  assert.equal(b?.campos.financiamento, "Não");
+  assert.equal(c?.recuperada, "Endereço e Descrição");
+  assert.equal(c?.campos.endereco, "RUA A; N. 1");
+  assert.equal(c?.campos.link, "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10005123");
+});
+
+test("recuperação: bloco numérico ambíguo ou cabeçalho fora da ordem conhecida não são adivinhados", () => {
+  const ambigua = linha("10005121").replace("RUA A, N. 1 ;", "RUA A ;1,00;2,00;3.00;Sim;");
+  assert.match(interpretarLista(csv(ambigua)).registros[0]?.problema ?? "", /16 colunas/);
+  const cab = " UF;N° do imóvel;Cidade;Bairro;Endereço;Preço;Valor de avaliação;Desconto;Financiamento;Descrição;Modalidade de venda;Link de acesso";
+  const l = " AC ;10005120 ;RIO BRANCO ;CENTRO ;RUA A ; FUNDOS ;1,00;2,00;50.00;Não;Casa.;Venda Online;https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10005120";
+  assert.match(interpretarLista(["Lista de Imóveis da Caixa;;Data de geração:;08/10/2026", cab, l, ""].join("\n")).registros[0]?.problema ?? "", /13 colunas/);
 });
 
 test("colunas reordenadas ou novas: lê pelo nome e avisa as desconhecidas", () => {

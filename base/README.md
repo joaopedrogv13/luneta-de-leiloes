@@ -88,7 +88,7 @@ export const minhaFonte: Conector<LinhaBruta> = {
 - **Histórico** (`preco_historico`): uma linha quando o imóvel entra e a cada mudança de preço, avaliação, modalidade, praça ou status.
 - **Geração da fonte**: um imóvel gravado a partir de um arquivo mais novo nunca é alterado, reativado nem removido por um arquivo mais antigo (ex.: CSV geral da Caixa, que atrasa um dia em relação ao da UF).
 - **Deduplicação**: `chave_dedup` (matrícula + cartório, senão endereço) e `chave_endereco` (endereço normalizado + cidade + UF) em todo imóvel.
-- **Coleta educada** (`util/http.ts`): User-Agent `LunetaDeLeiloes/0.1 (+contato)`, timeout, até 3 tentativas com espera exponencial e `Retry-After`, 2 s entre requisições ao mesmo host (mais, se o `Crawl-delay` pedir), robots.txt respeitado (RFC 9309: robots inacessível por erro do servidor bloqueia por precaução), limite de tamanho e validação antes de devolver. Não contorna anti-robô.
+- **Coleta educada** (`util/http.ts`): User-Agent `LunetaDeLeiloes/0.1 (+contato)`, timeout (30 s por tentativa, com o corpo; ajustável por requisição com `timeoutMs`, para arquivos grandes), até 3 tentativas com espera exponencial e `Retry-After`, 2 s entre requisições ao mesmo host (mais, se o `Crawl-delay` pedir), robots.txt respeitado (RFC 9309: robots inacessível por erro do servidor bloqueia por precaução), limite de tamanho e validação antes de devolver. Não contorna anti-robô.
 
 ## Regras de risco
 

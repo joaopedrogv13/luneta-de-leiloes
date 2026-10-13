@@ -31,6 +31,10 @@ export interface Medicao {
     media: number;
     /** Média só dos imóveis com preço até a avaliação (o Leilão SFI tem preço até 170× a avaliação). */
     media_sem_preco_acima: number;
+    /** Preço maior que a avaliação (comparação em centavos, não pelo deságio arredondado). */
+    preco_acima: number;
+    /** Preço igual à avaliação, centavo a centavo. */
+    preco_igual: number;
     p10: number;
     p25: number;
     mediana: number;
@@ -60,10 +64,18 @@ const media = (valores: readonly number[]): number =>
 
 const pct = (n: number, total: number): number => (total > 0 ? Math.round((n / total) * 10000) / 100 : 0);
 
-const FAIXAS: ReadonlyArray<readonly [string, (d: number) => boolean]> = [
-  ["< 0 (preço acima da avaliação)", (d) => d < 0],
-  ["0 (preço igual à avaliação)", (d) => d === 0],
-  ["0–10%", (d) => d > 0 && d < 10],
+/** Preço contra avaliação, em centavos: o deságio arredondado esconde casos como 305.011,21 × 305.000,00 (−0,0037% → 0). */
+export type Relacao = "acima" | "igual" | "abaixo";
+export function relacaoPreco(preco: number, avaliacao: number): Relacao {
+  const p = Math.round(preco * 100);
+  const a = Math.round(avaliacao * 100);
+  return p > a ? "acima" : p === a ? "igual" : "abaixo";
+}
+
+const FAIXAS: ReadonlyArray<readonly [string, (d: number, r: Relacao) => boolean]> = [
+  ["< 0 (preço acima da avaliação)", (_, r) => r === "acima"],
+  ["0 (preço igual à avaliação)", (_, r) => r === "igual"],
+  ["0–10%", (d, r) => r === "abaixo" && d < 10],
   ["10–20%", (d) => d >= 10 && d < 20],
   ["20–30%", (d) => d >= 20 && d < 30],
   ["30–40%", (d) => d >= 30 && d < 40],
@@ -87,6 +99,7 @@ export function medir(arquivo: string): Medicao {
   const tipos = new Map<string, number>();
   const financiamento = new Map<string, number>();
   const desagios: number[] = [];
+  const relacoes: Array<{ d: number; r: Relacao }> = [];
   let divergencias = 0;
   let zeroComPrecoAcima = 0;
   let invalidas = 0;
@@ -116,13 +129,15 @@ export function medir(arquivo: string): Medicao {
     const preco = imovel.preco ?? null;
     const avaliacao = imovel.valor_avaliacao ?? null;
     const desagio = calcularDesconto(preco, avaliacao);
-    if (desagio !== null) {
+    if (desagio !== null && preco !== null && avaliacao !== null) {
+      const relacao = relacaoPreco(preco, avaliacao);
       desagios.push(desagio);
+      relacoes.push({ d: desagio, r: relacao });
       m.desagios.push(desagio);
-      if (desagio < 0) m.acima++;
+      if (relacao === "acima") m.acima++;
       const coluna = lerNumeroBR(r.campos.desconto, { decimal: "." });
       if (coluna !== null) {
-        if (desagio < 0) {
+        if (relacao === "acima") {
           if (coluna === 0) zeroComPrecoAcima++;
         } else if (Math.abs(coluna - desagio) > 0.05) divergencias++;
       }
@@ -132,7 +147,7 @@ export function medir(arquivo: string): Medicao {
   const t2 = performance.now();
   const ordenados = [...desagios].sort((a, b) => a - b);
   const faixas: Record<string, number> = {};
-  for (const [nome, teste] of FAIXAS) faixas[nome] = ordenados.filter(teste).length;
+  for (const [nome, teste] of FAIXAS) faixas[nome] = relacoes.filter(({ d, r }) => teste(d, r)).length;
 
   return {
     arquivo,
@@ -157,7 +172,9 @@ export function medir(arquivo: string): Medicao {
     desagio: {
       com_avaliacao: ordenados.length,
       media: media(ordenados),
-      media_sem_preco_acima: media(ordenados.filter((d) => d >= 0)),
+      media_sem_preco_acima: media(relacoes.filter(({ r }) => r !== "acima").map(({ d }) => d)),
+      preco_acima: relacoes.filter(({ r }) => r === "acima").length,
+      preco_igual: relacoes.filter(({ r }) => r === "igual").length,
       p10: quantil(ordenados, 0.1),
       p25: quantil(ordenados, 0.25),
       mediana: quantil(ordenados, 0.5),
@@ -190,6 +207,7 @@ function formatar(m: Medicao): string {
   l.push("", `Deságio calculado (100 × (1 − preço/avaliação)), ${d.com_avaliacao} imóveis:`);
   l.push(`  média ${d.media}% (só preço ≤ avaliação: ${d.media_sem_preco_acima}%) · p10 ${d.p10}% · p25 ${d.p25}% · mediana ${d.mediana}% · p75 ${d.p75}% · p90 ${d.p90}% · mín ${d.minimo}% · máx ${d.maximo}%`);
   for (const [faixa, n] of Object.entries(d.faixas)) l.push(`  ${faixa.padEnd(32)} ${String(n).padStart(6)}  ${pct(n, d.com_avaliacao).toFixed(2)}%`);
+  l.push(`  preço acima da avaliação: ${d.preco_acima} · igual: ${d.preco_igual} (comparação em centavos)`);
   l.push(`  coluna Desconto = 0 com preço acima da avaliação: ${d.coluna_desconto_zero_com_preco_acima}`);
   l.push(`  coluna Desconto diferente do cálculo (> 0,05 ponto, preço ≤ avaliação): ${d.divergencias_coluna_desconto}`);
   return l.join("\n");

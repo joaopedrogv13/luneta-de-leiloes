@@ -9,10 +9,20 @@
  * Esta etapa só confere a estrutura e devolve as linhas como texto (por nome de coluna).
  * Qualquer sinal de arquivo errado (página de desafio anti-robô, assinatura ausente, data
  * inválida, cabeçalho diferente, última linha cortada) lança erro, para que nada seja gravado.
+ *
+ * Como o arquivo não usa aspas, um ";" dentro do endereço ou da descrição desloca as colunas.
+ * Com o cabeçalho na ordem conhecida, a linha é recuperada: ancorada pelo número e UF no
+ * começo, pelo link e modalidade no fim e pelo bloco Preço;Avaliação;Desconto;Financiamento
+ * no meio, o excedente volta para o Endereço ou a Descrição (recuperarLinha).
+ *
+ * O arquivo geral vem em ordem de UF (AC...TO; conferido no de 08/10/2026). Um corte exato numa
+ * quebra de linha passa pela checagem da última linha, mas tira as últimas UFs: resumirUfs
+ * dá o que o conector precisa para recusar (index.ts).
  */
 import { decodificar } from "../../util/arquivo.ts";
 import { lerDataBR } from "../../util/data.ts";
 import { normalizarTexto } from "../../util/texto.ts";
+import { normalizarUf } from "../../util/uf.ts";
 
 /** Colunas do CSV, pelo nome canônico usado no conector. */
 export const COLUNAS = {
@@ -41,6 +51,8 @@ export interface RegistroLista {
   campos: LinhaCaixa;
   /** Problema estrutural da linha (ex.: colunas a mais); o conector recusa o registro. */
   problema: string | null;
+  /** A linha tinha ";" a mais e foi recuperada (diz onde o excedente foi parar). */
+  recuperada?: string;
 }
 
 export interface ListaCaixa {
@@ -76,6 +88,75 @@ function chaveColuna(nome: string): string {
 const POR_CHAVE: ReadonlyMap<string, ColunaCaixa> = new Map(
   (Object.entries(COLUNAS) as Array<[ColunaCaixa, string]>).map(([coluna, nome]) => [chaveColuna(nome), coluna]),
 );
+
+const ORDEM_CANONICA: readonly ColunaCaixa[] = Object.keys(COLUNAS) as ColunaCaixa[];
+const DINHEIRO = /^\s*\d{1,3}(?:\.\d{3})*,\d{2}\s*$/;
+const PERCENTUAL = /^\s*-?\d+(?:\.\d+)?\s*$/;
+const SIM_NAO = /^\s*(?:sim|n[ãa]o)\s*$/i;
+
+/**
+ * Linha com ";" a mais (o arquivo não usa aspas): recupera pelo começo (número, UF, cidade,
+ * bairro), pelo fim (modalidade e link do mesmo imóvel) e pelo bloco numérico
+ * Preço;Avaliação;Desconto;Financiamento, que precisa aparecer uma vez só. O que sobrar antes
+ * do bloco volta para o Endereço; o que sobrar depois, para a Descrição. Só vale com o
+ * cabeçalho na ordem conhecida; senão devolve null (a linha fica com problema).
+ */
+export function recuperarLinha(campos: readonly string[], posicoes: ReadonlyMap<ColunaCaixa, number>): { linha: LinhaCaixa; onde: string } | null {
+  const largura = ORDEM_CANONICA.length;
+  if (campos.length <= largura || !ORDEM_CANONICA.every((c, i) => posicoes.get(c) === i)) return null;
+  const n = campos.length;
+  const numero = (campos[0] ?? "").trim().replace(/^0+/, "");
+  const link = (campos[n - 1] ?? "").trim();
+  if (!/^\d+$/.test(numero) || !new RegExp(`hdnimovel=0*${numero}$`).test(link)) return null;
+  const ancoras: number[] = [];
+  // O preço vem depois de número, UF, cidade, bairro e ao menos um campo de endereço; a
+  // descrição tem ao menos um campo antes de modalidade e link.
+  for (let k = 5; k + 4 <= n - 3; k++) {
+    if (DINHEIRO.test(campos[k] ?? "") && DINHEIRO.test(campos[k + 1] ?? "") && PERCENTUAL.test(campos[k + 2] ?? "") && SIM_NAO.test(campos[k + 3] ?? "")) ancoras.push(k);
+  }
+  const k = ancoras.length === 1 ? ancoras[0] : undefined;
+  if (k === undefined) return null;
+  const pega = (i: number): string => (campos[i] ?? "").trim();
+  const linha: LinhaCaixa = {
+    numero: pega(0),
+    uf: pega(1),
+    cidade: pega(2),
+    bairro: pega(3),
+    endereco: campos.slice(4, k).join(";").trim(),
+    preco: pega(k),
+    avaliacao: pega(k + 1),
+    desconto: pega(k + 2),
+    financiamento: pega(k + 3),
+    descricao: campos.slice(k + 4, n - 2).join(";").trim(),
+    modalidade: pega(n - 2),
+    link,
+  };
+  const onde = [k > 5 ? "Endereço" : "", n - 2 - (k + 4) > 1 ? "Descrição" : ""].filter(Boolean).join(" e ");
+  return { linha, onde: onde || "?" };
+}
+
+/** Contagem por UF, na ordem em que aparecem, e se o arquivo está em ordem de UF. */
+export interface ResumoUfs {
+  porUf: Record<string, number>;
+  /** UFs em ordem não decrescente (AC...TO), como no arquivo geral. */
+  ordenada: boolean;
+  /** UF da última linha com UF válida. */
+  ultima: string | null;
+}
+
+export function resumirUfs(registros: readonly RegistroLista[]): ResumoUfs {
+  const porUf: Record<string, number> = {};
+  let ordenada = true;
+  let ultima: string | null = null;
+  for (const r of registros) {
+    const uf = normalizarUf(r.campos.uf);
+    if (!uf) continue;
+    if (ultima !== null && uf < ultima) ordenada = false;
+    porUf[uf] = (porUf[uf] ?? 0) + 1;
+    ultima = uf;
+  }
+  return { porUf, ordenada, ultima };
+}
 
 /**
  * Decodifica os bytes do CSV: UTF-8 se for UTF-8 válido (cópias convertidas), senão
@@ -135,8 +216,14 @@ export function interpretarLista(texto: string): ListaCaixa {
       linha[coluna] = pos === undefined ? "" : (campos[pos] ?? "").trim();
     }
     let problema: string | null = null;
-    if (campos.length > larguraCabecalho) problema = `${campos.length} colunas, o cabeçalho tem ${larguraCabecalho} (";" dentro de um campo?)`;
-    else if (campos.length < larguraCabecalho) problema = `${campos.length} colunas, o cabeçalho tem ${larguraCabecalho}`;
+    if (campos.length > larguraCabecalho) {
+      const recuperada = recuperarLinha(campos, posicoes);
+      if (recuperada) {
+        registros.push({ linhaArquivo: i + 1, campos: recuperada.linha, problema: null, recuperada: recuperada.onde });
+        continue;
+      }
+      problema = `${campos.length} colunas, o cabeçalho tem ${larguraCabecalho} (";" dentro de um campo?)`;
+    } else if (campos.length < larguraCabecalho) problema = `${campos.length} colunas, o cabeçalho tem ${larguraCabecalho}`;
     registros.push({ linhaArquivo: i + 1, campos: linha, problema });
   }
   // Arquivo cortado no meio: a última linha vem com menos colunas, ou o link final fica pela metade.

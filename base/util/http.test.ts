@@ -109,6 +109,18 @@ test("timeout por tentativa e erro de rede são retentados", async () => {
   assert.equal(await quebrado.cliente.texto("https://fonte.test/rede"), "voltou");
 });
 
+test("timeout por requisição sobrepõe o do cliente (arquivo grande)", async () => {
+  const pendurado: Rota = (init) =>
+    new Promise((_, rejeitar) => {
+      init.signal?.addEventListener("abort", () => rejeitar(new DOMException("abortado", "AbortError")));
+    });
+  const lento = ambiente({ ...ROBOTS_LIVRE, "https://fonte.test/grande": pendurado }, { timeoutMs: 60_000, intervaloMinimoMs: 0, tentativas: 1 });
+  await assert.rejects(
+    lento.cliente.texto("https://fonte.test/grande", { timeoutMs: 25 }),
+    (e: unknown) => e instanceof ErroHttp && e.motivo === "timeout" && /25 ms/.test(e.message),
+  );
+});
+
 test("intervalo mínimo entre requisições ao mesmo host e Crawl-delay", async () => {
   const { cliente, esperas } = ambiente(
     { ...ROBOTS_LIVRE, "https://fonte.test/1": ok("1"), "https://fonte.test/2": ok("2"), "https://outro.test/1": ok("o") },

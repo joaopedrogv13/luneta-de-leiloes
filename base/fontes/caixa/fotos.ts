@@ -8,6 +8,11 @@
  * Sem rede, a capa entra como "padrao_url" e não verificada (ok = null). Com a verificação
  * ligada, um HEAD por slot (21, 22, ...) até o primeiro que não existir; a capa ausente fica
  * registrada com ok = false, para a regra de "Sem fotos" poder afirmar a ausência.
+ *
+ * O cliente segue redirecionamentos. Se o HEAD terminar noutra URL (por exemplo, uma imagem
+ * padrão de "sem foto"), o slot NÃO conta como confirmado: fica com ok = null e a
+ * verificação daquele imóvel para ali, com aviso. Não testado ao vivo: não se sabe se a
+ * Caixa redireciona foto ausente.
  */
 import type { Foto } from "../../tipos.ts";
 import { ErroHttp, type ClienteHttp } from "../../util/http.ts";
@@ -26,7 +31,8 @@ export function capaPadrao(id13: string): Foto {
 }
 
 export type ResultadoVerificacao =
-  | { tipo: "ok"; fotos: FotoVerificada[] }
+  /** `aviso`: algo que não impede o resultado (ex.: slot redirecionado para outra URL). */
+  | { tipo: "ok"; fotos: FotoVerificada[]; aviso?: string }
   /** A fonte bloqueou (anti-robô, robots.txt, 403/429): pare de verificar nesta coleta. */
   | { tipo: "bloqueio"; motivo: string }
   /** Falha passageira (rede, 5xx): tente de novo noutra coleta. */
@@ -48,6 +54,7 @@ export async function verificarFotos(
     const url = urlFoto(id13, SLOT_CAPA + i);
     let status: number;
     let tipo: string;
+    let urlFinal: string;
     try {
       const resposta = await http.requisitar(url, {
         metodo: "HEAD",
@@ -57,6 +64,7 @@ export async function verificarFotos(
       });
       status = resposta.status;
       tipo = (resposta.cabecalhos.get("content-type") ?? "").toLowerCase();
+      urlFinal = resposta.url || url;
     } catch (erro) {
       if (erro instanceof ErroHttp && erro.motivo === "cancelado") throw erro;
       if (erro instanceof ErroHttp && erro.motivo === "robots") return { tipo: "bloqueio", motivo: erro.message };
@@ -65,6 +73,11 @@ export async function verificarFotos(
     if (status === 403 || status === 429) return { tipo: "bloqueio", motivo: `HTTP ${status} em ${url}` };
     if (status >= 500) return { tipo: "falha", motivo: `HTTP ${status} em ${url}` };
     const quando = agora().toISOString();
+    if (urlFinal !== url) {
+      // Redirecionado: a resposta é de outra URL (talvez a imagem "sem foto"); não confirma nada.
+      fotos.push({ url, ordem: i, status, ok: null, verificada_em: quando });
+      return { tipo: "ok", fotos, aviso: `foto ${url} redirecionada para ${urlFinal}; slot não confirmado` };
+    }
     if (status >= 200 && status < 300) {
       // 200 com HTML é página de desafio, não foto.
       if (tipo.includes("text/html")) return { tipo: "bloqueio", motivo: `HTML no lugar da foto em ${url} (desafio anti-robô?)` };

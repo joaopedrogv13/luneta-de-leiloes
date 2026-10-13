@@ -3,16 +3,27 @@
  *
  * Testado em duas fichas reais (fixtures/): Venda Online de 2023 e Venda Direta Online de 2026.
  * Os rótulos de leilão ("Data do 1º Leilão", "Valor mínimo de venda 1º Leilão", "Data da
- * Licitação Aberta", "Leiloeiro(a):", "Edital:") vêm de parsers de terceiros e NÃO foram vistos
- * em HTML real: o parser os aceita em formas tolerantes, mas eles precisam ser conferidos na
- * primeira ficha de Leilão SFI ou Licitação Aberta que for baixada.
+ * Licitação Aberta", "Leiloeiro(a):", "Edital:", "Valor de venda:", "Valor mínimo de venda à
+ * vista:") vêm de parsers e índices de terceiros e NÃO foram vistos em HTML real: o parser os
+ * aceita em formas tolerantes, mas eles precisam ser conferidos na primeira ficha de Leilão
+ * SFI ou Licitação Aberta que for baixada.
  *
  * Tudo o que está dentro de comentário HTML é descartado antes de ler: a ficha traz
  * "Situação: Desocupado" só num comentário (em fichas de 2023 e 2026), o que não é dado
  * publicado e não pode virar ocupação. Fotos comentadas também são ignoradas.
+ *
+ * LGPD: a ficha de Leilão SFI tem texto livre (descrição, avisos de ação judicial e penhora)
+ * que pode citar devedor fiduciante ou outra parte. Todo campo de texto sai daqui já
+ * mascarado (mascararFicha), porque a ficha é guardada no cache local, fora do núcleo.
+ *
+ * Lista de documentos: a ficha só traz o link da matrícula. Os editais e anexos ficam em
+ * /sistema/carregaListaDocumentos.asp, um POST AJAX atrás do anti-robô, que a coleta NÃO
+ * chama (a verificação do catálogo recomendou não contornar). extrairDocumentos sabe ler
+ * essa lista (testado na página real), mas nenhum edital entra pela coleta hoje.
  */
 import type { Documento } from "../../tipos.ts";
 import { lerDataBR, lerDataHoraBR } from "../../util/data.ts";
+import { mascararDadosPessoais, mascararDocumentos } from "../../util/lgpd.ts";
 import { lerInteiro, lerNumeroBR } from "../../util/numero.ts";
 import { colapsarEspacos, decodificarEntidades, normalizarTexto, semHtml, textoOuNulo } from "../../util/texto.ts";
 import { marcaDeDesafio } from "./lista.ts";
@@ -45,8 +56,13 @@ export interface FichaCaixa {
   /** Ex.: "Averbado". */
   averbacao_leiloes_negativos: string | null;
   valor_avaliacao: number | null;
-  /** "Valor mínimo de venda" (oferta única) ou o da praça vigente. */
+  /**
+   * "Valor mínimo de venda" (oferta única), ou "Valor mínimo de venda à vista", ou, sem
+   * nenhum dos dois, "Valor de venda" (rótulos de ficha SFI vistos em índice de terceiro).
+   */
   valor_minimo: number | null;
+  /** "Valor de venda", quando a ficha mostra (pode ser diferente do mínimo à vista). */
+  valor_venda?: number | null;
   /** Desconto que a ficha mostra (informativo; a base calcula o seu). */
   desconto_ficha: number | null;
   area_total: number | null;
@@ -233,12 +249,18 @@ export function interpretarFicha(html: string): FichaCaixa {
 
   const avaliacao = /Valor de avalia[çc][ãa]o:?\s*R\$\s*([\d.]+,\d{2})/i.exec(texto);
   if (!avaliacao) throw new ErroFicha("Ficha recusada: sem \"Valor de avaliação\" (layout mudou?).");
-  const minimo = /Valor m[íi]nimo de venda:?\s*R\$\s*([\d.]+,\d{2})/i.exec(texto);
+  // "Valor mínimo de venda:" (fichas reais) ou "... à vista:"; "Valor de venda:" só na falta deles.
+  const minimo = /Valor m[íi]nimo de venda(?:\s+[àa]\s+vista)?\s*:?\s*R\$\s*([\d.]+,\d{2})/i.exec(texto);
+  const venda = /\bValor de venda\s*:?\s*R\$\s*([\d.]+,\d{2})/i.exec(texto);
   const desconto = /desconto de\s*([\d.,]+)\s*%/i.exec(texto);
 
   const pares = paresRotulados(bloco);
   const numero = valorDe(pares, "numero do imovel");
   const numeroDigitos = numero ? numero.replace(/\D/g, "") : "";
+  // Sem o número não dá para conferir que a ficha é do imóvel pedido: recusa.
+  if (numeroDigitos.length < 4 || numeroDigitos.length > 13) {
+    throw new ErroFicha("Ficha recusada: sem \"Número do imóvel\" legível (layout mudou?).");
+  }
   const matriculas = (valorDe(pares, "matricula") ?? "")
     .split(/\s*(?:,|;|\be\b|\/)\s*/)
     .map((m) => m.trim())
@@ -282,9 +304,10 @@ export function interpretarFicha(html: string): FichaCaixa {
     if (!fotos.includes(url)) fotos.push(url);
   }
 
-  return {
+  const valorVenda = venda ? lerNumeroBR(venda[1], { decimal: "," }) : null;
+  return mascararFicha({
     titulo: textoOuNulo(semHtml(/<h5\b[^>]*>([\s\S]*?)<\/h5>/i.exec(bloco)?.[1] ?? "")),
-    numero_imovel: numeroDigitos.length >= 4 && numeroDigitos.length <= 13 ? numeroDigitos.padStart(13, "0") : null,
+    numero_imovel: numeroDigitos.padStart(13, "0"),
     tipo_imovel: valorDe(pares, "tipo de imovel"),
     quartos: lerInteiro(valorDe(pares, "quartos")),
     vagas: lerInteiro(valorDe(pares, "garagem", "vagas")),
@@ -294,7 +317,8 @@ export function interpretarFicha(html: string): FichaCaixa {
     inscricao_imobiliaria: inscricao && !/^nao (identificad|informad)/.test(normalizarTexto(inscricao)) ? inscricao : null,
     averbacao_leiloes_negativos: valorDe(pares, "averbacao dos leiloes negativos", "averbacao"),
     valor_avaliacao: lerNumeroBR(avaliacao[1], { decimal: "," }),
-    valor_minimo: minimo ? lerNumeroBR(minimo[1], { decimal: "," }) : null,
+    valor_minimo: minimo ? lerNumeroBR(minimo[1], { decimal: "," }) : valorVenda,
+    valor_venda: valorVenda,
     desconto_ficha: desconto ? lerNumeroBR(desconto[1], { decimal: "," }) : null,
     area_total: lerAreaFicha(valorDe(pares, "area total")),
     area_privativa: lerAreaFicha(valorDe(pares, "area privativa", "area util")),
@@ -319,7 +343,84 @@ export function interpretarFicha(html: string): FichaCaixa {
     tem_galeria: /id=["']galeria-imagens["']/i.test(visivel),
     documentos: extrairDocumentos(html),
     texto: textoRelevante(texto),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// LGPD e fichas degradadas
+// ---------------------------------------------------------------------------
+
+function mascararOuNulo(valor: string | null | undefined): string | null {
+  return valor ? textoOuNulo(mascararDadosPessoais(valor)) : null;
+}
+
+/**
+ * Mascara os textos livres da ficha (nomes de partes, CPF/CNPJ, RG, e-mail, IP) e os
+ * documentos pessoais no leiloeiro e no endereço. Idempotente. interpretarFicha já devolve
+ * a ficha mascarada; o cache passa de novo por aqui ao gravar (e ao migrar fichas antigas).
+ */
+export function mascararFicha(ficha: FichaCaixa): FichaCaixa {
+  return {
+    ...ficha,
+    titulo: mascararOuNulo(ficha.titulo),
+    descricao: mascararOuNulo(ficha.descricao),
+    formas_pagamento: mascararOuNulo(ficha.formas_pagamento),
+    regras_despesas: mascararOuNulo(ficha.regras_despesas),
+    regra_condominio: mascararOuNulo(ficha.regra_condominio),
+    regra_tributos: mascararOuNulo(ficha.regra_tributos),
+    leiloeiro: ficha.leiloeiro ? textoOuNulo(mascararDocumentos(ficha.leiloeiro)) : null,
+    endereco: ficha.endereco ? textoOuNulo(mascararDocumentos(ficha.endereco)) : null,
+    documentos: ficha.documentos.map((d) => (d.titulo ? { ...d, titulo: mascararOuNulo(d.titulo) } : d)),
+    texto: mascararDadosPessoais(ficha.texto ?? ""),
   };
+}
+
+/** Campos estáveis da ficha (não mudam com a oferta) e o nome usado nos avisos. */
+const ESTAVEIS = [
+  ["matriculas", "matrícula"],
+  ["comarca", "comarca"],
+  ["oficio", "ofício"],
+  ["cep", "CEP"],
+  ["inscricao_imobiliaria", "inscrição imobiliária"],
+  ["endereco", "endereço"],
+  ["tipo_imovel", "tipo de imóvel"],
+  ["area_total", "área total"],
+  ["area_privativa", "área privativa"],
+  ["area_terreno", "área do terreno"],
+] as const satisfies ReadonlyArray<readonly [keyof FichaCaixa, string]>;
+
+function vazio(valor: unknown): boolean {
+  return valor === null || valor === undefined || valor === "" || (Array.isArray(valor) && valor.length === 0);
+}
+
+/** A ficha não tem nenhum dos dados que toda ficha real tem (matrícula, comarca, CEP). */
+export function fichaSemDadosEstaveis(ficha: FichaCaixa): boolean {
+  return ficha.matriculas.length === 0 && !ficha.comarca && !ficha.cep;
+}
+
+/**
+ * Nova leitura de uma ficha que perdeu campos estáveis que a anterior tinha (layout mudou,
+ * página parcial): mantém os valores anteriores campo a campo, inclusive o PDF da
+ * matrícula, e diz o que foi herdado. Uma ficha nunca apaga dado bom de uma leitura anterior.
+ */
+export function herdarEstaveis(anterior: FichaCaixa | null | undefined, nova: FichaCaixa): { ficha: FichaCaixa; herdados: string[] } {
+  if (!anterior) return { ficha: nova, herdados: [] };
+  const ficha: FichaCaixa = { ...nova, documentos: [...nova.documentos] };
+  const herdados: string[] = [];
+  const copia = ficha as unknown as Record<string, unknown>;
+  const velha = anterior as unknown as Record<string, unknown>;
+  for (const [campo, nome] of ESTAVEIS) {
+    if (vazio(copia[campo]) && !vazio(velha[campo])) {
+      copia[campo] = structuredClone(velha[campo]);
+      herdados.push(nome);
+    }
+  }
+  const matriculaPdf = anterior.documentos.find((d) => d.tipo === "matricula");
+  if (matriculaPdf && !ficha.documentos.some((d) => d.tipo === "matricula")) {
+    ficha.documentos.unshift({ ...matriculaPdf });
+    herdados.push("PDF da matrícula");
+  }
+  return { ficha, herdados };
 }
 
 /** Do texto do bloco, só o que interessa às regras: descrição, pagamento, despesas e avisos. */

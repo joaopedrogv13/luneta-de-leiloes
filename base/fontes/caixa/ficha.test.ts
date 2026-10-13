@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ErroFicha, extrairDocumentos, interpretarFicha } from "./ficha.ts";
+import { ErroFicha, extrairDocumentos, fichaSemDadosEstaveis, herdarEstaveis, interpretarFicha, mascararFicha } from "./ficha.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const FICHA_2026 = readFileSync(join(FIXTURES, "ficha_0000010005120_2026-10-08.html"), "utf8");
@@ -85,6 +85,7 @@ test("\"Situação: Desocupado\" só existe em comentário HTML e não é lido",
   }
 });
 
+// A coleta NÃO busca essa lista (POST AJAX atrás do anti-robô): o teste só fixa o parser.
 test("lista de documentos real (carregaListaDocumentos.asp): editais com data de publicação", () => {
   const docs = extrairDocumentos(readFileSync(join(FIXTURES, "lista_documentos_2026-10-08.html"), "utf8"));
   assert.equal(docs.length, 3);
@@ -96,10 +97,75 @@ test("lista de documentos real (carregaListaDocumentos.asp): editais com data de
   });
 });
 
-test("página de desafio, página sem o bloco do imóvel e ficha sem avaliação são recusadas", () => {
+test("página de desafio, página sem o bloco do imóvel, ficha sem avaliação e ficha sem número são recusadas", () => {
   assert.throws(() => interpretarFicha("<html><script src='https://validate.perfdrive.com/x.js'></script></html>"), (e: unknown) => e instanceof ErroFicha && /anti-robô/.test(e.message));
   assert.throws(() => interpretarFicha("<html><body><p>Imóvel não encontrado.</p></body></html>"), /bloco de dados/);
   assert.throws(() => interpretarFicha(FICHA_2026.replace(/Valor de avaliação/g, "Valor")), /Valor de avaliação/);
+  // Sem o número não há como conferir que a ficha é do imóvel pedido.
+  assert.throws(() => interpretarFicha(FICHA_2026.replace(/<span>Número do imóvel:.*?<\/span>/, "")), (e: unknown) => e instanceof ErroFicha && /Número do imóvel/.test(e.message));
+});
+
+/** Ficha real de 2026 com dados pessoais fictícios na descrição (como numa ficha de Leilão SFI). */
+const COM_DADOS_PESSOAIS = FICHA_2026.replace(
+  "<strong>Descrição:</strong><br>.</p>",
+  "<strong>Descrição:</strong><br>Casa. Imóvel com ação judicial: 0001234-56.2024.8.01.0002 movida por devedor fiduciante JOÃO CARLOS DA SILVA, CPF 529.982.247-25. Penhora Gravada no R-7 da Matrícula.</p>",
+);
+
+test("LGPD: nome e CPF na descrição saem mascarados da ficha (descrição e texto)", () => {
+  const f = interpretarFicha(COM_DADOS_PESSOAIS);
+  const tudo = JSON.stringify(f);
+  assert.doesNotMatch(tudo, /JOÃO|CARLOS|SILVA|529\.982\.247-25/);
+  assert.match(f.descricao ?? "", /devedor fiduciante \[NOME\], CPF \[CPF\]/);
+  assert.match(f.texto, /devedor fiduciante \[NOME\], CPF \[CPF\]/);
+  assert.match(f.texto, /ação judicial: 0001234-56\.2024\.8\.01\.0002/, "número do processo não é dado pessoal");
+  assert.match(f.texto, /Penhora Gravada no R-7/);
+  assert.deepEqual(mascararFicha(f), f, "idempotente");
+  // Os campos estruturados continuam iguais.
+  assert.deepEqual(f.matriculas, ["9740"]);
+  assert.equal(f.cep, "69980000");
+});
+
+test("[índice de terceiro] \"Valor de venda\" e \"Valor mínimo de venda à vista\" (rótulos SFI não vistos em HTML real)", () => {
+  const original = "<b>Valor mínimo de venda: R$ 50.074,26</b>";
+  const soVenda = interpretarFicha(FICHA_2026.replace(original, "<b>Valor de venda: R$ 210.000,00</b>"));
+  assert.equal(soVenda.valor_minimo, 210000);
+  assert.equal(soVenda.valor_venda, 210000);
+  const aVista = interpretarFicha(FICHA_2026.replace(original, "<b>Valor de venda: R$ 210.000,00</b><br><b>Valor mínimo de venda à vista: R$ 180.000,00</b>"));
+  assert.equal(aVista.valor_minimo, 180000, "o mínimo à vista vale mais que o valor de venda");
+  assert.equal(aVista.valor_venda, 210000);
+  assert.equal(interpretarFicha(FICHA_2026).valor_venda, null);
+  // "FINANCIAMENTO (consulte condições)." não diz sim nem não; "NÃO aceita utilização de FGTS" diz não.
+  const condicoes = interpretarFicha(
+    FICHA_2026.replace("Exclusivamente à vista (somente recursos próprios).", "Imóvel NÃO aceita utilização de FGTS.<br />FINANCIAMENTO (consulte condições)."),
+  );
+  assert.equal(condicoes.aceita_fgts, false);
+  assert.equal(condicoes.aceita_financiamento, null);
+});
+
+test("herdarEstaveis: ficha parcial mantém matrícula, comarca, ofício, CEP e o PDF da matrícula da leitura anterior", () => {
+  const boa = interpretarFicha(FICHA_2026);
+  const parcial = interpretarFicha(
+    FICHA_2026
+      .replace(/<span>Matrícula\(s\):.*?<\/span>/, "")
+      .replace(/<span>Comarca:.*?<\/span>/, "")
+      .replace(/<span>Ofício:.*?<\/span>/, "")
+      .replace("- CEP: 69980-000,", ",")
+      .replace(/<span><a [^>]*ExibeDoc\('\/editais\/matricula[^)]*\)>Baixar matrícula do imóvel<\/a><\/span>/, ""),
+  );
+  assert.deepEqual(parcial.matriculas, []);
+  assert.equal(parcial.cep, null);
+  assert.deepEqual(parcial.documentos, []);
+  assert.equal(fichaSemDadosEstaveis(parcial), true);
+  const { ficha, herdados } = herdarEstaveis(boa, parcial);
+  assert.deepEqual(herdados, ["matrícula", "comarca", "ofício", "CEP", "PDF da matrícula"]);
+  assert.deepEqual(ficha.matriculas, ["9740"]);
+  assert.equal(ficha.comarca, "CRUZEIRO DO SUL-AC");
+  assert.equal(ficha.oficio, "01");
+  assert.equal(ficha.cep, "69980000");
+  assert.deepEqual(ficha.documentos.map((d) => d.url), ["https://venda-imoveis.caixa.gov.br/editais/matricula/AC/0000010005120.pdf"]);
+  assert.equal(ficha.valor_minimo, parcial.valor_minimo, "a parte volátil é a da leitura nova");
+  assert.deepEqual(herdarEstaveis(boa, boa).herdados, [], "ficha completa não herda nada");
+  assert.deepEqual(herdarEstaveis(null, parcial), { ficha: parcial, herdados: [] });
 });
 
 test("ficha de verdade com script do anti-robô embutido continua valendo", () => {

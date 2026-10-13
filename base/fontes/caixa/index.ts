@@ -5,28 +5,29 @@
  *   Lista_imoveis_{UF}.csv com --uf). Validada antes de qualquer gravação (lista.ts).
  * - Ficha (`--detalhes`): /sistema/detalhe-imovel.asp, uma a cada 2 s no mínimo, só para
  *   imóvel novo, alterado no CSV ou com ficha velha. Guardada no cache local (cache.ts) e
- *   juntada ao CSV em toda coleta.
+ *   juntada ao CSV em toda coleta. Ficha que perde campos estáveis herda os da anterior.
  * - Fotos: capa pelo padrão F{id13}21.jpg; com LUNETA_CAIXA_VERIFICAR_FOTOS=1, HEAD nos slots.
  *
  * Variáveis de ambiente: LUNETA_CAIXA_CACHE (caminho do cache, ou "off"),
  * LUNETA_CAIXA_VERIFICAR_FOTOS=1, LUNETA_CAIXA_FICHAS=<pasta> (lê as fichas de arquivos
- * <pasta>/<id13>.html em vez da rede, para testar --detalhes sem rede).
+ * <pasta>/<id13>.html em vez da rede, para testar --detalhes sem rede),
+ * LUNETA_CAIXA_ULTIMA_UF=<UF> (última UF esperada na lista geral; "off" desliga a checagem).
  */
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Conector, Documento, Foto, ImovelNormalizado, Modalidade, NumeroPraca, OpcoesColeta, Praca, TextoFonte } from "../../tipos.ts";
+import { UFS, type Conector, type Documento, type Foto, type ImovelNormalizado, type Modalidade, type NumeroPraca, type OpcoesColeta, type Praca, type TextoFonte } from "../../tipos.ts";
 import { classificarModalidade } from "../../util/classificar.ts";
 import { hojeBrasilia, instanteDe } from "../../util/data.ts";
 import { ErroHttp } from "../../util/http.ts";
 import { lerNumeroBR } from "../../util/numero.ts";
 import { capitalizarNome, colapsarEspacos, normalizarTexto, textoOuNulo } from "../../util/texto.ts";
 import { normalizarUf } from "../../util/uf.ts";
-import { abrirCacheDisco, CACHE_PADRAO, cacheEmMemoria, VERSAO_PARSER_FICHA, type BaseCsv, type CacheCaixa, type DetalheGuardado } from "./cache.ts";
+import { abrirCacheDisco, CACHE_PADRAO, cacheEmMemoria, VERSAO_PARSER_FICHA, type BaseCsv, type CacheCaixa, type DetalheGuardado, type ResumoLista } from "./cache.ts";
 import { interpretarDescricao, tipoDaCaixa, tituloDoImovel } from "./descricao.ts";
-import { BASE_CAIXA, ErroFicha, fichaBloqueada, interpretarFicha, type FichaCaixa } from "./ficha.ts";
+import { BASE_CAIXA, ErroFicha, fichaBloqueada, fichaSemDadosEstaveis, herdarEstaveis, interpretarFicha, type FichaCaixa } from "./ficha.ts";
 import { capaPadrao, fotosDaFicha, fotosVerificadas, verificarFotos } from "./fotos.ts";
-import { decodificarLista, interpretarLista, pareceBloqueio, type LinhaCaixa } from "./lista.ts";
+import { decodificarLista, interpretarLista, pareceBloqueio, resumirUfs, type LinhaCaixa, type ListaCaixa } from "./lista.ts";
 
 export const URL_LISTA_GERAL = `${BASE_CAIXA}/listaweb/Lista_imoveis_geral.csv`;
 export const urlListaUf = (uf: string): string => `${BASE_CAIXA}/listaweb/Lista_imoveis_${uf}.csv`;
@@ -60,8 +61,21 @@ export interface ConfigConectorCaixa {
   maxSlotsFotos?: number;
   /** Para de buscar fichas depois de tantas falhas seguidas. Padrão 10. */
   maxFalhasSeguidas?: number;
+  /**
+   * Para de buscar fichas depois de tantas fichas degradadas seguidas (perderam campos
+   * estáveis da leitura anterior, ou vieram sem matrícula, comarca e CEP). Padrão 5.
+   */
+  maxFichasDegradadas?: number;
   /** Volume mínimo de imóveis na lista geral. Padrão 5000 (a lista oscilou de 7.113 a 28.219 em 2026). */
   volumeMinimo?: number;
+  /**
+   * Última UF esperada na lista geral, que vem em ordem de UF: um arquivo que termina antes
+   * dela foi cortado numa quebra de linha. Padrão: LUNETA_CAIXA_ULTIMA_UF, senão a última UF
+   * da lista anterior (cache), senão "TO". `null` (ou "off") desliga.
+   */
+  ultimaUf?: string | null;
+  /** Tempo máximo do download do CSV (por tentativa, com o corpo). Padrão 300 s no geral, 120 s por UF. */
+  timeoutListaMs?: number;
   agora?: () => Date;
   esperar?: (ms: number) => Promise<void>;
 }
@@ -105,7 +119,8 @@ export function fichaAtual(detalhe: DetalheGuardado | null, base: BaseCsv): bool
     return true;
   }
   const avaliacaoOk = base.avaliacao === null || ficha.valor_avaliacao === null || mesmoValor(ficha.valor_avaliacao, base.avaliacao);
-  const precoOk = mesmoValor(ficha.valor_minimo, base.preco) || ficha.pracas.some((p) => mesmoValor(p.valor_minimo, base.preco));
+  const precoOk = mesmoValor(ficha.valor_minimo, base.preco) || mesmoValor(ficha.valor_venda, base.preco) ||
+    ficha.pracas.some((p) => mesmoValor(p.valor_minimo, base.preco));
   const modalidadeOk = !b || b.modalidade === base.modalidade;
   return avaliacaoOk && precoOk && modalidadeOk;
 }
@@ -237,9 +252,8 @@ export function normalizarCaixa(bruto: BrutoCaixa): ImovelNormalizado {
     if (ficha.inscricao_imobiliaria) extras.inscricao_imobiliaria = ficha.inscricao_imobiliaria;
     if (ficha.averbacao_leiloes_negativos) extras.averbacao_leiloes_negativos = ficha.averbacao_leiloes_negativos;
     if (ficha.matriculas.length > 1) extras.matriculas = ficha.matriculas.join(", ");
-    // Só o dia: reler a ficha na mesma data não conta como mudança do imóvel.
-    extras.ficha_em = detalhe?.ficha_em ? detalhe.ficha_em.slice(0, 10) : null;
-    extras.ficha_atual = atual;
+    // A data da leitura e o "ficha atual?" ficam só no cache: no imóvel, entrariam no hash
+    // e toda releitura da mesma ficha viraria "atualizado".
   }
   if (fichaVigente) {
     if (fichaVigente.aceita_consorcio !== null) extras.aceita_consorcio = fichaVigente.aceita_consorcio;
@@ -296,6 +310,10 @@ export function normalizarCaixa(bruto: BrutoCaixa): ImovelNormalizado {
 // ---------------------------------------------------------------------------
 
 const DIA_MS = 24 * 3600_000;
+/** Na verificação de fotos, pelo menos 2 HEAD por imóvel: a capa (21) e o 1º slot ausente (22). */
+const HEAD_POR_IMOVEL = 2;
+/** Intervalo mínimo do cliente HTTP entre requisições ao mesmo host (fichas e fotos são o mesmo host). */
+const INTERVALO_HOST_MS = 2000;
 
 function idadeDias(iso: string | null, agora: Date): number {
   if (!iso) return Number.POSITIVE_INFINITY;
@@ -304,7 +322,7 @@ function idadeDias(iso: string | null, agora: Date): number {
 }
 
 /** Lê a lista: arquivo local (UTF-8 ou CP1252, detectado) ou a rede (sempre pelo cliente educado). */
-async function lerLista(op: OpcoesColeta): Promise<{ texto: string; origem: string }> {
+async function lerLista(op: OpcoesColeta, timeoutMs: number): Promise<{ texto: string; origem: string }> {
   if (op.arquivo) {
     const bytes = await readFile(op.arquivo);
     return { texto: decodificarLista(bytes), origem: op.arquivo };
@@ -312,6 +330,8 @@ async function lerLista(op: OpcoesColeta): Promise<{ texto: string; origem: stri
   const url = op.uf ? urlListaUf(op.uf) : URL_LISTA_GERAL;
   const resposta = await op.http.requisitar(url, {
     cabecalhos: { accept: "text/csv,text/plain;q=0.9,*/*;q=0.5" },
+    // O geral tem ~7,7 MB: o timeout padrão do cliente (30 s com o corpo) exigiria ~260 KB/s.
+    timeoutMs,
     sinal: op.sinal,
     validar: (r) => {
       const texto = decodificarLista(r.bytes);
@@ -319,6 +339,59 @@ async function lerLista(op: OpcoesColeta): Promise<{ texto: string; origem: stri
     },
   });
   return { texto: decodificarLista(resposta.bytes), origem: resposta.url || url };
+}
+
+/** Última UF que a lista geral deve trazer: configuração, variável de ambiente, lista anterior ou "TO". */
+function ultimaUfEsperada(config: ConfigConectorCaixa, anterior: ResumoLista | null): string | null {
+  if (config.ultimaUf !== undefined) return config.ultimaUf;
+  const env = process.env.LUNETA_CAIXA_ULTIMA_UF?.trim();
+  if (env) {
+    if (env.toLowerCase() === "off") return null;
+    const uf = normalizarUf(env);
+    if (!uf) throw new Error(`LUNETA_CAIXA_ULTIMA_UF inválida: ${JSON.stringify(env)} (use a sigla da UF ou "off").`);
+    return uf;
+  }
+  const ufsAnteriores = Object.keys(anterior?.por_uf ?? {}).filter((uf) => (UFS as readonly string[]).includes(uf)).sort();
+  return ufsAnteriores[ufsAnteriores.length - 1] ?? "TO";
+}
+
+/**
+ * Checagens da lista que dependem do escopo e da lista anterior (guardada no cache). Lança
+ * para recusar (nada é gravado); devolve avisos e o resumo a guardar.
+ * - Lista geral: vem em ordem de UF; se termina antes da última UF esperada, foi cortada numa
+ *   quebra de linha (a checagem da última linha não pega esse corte).
+ * - Mesma "Data de geração" da última lista lida no mesmo escopo, mas com menos imóveis:
+ *   arquivo truncado (o conteúdo de uma geração não muda).
+ */
+export function conferirLista(
+  lista: ListaCaixa,
+  opcoes: { uf: string | null; ultimaUf: string | null; anterior: ResumoLista | null; agora: Date },
+): { avisos: string[]; resumo: ResumoLista } {
+  const avisos: string[] = [];
+  const ufs = resumirUfs(lista.registros);
+  if (!opcoes.uf && opcoes.ultimaUf) {
+    const esperada = opcoes.ultimaUf;
+    if (!ufs.ordenada) {
+      avisos.push("A lista geral não veio em ordem de UF: a checagem de corte pela última UF ficou desligada nesta coleta.");
+    } else if (ufs.ultima === null || ufs.ultima < esperada) {
+      const faltam = UFS.filter((uf) => uf > (ufs.ultima ?? "") && uf <= esperada);
+      throw new Error(
+        `Lista da Caixa recusada: a lista geral vem em ordem de UF e devia ir até ${esperada}, mas termina em ${ufs.ultima ?? "(nenhuma UF)"} ` +
+          `(faltam ${faltam.join(", ")}). Arquivo cortado numa quebra de linha? Nada foi gravado. ` +
+          `Se essas UFs saíram mesmo da lista, rode com LUNETA_CAIXA_ULTIMA_UF=${ufs.ultima ?? "off"}.`,
+      );
+    }
+  }
+  const total = opcoes.uf ? (ufs.porUf[opcoes.uf] ?? 0) : lista.registros.length;
+  const anterior = opcoes.anterior;
+  if (anterior && anterior.gerado_em === lista.geradoEm && total < anterior.total) {
+    throw new Error(
+      `Lista da Caixa recusada: mesma "Data de geração" (${lista.geradoEm}) da lista lida em ${anterior.registrada_em.slice(0, 10) || "coleta anterior"}, ` +
+        `mas com ${total} imóveis em vez de ${anterior.total}. Arquivo truncado? Nada foi gravado; a próxima lista, com data nova, passa normalmente.`,
+    );
+  }
+  const porUf = opcoes.uf ? { [opcoes.uf]: total } : ufs.porUf;
+  return { avisos, resumo: { gerado_em: lista.geradoEm, total, por_uf: porUf, registrada_em: opcoes.agora.toISOString() } };
 }
 
 type ResultadoFicha = { tipo: "ok"; ficha: FichaCaixa } | { tipo: "bloqueio" | "falha"; motivo: string };
@@ -330,6 +403,7 @@ export function criarConectorCaixa(config: ConfigConectorCaixa = {}): Conector<B
   const maxDiasFicha = config.maxDiasFicha ?? 7;
   const maxDiasFotos = config.maxDiasFotos ?? 30;
   const maxFalhasSeguidas = config.maxFalhasSeguidas ?? 10;
+  const maxFichasDegradadas = config.maxFichasDegradadas ?? 5;
 
   function caminhoCache(): string | null {
     if (config.cache !== undefined) return config.cache;
@@ -363,8 +437,9 @@ export function criarConectorCaixa(config: ConfigConectorCaixa = {}): Conector<B
       }
     }
     try {
+      // interpretarFicha exige o "Número do imóvel": sem ele não dá para conferir de quem é a ficha.
       const ficha = interpretarFicha(html);
-      if (ficha.numero_imovel && ficha.numero_imovel !== id13) {
+      if (ficha.numero_imovel !== id13) {
         return { tipo: "falha", motivo: `a ficha devolvida é de outro imóvel (${ficha.numero_imovel})` };
       }
       return { tipo: "ok", ficha };
@@ -381,13 +456,15 @@ export function criarConectorCaixa(config: ConfigConectorCaixa = {}): Conector<B
     acesso: "arquivo_oficial",
     finalidade: "vitrine",
     url: "https://venda-imoveis.caixa.gov.br/",
-    // Fotos: capa pelo padrão de URL (ou a galeria da ficha). Documentos: matrícula e edital da ficha.
+    // Fotos: capa pelo padrão de URL (ou a galeria da ficha). Documentos: o PDF da matrícula da
+    // ficha (a lista de editais e anexos não é coletada; ver ficha.ts).
     // Ocupação: a Caixa não publica em campo (o "Situação" da ficha está comentado no HTML).
     capacidades: { fotos: true, documentos: true, ocupacao: false, listaCompleta: true },
     volumeMinimo: config.volumeMinimo ?? 5000,
 
     async *coletar(op) {
-      const { texto, origem } = await lerLista(op);
+      const escopo = op.uf ?? "geral";
+      const { texto, origem } = await lerLista(op, config.timeoutListaMs ?? (op.uf ? 120_000 : 300_000));
       const lista = interpretarLista(texto);
       const hoje = agora();
       op.informar({ geradoEm: lista.geradoEm, origem, totalNaFonte: lista.registros.length });
@@ -402,42 +479,73 @@ export function criarConectorCaixa(config: ConfigConectorCaixa = {}): Conector<B
         const outras = lista.registros.filter((r) => normalizarUf(r.campos.uf) !== op.uf).length;
         if (outras > 0) throw new Error(`Lista da UF ${op.uf} recusada: ${outras} linha(s) de outra UF (arquivo errado?).`);
       }
-      const desconhecidas = new Map<string, number>();
-      for (const r of lista.registros) {
-        const m = colapsarEspacos(r.campos.modalidade);
-        if (!MODALIDADES_CONHECIDAS.includes(m)) desconhecidas.set(m, (desconhecidas.get(m) ?? 0) + 1);
-      }
-      for (const [m, n] of desconhecidas) op.informar({ aviso: `Modalidade nova no CSV: ${JSON.stringify(m)} (${n} linha(s)); classificada como ${classificarModalidade(m).modalidade}.` });
-      const quebradas = lista.registros.filter((r) => r.problema).length;
-      if (quebradas > 0) op.informar({ aviso: `${quebradas} linha(s) com número de colunas diferente do cabeçalho.` });
 
       const pastaFichas = config.fichasLocais !== undefined ? config.fichasLocais : (process.env.LUNETA_CAIXA_FICHAS || null);
       const verificar = config.verificarFotos ?? process.env.LUNETA_CAIXA_VERIFICAR_FOTOS === "1";
-      const precisaEscrever = Boolean(op.detalhes) || verificar;
       const caminho = caminhoCache();
-      let cache: CacheCaixa | null = caminho ? abrirCacheDisco(caminho, { criar: precisaEscrever }) : null;
-      if (!cache && precisaEscrever) {
-        cache = cacheEmMemoria();
-        op.informar({ aviso: "Cache da Caixa desligado: fichas e fotos desta coleta não ficam guardadas para as próximas." });
-      }
-
-      let fichasAtivas = Boolean(op.detalhes);
-      let fotosAtivas = verificar;
-      let ultimaFicha = Number.NEGATIVE_INFINITY;
-      let falhasSeguidas = 0;
-      const contagem = { fichas: 0, fichasFalhas: 0, fotos: 0, fotosFalhas: 0 };
-      const naUf = (r: (typeof lista.registros)[number]): boolean => !op.uf || normalizarUf(r.campos.uf) === op.uf;
-      if (fichasAtivas || fotosAtivas) {
-        const alcance = Math.min(op.limite ?? Number.POSITIVE_INFINITY, lista.registros.filter(naUf).length);
-        const horas = (alcance * Math.max(intervaloFicha, 2000)) / 3600_000;
-        op.log(
-          `Caixa: ${fichasAtivas ? "fichas" : ""}${fichasAtivas && fotosAtivas ? " e " : ""}${fotosAtivas ? "fotos" : ""} ligadas para até ${alcance} imóvel(is)` +
-            `${pastaFichas ? ` (fichas da pasta ${pastaFichas})` : `; sem nada no cache, ~${horas.toFixed(1)} h a 2 s por requisição`}. ` +
-            `Só busca imóvel novo, alterado ou com ficha de mais de ${maxDiasFicha} dias.`,
-        );
-      }
-
+      // O cache abre antes de sair qualquer registro: se ele não abrir (corrompido, travado,
+      // apagado com a cópia ainda lá), a coleta para aqui com ErroCache e nada é gravado.
+      let cache: CacheCaixa | null = caminho ? abrirCacheDisco(caminho) : null;
+      const contagem = { fichas: 0, fichasFalhas: 0, fichasDegradadas: 0, fotos: 0, fotosFalhas: 0, fotosAvisos: 0 };
+      let falhou = false;
       try {
+        const anterior = cache ? cache.lerLista(escopo) : null;
+        const conferida = conferirLista(lista, {
+          uf: op.uf ?? null,
+          ultimaUf: op.uf ? null : ultimaUfEsperada(config, anterior),
+          anterior,
+          agora: hoje,
+        });
+        for (const aviso of conferida.avisos) op.informar({ aviso });
+
+        if (!caminho) {
+          op.informar({ aviso: "Cache da Caixa desligado: esta coleta não usa as fichas e fotos guardadas. Numa base que já tinha dados de ficha, matrícula, CEP, cartório, documentos e fotos da ficha são regravados vazios." });
+        }
+        if (!cache && (op.detalhes || verificar)) cache = cacheEmMemoria();
+
+        const desconhecidas = new Map<string, number>();
+        for (const r of lista.registros) {
+          if (r.problema) continue; // linha com colunas deslocadas: a "modalidade" dela não é a modalidade
+          const m = colapsarEspacos(r.campos.modalidade);
+          if (!MODALIDADES_CONHECIDAS.includes(m)) desconhecidas.set(m, (desconhecidas.get(m) ?? 0) + 1);
+        }
+        for (const [m, n] of desconhecidas) op.informar({ aviso: `Modalidade nova no CSV: ${JSON.stringify(m)} (${n} linha(s)); classificada como ${classificarModalidade(m).modalidade}.` });
+        const recuperadas = lista.registros.filter((r) => r.recuperada);
+        if (recuperadas.length > 0) {
+          const onde = [...new Set(recuperadas.map((r) => r.recuperada))].join("; ");
+          const linhas = recuperadas.slice(0, 5).map((r) => r.linhaArquivo).join(", ");
+          op.informar({ aviso: `${recuperadas.length} linha(s) com ";" a mais recuperada(s), excedente juntado a ${onde} (linha ${linhas}${recuperadas.length > 5 ? "..." : ""}).` });
+        }
+        const quebradas = lista.registros.filter((r) => r.problema);
+        if (quebradas.length > 0) {
+          const linhas = quebradas.slice(0, 5).map((r) => r.linhaArquivo).join(", ");
+          op.informar({ aviso: `${quebradas.length} linha(s) com número de colunas diferente do cabeçalho e não recuperáveis (linha ${linhas}${quebradas.length > 5 ? "..." : ""}): viram registro inválido e desligam a marcação de removidos nesta coleta.` });
+        }
+
+        let fichasAtivas = Boolean(op.detalhes);
+        let fotosAtivas = verificar;
+        let ultimaFicha = Number.NEGATIVE_INFINITY;
+        let falhasSeguidas = 0;
+        let degradadasSeguidas = 0;
+        const naUf = (r: (typeof lista.registros)[number]): boolean => !op.uf || normalizarUf(r.campos.uf) === op.uf;
+        if (fichasAtivas || fotosAtivas) {
+          const alcance = Math.min(op.limite ?? Number.POSITIVE_INFINITY, lista.registros.filter(naUf).length);
+          const segundos = Math.max(intervaloFicha, INTERVALO_HOST_MS) / 1000;
+          // Fichas e fotos são do mesmo host: o cliente espaça TODAS as requisições.
+          const porImovel = (fichasAtivas && !pastaFichas ? 1 : 0) + (fotosAtivas ? HEAD_POR_IMOVEL : 0);
+          const horas = (alcance * porImovel * segundos) / 3600;
+          op.log(
+            `Caixa: ${[fichasAtivas ? "fichas" : "", fotosAtivas ? "fotos" : ""].filter(Boolean).join(" e ")} ligadas para até ${alcance} imóvel(is)` +
+              `${pastaFichas ? ` (fichas da pasta ${pastaFichas})` : ""}` +
+              `${porImovel > 0 ? `; sem nada no cache, ~${horas.toFixed(1)} h (${porImovel} requisição(ões) por imóvel, ${segundos} s entre elas)` : ""}. ` +
+              `Só busca imóvel novo, alterado ou com ficha de mais de ${maxDiasFicha} dias.`,
+          );
+          if (fotosAtivas && !op.uf && !op.limite) {
+            const horasFotos = (alcance * HEAD_POR_IMOVEL * segundos) / 3600;
+            op.informar({ aviso: `Verificação de fotos ligada na lista inteira, sem --uf nem --limite: pelo menos ${HEAD_POR_IMOVEL} HEAD por imóvel a ${segundos} s, ~${horasFotos.toFixed(1)} h só de fotos na primeira vez. Prefira --uf ou --limite.` });
+          }
+        }
+
         for (const r of lista.registros) {
           if (op.sinal?.aborted) throw new Error("Coleta cancelada; nada foi gravado.");
           let id13: string | null = null;
@@ -467,7 +575,23 @@ export function criarConectorCaixa(config: ConfigConectorCaixa = {}): Conector<B
               contagem.fichas++;
               if (resultado.tipo === "ok") {
                 falhasSeguidas = 0;
-                cache.gravarFicha(id13, resultado.ficha, base, agora());
+                // Ficha parcial ou de layout novo nunca apaga dado estável de uma leitura anterior.
+                const { ficha, herdados } = herdarEstaveis(detalhe?.ficha, resultado.ficha);
+                if (herdados.length > 0 || fichaSemDadosEstaveis(ficha)) {
+                  contagem.fichasDegradadas++;
+                  degradadasSeguidas++;
+                  if (contagem.fichasDegradadas <= 5) {
+                    const oQue = herdados.length > 0 ? `veio sem ${herdados.join(", ")}; mantido o da leitura anterior` : "veio sem matrícula, comarca e CEP";
+                    op.informar({ aviso: `Ficha ${numero}: ${oQue} (layout mudou?).` });
+                  }
+                  if (degradadasSeguidas >= maxFichasDegradadas) {
+                    fichasAtivas = false;
+                    op.informar({ aviso: `Fichas desligadas nesta coleta (${degradadasSeguidas} fichas degradadas seguidas: layout mudou?). Os dados anteriores foram mantidos; confira o parser (ficha.ts).` });
+                  }
+                } else {
+                  degradadasSeguidas = 0;
+                }
+                cache.gravarFicha(id13, ficha, base, agora());
                 detalhe = cache.ler(id13);
               } else {
                 contagem.fichasFalhas++;
@@ -490,6 +614,7 @@ export function criarConectorCaixa(config: ConfigConectorCaixa = {}): Conector<B
             if (resultado.tipo === "ok") {
               cache.gravarFotos(id13, resultado.fotos, agora());
               detalhe = cache.ler(id13);
+              if (resultado.aviso && ++contagem.fotosAvisos <= 5) op.informar({ aviso: `Fotos ${id13}: ${resultado.aviso}.` });
             } else {
               contagem.fotosFalhas++;
               if (resultado.tipo === "bloqueio") {
@@ -501,10 +626,28 @@ export function criarConectorCaixa(config: ConfigConectorCaixa = {}): Conector<B
 
           yield { linha: r.campos, linhaArquivo: r.linhaArquivo, problema: r.problema, detalhe };
         }
+        // Lista inteira entregue: guarda o resumo para a checagem da próxima (não vale com --limite,
+        // que interrompe o laço antes daqui). Uma lista mais antiga não substitui a mais nova.
+        if (cache && (!anterior || lista.geradoEm >= anterior.gerado_em)) cache.gravarLista(escopo, conferida.resumo);
+      } catch (erro) {
+        falhou = true;
+        throw erro;
       } finally {
+        if (cache && !falhou && contagem.fichas + contagem.fotos > 0) {
+          try {
+            const copia = cache.copiaDeSeguranca();
+            if (copia) op.log(`Caixa: cópia de segurança do cache em ${copia}.`);
+          } catch (erro) {
+            op.informar({ aviso: `Cópia de segurança do cache da Caixa falhou: ${(erro as Error).message}.` });
+          }
+        }
         cache?.fechar();
-        if (contagem.fichas > 0) op.informar({ aviso: `Fichas: ${contagem.fichas} buscada(s), ${contagem.fichasFalhas} falha(s).` });
+        if (contagem.fichas > 0) {
+          const degradadas = contagem.fichasDegradadas > 0 ? `, ${contagem.fichasDegradadas} degradada(s)` : "";
+          op.informar({ aviso: `Fichas: ${contagem.fichas} buscada(s), ${contagem.fichasFalhas} falha(s)${degradadas}.` });
+        }
         if (contagem.fotos > 0) op.informar({ aviso: `Fotos: ${contagem.fotos} imóvel(is) verificado(s), ${contagem.fotosFalhas} falha(s).` });
+        if (contagem.fotosAvisos > 5) op.informar({ aviso: `Fotos: ${contagem.fotosAvisos} slot(s) redirecionado(s) para outra URL, não confirmado(s).` });
       }
     },
 

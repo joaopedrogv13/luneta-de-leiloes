@@ -54,6 +54,8 @@ export interface OpcoesRequisicao {
   aceitarStatus?: (status: number) => boolean;
   /** Validação do conteúdo: devolva o motivo da recusa, ou null se estiver bom. Recusa não é retentada. */
   validar?: (resposta: RespostaHttp) => string | null;
+  /** Tempo máximo desta requisição, por tentativa e com o corpo (ex.: arquivo grande). Padrão: o do cliente. */
+  timeoutMs?: number;
   sinal?: AbortSignal;
 }
 
@@ -203,6 +205,7 @@ export function criarClienteHttp(config: ConfigHttp = {}): ClienteHttp {
     const alvo = new URL(url);
     const metodo = opcoes.metodo ?? (opcoes.corpo !== undefined ? "POST" : "GET");
     const aceitar = opcoes.aceitarStatus ?? ((s: number) => s >= 200 && s < 300);
+    const limiteMs = opcoes.timeoutMs !== undefined && opcoes.timeoutMs > 0 ? opcoes.timeoutMs : timeoutMs;
     const cabecalhos: Record<string, string> = {
       "user-agent": userAgent,
       accept: "*/*",
@@ -216,7 +219,7 @@ export function criarClienteHttp(config: ConfigHttp = {}): ClienteHttp {
       const inicio = agora();
       // Temporizador próprio (não o AbortSignal.timeout, que não segura o processo vivo).
       const limite = new AbortController();
-      const temporizador = setTimeout(() => limite.abort(), timeoutMs);
+      const temporizador = setTimeout(() => limite.abort(), limiteMs);
       const sinal = opcoes.sinal ? AbortSignal.any([limite.signal, opcoes.sinal]) : limite.signal;
       let retryAfter: number | null = null;
       try {
@@ -261,7 +264,7 @@ export function criarClienteHttp(config: ConfigHttp = {}): ClienteHttp {
         if (erro instanceof ErroHttp) throw erro;
         if (opcoes.sinal?.aborted) throw new ErroHttp("cancelado", url, "Coleta cancelada.", null, tentativa);
         const timeout = limite.signal.aborted;
-        const descricao = timeout ? `tempo esgotado (${timeoutMs} ms)` : `falha de rede: ${(erro as Error).message}`;
+        const descricao = timeout ? `tempo esgotado (${limiteMs} ms)` : `falha de rede: ${(erro as Error).message}`;
         ultimoErro = new ErroHttp(timeout ? "timeout" : "rede", url, `${descricao} em ${url}`, null, tentativa);
         log(`${metodo} ${url} → ${descricao}`);
         if (tentativa < tentativas) await esperar(esperaDaTentativa(tentativa, null));

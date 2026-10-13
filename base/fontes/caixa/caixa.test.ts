@@ -1,20 +1,23 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { executarColeta } from "../../coleta.ts";
 import type { Banco } from "../../db.ts";
 import { prepararImovel } from "../../gravar.ts";
 import { bancoEmMemoria, httpProibido } from "../../testes/apoio.ts";
-import type { ImovelNormalizado, MetaColeta, OpcoesColeta } from "../../tipos.ts";
-import { criarClienteHttp, type ClienteHttp } from "../../util/http.ts";
+import { UFS, type ImovelNormalizado, type MetaColeta, type OpcoesColeta } from "../../tipos.ts";
+import { criarClienteHttp, type ClienteHttp, type OpcoesRequisicao } from "../../util/http.ts";
 import { validarImovel } from "../../validar.ts";
 import { obterConector } from "../index.ts";
-import { cacheEmMemoria } from "./cache.ts";
+import { abrirCacheDisco, cacheEmMemoria, caminhoCopia, ErroCache } from "./cache.ts";
 import { interpretarFicha } from "./ficha.ts";
 import {
   capitalizarEndereco,
+  conferirLista,
   criarConectorCaixa,
   fichaAtual,
   idTreze,
@@ -22,17 +25,22 @@ import {
   type BrutoCaixa,
   type ConfigConectorCaixa,
 } from "./index.ts";
-import { decodificarLista } from "./lista.ts";
+import { decodificarLista, interpretarLista } from "./lista.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const CSV_30 = join(FIXTURES, "Lista_imoveis_30.csv");
 const HTML_FICHA_2026 = readFileSync(join(FIXTURES, "ficha_0000010005120_2026-10-08.html"));
 const AGORA = new Date("2026-10-09T12:00:00Z");
 const T2 = new Date("2026-10-10T12:00:00Z");
+/** Mais de 7 dias depois de AGORA: a ficha guardada vence e é relida. */
+const DEPOIS = new Date("2026-10-18T12:00:00Z");
 
-/** Conector de teste: sem cache em disco, sem espera real, volume mínimo baixo para a fixture. */
+/**
+ * Conector de teste: sem cache em disco, sem espera real, volume mínimo baixo para a fixture e
+ * sem a checagem da última UF (a fixture tem só AC, AL e AM; essa checagem tem testes próprios).
+ */
 const conector = (extra: ConfigConectorCaixa = {}) =>
-  criarConectorCaixa({ cache: null, fichasLocais: null, verificarFotos: false, volumeMinimo: 10, agora: () => AGORA, esperar: async () => undefined, ...extra });
+  criarConectorCaixa({ cache: null, fichasLocais: null, verificarFotos: false, volumeMinimo: 10, ultimaUf: null, agora: () => AGORA, esperar: async () => undefined, ...extra });
 
 /** Roda só o `coletar` e guarda os brutos e os metadados informados. */
 async function coletar(c: ReturnType<typeof criarConectorCaixa>, op: Partial<OpcoesColeta> = {}) {
@@ -194,7 +202,7 @@ test("coleta completa da fixture grava no banco; segunda coleta igual não muda 
 
 test("volume mínimo padrão (5.000) recusa a lista pequena sem --uf; com --uf passa e só toca a UF", async () => {
   const db = bancoEmMemoria();
-  const padrao = criarConectorCaixa({ cache: null, agora: () => AGORA });
+  const padrao = criarConectorCaixa({ cache: null, ultimaUf: null, agora: () => AGORA });
   const r = await executarColeta(db, padrao, { arquivo: CSV_30, agora: AGORA, http: httpProibido() });
   assert.equal(r.status, "invalida");
   assert.match(r.erro ?? "", /mínimo esperado para caixa_csv é 5000/);
@@ -277,7 +285,8 @@ test("--detalhes com fichas locais: CEP, matrícula, cartório, documentos, foto
     assert.match(t.textos?.[0]?.texto ?? "", /Condomínio: Sob responsabilidade do comprador/);
     assert.equal(t.extras?.comarca, "CRUZEIRO DO SUL-AC");
     assert.equal(t.extras?.averbacao_leiloes_negativos, "Averbado");
-    assert.equal(t.extras?.ficha_atual, true);
+    assert.equal(t.aceita_fgts, false, "a parte volátil da ficha vale: ela descreve a oferta do CSV");
+    assert.ok(!("ficha_em" in (t.extras ?? {})) && !("ficha_atual" in (t.extras ?? {})), "data da leitura fica fora do imóvel (e do hash)");
     assert.equal(t.ocupacao, null, "o \"Situação\" comentado nunca vira ocupação");
     const semFicha = normalizarCaixa(brutos[1] as BrutoCaixa);
     assert.equal(semFicha.cep, null);
@@ -403,4 +412,332 @@ test("o conector está registrado como caixa_csv", () => {
   assert.equal(registrado.capacidades.listaCompleta, true);
   assert.equal(registrado.capacidades.ocupacao, false);
   assert.equal(registrado.volumeMinimo, 5000);
+});
+
+// ---------------------------------------------------------------------------
+// Revisão: LGPD no cache, ficha degradada, cache como ponto de falha, corte numa quebra de
+// linha, hash estável, redirecionamento de foto, linha com ";" a mais e estimativa de tempo.
+// ---------------------------------------------------------------------------
+
+const TEXTO_FICHA = HTML_FICHA_2026.toString("utf8");
+/** Ficha real de 2026 com dados pessoais fictícios na descrição (como numa ficha de Leilão SFI). */
+const FICHA_COM_DADOS_PESSOAIS = TEXTO_FICHA.replace(
+  "<strong>Descrição:</strong><br>.</p>",
+  "<strong>Descrição:</strong><br>Casa. Imóvel com ação judicial movida por devedor fiduciante JOÃO CARLOS DA SILVA, CPF 529.982.247-25.</p>",
+);
+/** A mesma ficha sem matrícula, comarca, ofício, CEP e o link da matrícula (layout quebrado). */
+const fichaDegradada = (html = TEXTO_FICHA): string =>
+  html
+    .replace(/<span>Matrícula\(s\):.*?<\/span>/, "")
+    .replace(/<span>Comarca:.*?<\/span>/, "")
+    .replace(/<span>Ofício:.*?<\/span>/, "")
+    .replace("- CEP: 69980-000,", ",")
+    .replace(/<span><a [^>]*ExibeDoc\('\/editais\/matricula[^)]*\)>Baixar matrícula do imóvel<\/a><\/span>/, "");
+/** A ficha de 2026 com o número de outro imóvel (para servir de ficha a qualquer id13). */
+const fichaDoImovel = (id13: string, html = TEXTO_FICHA): string =>
+  html.replace("000001000512-0", `${id13.slice(0, 12)}-${id13.slice(12)}`).replace(/0000010005120/g, id13);
+const IDS_AC = interpretarLista(decodificarLista(readFileSync(CSV_30))).registros
+  .filter((r) => r.campos.uf === "AC")
+  .map((r) => idTreze(r.campos.numero));
+
+function pastaTemporaria(): { dir: string; fichas: string; cache: string; limpar: () => void } {
+  const dir = mkdtempSync(join(tmpdir(), "caixa-rev-"));
+  const fichas = join(dir, "fichas");
+  mkdirSync(fichas);
+  return { dir, fichas, cache: join(dir, "detalhes.db"), limpar: () => rmSync(dir, { recursive: true, force: true }) };
+}
+
+test("LGPD: o cache de fichas (detalhes.db e a cópia .bak) não guarda nome nem CPF", async () => {
+  const t = pastaTemporaria();
+  try {
+    writeFileSync(join(t.fichas, "0000010005120.html"), FICHA_COM_DADOS_PESSOAIS);
+    const db = bancoEmMemoria();
+    const r = await executarColeta(db, conector({ cache: t.cache, fichasLocais: t.fichas }), { arquivo: CSV_30, uf: "AC", detalhes: true, limite: 1, agora: AGORA, http: httpProibido() });
+    assert.equal(r.status, "sucesso", r.erro ?? "");
+    assert.match(String(db.prepare("SELECT textos FROM imovel WHERE id_na_fonte = '0000010005120'").get()?.textos), /devedor fiduciante \[NOME\], CPF \[CPF\]/);
+    assert.ok(existsSync(caminhoCopia(t.cache)), "cópia de segurança gravada depois da coleta com fichas");
+    for (const arquivo of [t.cache, caminhoCopia(t.cache)]) {
+      const bruto = new DatabaseSync(arquivo);
+      const linhas = JSON.stringify(bruto.prepare("SELECT * FROM detalhe").all());
+      bruto.close();
+      assert.match(linhas, /devedor fiduciante \[NOME\], CPF \[CPF\]/, arquivo);
+      assert.doesNotMatch(linhas, /JOÃO|CARLOS DA SILVA|529\.982\.247-25/, arquivo);
+      assert.doesNotMatch(readFileSync(arquivo).toString("utf8"), /CARLOS DA SILVA|529\.982\.247-25/, `bytes de ${arquivo}`);
+    }
+  } finally {
+    t.limpar();
+  }
+});
+
+test("LGPD: cache antigo (texto em claro) é mascarado ao abrir, sem sobra no arquivo, e a ficha é relida", () => {
+  const t = pastaTemporaria();
+  try {
+    const ficha = interpretarFicha(TEXTO_FICHA);
+    const emClaro = { ...ficha, descricao: "devedor fiduciante JOÃO CARLOS DA SILVA, CPF 529.982.247-25", texto: "Descrição: devedor fiduciante JOÃO CARLOS DA SILVA, CPF 529.982.247-25" };
+    const velho = new DatabaseSync(t.cache);
+    velho.exec(`CREATE TABLE detalhe (id13 TEXT PRIMARY KEY, ficha TEXT, ficha_em TEXT, versao_parser INTEGER, base TEXT, falha_em TEXT, falha TEXT, fotos TEXT, fotos_em TEXT)`);
+    velho.prepare("INSERT INTO detalhe (id13, ficha, ficha_em, versao_parser) VALUES (?, ?, ?, 1)").run("0000010005120", JSON.stringify(emClaro), AGORA.toISOString());
+    velho.close();
+    assert.match(readFileSync(t.cache).toString("utf8"), /CARLOS DA SILVA/, "o arquivo antigo tinha o nome");
+    const cache = abrirCacheDisco(t.cache);
+    const lido = cache.ler("0000010005120");
+    cache.fechar();
+    assert.equal(lido?.ficha?.descricao, "devedor fiduciante [NOME], CPF [CPF]");
+    assert.equal(lido?.versao_parser, 1, "versão antiga do parser: relida na próxima coleta com --detalhes");
+    assert.doesNotMatch(readFileSync(t.cache).toString("utf8"), /CARLOS DA SILVA|529\.982\.247-25/);
+  } finally {
+    t.limpar();
+  }
+});
+
+test("ficha degradada não apaga matrícula, CEP, cartório nem o PDF da matrícula; avisa", async () => {
+  const t = pastaTemporaria();
+  try {
+    const arquivoFicha = join(t.fichas, "0000010005120.html");
+    writeFileSync(arquivoFicha, TEXTO_FICHA);
+    const db = bancoEmMemoria();
+    const op = { arquivo: CSV_30, uf: "AC" as const, detalhes: true, limite: 1, http: httpProibido() };
+    const r1 = await executarColeta(db, conector({ cache: t.cache, fichasLocais: t.fichas }), { ...op, agora: AGORA });
+    assert.equal(r1.status, "sucesso");
+    // Relida 9 dias depois, a ficha veio sem as linhas Matrícula/Comarca/Ofício, sem CEP e sem o PDF.
+    writeFileSync(arquivoFicha, fichaDegradada());
+    const r2 = await executarColeta(db, conector({ cache: t.cache, fichasLocais: t.fichas, agora: () => DEPOIS }), { ...op, agora: DEPOIS });
+    assert.equal(r2.status, "sucesso");
+    assert.ok(r2.avisos.some((a) => /Ficha 10005120: veio sem matrícula, comarca, ofício, CEP, PDF da matrícula; mantido o da leitura anterior/.test(a)), r2.avisos.join(" | "));
+    assert.ok(r2.avisos.some((a) => /1 degradada/.test(a)));
+    const linha = db.prepare("SELECT matricula, cep, cartorio FROM imovel WHERE id_na_fonte = '0000010005120'").get();
+    assert.deepEqual({ ...linha }, { matricula: "9740", cep: "69980000", cartorio: "1º Ofício de Registro de Imóveis de Cruzeiro do Sul/AC" });
+    assert.deepEqual(db.prepare("SELECT url FROM documento").all().map((d) => d.url), ["https://venda-imoveis.caixa.gov.br/editais/matricula/AC/0000010005120.pdf"]);
+  } finally {
+    t.limpar();
+  }
+});
+
+test("fichas degradadas seguidas desligam as fichas da coleta; ficha sem número é recusada", async () => {
+  const t = pastaTemporaria();
+  try {
+    for (const id of IDS_AC) writeFileSync(join(t.fichas, `${id}.html`), fichaDegradada(fichaDoImovel(id)));
+    const semNumero = IDS_AC[0] as string;
+    writeFileSync(join(t.fichas, `${semNumero}.html`), fichaDoImovel(semNumero).replace(/<span>Número do imóvel:.*?<\/span>/, ""));
+    const { avisos } = await coletar(conector({ fichasLocais: t.fichas, maxFichasDegradadas: 3 }), { arquivo: CSV_30, uf: "AC", detalhes: true });
+    assert.ok(avisos.some((a) => /Ficha \d+: Ficha recusada: sem "Número do imóvel"/.test(a)), avisos.join(" | "));
+    assert.ok(avisos.some((a) => /Fichas desligadas nesta coleta \(3 fichas degradadas seguidas: layout mudou\?\)/.test(a)), avisos.join(" | "));
+    assert.ok(avisos.some((a) => /Fichas: 4 buscada\(s\), 1 falha\(s\), 3 degradada\(s\)/.test(a)), avisos.join(" | "));
+  } finally {
+    t.limpar();
+  }
+});
+
+test("cache corrompido, ou apagado com a cópia ainda lá: erro claro, nada gravado, nada apagado", async () => {
+  const t = pastaTemporaria();
+  try {
+    const db = bancoEmMemoria();
+    await executarColeta(db, conector(), { arquivo: CSV_30, agora: AGORA, http: httpProibido() });
+    writeFileSync(t.cache, randomBytes(5000));
+    const r = await executarColeta(db, conector({ cache: t.cache }), { arquivo: CSV_30, agora: T2, http: httpProibido() });
+    assert.equal(r.status, "erro");
+    assert.equal(r.lidos, 0);
+    assert.match(r.erro ?? "", /^Cache da Caixa ilegível em .*detalhes\.db \(.*file is not a database.*\)\. Nada foi gravado\./);
+    assert.match(r.erro ?? "", /mova o arquivo e rode a coleta com --detalhes/);
+    assert.match(r.erro ?? "", /Não use LUNETA_CAIXA_CACHE=off numa base que já tem dados de ficha/);
+    writeFileSync(caminhoCopia(t.cache), "cópia");
+    const comCopia = await executarColeta(db, conector({ cache: t.cache }), { arquivo: CSV_30, agora: T2, http: httpProibido() });
+    assert.match(comCopia.erro ?? "", /restaure a cópia da última coleta que gravou fichas ou fotos \(mv .* && cp .*\.bak/);
+    rmSync(t.cache);
+    const apagado = await executarColeta(db, conector({ cache: t.cache }), { arquivo: CSV_30, agora: T2, http: httpProibido() });
+    assert.equal(apagado.status, "erro");
+    assert.match(apagado.erro ?? "", /Cache da Caixa ausente em .*detalhes\.db, mas a cópia .*\.bak existe/);
+    assert.throws(() => abrirCacheDisco(t.cache), ErroCache);
+    assert.equal(Number(db.prepare("SELECT count(*) AS n FROM imovel WHERE status = 'ativo'").get()?.n), 30, "o que havia continua");
+  } finally {
+    t.limpar();
+  }
+});
+
+test("cópia de segurança: depois da coleta com fichas, <cache>.bak restaurado devolve as fichas", async () => {
+  const t = pastaTemporaria();
+  try {
+    copyFileSync(join(FIXTURES, "ficha_0000010005120_2026-10-08.html"), join(t.fichas, "0000010005120.html"));
+    const db = bancoEmMemoria();
+    await executarColeta(db, conector({ cache: t.cache, fichasLocais: t.fichas }), { arquivo: CSV_30, uf: "AC", detalhes: true, limite: 1, agora: AGORA, http: httpProibido() });
+    writeFileSync(t.cache, randomBytes(5000));
+    rmSync(`${t.cache}-wal`, { force: true });
+    rmSync(`${t.cache}-shm`, { force: true });
+    copyFileSync(caminhoCopia(t.cache), t.cache);
+    const r = await executarColeta(db, conector({ cache: t.cache }), { arquivo: CSV_30, uf: "AC", agora: T2, http: httpProibido() });
+    assert.equal(r.status, "sucesso", r.erro ?? "");
+    assert.equal(db.prepare("SELECT matricula FROM imovel WHERE id_na_fonte = '0000010005120'").get()?.matricula, "9740");
+  } finally {
+    t.limpar();
+  }
+});
+
+const CABECALHO_CSV = " N° do imóvel;UF;Cidade;Bairro;Endereço;Preço;Valor de avaliação;Desconto;Financiamento;Descrição;Modalidade de venda;Link de acesso";
+/** Lista geral sintética, em ordem de UF como a real: `porUf` imóveis em cada UF. */
+function listaSintetica(porUf: Record<string, number>, data = "08/10/2026"): string {
+  const linhas = ["", ` Lista de Imóveis da Caixa;;Data de geração:;${data};;;;;;;`, CABECALHO_CSV, ""];
+  let numero = 100000;
+  for (const uf of Object.keys(porUf).sort()) {
+    for (let i = 0; i < (porUf[uf] ?? 0); i++) {
+      numero++;
+      linhas.push(
+        ` ${numero} ;${uf} ;CIDADE ${uf} ;CENTRO ;RUA A, N. ${i} ;100.000,00;200.000,00;50.00;Não;Casa, 0.00 de área total, 50.00 de área privativa, 0.00 de área do terreno.;Venda Direta Online;` +
+          `https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=${numero}`,
+      );
+    }
+  }
+  return `${linhas.join("\r\n")}\r\n`;
+}
+const DUAS_POR_UF: Record<string, number> = Object.fromEntries(UFS.map((uf) => [uf, 2]));
+const GERAL = "https://venda-imoveis.caixa.gov.br/listaweb/Lista_imoveis_geral.csv";
+
+test("conferirLista: lista geral cortada numa quebra de linha (faltam as últimas UFs) é recusada", () => {
+  const inteira = listaSintetica(DUAS_POR_UF);
+  const ok = conferirLista(interpretarLista(inteira), { uf: null, ultimaUf: "TO", anterior: null, agora: AGORA });
+  assert.deepEqual(ok.avisos, []);
+  assert.equal(ok.resumo.total, 54);
+  // Corte exato numa quebra de linha, a 60% do arquivo: passa nas checagens de estrutura...
+  const corte = inteira.indexOf("\r\n", Math.floor(inteira.length * 0.6)) + 2;
+  const cortada = interpretarLista(inteira.slice(0, corte));
+  assert.ok(cortada.registros.length < 54);
+  // ...mas termina antes de TO.
+  assert.throws(
+    () => conferirLista(cortada, { uf: null, ultimaUf: "TO", anterior: null, agora: AGORA }),
+    /devia ir até TO, mas termina em (\w\w) \(faltam .*TO\)\. Arquivo cortado numa quebra de linha\? Nada foi gravado\. Se essas UFs saíram mesmo da lista, rode com LUNETA_CAIXA_ULTIMA_UF=\1/,
+  );
+  assert.deepEqual(conferirLista(cortada, { uf: null, ultimaUf: null, anterior: null, agora: AGORA }).avisos, [], "checagem desligada");
+  assert.deepEqual(conferirLista(cortada, { uf: "AC", ultimaUf: null, anterior: null, agora: AGORA }).avisos, [], "lista de UF não tem essa checagem");
+  // Fora de ordem de UF: não dá para saber onde cortou; avisa e não recusa.
+  const foraDeOrdem = interpretarLista(inteira);
+  foraDeOrdem.registros.reverse();
+  assert.match(conferirLista(foraDeOrdem, { uf: null, ultimaUf: "TO", anterior: null, agora: AGORA }).avisos[0] ?? "", /não veio em ordem de UF/);
+});
+
+test("conferirLista: mesma data de geração com menos imóveis é recusada; data nova passa", () => {
+  const anterior = { gerado_em: "2026-10-08", total: 54, por_uf: DUAS_POR_UF, registrada_em: AGORA.toISOString() };
+  const menor = interpretarLista(listaSintetica({ ...DUAS_POR_UF, TO: 1 }));
+  assert.throws(() => conferirLista(menor, { uf: null, ultimaUf: "TO", anterior, agora: T2 }), /mesma "Data de geração" \(2026-10-08\) da lista lida em 2026-10-09, mas com 53 imóveis em vez de 54/);
+  const nova = interpretarLista(listaSintetica({ ...DUAS_POR_UF, TO: 1 }, "09/10/2026"));
+  assert.equal(conferirLista(nova, { uf: null, ultimaUf: "TO", anterior, agora: T2 }).resumo.total, 53);
+});
+
+test("rede (fetch falso): CSV geral cortado numa quebra de linha não marca removidos; mesma data com menos linhas também não", async () => {
+  const t = pastaTemporaria();
+  try {
+    const inteira = listaSintetica(DUAS_POR_UF);
+    const servir = (corpo: string): ClienteHttp => http({ ...ROBOTS, [GERAL]: resposta(corpo, "text/csv") }).cliente;
+    const c = conector({ cache: t.cache, ultimaUf: undefined });
+    const db = bancoEmMemoria();
+    const r1 = await executarColeta(db, c, { agora: AGORA, http: servir(inteira) });
+    assert.equal(r1.status, "sucesso", r1.erro ?? "");
+    assert.equal(r1.novos, 54);
+    const corte = inteira.indexOf("\r\n", Math.floor(inteira.length * 0.6)) + 2;
+    const r2 = await executarColeta(db, c, { agora: T2, http: servir(inteira.slice(0, corte)) });
+    assert.equal(r2.status, "erro");
+    assert.match(r2.erro ?? "", /devia ir até TO, mas termina em/);
+    // Corte dentro da última UF: termina em TO, mas a mesma geração já foi lida com mais linhas.
+    const semUltima = inteira.slice(0, inteira.lastIndexOf(" 100054 ;TO"));
+    const r3 = await executarColeta(db, c, { agora: T2, http: servir(semUltima) });
+    assert.equal(r3.status, "erro");
+    assert.match(r3.erro ?? "", /mesma "Data de geração" \(2026-10-08\).*53 imóveis em vez de 54/);
+    assert.equal(Number(db.prepare("SELECT count(*) AS n FROM imovel WHERE status = 'ativo'").get()?.n), 54, "nada marcado como removido");
+    // Uma UF que saiu de verdade: com a última UF ajustada (LUNETA_CAIXA_ULTIMA_UF; aqui, pela
+    // configuração) a lista passa, e a coleta seguinte já espera a última UF da lista anterior.
+    const semTo = listaSintetica({ ...DUAS_POR_UF, TO: 0 }, "09/10/2026");
+    const r4 = await executarColeta(db, conector({ cache: t.cache, ultimaUf: "SP" }), { agora: T2, http: servir(semTo) });
+    assert.equal(r4.status, "sucesso", r4.erro ?? "");
+    assert.equal(r4.removidos, 2);
+    const r5 = await executarColeta(db, c, { agora: DEPOIS, http: servir(listaSintetica({ ...DUAS_POR_UF, TO: 0 }, "10/10/2026")) });
+    assert.equal(r5.status, "sucesso", r5.erro ?? "");
+  } finally {
+    t.limpar();
+  }
+});
+
+test("reler a mesma ficha dias depois não muda o imóvel (a data da leitura fica fora do hash)", async () => {
+  const t = pastaTemporaria();
+  try {
+    copyFileSync(join(FIXTURES, "ficha_0000010005120_2026-10-08.html"), join(t.fichas, "0000010005120.html"));
+    const db = bancoEmMemoria();
+    const r1 = await executarColeta(db, conector({ cache: t.cache, fichasLocais: t.fichas }), { arquivo: CSV_30, uf: "AC", detalhes: true, agora: AGORA, http: httpProibido() });
+    assert.equal(r1.novos, 10);
+    const r2 = await executarColeta(db, conector({ cache: t.cache, fichasLocais: t.fichas, agora: () => DEPOIS }), { arquivo: CSV_30, uf: "AC", detalhes: true, agora: DEPOIS, http: httpProibido() });
+    assert.ok(r2.avisos.some((a) => /^Fichas: 10 buscada\(s\)/.test(a)), "a ficha foi relida");
+    assert.equal(r2.atualizados, 0);
+    assert.equal(r2.inalterados, 10);
+    const linha = db.prepare("SELECT atualizado_em, extras FROM imovel WHERE id_na_fonte = '0000010005120'").get();
+    assert.equal(linha?.atualizado_em, AGORA.toISOString());
+    assert.doesNotMatch(String(linha?.extras), /ficha_em|ficha_atual/);
+  } finally {
+    t.limpar();
+  }
+});
+
+test("foto redirecionada (ex.: imagem padrão de \"sem foto\") não conta como confirmada", async () => {
+  const capa = "https://venda-imoveis.caixa.gov.br/fotos/F000001000512021.jpg";
+  const redirecionada: Rota = () => {
+    const r = new Response(null, { status: 200, headers: { "content-type": "image/jpeg" } });
+    Object.defineProperty(r, "url", { value: "https://venda-imoveis.caixa.gov.br/fotos/sem-foto.jpg" });
+    return r;
+  };
+  const { cliente, chamadas } = http({ ...ROBOTS, [capa]: redirecionada });
+  const { brutos, avisos } = await coletar(conector({ verificarFotos: true }), { arquivo: CSV_30, uf: "AC", limite: 1, http: cliente });
+  const imovel = normalizarCaixa(brutos[0] as BrutoCaixa);
+  assert.deepEqual(imovel.fotos.map((f) => [f.url, f.ok, f.verificada_em]), [[capa, null, AGORA.toISOString()]]);
+  assert.ok(avisos.some((a) => /redirecionada para https:\/\/venda-imoveis\.caixa\.gov\.br\/fotos\/sem-foto\.jpg; slot não confirmado/.test(a)), avisos.join(" | "));
+  assert.equal(chamadas.filter((c) => c.url.includes("/fotos/F0000010005120")).length, 1, "para no slot redirecionado");
+});
+
+test("linha com \";\" a mais no endereço é recuperada e não desliga a marcação de removidos", async () => {
+  const db = bancoEmMemoria();
+  await executarColeta(db, conector(), { arquivo: CSV_30, agora: AGORA, http: httpProibido() });
+  const t = pastaTemporaria();
+  try {
+    const original = decodificarLista(readFileSync(CSV_30)).replace("08/10/2026", "09/10/2026");
+    const semUma = original.split("\n").filter((l) => !l.startsWith(" 10005121 ;")).join("\n");
+    const comPontoEVirgula = semUma.replace("RUA DO PURUS, N. S/N, QUARTEIRÃO 272, LOTE 10 ;", "RUA DO PURUS, N. S/N, QUARTEIRÃO 272, LOTE 10 ; FUNDOS ;");
+    const arquivo = join(t.dir, "lista.csv");
+    writeFileSync(arquivo, comPontoEVirgula);
+    const r = await executarColeta(db, conector(), { arquivo, agora: T2, http: httpProibido() });
+    assert.equal(r.status, "sucesso", `${r.erro ?? ""} ${r.avisos.join(" | ")}`);
+    assert.equal(r.invalidos, 0);
+    assert.equal(r.completa, true);
+    assert.equal(r.removidos, 1);
+    assert.ok(r.avisos.some((a) => /1 linha\(s\) com ";" a mais recuperada\(s\), excedente juntado a Endereço \(linha 5\)/.test(a)), r.avisos.join(" | "));
+    assert.equal(db.prepare("SELECT endereco FROM imovel WHERE id_na_fonte = '0000010005120'").get()?.endereco, "Rua do Purus, N. S/N, Quarteirão 272, Lote 10 ; Fundos");
+
+    // Sem âncora (link de outro número): continua inválida, mas o aviso de modalidade não lê a coluna deslocada.
+    const quebrada = comPontoEVirgula.replace("hdnimovel=10005120\n", "hdnimovel=99\n").replace("09/10/2026", "10/10/2026");
+    writeFileSync(arquivo, quebrada);
+    const r2 = await executarColeta(db, conector(), { arquivo, agora: T2, http: httpProibido() });
+    assert.equal(r2.invalidos, 1);
+    assert.ok(r2.avisos.some((a) => /1 linha\(s\) com número de colunas diferente do cabeçalho e não recuperáveis \(linha 5\)/.test(a)), r2.avisos.join(" | "));
+    assert.ok(r2.avisos.every((a) => !/Modalidade nova/.test(a)), r2.avisos.join(" | "));
+  } finally {
+    t.limpar();
+  }
+});
+
+test("estimativa de tempo conta a ficha e 2 HEAD de foto por imóvel; o CSV tem timeout próprio", async () => {
+  const logs: string[] = [];
+  const timeouts: Array<[string, number | undefined]> = [];
+  const { cliente } = http({ ...ROBOTS });
+  const espiao: ClienteHttp = {
+    ...cliente,
+    requisitar: (url: string, opcoes?: OpcoesRequisicao) => {
+      timeouts.push([url, opcoes?.timeoutMs]);
+      return cliente.requisitar(url, opcoes);
+    },
+  };
+  const { avisos } = await coletar(conector({ verificarFotos: true, maxFalhasSeguidas: 2 }), { arquivo: CSV_30, detalhes: true, http: espiao, log: (m) => logs.push(m) });
+  assert.ok(logs.some((l) => /fichas e fotos ligadas para até 30 imóvel\(is\); sem nada no cache, ~0\.\d h \(3 requisição\(ões\) por imóvel, 2 s entre elas\)/.test(l)), logs.join(" | "));
+  assert.ok(avisos.some((a) => /Verificação de fotos ligada na lista inteira, sem --uf nem --limite: pelo menos 2 HEAD por imóvel/.test(a)), avisos.join(" | "));
+
+  timeouts.length = 0;
+  await coletar(conector(), { uf: "AC", http: espiao }).catch(() => undefined);
+  await coletar(conector(), { http: espiao }).catch(() => undefined);
+  assert.deepEqual(timeouts, [
+    ["https://venda-imoveis.caixa.gov.br/listaweb/Lista_imoveis_AC.csv", 120_000],
+    [GERAL, 300_000],
+  ]);
 });
