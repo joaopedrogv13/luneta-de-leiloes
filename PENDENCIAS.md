@@ -50,16 +50,19 @@ pelo valor real no arquivo de conteúdo.
 - [ ] Login e área do assinante com dados reais; pagamento só na fase de venda.
 - [ ] No lançamento: `npm run check:publicacao` sem bloqueios e `NEXT_PUBLIC_INDEXAR=1` (passos abaixo).
 
-**Base de dados: geocodificação** (detalhes em `base/geo/README.md`)
-- [ ] Decidir o nome do nível "sede do município" em `precisao_geo`. Hoje é `cidade`: o contrato v1 já tinha esse valor e o
-  `CHECK` do esquema só aceita `exata`, `rua`, `cep`, `bairro` e `cidade`; o pedido original dizia `municipio`. Opções:
-  (a) manter `cidade` e o site ler como "o ponto é a sede do município, não o imóvel" (recomendado: nada muda);
-  (b) migração `002` que refaz a tabela `imovel` com o `CHECK` novo e regrava os valores (mexe no `tipos.ts` que todas as
-  fontes usam); (c) trocar só na exportação (`cidade` → `municipio`), deixando banco e JSON com nomes diferentes.
-- [ ] Conferir pela ficha da Caixa (CEP) o município de 3 imóveis cuja cidade não existe no IBGE e criar o apelido em
-  `base/geo/apelidos.csv`: `QUEIMADAS`/CE (imóvel 8444435692870), `TERRA VERMELHA`/PE (8444418921327) e
-  `SAO LUIZ DO TAPAJOS`/PA (1444419144903). Precisa de rede para o site da Caixa (bloqueada no ambiente de
-  desenvolvimento). Até lá ficam fora do mapa, sem palpite.
+**Base de dados** (detalhes em `base/README.md`, `base/FONTES.md` e `base/FASE1-SITE.md`)
+- [ ] Liberar a rede (ou acionar `base-coleta.yml`) para a primeira coleta ao vivo: hoje o banco foi carregado com a lista da
+  Caixa de 08/10/2026 e uma amostra de 10 lotes da Leilões Judiciais. Antes, ler os termos de uso da Caixa e da Leilões
+  Judiciais (esta declara `ai-train=no`) e pedir autorização por escrito à Leilões Judiciais.
+- [ ] Definir com o advogado os critérios dos selos (hoje desligados) e os limiares (deságio alto ≥ 40% e baixo < 20% são
+  provisórios), e quem revisa as tags marcadas "em revisão" (2.039 imóveis hoje, todos por preço acima da avaliação).
+- [ ] Conferir as fotos da Caixa ao vivo (a URL da capa segue um padrão confirmado por terceiros; nenhuma foi vista daqui).
+- [ ] Município de 3 imóveis cuja cidade não existe no IBGE, a conferir na ficha da Caixa e cadastrar em
+  `base/geo/apelidos.csv`: `QUEIMADAS`/CE (8444435692870), `TERRA VERMELHA`/PE (8444418921327) e `SAO LUIZ DO TAPAJOS`/PA
+  (1444419144903). Até lá ficam fora do mapa, sem palpite.
+- [ ] Tirar a `/previa` do ar antes do lançamento (ou protegê-la), e regerar `base/saida/` a partir da coleta oficial.
+- [ ] Opção 2 (raspagem): plataformas white-label primeiro (Superbid, V-Lance, Suporte Leilões, SOLEON, Leilão PRO), depois
+  leiloeiros e bancos, sempre respeitando robots.txt e termos; DataJud e Suporte Leilões só com termo/parceria.
 
 ## Antes de publicar: checagem e buscadores
 
