@@ -149,8 +149,12 @@ export function prepararImovel(imovel: ImovelNormalizado, agora: Date = new Date
   const pracas = [...imovel.pracas]
     .sort((a, b) => a.numero - b.numero)
     .map((p) => ({ numero: p.numero, data: p.data ?? null, valor_minimo: dinheiro(p.valor_minimo) }));
-  const pracaAtual = imovel.praca_atual ?? derivarPracaAtual(pracas, agora);
-  const daPraca = pracaAtual === null ? undefined : pracas.find((p) => p.numero === pracaAtual);
+  // praca_incerta: a fonte não diz qual praça vale; nada é deduzido, mas a data de uma praça
+  // única segue em data_praca (a exportação a usa para tirar o imóvel do ar).
+  const incerta = imovel.praca_incerta === true;
+  const pracaAtual = incerta ? null : (imovel.praca_atual ?? derivarPracaAtual(pracas, agora));
+  const daPraca =
+    pracaAtual !== null ? pracas.find((p) => p.numero === pracaAtual) : incerta && pracas.length === 1 ? pracas[0] : undefined;
   const preco = dinheiro(imovel.preco ?? daPraca?.valor_minimo ?? null);
   const avaliacao = dinheiro(imovel.valor_avaliacao);
   const cidade = colapsarEspacos(imovel.cidade);

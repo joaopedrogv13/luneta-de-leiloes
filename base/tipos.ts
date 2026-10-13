@@ -180,6 +180,14 @@ export interface ImovelNormalizado {
   preco?: number | null;
   /** Praça em vigor. Se ausente, o núcleo deduz pelas datas das praças. */
   praca_atual?: NumeroPraca | null;
+  /**
+   * `true` quando a fonte não permite saber qual praça está em vigor (ex.: Leilões Judiciais sem
+   * o valor da 2ª praça: praça única OU desconhecida). O núcleo então grava `praca_atual = null`
+   * em vez de deduzir pelas datas, e, havendo uma praça só, usa a data dela em `data_praca` (a
+   * exportação tira o imóvel do ar quando ela passa). O `numero` dessa praça é provisório e não
+   * afirma "oferta única". Deixe `praca_atual` vazio quando usar.
+   */
+  praca_incerta?: boolean;
   pracas: Praca[];
   fotos: Foto[];
   documentos: Documento[];

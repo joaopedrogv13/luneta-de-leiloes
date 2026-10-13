@@ -76,7 +76,7 @@ export const minhaFonte: Conector<LinhaBruta> = {
 - `coletar` lê os registros brutos, da rede (sempre por `op.http`) ou de `op.arquivo`. Valida o conteúdo (assinatura, formato, volume) e **lança erro** se vier uma página de bloqueio ou um arquivo truncado. Não grava nada.
 - `normalizar` converte um registro: devolve `null` para descartar (fora de escopo) e lança erro só se o registro estiver quebrado. Sem rede, sem banco.
 - Datas: `AAAA-MM-DD` ou ISO UTC (`util/data.ts` converte "08/10/2026 10:00" de Brasília). Dinheiro em reais, áreas em m². Campo que a fonte não informa fica `null`.
-- `preco` = valor mínimo vigente; se faltar, o núcleo usa a praça atual. `praca_atual` é deduzida pelas datas se faltar. O desconto é sempre calculado pelo núcleo (preço × avaliação), nunca copiado da fonte.
+- `preco` = valor mínimo vigente; se faltar, o núcleo usa a praça atual. `praca_atual` é deduzida pelas datas se faltar; com `praca_incerta: true` (a fonte não diz qual praça vale), ela fica `null` e, havendo uma praça só, a data dela vai para `data_praca`. O desconto é sempre calculado pelo núcleo (preço × avaliação), nunca copiado da fonte.
 - Fotos e documentos: só a URL da fonte, com `origem` ("api", "ficha", "padrao_url") e, quando houver, `verificada_em`/`ok`. Nada é baixado.
 - Utilitários prontos: `lerNumeroBR`, `lerDataBR`/`lerDataHoraBR`, `semHtml`, `capitalizarNome`, `normalizarUf`, `inferirTipoImovel`, `classificarModalidade`, `lerCsv`, `decodificar` (CP1252 correto; o `TextDecoder("windows-1252")` do Node 22 erra os bytes 0x80–0x9F).
 - Teste com `validarImovel` e com o conector rodando sobre uma fixture pequena (dados pessoais mascarados), sem rede.
@@ -101,6 +101,7 @@ Tabelas: `fonte`, `coleta` (log de cada execução), `imovel`, `praca`, `preco_h
 ## LGPD
 
 - Nunca mapear nome, CPF/CNPJ, e-mail ou IP de devedor, executado, exequente, depositário, licitante ou arrematante (ex.: `nm_usuario`, `id_usuario`, lances com IP).
-- O núcleo limpa e mascara (`util/lgpd.ts`) título, descrição, textos extras, resumos de edital e trechos de evidência antes de gravar: CPF, CNPJ, RG, e-mail e IP viram `[CPF]`, `[CNPJ]`, `[RG]`, `[E-MAIL]`, `[IP]`; nomes depois de papéis ("Executado:", "devedor fiduciante", "em face de", "Sr."...) e partes em "FULANO x BELTRANO" viram `[NOME]`. É heurística e prefere mascarar demais.
+- O núcleo limpa e mascara (`util/lgpd.ts`) título, descrição, textos extras, resumos de edital e trechos de evidência antes de gravar: CPF, CNPJ, RG, e-mail e IP viram `[CPF]`, `[CNPJ]`, `[RG]`, `[E-MAIL]`, `[IP]`; nomes depois de papéis ("Executado:", "devedor fiduciante", "em face de", "Sr."...) e de frases de ocupação ("ocupado por", "na posse de", "locado para", "reside no imóvel") e partes em "FULANO x BELTRANO" viram `[NOME]`. É heurística e prefere mascarar demais.
+- Endereço, bairro, cartório, matrícula e comitente **não** passam pela máscara de nomes (só pela de documentos, no comitente). Se o conector tira esses campos de texto livre, ele mesmo precisa garantir que não levam nomes (ver `campoSemPessoa` no conector da Leilões Judiciais).
 - Registros brutos não são guardados. Fixtures commitadas devem ser pequenas e já mascaradas.
 - Dados com `ai-train=no` (Leilões Judiciais) não podem treinar modelos.

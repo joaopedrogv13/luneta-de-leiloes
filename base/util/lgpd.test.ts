@@ -71,6 +71,19 @@ test("padrões reais de editais judiciais e matrículas (nomes trocados por fict
   for (const [entrada, esperado] of casos) assert.equal(mascararDadosPessoais(entrada), esperado, entrada);
 });
 
+test("frases de ocupação e posse de edital judicial", () => {
+  const casos: Array<[string, string]> = [
+    ["Imóvel ocupado por JOÃO DA SILVA SAURO e família.", "Imóvel ocupado por [NOME] e família."],
+    ["O bem encontra-se na posse de MARIA PEREIRA LIMA.", "O bem encontra-se na posse de [NOME]."],
+    ["Imóvel locado para JOSÉ CARLOS NUNES, sem contrato.", "Imóvel locado para [NOME], sem contrato."],
+    ["Segundo o oficial, reside no imóvel Maria Pereira Lima.", "Segundo o oficial, reside no imóvel [NOME]."],
+    ["Moradora: Ana Paula Costa", "Moradora: [NOME]"],
+    ["bem em poder de FULANO BELTRANO DE TAL", "bem em poder de [NOME]"],
+    ["Ocupada por terceiros. Imóvel locado a terceiros.", "Ocupada por terceiros. Imóvel locado a terceiros."],
+  ];
+  for (const [entrada, esperado] of casos) assert.equal(mascararDadosPessoais(entrada), esperado, entrada);
+});
+
 test("partes no formato A x B", () => {
   assert.equal(
     mascararDadosPessoais("Processo 1000818-76.2020.5.02.0090 - JOÃO DA SILVA x BANCO DO BRASIL S.A."),

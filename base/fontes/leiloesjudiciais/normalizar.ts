@@ -7,9 +7,11 @@
  *   vl_lanceinicialsegundoleilao (seg):
  *     seg preenchido e ini == min → 1ª praça em vigor (2ª praça valerá seg);
  *     seg preenchido e ini == seg → 2ª praça em vigor;
- *     seg nulo                    → praça única ou desconhecida: praça 0, com
- *                                   extras.regra_praca = "seg_nulo" para revisão humana;
- *     outra combinação            → indefinida: sem praças, extras.regra_praca = "indefinida".
+ *     seg nulo                    → praça única OU desconhecida: praca_atual null e
+ *                                   praca_incerta, com uma praça só como dado (número
+ *                                   provisório 0, data e lance inicial) e extras.regra_praca =
+ *                                   "seg_nulo" para revisão humana;
+ *     outra combinação            → igual, com extras.regra_praca = "indefinida".
  *   A data (dt_fechamento) vai na praça em vigor; a da outra praça a fonte não informa.
  * - Avaliação = vl_lanceminimo, com cautela: a API não documenta o campo. Na sonda ele bateu com
  *   a avaliação escrita no texto em todos os lotes conferíveis (inclusive a soma dos lotes com
@@ -17,24 +19,28 @@
  *   o lance inicial passa dele (aí não pode ser avaliação). O valor achado no texto e a
  *   conferência vão em extras (avaliacao_texto, avaliacao_confere).
  * - Status: a fonte deixa lotes "Aberto para Lance" depois do fechamento (sonda de 11/10 com
- *   fechamento em 17/09). Se dt_fechamento já passou quando a resposta chegou, ou o rótulo diz
- *   arrematado/encerrado/suspenso etc., o lote é "encerrado".
+ *   fechamento em 17/09) e até sem data de fechamento. O lote é "encerrado" se o rótulo diz
+ *   arrematado/encerrado/suspenso etc., se dt_fechamento já passou quando a resposta chegou ou se
+ *   dt_fechamento falta (extras.fechamento_ausente); o motivo vai em extras.status_motivo.
  * - Coordenadas: a URL do iframe do Street View traz o ponto da câmera (!1d lat !2d lon), que
  *   fica na rua em frente: precisão "rua".
  * - Fotos: só a URL da fonte (nada é baixado). Montamos o tamanho 640x480 com o prefixo e o
  *   tamanho que a própria API informa (nm_path_incompleto + tamanho.thumb_grande + nm_path),
- *   quando a URL pronta confirma esse padrão; senão fica a URL pronta (196x146).
+ *   quando a URL pronta confirma esse padrão, com origem "padrao_url" (não verificada; com
+ *   --detalhes só a capa é conferida); senão fica a URL pronta (196x146), com origem "api".
  * - Documentos: anexos[] (EDITAL, MATRÍCULA, AVALIAÇÃO, LAUDO...), só a URL.
  * - LGPD: nm_usuario/id_usuario nunca são lidos. Título, descrição e textos saem com nomes de
  *   partes e documentos mascarados (o núcleo mascara de novo ao gravar). Número de processo sim
- *   (é público e serve para conferir o leilão); nomes das partes não.
+ *   (é público e serve para conferir o leilão); nomes das partes não. Vara, endereço, bairro e
+ *   cartório tirados do texto passam por `campoSemPessoa` (o núcleo não mascara nomes nessas
+ *   colunas): são cortados onde começa uma pessoa e descartados se a máscara ainda mudar algo.
  * - Áreas, endereço, matrícula, quartos e vagas são lidos do texto só quando o lote é de um
  *   imóvel; lotes com vários imóveis ("Lote c/ 03 Imóveis") ficam sem esses campos.
  */
 import type { Documento, Foto, ImovelNormalizado, NumeroPraca, Praca, TextoFonte, TipoDocumento, TipoImovel, Uf } from "../../tipos.ts";
 import { inferirTipoImovel, classificarModalidade } from "../../util/classificar.ts";
 import { instanteDe, lerDataHoraBR } from "../../util/data.ts";
-import { mascararDadosPessoais } from "../../util/lgpd.ts";
+import { MASCARA, mascararDadosPessoais } from "../../util/lgpd.ts";
 import { arredondar, lerNumeroBR } from "../../util/numero.ts";
 import { dobrarCaixaEAcento, normalizarTexto, semHtml, textoOuNulo } from "../../util/texto.ts";
 import { normalizarUf } from "../../util/uf.ts";
@@ -116,15 +122,35 @@ export function ehLoteMultiplo(titulo: string, descricao: string): boolean {
   return /^im[óo]veis\b/i.test(titulo.trim()) || /\blote\s+c\/\s*\d+\s+im[óo]veis\b/i.test(descricao);
 }
 
-const STATUS_FECHADO = /(encerrad|arrematad|vendid|cancelad|suspens|sustad|retirad|finalizad|desert|prejudicad|sem licitante|nao vendid|fechad|baixad|adiad|condicional)/;
+/**
+ * Rótulos de lote que não recebe mais lance. "Adiado" NÃO está aqui: o leilão só mudou de data
+ * e segue valendo a data de fechamento. "Condicional" está: é lance abaixo do mínimo esperando o
+ * aval do comitente, depois do fechamento.
+ */
+const STATUS_FECHADO = /(encerrad|arrematad|vendid|cancelad|suspens|sustad|retirad|finalizad|desert|prejudicad|sem licitante|nao vendid|fechad|baixad|condicional)/;
 
-/** "ativo" ou "encerrado"; nunca "aberto" com fechamento no passado. */
-export function statusDoLote(lote: LoteLJ, fechamento: string | null, coletadoEm: string): "ativo" | "encerrado" {
-  if (STATUS_FECHADO.test(normalizarTexto(lote.nm_statuslote ?? ""))) return "encerrado";
+/** Por que o lote saiu como encerrado. */
+export type MotivoEncerrado = "rotulo_fonte" | "fechamento_passado" | "fechamento_ausente";
+
+export interface StatusDoLote {
+  status: "ativo" | "encerrado";
+  motivo: MotivoEncerrado | null;
+}
+
+/**
+ * "ativo" só com data de fechamento futura e rótulo aberto. A fonte deixa lotes "Aberto para
+ * Lance" depois do fechamento (sonda: fechados em 17/09, ainda abertos em 11/10) e também sem
+ * data (lote 217032, do 710º leilão do TRT2, anterior ao 711º que fechou em 17/09). Sem data não
+ * há como saber se ainda vale nem a exportação consegue tirá-lo do ar quando passar: fica
+ * "encerrado" (motivo "fechamento_ausente") até uma coleta trazer a data (ex.: --detalhes).
+ */
+export function statusDoLote(lote: LoteLJ, fechamento: string | null, coletadoEm: string): StatusDoLote {
+  if (STATUS_FECHADO.test(normalizarTexto(lote.nm_statuslote ?? ""))) return { status: "encerrado", motivo: "rotulo_fonte" };
   const fim = fechamento ? instanteDe(fechamento) : null;
+  if (fim === null) return { status: "encerrado", motivo: "fechamento_ausente" };
   const agora = instanteDe(coletadoEm);
-  if (fim !== null && agora !== null && fim < agora) return "encerrado";
-  return "ativo";
+  if (agora !== null && fim < agora) return { status: "encerrado", motivo: "fechamento_passado" };
+  return { status: "ativo", motivo: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -136,14 +162,26 @@ export type RegraPraca = "ini=min" | "ini=seg" | "seg_nulo" | "indefinida";
 export interface PracasDoLote {
   pracas: Praca[];
   praca_atual: NumeroPraca | null;
+  /** A fonte não diz qual praça está em vigor: vai como `praca_incerta` para o núcleo. */
+  incerta: boolean;
   regra: RegraPraca;
 }
 
-/** Aplica a regra de praça da crítica (§1.4) aos valores do lote. */
+/**
+ * Aplica a regra de praça da crítica (§1.4) aos valores do lote. Quando a regra não decide
+ * (`seg` nulo = praça única OU desconhecida; combinação fora da regra), a praça em vigor fica
+ * desconhecida (`praca_atual` null, `incerta`), mas a data e o lance inicial ficam numa praça só
+ * como dado, com número provisório 0: o núcleo usa essa data em `data_praca`, e a exportação tira
+ * o lote do ar quando ela passa.
+ */
 export function pracasDoLote(ini: number | null, min: number | null, seg: number | null, fechamento: string | null): PracasDoLote {
-  if (seg === null) {
-    return { pracas: [{ numero: 0, data: fechamento, valor_minimo: ini }], praca_atual: 0, regra: "seg_nulo" };
-  }
+  const soComoDado = (regra: RegraPraca): PracasDoLote => ({
+    pracas: [{ numero: 0, data: fechamento, valor_minimo: ini }],
+    praca_atual: null,
+    incerta: true,
+    regra,
+  });
+  if (seg === null) return soComoDado("seg_nulo");
   const igualMin = iguais(ini, min);
   const igualSeg = iguais(ini, seg);
   if (igualMin && !igualSeg) {
@@ -153,6 +191,7 @@ export function pracasDoLote(ini: number | null, min: number | null, seg: number
         { numero: 2, data: null, valor_minimo: seg },
       ],
       praca_atual: 1,
+      incerta: false,
       regra: "ini=min",
     };
   }
@@ -163,10 +202,11 @@ export function pracasDoLote(ini: number | null, min: number | null, seg: number
         { numero: 2, data: fechamento, valor_minimo: seg },
       ],
       praca_atual: 2,
+      incerta: false,
       regra: "ini=seg",
     };
   }
-  return { pracas: [], praca_atual: null, regra: "indefinida" };
+  return soComoDado("indefinida");
 }
 
 /**
@@ -201,7 +241,77 @@ function valorBR(bruto: string): number | null {
 // Texto: processo, matrícula, endereço, áreas
 // ---------------------------------------------------------------------------
 
+/**
+ * Começo de pessoa dentro de um campo tirado do texto livre: papel processual, dono, ocupante,
+ * "de propriedade de", "em nome de"... Tudo dali em diante é cortado.
+ */
+const PESSOA_NO_CAMPO = new RegExp(
+  String.raw`(?<![\p{L}\p{M}])(?:(?:${[
+    "deposit[áa]ri", "exequent", "executad", "requerent", "requerid", "reclamant", "reclamad", "embargant", "embargad",
+    "agravant", "agravad", "apelant", "apelad", "impugnant", "interessad", "credor", "devedor", "fiduciant",
+    "copropriet[áa]ri", "propriet[áa]ri", "possuidor", "ocupant", "ocupad[oa]", "morador", "locat[áa]ri", "locad[oa]",
+    "inquilin", "usufrutu[áa]ri", "adquirent", "transmitent", "herdeir", "c[ôo]njuge", "esp[óo]li", "inventariant",
+    "meeir", "avalista", "fiador", "outorgant", "outorgad", "cedent", "cession[áa]ri", "promitent", "compromiss[áa]ri",
+  ].join("|")})\p{L}*|(?:${[
+    "autor(?:a|es|as)?", "r[ée]u", "r[ée]us", "r[ée]s", "contra", "s[óo]ci[oa]s?", "titular(?:es)?", "reside(?:m)?",
+    "residentes?", "massa\\s+falida", "de\\s+propriedade", "em\\s+nome", "pertencente", "na\\s+posse", "em\\s+poder",
+    "em\\s+favor", "a\\s+favor", "em\\s+face", "movid[oa]\\s+por", "propost[oa]\\s+por", "ajuizad[oa]\\s+por",
+  ].join("|")})(?![\p{L}\p{M}]))`,
+  "iu",
+);
+/** "FULANO x BELTRANO", "A vs. B": sem a flag i, para \p{Lu} exigir maiúscula. */
+const PARTES_NO_CAMPO = /(?<=\p{L}[ \t]+)(?:x|X|vs\.?|VS\.?|versus|VERSUS)(?=[ \t]+\p{Lu})/u;
+
+/**
+ * Campo tirado do texto livre (vara, endereço, bairro, cartório). O núcleo não mascara nomes
+ * nessas colunas, e elas vão para o site; por isso: corta onde começa uma pessoa (papel, dono,
+ * ocupante, "A x B") e descarta o campo inteiro se a máscara de dados pessoais ainda mudar algo.
+ * Prefere perder o campo a publicar um nome.
+ */
+export function campoSemPessoa(valor: string | null | undefined): string | null {
+  if (!valor) return null;
+  let corte = valor.length;
+  for (const regex of [PESSOA_NO_CAMPO, PARTES_NO_CAMPO]) {
+    const achado = regex.exec(valor);
+    if (achado && achado.index < corte) corte = achado.index;
+  }
+  const limpo = textoOuNulo(valor.slice(0, corte).replace(/[\s.,;:(–—-]+$/u, ""));
+  if (!limpo || limpo.length < 2 || !/\p{L}/u.test(limpo)) return null;
+  return mascararDadosPessoais(limpo) === limpo ? limpo : null;
+}
+
+function trechosDaVara(texto: string): string[] {
+  return texto.split(/\s+[-–—]\s+|\s*[,;]\s*/u).map((t) => t.trim()).filter(Boolean);
+}
+
+/** Palavras de juízo: o 1º trecho da vara precisa de uma ("90ª VT São Paulo/SP", "EXE3", "DIVEX"). */
+const JUIZO = /(?<![\p{L}\p{M}])(?:varas?|vt|vfp|juízo|juizo|juizado|foro|fórum|forum|comarca|exe\d*|divex|cejusc|gaep|tribunal|turma|c[âa]mara|se[çc][ãa]o|subse[çc][ãa]o|of[íi]cio|central|n[úu]cleo|posto|cartório|cartorio|secretaria|unidade|upj|ufp|cpe)(?![\p{L}\p{M}])/iu;
+
+/**
+ * Vara/juízo escrito ao lado do processo, em trechos separados por " - ", "," ou ";". Fica o
+ * 1º trecho (que precisa nomear o juízo) e os seguintes que também nomeiam juízo, cidade com UF
+ * ("São Paulo/SP") ou são uma palavra só ("Piracicaba"). Para no primeiro trecho que pode ser
+ * nome de pessoa ("2ª Vara Cível - JOÃO DA SILVA").
+ */
+export function varaSegura(bruto: string | null | undefined): string | null {
+  const semPessoa = campoSemPessoa(bruto);
+  if (!semPessoa) return null;
+  const trechos = trechosDaVara(semPessoa);
+  const primeiro = trechos[0];
+  if (!primeiro || !JUIZO.test(primeiro)) return null;
+  const aceitos = [primeiro];
+  for (const trecho of trechos.slice(1)) {
+    const cidadeUf = /^[\p{L}\p{M}' .-]+\/[A-Z]{2}$/u.test(trecho);
+    const umaPalavra = /^[\p{L}\p{M}\d'-]+$/u.test(trecho);
+    if (!JUIZO.test(trecho) && !cidadeUf && !umaPalavra) break;
+    aceitos.push(trecho);
+  }
+  return aceitos.join(" - ");
+}
+
 const CNJ = String.raw`(\d{7}-\d{2}\.\d{4}\.(\d)\.(\d{2})\.\d{4})`;
+/** "(Proc. NNNNNNN-DD.AAAA.J.TR.OOOO - resto)": grupo 1 = número, grupo 4 = resto (vara e partes). */
+const PROC_ENTRE_PARENTESES = String.raw`\(\s*proc(?:esso)?\.?\s*(?:n[º°o]?\.?\s*)?${CNJ}\s*(?:[-–]\s*([^()\n]{2,80}?))?\s*\)`;
 const UF_POR_TR_ESTADUAL = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ",
   "RN", "RS", "RO", "RR", "SC", "SE", "SP", "TO",
@@ -221,22 +331,41 @@ export function tribunalDoProcesso(processo: string): string | null {
 
 export interface ProcessoDoLote {
   numero: string | null;
-  /** Vara/juízo escrito ao lado ("90ª VT São Paulo/SP", "EXE3 - Piracicaba"). */
+  /** Vara/juízo escrito ao lado ("90ª VT São Paulo/SP", "EXE3 - Piracicaba"), sem nomes de partes. */
   vara: string | null;
 }
 
 /**
  * Número do processo do próprio lote. Só aceita o formato "(Proc. NNNNNNN-DD.AAAA.J.TR.OOOO ...)"
  * ou "Processo nº ...": a descrição cita outros processos (penhoras, indisponibilidades, agravos)
- * que não são o da execução.
+ * que não são o da execução. A vara passa por `varaSegura`: o que vem depois dela costuma ser
+ * o nome das partes ("2ª Vara Cível - FULANO x BELTRANO").
  */
 export function processoDoLote(descricao: string): ProcessoDoLote {
-  const entreParenteses = new RegExp(String.raw`\(\s*proc(?:esso)?\.?\s*(?:n[º°o]?\.?\s*)?${CNJ}\s*(?:[-–]\s*([^()\n]{2,80}?))?\s*\)`, "i").exec(descricao);
+  const entreParenteses = new RegExp(PROC_ENTRE_PARENTESES, "i").exec(descricao);
   if (entreParenteses?.[1]) {
-    return { numero: entreParenteses[1], vara: textoOuNulo(entreParenteses[4]?.replace(/[.;,]+$/, "")) };
+    return { numero: entreParenteses[1], vara: varaSegura(entreParenteses[4]?.replace(/[.;,]+$/, "")) };
   }
   const solto = new RegExp(String.raw`\bprocesso\s*(?:n[º°o]?\.?\s*)?:?\s*${CNJ}`, "i").exec(descricao);
   return { numero: solto?.[1] ?? null, vara: null };
+}
+
+/**
+ * Na descrição, o que vem depois da vara em "(Proc. NNN - vara - ...)" e que `varaSegura` não
+ * aceitou vira "[NOME]": ali vão as partes, às vezes sem papel nem "x" ("2ª Vara Cível - FULANO
+ * DE TAL"), e a máscara do núcleo só reconhece nome por papel ou "A x B". Prefere mascarar demais
+ * (uma cidade escrita por extenso também some).
+ */
+export function semPartesNoProcesso(descricao: string): string {
+  return descricao.replace(new RegExp(PROC_ENTRE_PARENTESES, "gi"), (inteiro: string, ...grupos: unknown[]) => {
+    const resto = typeof grupos[3] === "string" ? grupos[3] : "";
+    if (!resto) return inteiro;
+    const bruto = resto.replace(/[.;,]+$/, "").trim();
+    const vara = varaSegura(bruto);
+    if (vara !== null && vara === trechosDaVara(bruto).join(" - ")) return inteiro;
+    const i = inteiro.lastIndexOf(resto);
+    return `${inteiro.slice(0, i)}${vara ? `${vara} - ` : ""}${MASCARA.nome}${inteiro.slice(i + resto.length)}`;
+  });
 }
 
 export interface MatriculaDoLote {
@@ -244,15 +373,19 @@ export interface MatriculaDoLote {
   cartorio: string | null;
 }
 
-/** Primeira matrícula com cartório ("MATRÍCULA Nº 147.300 DO 6º CARTÓRIO DE REGISTRO DE IMÓVEIS DE ..."). */
+/**
+ * Primeira matrícula com cartório ("MATRÍCULA Nº 147.300 DO 6º CARTÓRIO DE REGISTRO DE IMÓVEIS DE ...").
+ * O cartório para na primeira vírgula (nome de cartório não tem) e passa por `campoSemPessoa`:
+ * logo depois costuma vir "de propriedade de FULANO".
+ */
 export function matriculaDoLote(descricao: string): MatriculaDoLote {
   const direta =
-    /matr[íi]cula(?:d[oa])?\s+(?:sob\s+o\s+)?(?:n[º°o]?\.?\s*)?:?\s*(\d[\d.]*\d|\d)\s*,?\s+(?:d[oa]\s+)?(\d{1,2}\s*[º°ªo]?\s*(?:cart[óo]rio|of[íi]cio|serventia|registro|cri\b)[^.;()\n]*)/i.exec(descricao);
-  if (direta?.[1]) return { matricula: direta[1], cartorio: textoOuNulo(direta[2]) };
+    /matr[íi]cula(?:d[oa])?\s+(?:sob\s+o\s+)?(?:n[º°o]?\.?\s*)?:?\s*(\d[\d.]*\d|\d)\s*,?\s+(?:d[oa]\s+)?(\d{1,2}\s*[º°ªo]?\s*(?:cart[óo]rio|of[íi]cio|serventia|registro|cri\b)[^.;,()\n]*)/i.exec(descricao);
+  if (direta?.[1]) return { matricula: direta[1], cartorio: campoSemPessoa(direta[2]) };
   const cri = /(\d{1,2}\s*[º°ª]\s*CRI)\s+(?:n[º°o]?\.?\s*)?(\d[\d.]*\d)/i.exec(descricao);
-  if (cri?.[2]) return { matricula: cri[2], cartorio: textoOuNulo(cri[1]) };
+  if (cri?.[2]) return { matricula: cri[2], cartorio: campoSemPessoa(cri[1]) };
   const local = /\b(CRI\s+local)\s+(?:n[º°o]?\.?\s*)?(\d[\d.]*\d)/i.exec(descricao);
-  if (local?.[2]) return { matricula: local[2], cartorio: textoOuNulo(local[1]) };
+  if (local?.[2]) return { matricula: local[2], cartorio: campoSemPessoa(local[1]) };
   return { matricula: null, cartorio: null };
 }
 
@@ -264,8 +397,16 @@ export interface EnderecoDoLote {
   cep: string | null;
 }
 
+/**
+ * Endereço limpo: para no fim da frase que fecha com cidade/UF ("Campinas/SP. Depositário: ...")
+ * ou antes de um novo rótulo (". Obs.:", ". Ônus:"), corta onde começa uma pessoa e descarta o
+ * campo se ainda sobrar algo que a máscara mude (`campoSemPessoa`).
+ */
 function limparEndereco(valor: string | undefined): string | null {
-  const limpo = textoOuNulo(valor?.replace(/[.;,\s]+$/, ""));
+  if (!valor) return null;
+  const fimDeFrase = /(?<=\/[A-Z]{2})\.(?=\s|$)|\.\s+(?=\p{Lu}[\p{L}\p{M}]*(?:\s+[\p{L}\p{M}]+){0,3}\s*:)/u.exec(valor);
+  const cortado = fimDeFrase ? valor.slice(0, fimDeFrase.index) : valor;
+  const limpo = campoSemPessoa(cortado.replace(/[.;,\s]+$/, ""));
   return limpo && limpo.length <= 200 ? limpo : null;
 }
 
@@ -285,7 +426,7 @@ export function enderecoDoLote(descricao: string): EnderecoDoLote {
     const m = /^(.+?)\s+n[úu]mero\s*:\s*([^,]+),\s*bairro\s*:\s*([^,]+?)(?:\s+complemento\s*:\s*([^,]+))?,\s*([^,]+?)\/([A-Z]{2})(?:\s*,\s*CEP\s*:\s*([\d.-]+))?/i.exec(bruto);
     if (m) {
       const partes = [m[1], m[2], m[4]].map((p) => textoOuNulo(p)).filter((p): p is string => p !== null);
-      return { endereco: limparEndereco(partes.join(", ")), bairro: textoOuNulo(m[3]), cep: cepDe(m[7]) };
+      return { endereco: limparEndereco(partes.join(", ")), bairro: campoSemPessoa(m[3]), cep: cepDe(m[7]) };
     }
   }
 
@@ -358,8 +499,10 @@ export function urlGrande(foto: FotoLJ): string | null {
 }
 
 /**
- * Fotos do lote, na ordem da fonte. `usarGrande` = false força a URL pronta da API (ex.: quando
- * o HEAD da capa grande falhou).
+ * Fotos do lote, na ordem da fonte. A URL grande (640x480) é MONTADA por nós: vai com origem
+ * "padrao_url" (precisa de verificação; só a capa é conferida, e só com --detalhes). A URL pronta
+ * da API (196x146) vai com origem "api". `usarGrande` = false força a URL pronta (ex.: quando o
+ * HEAD da capa grande falhou).
  */
 export function fotosDoLote(fotos: readonly FotoLJ[] | null | undefined, usarGrande = true): Foto[] {
   const saida: Foto[] = [];
@@ -371,7 +514,7 @@ export function fotosDoLote(fotos: readonly FotoLJ[] | null | undefined, usarGra
     const url = grande ?? pronta;
     if (!url) continue;
     const tamanho = grande ? tamanhoDeclarado(foto, "thumb_grande") : (/\/(\d{2,4}x\d{2,4})\//.exec(url)?.[1] ?? null);
-    saida.push({ url, ordem: saida.length, tamanho, origem: "api", verificada_em: null, ok: null });
+    saida.push({ url, ordem: saida.length, tamanho, origem: grande ? "padrao_url" : "api", verificada_em: null, ok: null });
   }
   return saida;
 }
@@ -490,6 +633,7 @@ export function normalizarLote(coletado: LoteColetado): ImovelNormalizado | null
     if (aviso) textos.push({ origem: "alerta", texto: mascararDadosPessoais(aviso) });
   }
 
+  const situacao = statusDoLote(lote, fechamento, coletado.coletado_em);
   const parcelas = inteiro(lote.nu_parcelas);
   const extras: Record<string, string | number | boolean | null> = {
     leilao_id: Number(leilaoId),
@@ -512,7 +656,8 @@ export function normalizarLote(coletado: LoteColetado): ImovelNormalizado | null
     indice_correcao: texto(lote.indice_correcao),
     site_leiloeiro: siteDoLeiloeiro(lote.nm_url_leiloeiro),
     lote_multiplo: multiplo,
-    fechamento_fonte: praca.regra === "indefinida" ? fechamento : null,
+    status_motivo: situacao.motivo,
+    fechamento_ausente: fechamento === null ? true : null,
   };
   for (const [chave, valor] of Object.entries(extras)) if (valor === null) delete extras[chave];
 
@@ -531,7 +676,7 @@ export function normalizarLote(coletado: LoteColetado): ImovelNormalizado | null
     lon: coordenadas?.lon ?? null,
     precisao_geo: coordenadas ? "rua" : null,
     ...areas,
-    descricao: descricaoBruta ? mascararDadosPessoais(descricaoBruta) : null,
+    descricao: descricaoBruta ? mascararDadosPessoais(semPartesNoProcesso(descricaoBruta)) : null,
     textos,
     modalidade: classificada.modalidade === "outro" ? "leilao" : classificada.modalidade,
     modalidade_fonte: null,
@@ -549,10 +694,11 @@ export function normalizarLote(coletado: LoteColetado): ImovelNormalizado | null
     valor_avaliacao: avaliacao,
     preco: precoAtual,
     praca_atual: praca.praca_atual,
+    praca_incerta: praca.incerta,
     pracas: praca.pracas,
     fotos,
     documentos: documentosDoLote(lote.anexos),
-    status: statusDoLote(lote, fechamento, coletado.coletado_em),
+    status: situacao.status,
     extras,
   };
 }

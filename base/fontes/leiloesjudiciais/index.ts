@@ -22,8 +22,9 @@
  * - uma resposta JSON-RPC (ou uma lista delas), como o `curl` devolve; linhas que não são JSON
  *   depois do objeto (ex.: "HTTP 200 application/json" das sondas) são ignoradas;
  * - o JSON de dentro de `content[0].text` ({"results": [...]} ou {"details": {...}}).
+ * Os dois últimos não trazem a data de coleta: informe com LUNETA_LJ_COLETADO_EM, senão o arquivo
+ * é recusado (a data de modificação do arquivo não vale como data de coleta).
  */
-import { stat } from "node:fs/promises";
 import type { Conector, OpcoesColeta, Uf } from "../../tipos.ts";
 import { UFS } from "../../tipos.ts";
 import { lerArquivoTexto } from "../../util/arquivo.ts";
@@ -59,8 +60,13 @@ export interface ConfigLeiloesJudiciais {
   intervaloMs?: number;
   /** Teto de chamadas de ferramenta por coleta (padrão 1000). */
   maxChamadas?: number;
-  /** Falhas transitórias (rede, timeout, 5xx) toleradas antes de desistir: max(3, fração × chamadas previstas). Padrão 0,1. */
+  /** Falhas transitórias (rede, timeout, 5xx, erro interno JSON-RPC) toleradas antes de desistir: max(3, fração × chamadas previstas). Padrão 0,1. */
   fracaoFalhasToleradas?: number;
+  /**
+   * Data de coleta de um arquivo local que não a declara (padrão: variável LUNETA_LJ_COLETADO_EM).
+   * Sem ela, arquivo sem "coletado_em" é recusado.
+   */
+  coletadoEm?: string;
   /** Para testes: relógio e espera. */
   agora?: () => number;
   esperar?: (ms: number) => Promise<void>;
@@ -81,11 +87,16 @@ function ehObjeto(valor: unknown): valor is Record<string, unknown> {
   return typeof valor === "object" && valor !== null && !Array.isArray(valor);
 }
 
-/** Lotes de uma carga de ferramenta: busca ({results}), detalhe ({found, details}) ou lote solto. */
+/**
+ * Lotes de uma carga de ferramenta: busca ({results}), detalhe ({found, details}) ou lote solto.
+ * Busca vazia: a sonda nunca mostrou uma; aceitamos `totalResults: 0` com `results` vazio,
+ * ausente ou null. Qualquer outro formato é erro (a coleta para sem gravar).
+ */
 export function lotesDaCarga(carga: unknown): LoteLJ[] {
   if (Array.isArray(carga)) return carga.filter(ehObjeto).map(semCamposPessoais);
   if (!ehObjeto(carga)) throw new ErroMcp("formato", "carga da ferramenta não é objeto JSON.");
   if (Array.isArray(carga.results)) return carga.results.filter(ehObjeto).map(semCamposPessoais);
+  if ((carga.totalResults === 0 || carga.totalResults === "0") && (carga.results === undefined || carga.results === null)) return [];
   if ("details" in carga || "found" in carga) {
     const detalhe = carga.details;
     return carga.found !== false && ehObjeto(detalhe) && idDoLote(detalhe.lote_id) ? [semCamposPessoais(detalhe)] : [];
@@ -139,18 +150,34 @@ function termosDaConfig(config: ConfigLeiloesJudiciais): readonly string[] {
   return TERMOS_PADRAO;
 }
 
-/** Falha que vale tentar a próxima busca: rede, timeout ou erro do servidor depois das retentativas. */
-function ehTransitoria(erro: unknown): boolean {
+/**
+ * Falha que vale tentar a próxima busca: rede, timeout, HTTP 5xx depois das retentativas, erro
+ * da própria ferramenta (isError) e erro JSON-RPC do servidor (-32603 "Internal error" e a faixa
+ * -32000 a -32099, reservada a erros de implementação do servidor). Conta para o limite de falhas.
+ * Parâmetro inválido (-32602), método inexistente (-32601) e resposta fora do formato não são
+ * transitórios: a API mudou e a coleta para.
+ */
+export function ehTransitoria(erro: unknown): boolean {
   if (erro instanceof ErroHttp) return erro.motivo === "rede" || erro.motivo === "timeout" || (erro.motivo === "status" && (erro.status ?? 0) >= 500);
-  return erro instanceof ErroMcp && erro.tipo === "ferramenta";
+  if (!(erro instanceof ErroMcp)) return false;
+  if (erro.tipo === "ferramenta") return true;
+  const codigo = erro.codigo;
+  return erro.tipo === "jsonrpc" && codigo !== null && (codigo === -32603 || (codigo <= -32000 && codigo >= -32099));
 }
 
-function exigirFerramenta(ferramentas: readonly FerramentaMcp[], nome: string, parametro: string): FerramentaMcp | null {
-  const f = ferramentas.find((t) => t.name === nome) ?? null;
-  if (f && f.inputSchema?.properties && !(parametro in f.inputSchema.properties)) {
-    throw new ErroMcp("formato", `${nome} não tem mais o parâmetro "${parametro}": a API mudou, revise o conector.`);
-  }
-  return f;
+/** A ferramenta existe e ainda tem o parâmetro? `mudou` = existe, mas sem o parâmetro. */
+function conferirFerramenta(ferramentas: readonly FerramentaMcp[], nome: string, parametro: string): "ok" | "ausente" | "mudou" {
+  const f = ferramentas.find((t) => t.name === nome);
+  if (!f) return "ausente";
+  return f.inputSchema?.properties && !(parametro in f.inputSchema.properties) ? "mudou" : "ok";
+}
+
+/** Data de coleta de um arquivo local: ISO válida e não no futuro (com folga de 10 min para relógio). */
+function dataDeColeta(valor: string, agora: number, deOnde: string): string {
+  const t = Date.parse(valor);
+  if (Number.isNaN(t)) throw new Error(`${deOnde}: data inválida (${JSON.stringify(valor)}); use ISO, ex.: 2026-10-11T01:35:00Z.`);
+  if (t > agora + 10 * 60 * 1000) throw new Error(`${deOnde}: ${valor} está no futuro; um arquivo assim sobrescreveria coletas reais.`);
+  return new Date(t).toISOString();
 }
 
 /** Cria o conector (a configuração serve para testes e ajustes de ritmo). */
@@ -163,16 +190,26 @@ export function criarConectorLeiloesJudiciais(config: ConfigLeiloesJudiciais = {
 
   async function* doArquivo(op: OpcoesColeta, arquivo: string): AsyncGenerator<LoteColetado> {
     const { cargas, coletadoEm: declarado } = interpretarArquivo(await lerArquivoTexto(arquivo, "utf-8"));
-    let coletadoEm = declarado && !Number.isNaN(Date.parse(declarado)) ? new Date(declarado).toISOString() : null;
-    if (!coletadoEm) {
-      coletadoEm = (await stat(arquivo)).mtime.toISOString();
-      op.informar({ aviso: `Arquivo sem "coletado_em": usei a data de modificação (${coletadoEm}) para decidir o que já fechou.` });
+    // Formato primeiro (erro mais útil), depois a data.
+    const lotesPorCarga = cargas.map(lotesDaCarga);
+    // A data de coleta decide o que já fechou e protege dados mais novos (o núcleo recusa um
+    // arquivo mais antigo que o gravado). A data de modificação do arquivo NÃO serve: copiar ou
+    // tocar uma resposta antiga a faria passar por nova. Sem data declarada, o arquivo é recusado.
+    const explicita = config.coletadoEm ?? process.env.LUNETA_LJ_COLETADO_EM ?? null;
+    let coletadoEm: string;
+    if (declarado !== null) coletadoEm = dataDeColeta(declarado, agora(), `"coletado_em" de ${arquivo}`);
+    else if (explicita) coletadoEm = dataDeColeta(explicita, agora(), "LUNETA_LJ_COLETADO_EM");
+    else {
+      throw new Error(
+        `${arquivo} não declara quando a resposta foi coletada. Use o formato da fixture ({"coletado_em": "...", "respostas": [...]}) ` +
+          `ou informe a data: LUNETA_LJ_COLETADO_EM=2026-10-11T01:35:00Z. A data de modificação do arquivo não é usada.`,
+      );
     }
     op.informar({ origem: arquivo, geradoEm: coletadoEm });
     const vistos = new Set<string>();
     let entregues = 0;
-    for (const carga of cargas) {
-      for (const lote of lotesDaCarga(carga)) {
+    for (const lotes of lotesPorCarga) {
+      for (const lote of lotes) {
         const id = idDoLote(lote.lote_id);
         if (id) {
           if (vistos.has(id)) continue;
@@ -193,11 +230,20 @@ export function criarConectorLeiloesJudiciais(config: ConfigLeiloesJudiciais = {
     const info = await mcp.inicializar();
     op.log(`MCP: ${info.nome ?? "servidor sem nome"} ${info.versao ?? ""}, protocolo ${info.protocolo ?? "?"}`);
     const ferramentas = await mcp.listarFerramentas();
-    if (!exigirFerramenta(ferramentas, "search_leiloes", "query")) {
-      throw new ErroMcp("formato", "a API não oferece mais search_leiloes: revise o conector.");
+    const busca = conferirFerramenta(ferramentas, "search_leiloes", "query");
+    if (busca === "ausente") throw new ErroMcp("formato", "a API não oferece mais search_leiloes: revise o conector.");
+    if (busca === "mudou") throw new ErroMcp("formato", `search_leiloes não tem mais o parâmetro "query": a API mudou, revise o conector.`);
+    // get_leilao_details só importa com --detalhes; sem ela (ou com o parâmetro trocado), a
+    // coleta segue só com a busca e avisa.
+    let temDetalhe = false;
+    if (op.detalhes) {
+      const detalhe = conferirFerramenta(ferramentas, "get_leilao_details", "leilaoId");
+      temDetalhe = detalhe === "ok";
+      if (detalhe === "ausente") op.informar({ aviso: "get_leilao_details indisponível: coleta sem detalhes." });
+      if (detalhe === "mudou") {
+        op.informar({ aviso: `get_leilao_details não tem mais o parâmetro "leilaoId" (a API mudou, revise o conector): coleta sem detalhes.` });
+      }
     }
-    const temDetalhe = exigirFerramenta(ferramentas, "get_leilao_details", "leilaoId") !== null;
-    if (op.detalhes && !temDetalhe) op.informar({ aviso: "get_leilao_details indisponível: coleta sem detalhes." });
 
     op.informar({ origem: URL_MCP, geradoEm: inicio });
 

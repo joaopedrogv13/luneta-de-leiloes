@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 import { principal } from "../../cli.ts";
 import { executarColeta } from "../../coleta.ts";
 import { lerTexto } from "../../db.ts";
+import { montarExportacao } from "../../exportar.ts";
+import { prepararImovel } from "../../gravar.ts";
 import { bancoEmMemoria, httpProibido } from "../../testes/apoio.ts";
 import type { ImovelNormalizado, MetaColeta, OpcoesColeta, Uf } from "../../tipos.ts";
 import { criarClienteHttp, ErroHttp, type ClienteHttp } from "../../util/http.ts";
@@ -15,6 +17,7 @@ import { obterConector } from "../index.ts";
 import {
   AVISO_LEGAL,
   criarConectorLeiloesJudiciais,
+  ehTransitoria,
   ID_LEILOES_JUDICIAIS,
   interpretarArquivo,
   leiloesJudiciais,
@@ -27,16 +30,19 @@ import { acharRespostaRpc, ErroMcp, URL_MCP } from "./mcp.ts";
 import {
   areasDoLote,
   avaliacaoNoTexto,
+  campoSemPessoa,
   coordenadasDoIframe,
   enderecoDoLote,
   matriculaDoLote,
   normalizarLote,
   pracasDoLote,
   processoDoLote,
+  semPartesNoProcesso,
   statusDoLote,
   tipoDoAnexo,
   tribunalDoProcesso,
   valorLJ,
+  varaSegura,
 } from "./normalizar.ts";
 import type { LoteColetado, LoteLJ } from "./tipos.ts";
 
@@ -70,16 +76,27 @@ function normalizar(l: LoteLJ, coletadoEm = COLETADO_EM, extra: Partial<LoteCole
   return n;
 }
 
-/** Nomes fictícios que a fixture põe no lugar das partes: nenhum pode sobrar depois da normalização. */
+/**
+ * Nomes sintéticos que a fixture põe no lugar das partes (nenhuma palavra vem do nome real):
+ * nenhum pode sobrar depois da normalização.
+ */
 const NOMES_FICTICIOS = [
-  "FULANO DE TAL", "BELTRANO DA SILVA", "CICLANA DE SOUZA", "JOANA EXEMPLO PEREIRA", "PEDRO AMOSTRA LIMA",
-  "LUCIA FICTICIA ROCHA", "VERA TESTE ALVES", "SILVIA MODELO COSTA", "MARIA TESTE OLIVEIRA", "CARLOS EXEMPLAR ALVES",
-  "REGINA FICTICIA MOURA", "ROBERTO AMOSTRA NUNES", "JOSE FICTICIO SANTOS", "JOAO EXEMPLO CAMPOS", "CRISTINA TESTE CAMPOS",
-  "JOÃO FICTÍCIO MAGALHÃES", "TEREZA EXEMPLO DIAS", "EDSON AMOSTRA DA SILVA", "PAULA FICTICIA BRITO", "PAULO EXEMPLO BRITO",
-  "ELIANA TESTE BRITO", "MARIO AMOSTRA GOMES", "CLAUDIO FICTICIO RAMOS", "HELIO EXEMPLO SOARES", "ESTER TESTE DOS SANTOS",
-  "RAIMUNDO AMOSTRA DOS SANTOS", "CRISTIANO FICTICIO MELO", "USUARIO FICTICIO DE TESTE",
+  "FULANO DE TAL", "BELTRANO DE TAL", "CICLANA DE TAL", "FULANA SINTETICA ALFA", "FULANO SINTETICO COMETA",
+  "BELTRANA SINTETICA DELTA", "CICLANA SINTETICA EPSILON", "FULANA SINTETICA ZETA", "BELTRANA SINTETICA TETA",
+  "CICLANO SINTETICO IOTA", "FULANA SINTETICA KAPA", "BELTRANO SINTETICO LAMBDA", "CICLANO SINTETICO SIGMA",
+  "FULANO SINTETICO OMICRON", "BELTRANA SINTETICA OMICRON", "CICLANO SINTÉTICO ÔMEGA", "FULANA SINTETICA UPSILON",
+  "BELTRANO SINTETICO DE TAL", "CICLANA SINTETICA RHO", "FULANO SINTETICO RHO", "BELTRANA SINTETICA RHO",
+  "CICLANO SINTETICO PSI", "FULANO SINTETICO NEBULOSA", "BELTRANO SINTETICO QUASAR", "CICLANA SINTETICA DOS OMEGAS",
+  "FULANO SINTETICO DOS OMEGAS", "BELTRANO SINTETICO PULSAR", "USUARIO FICTICIO DE TESTE",
   "111.444.777-35", "529.982.247-25", "123.456.789-09", "424242",
 ];
+/** Palavras dos nomes sintéticos: nenhuma pode sobrar em texto, vara, endereço ou cartório. */
+const PALAVRAS_SINTETICAS = /\b(?:FULAN[OA]|BELTRAN[OA]|CICLAN[OA]|SINT[EÉ]TIC[OA]|OMEGAS|QUASAR|PULSAR|NEBULOSA)\b/;
+
+test("fixture: os nomes sintéticos estão todos lá (e saem mascarados)", () => {
+  const cru = readFileSync(FIXTURE, "utf8");
+  for (const nome of NOMES_FICTICIOS) assert.ok(cru.includes(nome), `a fixture deveria ter ${nome}`);
+});
 
 // ---------------------------------------------------------------------------
 // Normalização (fixture real, mascarada)
@@ -91,7 +108,7 @@ test("fixture: os 10 lotes normalizam e passam na validação do núcleo", () =>
   for (const l of lotes) assert.deepEqual(validarImovel(normalizar(l)), [], `lote ${String(l.lote_id)}`);
 });
 
-test("lote TRT em praça única: avaliação, preço, processo, matrícula, endereço e áreas", () => {
+test("lote TRT sem 2ª praça (seg nulo): avaliação, preço, processo, matrícula, endereço e áreas", () => {
   const n = normalizar(lote(218898));
   assert.equal(n.id_na_fonte, "218898");
   assert.equal(n.url, "https://www.leiloesjudiciais.com.br/lote/99916/218898");
@@ -102,7 +119,9 @@ test("lote TRT em praça única: avaliação, preço, processo, matrícula, ende
   assert.equal(n.judicial, true);
   assert.equal(n.valor_avaliacao, 1_700_000);
   assert.equal(n.preco, 1_275_000);
-  assert.equal(n.praca_atual, 0);
+  // Praça única OU desconhecida: não afirma "oferta única"; a praça fica só como dado.
+  assert.equal(n.praca_atual, null);
+  assert.equal(n.praca_incerta, true);
   assert.deepEqual(n.pracas, [{ numero: 0, data: "2026-09-17T16:05:50.000Z", valor_minimo: 1_275_000 }]);
   assert.equal(n.extras?.regra_praca, "seg_nulo");
   assert.equal(n.extras?.avaliacao_origem, "vl_lanceminimo");
@@ -134,13 +153,37 @@ test("status desatualizado: fechamento no passado vira encerrado mesmo 'Aberto p
   const n = normalizar(lote(218898));
   assert.equal(n.extras?.status_fonte, "Aberto para Lance");
   assert.equal(n.status, "encerrado");
+  assert.equal(n.extras?.status_motivo, "fechamento_passado");
   // Antes do fechamento, o mesmo lote está ativo.
-  assert.equal(normalizar(lote(218898), "2026-09-17T15:00:00.000Z").status, "ativo");
+  const antes = normalizar(lote(218898), "2026-09-17T15:00:00.000Z");
+  assert.equal(antes.status, "ativo");
+  assert.equal(antes.extras?.status_motivo, undefined);
   // Rótulo de encerramento vale mesmo com data futura.
   assert.equal(normalizar({ ...lote(222141), nm_statuslote: "Arrematado" }).status, "encerrado");
-  assert.equal(normalizar({ ...lote(222141), nm_statuslote: "Suspenso" }).status, "encerrado");
+  assert.equal(normalizar({ ...lote(222141), nm_statuslote: "Suspenso" }).extras?.status_motivo, "rotulo_fonte");
   assert.equal(normalizar(lote(222141)).status, "ativo");
-  assert.equal(statusDoLote({ nm_statuslote: "Aguardando" }, null, COLETADO_EM), "ativo");
+  // "Adiado" só mudou a data: com fechamento futuro segue ativo (o rótulo fica em status_fonte).
+  const adiado = normalizar({ ...lote(222141), nm_statuslote: "Adiado" });
+  assert.equal(adiado.status, "ativo");
+  assert.equal(adiado.extras?.status_fonte, "Adiado");
+  assert.deepEqual(statusDoLote({ nm_statuslote: "Adiado" }, "2026-12-01T00:00:00.000Z", COLETADO_EM), { status: "ativo", motivo: null });
+  assert.deepEqual(statusDoLote({ nm_statuslote: "Adiado" }, "2026-09-01T00:00:00.000Z", COLETADO_EM), { status: "encerrado", motivo: "fechamento_passado" });
+  assert.deepEqual(statusDoLote({ nm_statuslote: "Lance Condicional" }, "2026-12-01T00:00:00.000Z", COLETADO_EM), { status: "encerrado", motivo: "rotulo_fonte" });
+});
+
+test("sem dt_fechamento: não sai como ativo (217032, do 710º leilão do TRT2, já passado)", () => {
+  const n = normalizar(lote(217032));
+  assert.equal(lote(217032).dt_fechamento, null);
+  assert.equal(lote(217032).nm_statuslote, "Aberto para Lance");
+  assert.equal(n.status, "encerrado");
+  assert.equal(n.extras?.fechamento_ausente, true);
+  assert.equal(n.extras?.status_motivo, "fechamento_ausente");
+  assert.deepEqual(statusDoLote({ nm_statuslote: "Aguardando" }, null, COLETADO_EM), { status: "encerrado", motivo: "fechamento_ausente" });
+  // Quando a data chega (ex.: get_leilao_details com --detalhes), vale a regra normal.
+  const comData = normalizar({ ...lote(217032), dt_fechamento: "2026-11-20 13:00:00-03" });
+  assert.equal(comData.status, "ativo");
+  assert.equal(comData.extras?.fechamento_ausente, undefined);
+  assert.equal(comData.pracas[0]?.data, "2026-11-20T16:00:00.000Z");
 });
 
 test("praça pela regra da crítica: ini == seg → 2ª praça; ini == min com seg → 1ª praça", () => {
@@ -164,11 +207,21 @@ test("praça pela regra da crítica: ini == seg → 2ª praça; ini == min com s
   ]);
   assert.equal(primeira.aceita_parcelamento, false, "1 parcela com 100% de entrada é à vista");
 
-  assert.deepEqual(pracasDoLote(100, 200, 50, null), { pracas: [], praca_atual: null, regra: "indefinida" });
+  assert.equal(primeira.praca_incerta, false);
+
+  // Fora da regra: a praça em vigor é desconhecida, mas data e lance ficam como dado.
+  const fora = pracasDoLote(100, 200, 50, "2026-11-01T13:00:00.000Z");
+  assert.deepEqual(fora, {
+    pracas: [{ numero: 0, data: "2026-11-01T13:00:00.000Z", valor_minimo: 100 }],
+    praca_atual: null,
+    incerta: true,
+    regra: "indefinida",
+  });
   assert.equal(pracasDoLote(100, 100, 100, null).regra, "indefinida");
+  assert.equal(pracasDoLote(100, 200, null, null).regra, "seg_nulo");
 });
 
-test("coordenadas do Street View, fotos 640x480 com origem api e anexos tipados", () => {
+test("coordenadas do Street View, fotos 640x480 montadas (padrao_url) e anexos tipados", () => {
   const n = normalizar(lote(222141));
   assert.equal(n.lat, -23.6183426);
   assert.equal(n.lon, -46.5705281);
@@ -177,8 +230,9 @@ test("coordenadas do Street View, fotos 640x480 com origem api e anexos tipados"
   const capa = n.fotos[0];
   assert.equal(capa?.url, "https://s3-sa-east-1.amazonaws.com/906de634c48fb7d34136160b4c353ae4/public/fotos/imoveis/640x480/I_1195_590488_Y.webp");
   assert.equal(capa?.tamanho, "640x480");
-  assert.equal(capa?.origem, "api");
+  assert.equal(capa?.origem, "padrao_url", "URL montada por nós, não veio pronta na resposta");
   assert.equal(capa?.verificada_em, null);
+  assert.ok(n.fotos.every((f) => f.origem === "padrao_url" && f.ok === null));
   assert.deepEqual(n.fotos.map((f) => f.ordem), [0, 1, 2, 3]);
   assert.deepEqual(n.documentos.map((d) => d.tipo), ["matricula", "matricula", "matricula", "laudo", "avaliacao", "edital"]);
   assert.equal(n.quartos, 5);
@@ -191,9 +245,11 @@ test("coordenadas do Street View, fotos 640x480 com origem api e anexos tipados"
   const verificada = normalizar(lote(222141), COLETADO_EM, { capa: { url, status: 200, em: "2026-10-11T01:40:00.000Z" } });
   assert.equal(verificada.fotos[0]?.verificada_em, "2026-10-11T01:40:00.000Z");
   assert.equal(verificada.fotos[0]?.ok, true);
+  assert.equal(verificada.fotos[1]?.verificada_em, null, "só a capa é conferida");
   const semGrande = normalizar(lote(222141), COLETADO_EM, { capa: { url, status: 403, em: "2026-10-11T01:40:00.000Z" } });
   assert.match(semGrande.fotos[0]?.url ?? "", /\/196x146\/I_1195_590488_Y\.webp$/);
   assert.equal(semGrande.fotos[0]?.tamanho, "196x146");
+  assert.equal(semGrande.fotos[0]?.origem, "api", "a URL pronta veio na resposta");
 });
 
 test("lote com vários imóveis: sem área, endereço e matrícula; avaliação confere com a soma do texto", () => {
@@ -253,9 +309,60 @@ test("LGPD: nm_usuario/id_usuario nunca entram e nomes de partes saem mascarados
 
   const todos = JSON.stringify(lotesDaFixture().map((l) => normalizar(l)));
   for (const nome of NOMES_FICTICIOS) assert.ok(!todos.includes(nome), `vazou: ${nome}`);
+  assert.doesNotMatch(todos, PALAVRAS_SINTETICAS);
   assert.match(todos, /EXEQUENTE: \[NOME\]/);
   assert.match(todos, /EXECUTADO\(A\)\(S\): \[NOME\]/);
   assert.match(todos, /CPF \[CPF\]/);
+});
+
+/** Lote sintético de um imóvel só, com a descrição dada (textos nos formatos que as regex procuram). */
+function comDescricao(descricao: string): ImovelNormalizado {
+  return normalizar({ ...lote(222141), nm_titulo_lote: "Apartamento - Campinas/SP", nm_descricao: descricao });
+}
+
+test("LGPD: vara, endereço e cartório tirados do texto não levam nomes (nem depois do núcleo)", () => {
+  const casos: Array<{ texto: string; campo: "comitente" | "endereco" | "cartorio"; esperado: string | null }> = [
+    { texto: "(Proc. 1234567-89.2020.8.26.0100 - 2ª Vara Cível - JOÃO DA SILVA SAURO x MARIA PEREIRA LIMA)", campo: "comitente", esperado: "TJSP – 2ª Vara Cível" },
+    { texto: "(Processo nº 1234567-89.2020.8.26.0100 - 3ª Vara - Exequente: JOSÉ CARLOS NUNES)", campo: "comitente", esperado: "TJSP – 3ª Vara" },
+    { texto: "(Proc. 1234567-89.2020.8.26.0100 - 2ª Vara Cível - JOÃO DA SILVA SAURO)", campo: "comitente", esperado: "TJSP – 2ª Vara Cível" },
+    { texto: "(Proc. 1234567-89.2020.8.26.0100 - JOÃO DA SILVA SAURO)", campo: "comitente", esperado: "TJSP" },
+    { texto: "(Proc. 1234567-89.2020.8.26.0100 - 1ª Vara Cível - Foro Regional de Santo Amaro, São Paulo/SP)", campo: "comitente", esperado: "TJSP – 1ª Vara Cível - Foro Regional de Santo Amaro - São Paulo/SP" },
+    { texto: "Local dos bens: Rua das Flores, 10, Centro, Campinas/SP. Depositário: JOÃO DA SILVA SAURO.", campo: "endereco", esperado: "Rua das Flores, 10, Centro, Campinas/SP" },
+    { texto: "Local dos bens: Rua das Flores, 10, em poder de JOÃO DA SILVA SAURO.", campo: "endereco", esperado: "Rua das Flores, 10" },
+    { texto: "Local dos bens: Rua Dr. Arnaldo, 455, Cerqueira César, São Paulo/SP. Obs.: imóvel sem vaga.", campo: "endereco", esperado: "Rua Dr. Arnaldo, 455, Cerqueira César, São Paulo/SP" },
+    { texto: "Imóvel localizado na Rua das Flores, 10, ocupado por JOÃO DA SILVA SAURO, e outros.", campo: "endereco", esperado: "Rua das Flores, 10" },
+    {
+      texto: "matrícula nº 12.345 do 1º Cartório de Registro de Imóveis de Campinas, de propriedade de JOÃO DA SILVA SAURO e MARIA PEREIRA LIMA.",
+      campo: "cartorio",
+      esperado: "1º Cartório de Registro de Imóveis de Campinas",
+    },
+    { texto: "matrícula nº 12.345 do 1º Cartório de Registro de Imóveis de Campinas em nome de JOÃO DA SILVA SAURO.", campo: "cartorio", esperado: "1º Cartório de Registro de Imóveis de Campinas" },
+  ];
+  for (const { texto, campo, esperado } of casos) {
+    const n = comDescricao(texto);
+    assert.equal(n[campo], esperado, texto);
+    // O que o núcleo grava (e a exportação publica): sem nome em coluna nenhuma.
+    const linha = prepararImovel(n, new Date(COLETADO_EM)).linha;
+    const gravado = JSON.stringify(linha);
+    for (const nome of ["JOÃO", "SAURO", "MARIA PEREIRA", "JOSÉ CARLOS"]) assert.ok(!gravado.includes(nome), `vazou ${nome} de: ${texto}`);
+  }
+  // A descrição também perde o nome solto depois da vara (sem papel nem "x").
+  assert.equal(comDescricao("(Proc. 1234567-89.2020.8.26.0100 - 2ª Vara Cível - JOÃO DA SILVA SAURO) Apartamento.").descricao, "(Proc. 1234567-89.2020.8.26.0100 - 2ª Vara Cível - [NOME]) Apartamento.");
+  assert.equal(semPartesNoProcesso("(Proc. 0000015-00.2013.5.15.0128 - EXE3 - Piracicaba)"), "(Proc. 0000015-00.2013.5.15.0128 - EXE3 - Piracicaba)");
+});
+
+test("campoSemPessoa e varaSegura", () => {
+  assert.equal(campoSemPessoa("Rua A, 1, ocupado por FULANO DE TAL"), "Rua A, 1");
+  assert.equal(campoSemPessoa("6º CRI de São Paulo, na posse de Fulano"), "6º CRI de São Paulo");
+  assert.equal(campoSemPessoa("Rua Exemplo, 10 - locado para Fulano Beltrano"), "Rua Exemplo, 10");
+  assert.equal(campoSemPessoa("Residencial Jardim das Flores, Rua A, 1"), "Residencial Jardim das Flores, Rua A, 1", "'residencial' não é 'reside'");
+  assert.equal(campoSemPessoa("Rua A, 1, CPF 123.456.789-09"), null, "a máscara ainda mudaria: descarta");
+  assert.equal(campoSemPessoa("Depositário: FULANO"), null);
+  assert.equal(varaSegura("90ª VT São Paulo/SP"), "90ª VT São Paulo/SP");
+  assert.equal(varaSegura("EXE3 - Piracicaba"), "EXE3 - Piracicaba");
+  assert.equal(varaSegura("DIVEX - Piracicaba"), "DIVEX - Piracicaba");
+  assert.equal(varaSegura("FULANO DE TAL x BELTRANO"), null, "1º trecho sem juízo");
+  assert.equal(varaSegura("2ª Vara Cível - São José dos Campos"), "2ª Vara Cível", "pode ser nome de pessoa: corta");
 });
 
 // ---------------------------------------------------------------------------
@@ -355,10 +462,26 @@ test("--arquivo no formato da sonda (JSON-RPC + linha de status) e erros de arqu
     const resposta = { jsonrpc: "2.0", id: 4, ...carregarFixture().respostas[0] };
     const sonda = join(dir, "sonda.txt");
     writeFileSync(sonda, `${JSON.stringify(resposta)}\nHTTP 200 application/json\n`);
+    // Sem data declarada, o arquivo é recusado: a data de modificação não vale como data de coleta.
+    await assert.rejects(coletarTudo(leiloesJudiciais, opcoesLocais(sonda).op), /não declara quando a resposta foi coletada/);
+    const comData = criarConectorLeiloesJudiciais({ coletadoEm: "2026-10-11T01:35:00Z" });
     const { op, metas } = opcoesLocais(sonda);
-    assert.equal((await coletarTudo(leiloesJudiciais, op)).length, 10);
-    assert.match(String(metas[0]?.aviso), /coletado_em/, "sem data declarada, avisa e usa a do arquivo");
-    assert.equal(metas[1]?.origem, sonda);
+    const brutos = await coletarTudo(comData, op);
+    assert.equal(brutos.length, 10);
+    assert.ok(brutos.every((b) => b.coletado_em === COLETADO_EM));
+    assert.deepEqual(metas, [{ origem: sonda, geradoEm: COLETADO_EM }]);
+    // A variável de ambiente faz o mesmo pela CLI.
+    process.env.LUNETA_LJ_COLETADO_EM = "2026-10-11T01:35:00Z";
+    try {
+      assert.equal((await coletarTudo(leiloesJudiciais, opcoesLocais(sonda).op)).length, 10);
+    } finally {
+      delete process.env.LUNETA_LJ_COLETADO_EM;
+    }
+    // Data inválida ou no futuro também é recusada.
+    await assert.rejects(coletarTudo(criarConectorLeiloesJudiciais({ coletadoEm: "ontem" }), opcoesLocais(sonda).op), /data inválida/);
+    const futura = join(dir, "futura.json");
+    writeFileSync(futura, JSON.stringify({ ...carregarFixture(), coletado_em: "2099-01-01T00:00:00Z" }));
+    await assert.rejects(coletarTudo(leiloesJudiciais, opcoesLocais(futura).op), /no futuro/);
 
     const erro = join(dir, "erro.json");
     writeFileSync(erro, JSON.stringify({ jsonrpc: "2.0", id: 6, error: { code: -32602, message: "Invalid params: 'query' parameter is required" } }));
@@ -376,9 +499,14 @@ test("--arquivo no formato da sonda (JSON-RPC + linha de status) e erros de arqu
   }
 });
 
-test("interpretarArquivo e lotesDaCarga aceitam busca, detalhe e lote solto", () => {
+test("interpretarArquivo e lotesDaCarga aceitam busca, detalhe, lote solto e busca vazia", () => {
   const busca = { query: "x", results: [{ lote_id: 1 }, { lote_id: 2, nm_usuario: "N" }] };
   assert.deepEqual(lotesDaCarga(busca), [{ lote_id: 1 }, { lote_id: 2 }]);
+  // Busca vazia: formato não confirmado na sonda; aceitamos results vazio, ausente ou null com totalResults 0.
+  assert.deepEqual(lotesDaCarga({ query: "x", estado: "AC", categoria: "imoveis", totalResults: 0, results: [] }), []);
+  assert.deepEqual(lotesDaCarga({ query: "x", estado: "AC", categoria: "imoveis", totalResults: 0 }), []);
+  assert.deepEqual(lotesDaCarga({ query: "x", estado: "AC", categoria: "imoveis", totalResults: 0, results: null }), []);
+  assert.throws(() => lotesDaCarga({ query: "x", totalResults: 3 }), /formato desconhecido/, "diz que tem lotes e não manda: formato mudou");
   assert.deepEqual(lotesDaCarga({ leilaoId: "9", found: true, details: { lote_id: 9, nm_usuario: null } }), [{ lote_id: 9 }]);
   assert.deepEqual(lotesDaCarga({ leilaoId: "99916", found: true, details: { lote_proximo: { lote_id: 1 } } }), []);
   assert.deepEqual(lotesDaCarga({ found: false }), []);
@@ -408,7 +536,8 @@ interface ChamadaRpc {
   cabecalhos: Record<string, string>;
 }
 
-type Resposta = Response | (() => Response);
+/** Resposta fixa ou montada na hora (recebe o id JSON-RPC da chamada). */
+type Resposta = Response | ((id: number) => Response);
 
 interface ServidorFalso {
   /** Lotes por "termo@UF"; o que não estiver aqui volta vazio. */
@@ -466,7 +595,7 @@ function ambienteRede(servidor: ServidorFalso, config: Partial<ConfigLeiloesJudi
     if (nome === "search_leiloes") {
       const chave = `${args.query}@${args.estado}`;
       const especial = servidor.respostaBusca?.[chave];
-      if (especial) return typeof especial === "function" ? especial() : especial;
+      if (especial) return typeof especial === "function" ? especial(corpo.id) : especial;
       const results = servidor.buscas?.[chave] ?? [];
       return cargaTexto(corpo.id, { query: args.query, estado: args.estado, categoria: args.categoria, totalResults: results.length, results }, servidor.sse);
     }
@@ -581,6 +710,50 @@ test("rede: falha transitória isolada é pulada com aviso; falhas seguidas inte
   await assert.rejects(coletarTudo(fora.conector, fora.op()), /3 falhas seguidas/);
 });
 
+function erroRpc(codigo: number, mensagem: string): (id: number) => Response {
+  return (id) => new Response(JSON.stringify({ jsonrpc: "2.0", id, error: { code: codigo, message: mensagem } }), { status: 200, headers: { "content-type": "application/json" } });
+}
+
+test("rede: erro interno JSON-RPC (-32603) numa busca é transitório; busca vazia sem results é aceita", async () => {
+  const amb = ambienteRede({
+    buscas: { "apartamento@RJ": [loteSintetico(900001)] },
+    respostaBusca: {
+      "casa@SP": erroRpc(-32603, "Internal error"),
+      "casa@RJ": (id) => cargaTexto(id, { query: "casa", estado: "RJ", categoria: "imoveis", totalResults: 0 }),
+    },
+  });
+  const brutos = await coletarTudo(amb.conector, amb.op());
+  assert.deepEqual(brutos.map((b) => b.lote.lote_id), [900001]);
+  assert.equal(amb.chamadas.filter((c) => c.metodo === "tools/call").length, 4, "seguiu até a última busca");
+  assert.ok(amb.metas.some((m) => /busca casa@SP: .*-32603/.test(m.aviso ?? "")));
+  assert.ok(amb.metas.some((m) => /1 chamada\(s\) falharam/.test(m.aviso ?? "")));
+
+  const seguidas = ambienteRede({ respostaBusca: { "apartamento@SP": erroRpc(-32603, "x"), "casa@SP": erroRpc(-32001, "y"), "apartamento@RJ": erroRpc(-32603, "z") } });
+  await assert.rejects(coletarTudo(seguidas.conector, seguidas.op()), /3 falhas seguidas/);
+
+  assert.equal(ehTransitoria(new ErroMcp("jsonrpc", "x", -32603)), true);
+  assert.equal(ehTransitoria(new ErroMcp("jsonrpc", "x", -32050)), true);
+  assert.equal(ehTransitoria(new ErroMcp("jsonrpc", "x", -32602)), false, "parâmetro inválido: a API mudou");
+  assert.equal(ehTransitoria(new ErroMcp("jsonrpc", "x", -32601)), false);
+  assert.equal(ehTransitoria(new ErroMcp("jsonrpc", "x", null)), false);
+  assert.equal(ehTransitoria(new ErroMcp("formato", "x")), false);
+});
+
+test("rede: get_leilao_details com parâmetro trocado não aborta coleta; com --detalhes vira aviso", async () => {
+  const ferramentas = [FERRAMENTAS[0], { name: "get_leilao_details", inputSchema: { type: "object", properties: { id: {} }, required: ["id"] } }];
+  const buscas = { "apartamento@SP": [loteSintetico(900001, "SP")] };
+  const sem = ambienteRede({ ferramentas, buscas }, { ufs: ["SP"], termos: ["apartamento"] });
+  assert.equal((await coletarTudo(sem.conector, sem.op())).length, 1);
+  assert.ok(!sem.metas.some((m) => /get_leilao_details/.test(m.aviso ?? "")), "sem --detalhes a ferramenta nem é conferida");
+
+  const com = ambienteRede({ ferramentas, buscas }, { ufs: ["SP"], termos: ["apartamento"] });
+  const brutos = await coletarTudo(com.conector, com.op({ detalhes: true }));
+  assert.equal(brutos.length, 1);
+  assert.equal(brutos[0]?.detalhado, false);
+  assert.ok(com.metas.some((m) => /get_leilao_details não tem mais o parâmetro "leilaoId"/.test(m.aviso ?? "")));
+  assert.equal(com.chamadas.filter((c) => c.params.name === "get_leilao_details").length, 0);
+});
+
 test("rede: --detalhes chama get_leilao_details do mesmo lote e confere a capa por HEAD", async () => {
   const base = lote(222141);
   const detalhe = { ...base, nm_descricao: `${String(base.nm_descricao)}<p>Texto completo do edital.</p>`, nm_usuario: "N" };
@@ -623,8 +796,9 @@ test("núcleo: a fixture grava 10 imóveis sem marcar removidos; arquivo mais an
     for (const nome of NOMES_FICTICIOS) assert.ok(!gravado.includes(nome), `vazou no banco: ${nome}`);
     const fonte = db.prepare("SELECT publica_fotos, lista_completa, acesso FROM fonte WHERE id = ?").get(ID_LEILOES_JUDICIAIS);
     assert.deepEqual({ ...fonte }, { publica_fotos: 1, lista_completa: 0, acesso: "api_documentada" });
-    const encerrados = db.prepare("SELECT count(*) AS n FROM imovel WHERE status = 'encerrado'").get();
-    assert.equal(Number(encerrados?.n), 4, "os 4 lotes do 711º leilão do TRT2 já tinham fechado em 17/09");
+    const encerrados = db.prepare("SELECT id_na_fonte FROM imovel WHERE status = 'encerrado' ORDER BY id_na_fonte").all().map((l) => String(l.id_na_fonte));
+    // Os 4 lotes do 711º leilão do TRT2 fecharam em 17/09; o 217032 (710º) veio sem data de fechamento.
+    assert.deepEqual(encerrados, ["217032", "218848", "218898", "218901", "218903"]);
     const fotos = db.prepare("SELECT count(*) AS n FROM foto").get();
     assert.equal(Number(fotos?.n), 24, "5 + 4 + 5 + 5 + 5 (a fixture corta em 5 por lote)");
 
@@ -641,7 +815,61 @@ test("núcleo: a fixture grava 10 imóveis sem marcar removidos; arquivo mais an
     const precoHistorico = db.prepare("SELECT count(*) AS n FROM preco_historico").get();
     assert.equal(Number(precoHistorico?.n), 10, "uma linha por imóvel novo, nada do arquivo antigo");
     assert.equal(lerTexto(db.prepare("SELECT data_praca FROM imovel WHERE id_na_fonte = '222141'").get()?.data_praca), "2026-10-19T19:00:00.000Z");
+    // Seg nulo: praça em vigor desconhecida (null), mas a data segue em data_praca.
+    const segNulo = db.prepare("SELECT praca_atual, data_praca FROM imovel WHERE id_na_fonte = '221879'").get();
+    assert.deepEqual({ ...segNulo }, { praca_atual: null, data_praca: "2026-11-04T13:06:00.000Z" });
+
+    // Exportação: só os ativos com data futura; o 217032 (sem data) não sai.
+    const exportados = montarExportacao(db, { agora }).imoveis;
+    assert.deepEqual(exportados.map((i) => i.id_na_fonte).sort(), ["220169", "221879", "221884", "222069", "222141"]);
+    const exportado = exportados.find((i) => i.id_na_fonte === "221879");
+    assert.equal(exportado?.praca_atual, null, "não publica 'praça única' quando a fonte não diz");
+    assert.equal(exportado?.data_praca, "2026-11-04T13:06:00.000Z");
+    // Passada a data, a exportação tira o lote do ar mesmo sem nova coleta.
+    const depois = montarExportacao(db, { agora: new Date("2026-11-10T00:00:00Z") }).imoveis.map((i) => i.id_na_fonte);
+    assert.ok(!depois.includes("221879") && !depois.includes("222141"));
+    const publicado = JSON.stringify(exportados);
+    for (const nome of NOMES_FICTICIOS) assert.ok(!publicado.includes(nome), `vazou na exportação: ${nome}`);
+    assert.doesNotMatch(publicado, PALAVRAS_SINTETICAS);
   } finally {
+    db.close();
+  }
+});
+
+test("núcleo: resposta antiga sem coletado_em não sobrescreve coleta mais nova (data de modificação não vale)", async () => {
+  const db = bancoEmMemoria();
+  const dir = mkdtempSync(join(tmpdir(), "luneta-lj-"));
+  try {
+    const agora = new Date("2026-10-13T12:00:00Z");
+    // Coleta 1: resposta de 12/10 com o 222141 a R$ 800.000.
+    const fixture = carregarFixture();
+    const carga = JSON.parse(fixture.respostas[0]?.result.content[0]?.text ?? "") as { results: LoteLJ[] };
+    const novos = carga.results.map((l) => (l.lote_id === 222141 ? { ...l, vl_lanceinicial: "800000.00", vl_lanceinicialsegundoleilao: "800000.00" } : l));
+    const nova = join(dir, "nova.json");
+    writeFileSync(nova, JSON.stringify({ coletado_em: "2026-10-12T10:00:00Z", respostas: [{ jsonrpc: "2.0", id: 4, result: { content: [{ type: "text", text: JSON.stringify({ ...carga, results: novos }) }] } }] }));
+    const r1 = await executarColeta(db, leiloesJudiciais, { arquivo: nova, http: httpProibido(), agora });
+    assert.equal(r1.status, "sucesso", r1.erro ?? "");
+
+    // Coleta 2: a resposta de 11/10, sem coletado_em, num arquivo tocado depois (mtime novo).
+    const antiga = join(dir, "antiga.txt");
+    writeFileSync(antiga, `${JSON.stringify({ jsonrpc: "2.0", id: 4, ...fixture.respostas[0] })}\nHTTP 200 application/json\n`);
+    const r2 = await executarColeta(db, leiloesJudiciais, { arquivo: antiga, http: httpProibido(), agora });
+    assert.equal(r2.status, "erro");
+    assert.match(r2.erro ?? "", /não declara quando a resposta foi coletada/);
+    assert.equal(Number(db.prepare("SELECT preco FROM imovel WHERE id_na_fonte = '222141'").get()?.preco), 800000, "preço novo mantido");
+
+    // Com a data verdadeira declarada, o núcleo reconhece que é mais antiga e recusa.
+    process.env.LUNETA_LJ_COLETADO_EM = "2026-10-11T01:35:00Z";
+    try {
+      const r3 = await executarColeta(db, leiloesJudiciais, { arquivo: antiga, http: httpProibido(), agora });
+      assert.equal(r3.status, "invalida");
+      assert.match(r3.erro ?? "", /mais antigo/);
+    } finally {
+      delete process.env.LUNETA_LJ_COLETADO_EM;
+    }
+    assert.equal(Number(db.prepare("SELECT preco FROM imovel WHERE id_na_fonte = '222141'").get()?.preco), 800000);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
     db.close();
   }
 });

@@ -80,6 +80,8 @@ export function validarImovel(imovel: ImovelNormalizado): string[] {
   }
   p(ausente(imovel.ocupacao) || imovel.ocupacao === "ocupado" || imovel.ocupacao === "desocupado", "ocupacao inválida");
   p(ausente(imovel.praca_atual) || [0, 1, 2, 3].includes(imovel.praca_atual as number), "praca_atual inválida");
+  p(boolOuAusente(imovel.praca_incerta), "praca_incerta deve ser boolean ou null");
+  p(imovel.praca_incerta !== true || ausente(imovel.praca_atual), "praca_incerta com praca_atual preenchida");
 
   if (!Array.isArray(imovel.pracas)) problemas.push("pracas deve ser lista");
   else {

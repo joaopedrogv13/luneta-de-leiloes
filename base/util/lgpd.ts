@@ -6,7 +6,8 @@
  * - CPF, CNPJ, RG, e-mail e endereço IP → "[CPF]", "[CNPJ]", "[RG]", "[E-MAIL]", "[IP]";
  * - nomes de pessoas depois de papéis processuais e contratuais (executado, exequente,
  *   devedor, fiduciante, depositário, réu, autor, proprietário, cônjuge, "em face de",
- *   "Sr.", "Dra."...) → "[NOME]";
+ *   "Sr.", "Dra."...) e de frases de ocupação ("ocupado por", "na posse de", "locado para",
+ *   "reside no imóvel", "moradora") → "[NOME]";
  * - nomes de licitante, arrematante, comprador e proponente, quando vêm depois de dois-pontos
  *   ("Arrematante: Fulano"); sem dois-pontos essas palavras são genéricas no edital;
  * - partes no formato "FULANO DE TAL x BELTRANO" (título de processo).
@@ -103,6 +104,9 @@ const PAPEIS = [
   "em\\s+favor\\s+de", "a\\s+favor\\s+de", "em\\s+benef[íi]cio\\s+de",
   "em\\s+face\\s+de", "movid[oa]\\s+por", "propost[oa]\\s+por", "ajuizad[oa]\\s+por", "contra",
   "de\\s+propriedade\\s+de", "pertencente\\s+a", "em\\s+nome\\s+de", "titularidade\\s+d[aeo]s?",
+  // Ocupação e posse (frases típicas de edital judicial, lidas pelas regras de Ocupado/Desocupado).
+  "ocupad[oa]s?\\s+por", "na\\s+posse\\s+de", "em\\s+poder\\s+de", "locad[oa]s?\\s+(?:para|a|ao|[àá])",
+  "resid(?:e|em)\\s+no\\s+im[óo]vel", "morador(?:a|es|as)?",
   // "Dr./Dra." ficam de fora como gatilho (aparecem em nome de rua: "Rua Dr. Arnaldo"); só
   // contam como prefixo depois de um papel ("Depositário: Dr. Fulano").
   "sr\\.?", "sra\\.?", "srs\\.?", "sras\\.?", "srta\\.?",

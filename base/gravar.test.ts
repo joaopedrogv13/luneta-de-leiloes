@@ -4,6 +4,7 @@ import type { Banco } from "./db.ts";
 import { calcularDesconto, derivarPracaAtual, garantirFonte, gravarEditais, gravarImoveis, prepararImovel } from "./gravar.ts";
 import { carregarImoveis } from "./consultas.ts";
 import { bancoEmMemoria, conectorFalso, imovelExemplo, lote } from "./testes/apoio.ts";
+import { validarImovel } from "./validar.ts";
 
 const T1 = new Date("2026-10-12T12:00:00Z");
 const T2 = new Date("2026-10-13T12:00:00Z");
@@ -58,6 +59,18 @@ test("praça atual, preço e desconto derivados", () => {
   const explicito = prepararImovel(imovelExemplo({ pracas, preco: 300000, praca_atual: 1 }), T1);
   assert.equal(explicito.linha.preco, 300000, "preço informado pelo conector vence");
   assert.equal(explicito.linha.praca_atual, 1);
+});
+
+test("praça incerta: não deduz praca_atual, mas a data da praça única segue em data_praca", () => {
+  const unica = [{ numero: 0 as const, data: "2026-11-04T13:06:00.000Z", valor_minimo: 871500 }];
+  const incerta = prepararImovel(imovelExemplo({ pracas: unica, preco: undefined, praca_atual: null, praca_incerta: true }), T1);
+  assert.equal(incerta.linha.praca_atual, null, "não afirma praça única");
+  assert.equal(incerta.linha.data_praca, "2026-11-04T13:06:00.000Z");
+  assert.equal(incerta.linha.preco, 871500);
+  const deduzida = prepararImovel(imovelExemplo({ pracas: unica, preco: undefined, praca_atual: null }), T1);
+  assert.equal(deduzida.linha.praca_atual, 0, "sem praca_incerta, o núcleo deduz como antes");
+  assert.deepEqual(validarImovel(imovelExemplo({ pracas: unica, praca_incerta: true })), []);
+  assert.match(validarImovel(imovelExemplo({ pracas: unica, praca_incerta: true, praca_atual: 0 })).join(";"), /praca_incerta com praca_atual/);
 });
 
 test("insere, reconhece inalterado e registra mudança de preço no histórico", () => {
