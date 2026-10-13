@@ -3,6 +3,7 @@
  * fotos e de coordenadas, duplicatas e a última coleta de cada fonte.
  */
 import { lerTexto, versaoDoBanco, type Banco } from "./db.ts";
+import { agruparDuplicatas } from "./dedup/index.ts";
 import { definicaoTag } from "./riscos/tags.ts";
 import { formatarNumeroBR } from "./util/numero.ts";
 
@@ -44,6 +45,12 @@ export interface RelatorioStatus {
   geo: Array<{ precisao: string; ativos: number }>;
   /** Ativos que dividem a chave_dedup com outro ativo (mesmo imóvel em mais de um anúncio). */
   duplicatas: { grupos: number; imoveis: number; gruposEntreFontes: number };
+  /**
+   * Mesmo imóvel pela chave_dedup ou pela chave_endereco (dedup/index.ts, `agruparDuplicatas`): junta
+   * a fonte com matrícula e a sem matrícula, que nunca dividem a chave_dedup; endereço com duas
+   * matrículas diferentes não junta ninguém e é contado à parte.
+   */
+  mesmoImovel: { grupos: number; imoveis: number; gruposEntreFontes: number; enderecosComMatriculasDiferentes: number };
 }
 
 function contagem(db: Banco, sql: string, ...parametros: Array<string | number>): number {
@@ -128,6 +135,12 @@ export function relatorioStatus(db: Banco): RelatorioStatus {
          WHERE status = 'ativo' AND chave_dedup IS NOT NULL GROUP BY chave_dedup HAVING count(*) > 1)`,
     )
     .get();
+  const porImovel = agruparDuplicatas(
+    db
+      .prepare("SELECT id, fonte_id, chave_dedup, chave_endereco FROM imovel WHERE status = 'ativo' AND (chave_dedup IS NOT NULL OR chave_endereco IS NOT NULL)")
+      .all()
+      .map((l) => ({ id: Number(l.id), fonte: String(l.fonte_id), chave_dedup: lerTexto(l.chave_dedup), chave_endereco: lerTexto(l.chave_endereco) })),
+  );
   return {
     versaoBanco: versaoDoBanco(db),
     totais: {
@@ -143,6 +156,12 @@ export function relatorioStatus(db: Banco): RelatorioStatus {
     fotos: { ativosComFoto: comFoto, ativos, percentual: ativos > 0 ? Math.round((comFoto / ativos) * 1000) / 10 : 0 },
     geo,
     duplicatas: { grupos: Number(dup?.grupos ?? 0), imoveis: Number(dup?.imoveis ?? 0), gruposEntreFontes: Number(dup?.entre_fontes ?? 0) },
+    mesmoImovel: {
+      grupos: porImovel.grupos,
+      imoveis: porImovel.imoveis,
+      gruposEntreFontes: porImovel.gruposEntreFontes,
+      enderecosComMatriculasDiferentes: porImovel.enderecosComMatriculasDiferentes,
+    },
   };
 }
 
@@ -179,6 +198,11 @@ export function formatarStatus(r: RelatorioStatus): string {
   linhas.push(`Fotos: ${r.fotos.percentual.toLocaleString("pt-BR")}% dos ativos com ao menos uma foto (${n(r.fotos.ativosComFoto)} de ${n(r.fotos.ativos)})`);
   linhas.push(`Coordenadas (ativos, por precisão): ${r.geo.length ? r.geo.map((g) => `${g.precisao} ${n(g.ativos)}`).join(" · ") : "—"}`);
   linhas.push(`Duplicatas (mesma chave_dedup): ${n(r.duplicatas.grupos)} grupo(s) com ${n(r.duplicatas.imoveis)} anúncios, ${n(r.duplicatas.gruposEntreFontes)} entre fontes diferentes`);
+  const m = r.mesmoImovel;
+  linhas.push(
+    `Mesmo imóvel (chave_dedup ou chave_endereco): ${n(m.grupos)} grupo(s) com ${n(m.imoveis)} anúncios, ${n(m.gruposEntreFontes)} entre fontes diferentes`
+      + (m.enderecosComMatriculasDiferentes ? `; ${n(m.enderecosComMatriculasDiferentes)} endereço(s) com matrículas diferentes, não juntados` : ""),
+  );
   linhas.push("Tags (imóveis ativos com valor sim):");
   if (r.porTag.length === 0) linhas.push("  (nenhuma tag detectada; rode `riscos` depois de registrar regras)");
   for (const t of r.porTag) {

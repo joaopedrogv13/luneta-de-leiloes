@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  agruparDuplicatas,
   chaveDedup,
   chaveEndereco,
   chaveMatricula,
+  mesmoImovel,
   motivoSemChave,
   municipioDaChave,
   normalizarCartorio,
@@ -11,7 +13,7 @@ import {
   normalizarMatricula,
   type DadosChave,
 } from "./index.ts";
-import { linhasCaixa, medirDedup, perfil, reescrever } from "./medir.ts";
+import { linhasCaixa, medirDedup, perfil, reescrever, reescreverSemMarcador, reescreverUnidadeComNumero } from "./medir.ts";
 
 /** Linha do CSV da Caixa (sem dados pessoais: o CSV não traz nomes) como dados de chave. */
 const caixa = (uf: string, cidade: string, bairro: string, endereco: string): DadosChave => ({ uf, cidade, bairro, endereco });
@@ -20,6 +22,13 @@ test("matrícula e cartório", () => {
   assert.equal(normalizarMatricula("147.300"), "147300");
   assert.equal(normalizarMatricula("Matrícula nº 009740"), "9740");
   assert.equal(normalizarMatricula("sem número"), null);
+  // Várias matrículas: fica a primeira, nunca um número que junta duas.
+  assert.equal(normalizarMatricula("9740 9741"), "9740");
+  assert.equal(normalizarMatricula("9740 - 9741"), "9740");
+  assert.equal(normalizarMatricula("9740, 9741"), "9740");
+  assert.equal(normalizarMatricula("9.740 e 9.741"), "9740");
+  assert.equal(normalizarMatricula("12.345"), "12345");
+  assert.equal(normalizarMatricula("1.234.567"), "1234567");
   assert.equal(normalizarCartorio("6º Cartório de Registro de Imóveis de São Paulo"), "6");
   assert.equal(normalizarCartorio("Ofício: 01"), "1");
   assert.equal(normalizarCartorio("2º RI"), "2");
@@ -103,6 +112,67 @@ test("Caixa: unidades diferentes no mesmo número não se juntam", () => {
   assert.equal(municipioDaChave({ uf: "DF", cidade: "CEILANDIA" }, undefined, { regiaoDf: true }), "df-ceilandia");
 });
 
+test("leiloeiro (texto com bairro e cidade, sem \"nº\") e Caixa chegam à mesma chave", () => {
+  const caixaSp = caixa("SP", "SAO PAULO", "VILA PRUDENTE", "RUA FREI ANTONIO DE GUADALUPE, N. 67, Apto 21");
+  const lj = { uf: "SP", cidade: "São Paulo", bairro: null, endereco: "Rua Frei Antônio de Guadalupe, nº 67, apto 21, Vila Prudente, São Paulo/SP" };
+  assert.equal(chaveEndereco(lj), chaveEndereco(caixaSp));
+  assert.equal(
+    chaveEndereco({ uf: "SP", cidade: "Presidente Prudente", endereco: "Rua Antônio Furtado de Miranda, 493, Vila Industrial, Presidente Prudente/SP" }),
+    chaveEndereco(caixa("SP", "PRESIDENTE PRUDENTE", "VILA INDUSTRIAL", "RUA ANTONIO FURTADO DE MIRANDA, N. 493,")),
+  );
+  // Apartamentos diferentes do mesmo prédio não se juntam (achado da revisão: "apartamento nº").
+  assert.notEqual(
+    chaveEndereco({ uf: "SP", cidade: "São Paulo", endereco: "Rua Doutor Melo Alves, nº 640, apartamento nº 91, Cerqueira César, São Paulo/SP" }),
+    chaveEndereco({ uf: "SP", cidade: "São Paulo", endereco: "Rua Doutor Melo Alves, nº 640, apartamento nº 12, Cerqueira César, São Paulo/SP" }),
+  );
+  // Rua genérica: o bairro do texto entra na chave quando a fonte não o informa à parte.
+  const ii = chaveEndereco({ uf: "GO", cidade: "Cocalzinho de Goiás", endereco: "Rua 18, s/n, Qd 17, Lt 12, Itamar Nobrega II, Cocalzinho de Goiás/GO" });
+  const iii = chaveEndereco({ uf: "GO", cidade: "Cocalzinho de Goiás", endereco: "Rua 18, s/n, Qd 17, Lt 12, Itamar Nobrega III, Cocalzinho de Goiás/GO" });
+  assert.notEqual(ii, iii);
+  assert.equal(ii, chaveEndereco(caixa("GO", "COCALZINHO DE GOIAS", "ITAMAR NOBREGA II", "RUA 18, N. SN, QD 17, LT 12")));
+});
+
+test("ruas D e E, \"RUA N-1\" e rua sem nome não juntam imóveis diferentes", () => {
+  const par = (a: string, b: string): void =>
+    assert.notEqual(chaveEndereco(caixa("BA", "ITABUNA", "CENTRO", a)), chaveEndereco(caixa("BA", "ITABUNA", "CENTRO", b)), `${a} × ${b}`);
+  par("RUA E, N. 10", "RUA D, N. 10");
+  par("RUA E, N. 10, LT 5", "RUA D, N. 10, LT 5");
+  par("RUA PROJETADA D, N. 20", "RUA PROJETADA E, N. 20");
+  par("RUA N-1, N. 50", "RUA N-1, N. 51");
+  par("RUA Nº 06, N. 100", "RUA Nº 06, N. 200");
+  // Rua sem nome só vira chave com o bairro, que então entra sempre.
+  assert.equal(chaveEndereco(caixa("GO", "SAO LUIS DE MONTES BELOS", "", "RUA, N. SN, CS 03 LT 20A QD 20")), null);
+  assert.equal(motivoSemChave("RUA, N. SN, CS 03 LT 20A QD 20"), "sem_logradouro");
+  assert.match(chaveEndereco(caixa("GO", "SAO LUIS DE MONTES BELOS", "VILA NOVA", "RUA, N. SN, CS 03 LT 20A QD 20")) ?? "", /:rua:sn:casa 3 lt 20a qd 20:b=vila nova$/);
+  assert.notEqual(
+    chaveEndereco(caixa("GO", "SAO LUIS DE MONTES BELOS", "VILA NOVA", "RUA, N. 10, AP 1, BL 2, LT 3")),
+    chaveEndereco(caixa("GO", "SAO LUIS DE MONTES BELOS", "CENTRO", "RUA, N. 10, AP 1, BL 2, LT 3")),
+  );
+});
+
+test("mesmo imóvel: matrícula numa fonte e só endereço na outra se juntam pelo endereço", () => {
+  const comMatricula = { chave_dedup: "mat:3550308:6:147300", chave_endereco: "end:3550308:rua frei antonio guadalupe:67:ap 21" };
+  const semMatricula = { chave_dedup: "end:3550308:rua frei antonio guadalupe:67:ap 21", chave_endereco: "end:3550308:rua frei antonio guadalupe:67:ap 21" };
+  const outraMatricula = { chave_dedup: "mat:3550308:6:999", chave_endereco: "end:3550308:rua frei antonio guadalupe:67:ap 21" };
+  assert.equal(mesmoImovel(comMatricula, semMatricula), true);
+  assert.equal(mesmoImovel(comMatricula, outraMatricula), false, "matrículas diferentes nunca se juntam");
+  assert.equal(mesmoImovel(comMatricula, { ...comMatricula, chave_endereco: null }), true);
+  const r = agruparDuplicatas([
+    { id: 1, fonte: "caixa", ...semMatricula },
+    { id: 2, fonte: "leiloesjudiciais", ...comMatricula },
+    { id: 3, fonte: "caixa", chave_dedup: "end:3550308:rua x:10:ap 91", chave_endereco: "end:3550308:rua x:10:ap 91" },
+    { id: 4, fonte: "caixa", chave_dedup: "end:3550308:rua x:10:ap 12", chave_endereco: "end:3550308:rua x:10:ap 12" },
+  ]);
+  assert.deepEqual([r.grupos, r.imoveis, r.gruposEntreFontes, r.enderecosComMatriculasDiferentes], [1, 2, 1, 0]);
+  assert.deepEqual(r.lista, [[1, 2]]);
+  const conflito = agruparDuplicatas([
+    { id: 1, fonte: "caixa", ...semMatricula },
+    { id: 2, fonte: "leiloesjudiciais", ...comMatricula },
+    { id: 3, fonte: "leiloesjudiciais", ...outraMatricula },
+  ]);
+  assert.deepEqual([conflito.grupos, conflito.enderecosComMatriculasDiferentes], [0, 1], "o endereço com duas matrículas não junta ninguém");
+});
+
 test("rua genérica com endereço pouco específico leva o bairro", () => {
   // Cocalzinho de Goiás/GO: "RUA 18, N. SN, QD 17, LT 12" em ITAMAR NOBREGA II e III (loteamentos vizinhos).
   const ii = chaveEndereco(caixa("GO", "COCALZINHO DE GOIAS", "ITAMAR NOBREGA II", "RUA 18, N. SN, QD 17, LT 12"));
@@ -140,18 +210,27 @@ const CSV_CAIXA = [
   " 10005121 ;AC ;CRUZEIRO DO SUL ;BAIRRO COHAB ;RUA DO PURUS, N. S/N, QUARTEIRÃO 272 LOTE 11 ;50.074,26;150.000,00;66.62;Não;Terreno, 0.00 de área total, 0.00 de área privativa, 600.00 de área do terreno.;Venda Direta Online;https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10005121",
 ].join("\n");
 
-test("medição: cobertura, grupos e reescrita estilo leiloeiro", () => {
+test("medição: cobertura, grupos e reescritas em outros formatos", () => {
   const linhas = linhasCaixa(CSV_CAIXA);
   assert.equal(linhas.length, 8);
   assert.deepEqual(perfil(linhas[0]?.descricao ?? ""), { tipo: "casa", area: 49.16 });
   assert.equal(reescrever("RUA DO PURUS, N. S/N, QUARTEIRÃO 272, LOTE 10"), "R. Do Purus, S/Nº, Lote 10, Quadra 272", "ordem invertida");
   assert.equal(reescrever("AVENIDA DAS FLORES, N. 10, Apto 1007, BL C"), "Av. Das Flores, Nº 10, Apartamento 1007, Bloco C");
+  assert.equal(reescrever("RUA R MINIAPOLIS, N. 182, Apto 6, UN.06"), "R. R Miniapolis, Nº 182, Apartamento 6, Un.06", "só o \"N.\" do número");
+  assert.equal(reescreverUnidadeComNumero("RUA X, N. 10, Apto 91, CS 2, LT 5 QD 3, VG 10"), "RUA X, N. 10, apartamento nº 91, casa nº 2, lote nº 5 quadra nº 3, vaga nº 10");
+  const linha = { endereco: "RUA X, N. 62, Apto 1, BL 2", bairro: "JARDIM Y", cidade: "SAO PAULO", uf: "SP" };
+  assert.equal(reescreverSemMarcador(linha), "Rua X, 62, Apto 1, Bl 2, Jardim Y, Sao Paulo/Sp");
+  assert.equal(reescreverSemMarcador(linha, true), "Rua X, 62 - Apto 1 - Bl 2 - Jardim Y - Sao Paulo/Sp");
   const m = medirDedup(linhas);
   assert.equal(m.comChave, 6);
   assert.deepEqual(m.semChave, { sem_numero_nem_unidade: 2 });
   assert.equal(m.grupos, 2, "Santa Rita (mesmo imóvel) e Luziânia (texto idêntico)");
   assert.equal(m.gruposConsistentes, 1, "Luziânia: áreas 57,96 e 56,62 — o texto não separa");
   assert.equal(m.gruposComModalidadesDiferentes, 1);
-  assert.equal(m.reescritasMesmaChave, 6);
-  assert.equal(m.reescritasOutroImovel, 0);
+  assert.equal(m.reescritas.length, 5);
+  for (const r of m.reescritas) {
+    assert.equal(r.mesmaChave, 6, r.estilo);
+    assert.equal(r.outroImovel, 0, r.estilo);
+    assert.equal(r.gruposInconsistentes, 1, `${r.estilo}: só o par de Luziânia`);
+  }
 });

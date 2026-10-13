@@ -88,6 +88,12 @@ export interface ImovelExportado {
   documentos: ImovelGravado["documentos"];
   tags: TagExportada[];
   chave_dedup: string | null;
+  /**
+   * Chave de endereço (base/dedup). Mesmo imóvel = mesma chave_dedup, ou mesma chave_endereco sem
+   * matrículas diferentes (`mesmoImovel` em base/dedup/index.ts): uma fonte com matrícula e outra
+   * sem nunca dividem a chave_dedup.
+   */
+  chave_endereco: string | null;
   primeira_vez_em: string;
   ultima_vez_em: string;
   atualizado_em: string;
@@ -202,6 +208,7 @@ export function montarExportacao(db: Banco, opcoes: OpcoesExportar = {}): Export
       documentos: i.documentos,
       tags,
       chave_dedup: i.chave_dedup,
+      chave_endereco: i.chave_endereco,
       primeira_vez_em: i.primeira_vez_em,
       ultima_vez_em: i.ultima_vez_em,
       atualizado_em: i.atualizado_em,

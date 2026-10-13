@@ -1,12 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { criarClienteHttp, USER_AGENT_PADRAO } from "../util/http.ts";
 import {
   FONTES_GEO,
   formatarMunicipiosCsv,
+  gravarJuntos,
   lerDistritosDtb,
   lerMalha,
   lerMunicipiosKelvins,
@@ -15,7 +16,7 @@ import {
   urlDaFonte,
   type EntradaAtualizacao,
 } from "./atualizar.ts";
-import { ARQUIVO_MUNICIPIOS, CODIGO_UF, tabelaPadrao, type Distrito, type Municipio } from "./municipios.ts";
+import { ARQUIVO_APELIDOS, ARQUIVO_MUNICIPIOS, CODIGO_UF, lerApelidos, tabelaCsv, tabelaPadrao, type Distrito, type Municipio } from "./municipios.ts";
 
 const atuais = tabelaPadrao().municipios;
 
@@ -107,6 +108,38 @@ test("volume, capitais e comparação com o arquivo atual", () => {
   assert.equal(r.municipios.find((m) => m.codigo_ibge === "1500602")?.raio_km, 753, "sem malha, o raio vem do arquivo atual");
   const poucosDistritos = prepararAtualizacao(entrada({ distritos: distritosFalsos(atuais).slice(0, 100), malha: null }));
   assert.ok(poucosDistritos.erros.some((e) => /distritos/.test(e)));
+});
+
+test("apelido ou correção com código que sumiu da fonte bloqueia (a tabela não carregaria depois)", () => {
+  const apelidos = lerApelidos(tabelaCsv(readFileSync(ARQUIVO_APELIDOS, "utf8")));
+  assert.deepEqual(prepararAtualizacao(entrada({ apelidos })).erros, [], "os apelidos de hoje passam");
+  // Açu (2400208, apelido "Assu") some da fonte: menos de 10 remoções, então só o apelido bloqueia.
+  const semAcu = lerMunicipiosKelvins(textoKelvins(atuais.filter((m) => m.codigo_ibge !== "2400208")));
+  const r = prepararAtualizacao(entrada({ municipios: semAcu, apelidos, forcar: true }));
+  assert.deepEqual(r.erros, ['apelidos.csv: "Assu"/RN aponta para 2400208, que sumiu da fonte; corrija o apelido antes de atualizar.']);
+  const outraUf = prepararAtualizacao(entrada({ apelidos: [{ uf: "SP", nome: "Assu", codigo_ibge: "2400208", tipo: "", observacao: "" }] }));
+  assert.match(outraUf.erros.join("\n"), /de outra UF/);
+  const correcaoOrfa = prepararAtualizacao(entrada({ municipios: semAcu, correcoes: [{ codigo_ibge: "2400208", lat: -5.57, lon: -36.9, motivo: "teste" }] }));
+  assert.match(correcaoOrfa.erros.join("\n"), /correcoes\.csv: 2400208 sumiu da fonte/);
+});
+
+test("gravarJuntos: os dois arquivos trocam juntos; se uma escrita falha, nenhum troca", () => {
+  const pasta = mkdtempSync(join(tmpdir(), "luneta-geo-juntos-"));
+  try {
+    const a = join(pasta, "a.csv");
+    const b = join(pasta, "b.csv");
+    writeFileSync(a, "A0");
+    writeFileSync(b, "B0");
+    gravarJuntos([[a, "A1"], [b, "B1"]]);
+    assert.deepEqual([readFileSync(a, "utf8"), readFileSync(b, "utf8")], ["A1", "B1"]);
+    // Destino numa pasta que não existe: a segunda escrita falha antes de qualquer rename.
+    assert.throws(() => gravarJuntos([[a, "A2"], [join(pasta, "nao-existe", "b.csv"), "B2"]]));
+    assert.equal(readFileSync(a, "utf8"), "A1", "o primeiro arquivo não foi trocado");
+    assert.deepEqual(readdirSync(pasta).filter((n) => n.endsWith(".tmp")), [], "sem temporários sobrando");
+    assert.equal(existsSync(join(pasta, "nao-existe")), false);
+  } finally {
+    rmSync(pasta, { recursive: true, force: true });
+  }
 });
 
 test("principal: falha de rede ou conteúdo ruim não toca nos arquivos; sucesso grava", async () => {

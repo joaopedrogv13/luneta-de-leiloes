@@ -82,6 +82,28 @@ test("variações de escrita e homônimos", () => {
   assert.equal(tabela.encontrar("SP", ""), null);
 });
 
+test("grafias usuais fora do CSV da Caixa (revisão de 13/10/2026)", () => {
+  const casos: Array<[string, string, string, string]> = [
+    ["MA", "GOVERNADOR EDSON LOBAO", "2104552", "apelido"],
+    ["RJ", "TRAJANO DE MORAIS", "3305901", "grafia"],
+    ["MG", "GOUVEA", "3127602", "grafia"],
+    ["SC", "ERVAL D OESTE", "4206702", "grafia"],
+    ["SC", "ERVAL D'OESTE", "4206702", "grafia"],
+    ["SP", "S J DOS CAMPOS", "3549904", "grafia"],
+    ["SP", "S J DO RIO PRETO", "3549805", "grafia"],
+    ["MG", "S J DEL REI", "3162500", "grafia"],
+    ["SP", "SAO PAULO (CAPITAL)", "3550308", "nome"],
+    ["RJ", "NITEROI RJ", "3303302", "nome"],
+  ];
+  for (const [uf, cidade, codigo, metodo] of casos) {
+    const achado = tabela.encontrar(uf, cidade);
+    assert.equal(achado?.municipio.codigo_ibge, codigo, `${cidade}/${uf}`);
+    assert.equal(achado?.metodo, metodo, `${cidade}/${uf}: método`);
+  }
+  // "S J DO PIAUI": São José do Piauí e São João do Piauí existem; nenhuma leitura vence.
+  assert.equal(tabela.encontrar("PI", "S J DO PIAUI"), null);
+});
+
 test("erro de digitação não casa sozinho; só vira sugestão", () => {
   // "Itupiranga" é do PA; no AM existe "Itapiranga" (1 letra de diferença). Casar seria erro.
   assert.equal(tabela.encontrar("AM", "Itupiranga"), null);

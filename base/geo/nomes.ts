@@ -58,11 +58,17 @@ export function chaveCompacta(nome: string): string {
 
 /**
  * Chave fonética: a solta com as trocas de grafia comuns em nomes brasileiros (ç/ss/s/z, y/i,
- * th/t, ph/f, w/v, ge/je, ce/se e letras dobradas).
- *   "Açu" e "ASSU" → "asu"; "Santa Izabel" e "Santa Isabel" → "santaisabel"; "Thomé" → "tome"
+ * th/t, ph/f, w/v, ge/je, ce/se, letras dobradas, "h" mudo no começo da palavra e, no fim da
+ * palavra, "aes"/"ais" e "eia"/"ea").
+ *   "Açu" e "ASSU" → "asu"; "Santa Izabel" e "Santa Isabel" → "santaisabel"; "Thomé" → "tome";
+ *   "Herval d'Oeste" e "ERVAL D OESTE"; "Trajano de Moraes" e "TRAJANO DE MORAIS"; "Gouveia" e "GOUVEA"
  */
 export function chaveFonetica(nome: string): string {
-  return chaveCompacta(nome.replace(/[çÇ]/g, "s"))
+  const palavras = chaveNome(nome.replace(/[çÇ]/g, "s"))
+    .split(" ")
+    .map((p) => p.replace(/^h(?=[aeiou])/, "").replace(/aes$/, "ais").replace(/eia$/, "ea"))
+    .join(" ");
+  return chaveCompacta(palavras)
     .replace(/ph/g, "f")
     .replace(/th/g, "t")
     .replace(/y/g, "i")
@@ -108,7 +114,7 @@ const SIGLAS_UF = "AC|AL|AM|AP|BA|CE|DF|ES|GO|MA|MG|MS|MT|PA|PB|PE|PI|PR|RJ|RN|R
  * prefixos ("Município de", "Comarca de", "Cidade de") e espaços sobrando. Devolve também a UF
  * encontrada no texto, se houver.
  */
-export function limparCidade(cidade: string): { nome: string; ufNoTexto: string | null } {
+export function limparCidade(cidade: string, uf?: string | null): { nome: string; ufNoTexto: string | null } {
   let nome = colapsarEspacos(cidade);
   let ufNoTexto: string | null = null;
   const sufixo = new RegExp(`\\s*(?:[/,\\-–]\\s*|\\(\\s*)(${SIGLAS_UF})\\s*\\)?\\s*$`, "i").exec(nome);
@@ -116,6 +122,27 @@ export function limparCidade(cidade: string): { nome: string; ufNoTexto: string 
     ufNoTexto = (sufixo[1] ?? "").toUpperCase();
     nome = nome.slice(0, sufixo.index);
   }
-  nome = nome.replace(/^(?:munic[ií]pio|comarca|cidade)\s+(?:de|da|do)\s+/i, "");
+  // "NITEROI RJ": a UF informada no fim, só com espaço (nenhum município termina com a sigla da UF).
+  const ufInformada = (uf ?? "").trim().toUpperCase();
+  if (!ufNoTexto && /^[A-Z]{2}$/.test(ufInformada)) {
+    const espaco = new RegExp(`\\s+${ufInformada}$`, "i").exec(nome);
+    if (espaco && espaco.index > 0) {
+      ufNoTexto = ufInformada;
+      nome = nome.slice(0, espaco.index);
+    }
+  }
+  nome = nome
+    .replace(/^(?:munic[ií]pio|comarca|cidade)\s+(?:de|da|do)\s+/i, "")
+    // "SAO PAULO (CAPITAL)", "SÃO PAULO - CAPITAL"
+    .replace(/\s*(?:\(\s*capital\s*\)|[-–]\s*capital)\s*$/i, "");
   return { nome: colapsarEspacos(nome), ufNoTexto };
+}
+
+/**
+ * Leituras possíveis de abreviações ambíguas: "S J DOS CAMPOS" → "sao jose dos campos" e "sao joao
+ * dos campos". Quem usa só aceita se uma única leitura casar.
+ */
+export function leiturasAbreviadas(chave: string): string[] {
+  if (!/\b(?:sao|s) j\b/.test(chave)) return [];
+  return ["jose", "joao"].map((nome) => chave.replace(/\b(?:sao|s) j\b/g, `sao ${nome}`));
 }

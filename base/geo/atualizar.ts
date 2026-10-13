@@ -17,9 +17,12 @@
  *     [--arquivo-malha geojs-100-mun.json] [--ref-municipios <commit|main>] [--ref-distritos ...] [--ref-malha ...]
  *
  * correcoes.csv (codigo_ibge, lat, lon, motivo) corrige sedes erradas na fonte; a correção é
- * reaplicada a cada atualização e o relatório avisa quando a fonte já corrigiu.
+ * reaplicada a cada atualização e o relatório avisa quando a fonte já corrigiu. Código de
+ * apelidos.csv ou de correcoes.csv que some da fonte bloqueia a gravação (senão a tabela não
+ * carregaria e toda coleta pararia). Os dois arquivos são gravados juntos: primeiro os
+ * temporários, depois os dois renames.
  */
-import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
@@ -27,7 +30,18 @@ import type { Uf } from "../tipos.ts";
 import { lerArquivoTexto } from "../util/arquivo.ts";
 import { criarClienteHttp, type ClienteHttp } from "../util/http.ts";
 import { arredondarCoordenada, dentroDoBrasil, distanciaKm } from "./coordenadas.ts";
-import { ARQUIVO_DISTRITOS, ARQUIVO_MUNICIPIOS, CODIGO_UF, lerMunicipios, tabelaCsv as tabela, type Distrito, type Municipio } from "./municipios.ts";
+import {
+  ARQUIVO_APELIDOS,
+  ARQUIVO_DISTRITOS,
+  ARQUIVO_MUNICIPIOS,
+  CODIGO_UF,
+  lerApelidos,
+  lerMunicipios,
+  tabelaCsv as tabela,
+  type Apelido,
+  type Distrito,
+  type Municipio,
+} from "./municipios.ts";
 import { chaveNome } from "./nomes.ts";
 
 export const ARQUIVO_CORRECOES = fileURLToPath(new URL("./correcoes.csv", import.meta.url));
@@ -207,6 +221,8 @@ export interface EntradaAtualizacao {
   correcoes: Correcao[];
   /** O que está gravado hoje (para comparar e manter raio_km quando não há malha). */
   atuais: Municipio[];
+  /** apelidos.csv: cada código precisa continuar existindo, na mesma UF. */
+  apelidos?: Apelido[];
   forcar?: boolean;
 }
 
@@ -246,7 +262,7 @@ export function prepararAtualizacao(entrada: EntradaAtualizacao): ResultadoAtual
   for (const c of entrada.correcoes) {
     const m = porCodigo.get(c.codigo_ibge);
     if (!m) {
-      relatorio.push(`correção para ${c.codigo_ibge} sem município na fonte; ignorada.`);
+      erros.push(`correcoes.csv: ${c.codigo_ibge} sumiu da fonte; tire ou troque a linha antes de atualizar.`);
       continue;
     }
     const diferenca = distanciaKm(m.lat, m.lon, c.lat, c.lon);
@@ -258,6 +274,13 @@ export function prepararAtualizacao(entrada: EntradaAtualizacao): ResultadoAtual
 
   for (const m of municipios) {
     if (!dentroDoBrasil(m.lat, m.lon)) erros.push(`sede de ${m.nome}/${m.uf} fora do Brasil: ${m.lat}, ${m.lon}`);
+  }
+
+  // Apelidos: com código inexistente, tabelaPadrao() lançaria e toda coleta e exportação parariam.
+  for (const a of entrada.apelidos ?? []) {
+    const m = porCodigo.get(a.codigo_ibge);
+    if (!m) erros.push(`apelidos.csv: "${a.nome}"/${a.uf} aponta para ${a.codigo_ibge}, que sumiu da fonte; corrija o apelido antes de atualizar.`);
+    else if (m.uf !== a.uf) erros.push(`apelidos.csv: "${a.nome}"/${a.uf} aponta para ${m.nome}/${m.uf}, de outra UF.`);
   }
 
   // Malha: sede dentro do município e raio.
@@ -350,10 +373,18 @@ export function formatarDistritosCsv(distritos: readonly Distrito[]): string {
   return ["codigo_distrito,codigo_ibge,nome", ...distritos.map((d) => [d.codigo_distrito, d.codigo_ibge, campoCsv(d.nome)].join(","))].join("\n") + "\n";
 }
 
-function gravarAtomico(caminho: string, conteudo: string): void {
-  const temporario = `${caminho}.${process.pid}.tmp`;
-  writeFileSync(temporario, conteudo, "utf8");
-  renameSync(temporario, caminho);
+/**
+ * Grava vários arquivos juntos: escreve todos os temporários e só então renomeia. Se uma escrita
+ * falhar, nenhum arquivo é trocado; os temporários são apagados.
+ */
+export function gravarJuntos(arquivos: ReadonlyArray<readonly [caminho: string, conteudo: string]>): void {
+  const pares = arquivos.map(([caminho, conteudo]) => ({ caminho, conteudo, temporario: `${caminho}.${process.pid}.tmp` }));
+  try {
+    for (const p of pares) writeFileSync(p.temporario, p.conteudo, "utf8");
+    for (const p of pares) renameSync(p.temporario, p.caminho);
+  } finally {
+    for (const p of pares) rmSync(p.temporario, { force: true });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -367,6 +398,7 @@ export interface DependenciasAtualizar {
   destinoMunicipios?: string;
   destinoDistritos?: string;
   arquivoCorrecoes?: string;
+  arquivoApelidos?: string;
 }
 
 export async function principal(argv: readonly string[], deps: DependenciasAtualizar = {}): Promise<number> {
@@ -420,12 +452,19 @@ export async function principal(argv: readonly string[], deps: DependenciasAtual
     } catch (erro) {
       if ((erro as NodeJS.ErrnoException).code !== "ENOENT") throw erro;
     }
+    let apelidos: Apelido[] = [];
+    try {
+      apelidos = lerApelidos(tabela(readFileSync(deps.arquivoApelidos ?? ARQUIVO_APELIDOS, "utf8")));
+    } catch (erro) {
+      if ((erro as NodeJS.ErrnoException).code !== "ENOENT") throw erro;
+    }
     const r = prepararAtualizacao({
       municipios: lerMunicipiosKelvins(textoMunicipios),
       distritos: lerDistritosDtb(textoDistritos),
       malha,
       correcoes,
       atuais,
+      apelidos,
       forcar: Boolean(v.forcar),
     });
     for (const linha of r.relatorio) saida(linha);
@@ -438,8 +477,10 @@ export async function principal(argv: readonly string[], deps: DependenciasAtual
       saida("Simulação: nada foi gravado.");
       return 0;
     }
-    gravarAtomico(destinoMunicipios, formatarMunicipiosCsv(r.municipios));
-    gravarAtomico(destinoDistritos, formatarDistritosCsv(r.distritos));
+    gravarJuntos([
+      [destinoMunicipios, formatarMunicipiosCsv(r.municipios)],
+      [destinoDistritos, formatarDistritosCsv(r.distritos)],
+    ]);
     saida(`Gravados ${destinoMunicipios} e ${destinoDistritos}. Rode os testes (npm run base:testar) e confira o diff.`);
     return 0;
   } catch (erro) {

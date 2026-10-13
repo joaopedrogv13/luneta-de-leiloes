@@ -26,7 +26,7 @@ import { fileURLToPath } from "node:url";
 import type { Uf } from "../tipos.ts";
 import { lerCsv } from "../util/csv.ts";
 import { ehUf } from "../util/uf.ts";
-import { chaveCompacta, chaveFonetica, chaveNome, distanciaEdicao, limparCidade } from "./nomes.ts";
+import { chaveCompacta, chaveFonetica, chaveNome, distanciaEdicao, leiturasAbreviadas, limparCidade } from "./nomes.ts";
 
 export const ARQUIVO_MUNICIPIOS = fileURLToPath(new URL("./municipios.csv", import.meta.url));
 export const ARQUIVO_DISTRITOS = fileURLToPath(new URL("./distritos.csv", import.meta.url));
@@ -175,7 +175,7 @@ export function montarTabela(dados: {
   }
 
   function preparar(ufBruta: string, cidade: string): { uf: Uf; nome: string; indice: IndiceUf } | null {
-    const { nome, ufNoTexto } = limparCidade(cidade ?? "");
+    const { nome, ufNoTexto } = limparCidade(cidade ?? "", ufBruta);
     const uf = (ufBruta ?? "").trim().toUpperCase() || ufNoTexto || "";
     if (!ehUf(uf) || nome === "") return null;
     const indice = porUf.get(uf);
@@ -200,6 +200,13 @@ export function montarTabela(dados: {
       achou(unico(indice.fonetica, fonetica), "grafia") ??
       achou(unico(indice.distrito, estrita) ?? unico(indice.distrito, compacta) ?? unico(indice.distrito, fonetica), "distrito");
     if (resultado) return resultado;
+    // Abreviação ambígua ("S J DOS CAMPOS"): vale se uma única leitura casar com um município.
+    const porLeitura = new Set(
+      leiturasAbreviadas(estrita)
+        .map((leitura) => unico(indice.nome, leitura) ?? unico(indice.apelido, leitura) ?? unico(indice.compacta, chaveCompacta(leitura)) ?? unico(indice.fonetica, chaveFonetica(leitura)))
+        .filter((codigo): codigo is string => codigo !== null),
+    );
+    if (porLeitura.size === 1) return achou([...porLeitura][0] ?? null, "grafia");
     return ufTexto === "DF" ? achou(CODIGO_BRASILIA, "df") : null;
   }
 
@@ -270,6 +277,15 @@ export function lerMunicipios(linhas: ReadonlyArray<Record<string, string>>): Mu
   });
 }
 
+/** Converte linhas de apelidos.csv, conferindo cada campo (lança na primeira linha ruim). */
+export function lerApelidos(linhas: ReadonlyArray<Record<string, string>>): Apelido[] {
+  return linhas.map((l, i) => {
+    const uf = l.uf ?? "";
+    if (!ehUf(uf) || !l.nome || !/^\d{7}$/.test(l.codigo_ibge ?? "")) throw new Error(`apelidos.csv, linha ${i + 2}: registro inválido`);
+    return { uf, nome: l.nome, codigo_ibge: l.codigo_ibge as string, tipo: l.tipo ?? "", observacao: l.observacao ?? "" };
+  });
+}
+
 export function carregarTabela(caminhos: { municipios?: string; distritos?: string; apelidos?: string } = {}): TabelaMunicipios {
   const municipios = lerMunicipios(lerTabelaCsv(caminhos.municipios ?? ARQUIVO_MUNICIPIOS));
   const distritos = lerTabelaCsv(caminhos.distritos ?? ARQUIVO_DISTRITOS).map((l) => ({
@@ -277,11 +293,7 @@ export function carregarTabela(caminhos: { municipios?: string; distritos?: stri
     codigo_ibge: l.codigo_ibge ?? "",
     nome: l.nome ?? "",
   }));
-  const apelidos = lerTabelaCsv(caminhos.apelidos ?? ARQUIVO_APELIDOS).map((l, i) => {
-    const uf = l.uf ?? "";
-    if (!ehUf(uf) || !l.nome || !/^\d{7}$/.test(l.codigo_ibge ?? "")) throw new Error(`apelidos.csv, linha ${i + 2}: registro inválido`);
-    return { uf, nome: l.nome, codigo_ibge: l.codigo_ibge as string, tipo: l.tipo ?? "", observacao: l.observacao ?? "" };
-  });
+  const apelidos = lerApelidos(lerTabelaCsv(caminhos.apelidos ?? ARQUIVO_APELIDOS));
   return montarTabela({ municipios, distritos, apelidos });
 }
 

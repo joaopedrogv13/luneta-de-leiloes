@@ -14,7 +14,11 @@ import type { PrecisaoGeo } from "../tipos.ts";
 import { arredondarCoordenada, coordenadaValida, dentroDoBrasil, distanciaKm } from "./coordenadas.ts";
 import { tabelaPadrao, type MetodoMunicipio, type Municipio, type TabelaMunicipios } from "./municipios.ts";
 
-/** Precisão gravada quando o ponto é a sede do município (o contrato chama esse nível de "cidade"). */
+/**
+ * Precisão gravada quando o ponto é a sede do município. O contrato v1 chama esse nível de
+ * "cidade" (o pedido dizia "municipio"); a escolha entre manter, migrar o esquema ou trocar só na
+ * exportação está em PENDENCIAS.md.
+ */
 export const PRECISAO_MUNICIPIO: PrecisaoGeo = "cidade";
 /** Precisão padrão de coordenada vinda da fonte sem precisão declarada. */
 export const PRECISAO_FONTE_PADRAO: PrecisaoGeo = "exata";

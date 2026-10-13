@@ -6,10 +6,17 @@
  *    precisão: o grupo é "consistente" quando todos têm o mesmo tipo e a mesma área (privativa,
  *    ou do terreno quando não há privativa, com 2% de tolerância). É um limite superior: dois
  *    apartamentos iguais no mesmo prédio, sem número de apartamento, parecem consistentes.
- * 3. Robustez a formato: cada endereço é reescrito como um leiloeiro escreveria ("RUA" → "R.",
- *    "N. S/N" → "s/nº", "LT 10 QD 272" → "Quadra 272, Lote 10", bairro "JARDIM X" → "Jd. X") e
- *    conta-se quantas reescritas caem na mesma chave (recall) e quantas caem na chave de OUTRO
- *    imóvel (junção errada).
+ * 3. Robustez a formato: cada endereço é reescrito como outra fonte escreveria e conta-se quantas
+ *    reescritas caem na mesma chave (recall), quantas ficam sem chave, quantas caem na chave de
+ *    OUTRO imóvel da Caixa (junção errada) e quantos grupos as reescritas formam entre si com
+ *    imóveis de tipo ou área diferente. Estilos (ESTILOS, abaixo):
+ *    - leiloeiro: "RUA" → "R.", "N. S/N" → "s/nº", "LT 10 QD 272" → "Quadra 272, Lote 10", "Apto" →
+ *      "apartamento", bairro "JARDIM X" → "Jd. X";
+ *    - unidade_com_numero: "Apto 91" → "apartamento nº 91", "CASA 2" → "casa nº 2", "LT 5" →
+ *      "lote nº 5", "QD 3" → "quadra nº 3", "VG 10" → "vaga nº 10";
+ *    - sem_marcador: "Rua X, 62, Apto 1, <bairro>, <cidade>/<UF>" (como a Leilões Judiciais
+ *      extrai do texto), com o bairro só no texto e, à parte, também informado em campo próprio;
+ *    - sem_marcador_tracos: "Rua X, 62 - Apto 1 - <bairro> - <cidade>/<UF>", bairro só no texto.
  *
  *   node --experimental-strip-types base/dedup/medir.ts --arquivo Lista_imoveis_geral.csv [--exemplos 20]
  */
@@ -18,7 +25,7 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { lerArquivoTexto } from "../util/arquivo.ts";
 import { lerCsv } from "../util/csv.ts";
-import { chaveEndereco, motivoSemChave, type ModoBairro } from "./index.ts";
+import { chaveEndereco, motivoSemChave, type DadosChave, type ModoBairro } from "./index.ts";
 
 export interface LinhaCaixa {
   id: string;
@@ -60,7 +67,8 @@ export function perfil(descricao: string): { tipo: string; area: number } {
   return { tipo, area: privativa > 0 ? privativa : terreno };
 }
 
-function consistente(grupo: readonly LinhaCaixa[]): boolean {
+/** Todos com o mesmo tipo e a mesma área (2% de tolerância). */
+export function consistente(grupo: readonly LinhaCaixa[]): boolean {
   const perfis = grupo.map((l) => perfil(l.descricao));
   const [p0] = perfis;
   if (!p0) return true;
@@ -71,12 +79,13 @@ function titulo(texto: string): string {
   return texto.toLowerCase().replace(/(^|[\s,(/-])(\p{L})/gu, (_, sep: string, letra: string) => sep + letra.toUpperCase());
 }
 
-/** O endereço como um leiloeiro escreveria (ver o topo do arquivo). */
+/** O endereço como um leiloeiro escreveria (estilo "leiloeiro"; ver o topo do arquivo). */
 export function reescrever(endereco: string): string {
   let t = ` ${endereco.trim()} `;
   t = t
-    .replace(/,?\s*N\.\s*(?:S\/N[º°]?|SN)\s*(?=,|$|\s)/gi, ", s/nº")
-    .replace(/,?\s*N\.\s*(\d+)/gi, ", nº $1")
+    // Só o primeiro "N." (o do número da casa; "LOTE N.17" fica).
+    .replace(/,?\s*\bN\.\s*(?:S\/N[º°]?|SN)\s*(?=,|$|\s)/i, ", s/nº")
+    .replace(/,\s*\bN\.\s*(\d+)/i, ", nº $1")
     .replace(/^\s*RUA\b/i, "R.")
     .replace(/^\s*AVENIDA\b/i, "Av.")
     .replace(/^\s*TRAVESSA\b/i, "Tv.")
@@ -96,8 +105,63 @@ export function reescrever(endereco: string): string {
   return titulo(t.replace(/\s+/g, " ").trim());
 }
 
+/** Unidades com "nº" entre o rótulo e o valor (estilo "unidade_com_numero"): "Apto 91" → "apartamento nº 91". */
+export function reescreverUnidadeComNumero(endereco: string): string {
+  return endereco
+    .replace(/\b(?:APTO|APT|APARTAMENTO)\.?\s+(?=\d)/gi, "apartamento nº ")
+    .replace(/\b(?:CASA|CS)\.?\s+(?=\d)/gi, "casa nº ")
+    .replace(/\b(?:LOTE|LT)\.?\s+(?=\d)/gi, "lote nº ")
+    .replace(/\b(?:QUADRA|QD)\.?\s+(?=\d)/gi, "quadra nº ")
+    .replace(/\b(?:VAGA|VG)\.?\s+(?=\d)/gi, "vaga nº ");
+}
+
+/**
+ * Sem marcador de número, com bairro e cidade no fim (estilo "sem_marcador"): "RUA X, N. 62, Apto 1"
+ * → "Rua X, 62, Apto 1, Jardim Y, Cidade/UF"; com `tracos`, "Rua X, 62 - Apto 1 - Jardim Y - Cidade/UF".
+ */
+export function reescreverSemMarcador(l: Pick<LinhaCaixa, "endereco" | "bairro" | "cidade" | "uf">, tracos = false): string {
+  const m = /^(.*?),\s*\bN\.\s*(S\/N[º°]?|SN|[^,]*?)\s*(?:,(.*))?$/i.exec(l.endereco.trim());
+  const logradouro = (m?.[1] ?? l.endereco).trim();
+  const numero = m ? (/^(?:S\/N[º°]?|SN)$/i.test(m[2] ?? "") ? "s/nº" : (m[2] ?? "").trim()) : "";
+  const resto = (m?.[3] ?? "").split(",").map((c) => c.trim()).filter((c) => c !== "");
+  const lugar = [l.bairro.trim(), `${titulo(l.cidade.trim())}/${l.uf.trim()}`].filter((c) => c !== "" && c !== "/");
+  const texto = tracos
+    ? [`${logradouro}${numero ? `, ${numero}` : ""}`, ...resto, ...lugar].join(" - ")
+    : [logradouro, numero, ...resto, ...lugar].filter((c) => c !== "").join(", ");
+  return titulo(texto.replace(/\s+/g, " "));
+}
+
 function reescreverBairro(bairro: string): string {
   return titulo(bairro.replace(/\bJARDIM\b/i, "Jd.").replace(/\bPARQUE\b/i, "Pq.").replace(/\bVILA\b/i, "Vl."));
+}
+
+export interface EstiloReescrita {
+  nome: string;
+  /** Os dados de chave como a outra fonte mandaria (endereço reescrito; bairro em campo ou não). */
+  reescrever: (l: LinhaCaixa) => DadosChave;
+}
+
+export const ESTILOS: readonly EstiloReescrita[] = [
+  { nome: "leiloeiro", reescrever: (l) => ({ uf: l.uf, cidade: titulo(l.cidade), bairro: reescreverBairro(l.bairro), endereco: reescrever(l.endereco) }) },
+  { nome: "unidade_com_numero", reescrever: (l) => ({ uf: l.uf, cidade: l.cidade, bairro: l.bairro, endereco: reescreverUnidadeComNumero(l.endereco) }) },
+  { nome: "sem_marcador (bairro só no texto)", reescrever: (l) => ({ uf: l.uf, cidade: titulo(l.cidade), bairro: null, endereco: reescreverSemMarcador(l) }) },
+  { nome: "sem_marcador (bairro também em campo)", reescrever: (l) => ({ uf: l.uf, cidade: titulo(l.cidade), bairro: titulo(l.bairro), endereco: reescreverSemMarcador(l) }) },
+  { nome: "sem_marcador_tracos (bairro só no texto)", reescrever: (l) => ({ uf: l.uf, cidade: titulo(l.cidade), bairro: null, endereco: reescreverSemMarcador(l, true) }) },
+];
+
+export interface MedicaoReescrita {
+  estilo: string;
+  /** Imóveis com chave no original (os que entram na conta). */
+  reescritas: number;
+  mesmaChave: number;
+  semChave: number;
+  /** A reescrita caiu na chave original de OUTRO imóvel da Caixa. */
+  outroImovel: number;
+  /** Grupos que as reescritas formam entre si, e quantos juntam tipo ou área diferente. */
+  grupos: number;
+  gruposInconsistentes: number;
+  exemplosPerdidos: string[];
+  exemplosOutroImovel: string[];
 }
 
 export interface MedicaoDedup {
@@ -109,66 +173,103 @@ export interface MedicaoDedup {
   gruposConsistentes: number;
   gruposComModalidadesDiferentes: number;
   gruposComBairrosDiferentes: number;
-  reescritas: number;
-  reescritasMesmaChave: number;
-  reescritasOutroImovel: number;
   exemplosDivergentes: string[];
-  exemplosRecallPerdido: string[];
+  reescritas: MedicaoReescrita[];
 }
 
-export function medirDedup(linhas: readonly LinhaCaixa[], modo: ModoBairro = "quando_fraco", maxExemplos = 15): MedicaoDedup {
+/** Função de chave a medir (a padrão é a da base; medir.ts aceita outra para comparar versões). */
+export type FuncaoChave = (dados: DadosChave, modo: ModoBairro) => string | null;
+
+const chavePadrao: FuncaoChave = (dados, modo) => chaveEndereco(dados, undefined, modo);
+
+export function medirDedup(
+  linhas: readonly LinhaCaixa[],
+  modo: ModoBairro = "quando_fraco",
+  maxExemplos = 15,
+  opcoes: { chave?: FuncaoChave; estilos?: readonly EstiloReescrita[] } = {},
+): MedicaoDedup {
+  const chave = opcoes.chave ?? chavePadrao;
   const m: MedicaoDedup = {
     imoveis: linhas.length, comChave: 0, semChave: {}, grupos: 0, imoveisEmGrupos: 0, gruposConsistentes: 0,
-    gruposComModalidadesDiferentes: 0, gruposComBairrosDiferentes: 0, reescritas: 0, reescritasMesmaChave: 0,
-    reescritasOutroImovel: 0, exemplosDivergentes: [], exemplosRecallPerdido: [],
+    gruposComModalidadesDiferentes: 0, gruposComBairrosDiferentes: 0, exemplosDivergentes: [], reescritas: [],
   };
   const porChave = new Map<string, LinhaCaixa[]>();
   const chaveDe = new Map<LinhaCaixa, string>();
   for (const l of linhas) {
-    const chave = chaveEndereco({ uf: l.uf, cidade: l.cidade, bairro: l.bairro, endereco: l.endereco }, undefined, modo);
-    if (!chave) {
-      const motivo = motivoSemChave(l.endereco) ?? "outro";
+    const c = chave({ uf: l.uf, cidade: l.cidade, bairro: l.bairro, endereco: l.endereco }, modo);
+    if (!c) {
+      const motivo = motivoSemChave(l.endereco, { uf: l.uf, cidade: l.cidade, bairro: l.bairro }) ?? "outro";
       m.semChave[motivo] = (m.semChave[motivo] ?? 0) + 1;
       continue;
     }
     m.comChave++;
-    chaveDe.set(l, chave);
-    porChave.set(chave, [...(porChave.get(chave) ?? []), l]);
+    chaveDe.set(l, c);
+    porChave.set(c, [...(porChave.get(c) ?? []), l]);
   }
-  for (const [chave, grupo] of porChave) {
+  for (const [c, grupo] of porChave) {
     if (grupo.length < 2) continue;
     m.grupos++;
     m.imoveisEmGrupos += grupo.length;
     if (consistente(grupo)) m.gruposConsistentes++;
     else if (m.exemplosDivergentes.length < maxExemplos) {
-      m.exemplosDivergentes.push(`${chave}\n${grupo.map((l) => `    ${l.id} | ${l.bairro} | ${l.endereco} | ${l.descricao.slice(0, 70)}`).join("\n")}`);
+      m.exemplosDivergentes.push(`${c}\n${grupo.map((l) => `    ${l.id} | ${l.bairro} | ${l.endereco} | ${l.descricao.slice(0, 70)}`).join("\n")}`);
     }
     if (new Set(grupo.map((l) => l.modalidade)).size > 1) m.gruposComModalidadesDiferentes++;
     if (new Set(grupo.map((l) => l.bairro)).size > 1) m.gruposComBairrosDiferentes++;
   }
-  for (const [l, chave] of chaveDe) {
-    const variante = chaveEndereco({ uf: l.uf, cidade: titulo(l.cidade), bairro: reescreverBairro(l.bairro), endereco: reescrever(l.endereco) }, undefined, modo);
-    m.reescritas++;
-    if (variante === chave) m.reescritasMesmaChave++;
-    else {
-      if (variante && porChave.has(variante)) m.reescritasOutroImovel++;
-      if (m.exemplosRecallPerdido.length < maxExemplos) m.exemplosRecallPerdido.push(`${l.endereco}  →  ${reescrever(l.endereco)}\n    ${chave}\n    ${variante ?? "(sem chave)"}`);
+  for (const estilo of opcoes.estilos ?? ESTILOS) {
+    const r: MedicaoReescrita = {
+      estilo: estilo.nome, reescritas: 0, mesmaChave: 0, semChave: 0, outroImovel: 0, grupos: 0, gruposInconsistentes: 0,
+      exemplosPerdidos: [], exemplosOutroImovel: [],
+    };
+    const porVariante = new Map<string, LinhaCaixa[]>();
+    for (const [l, original] of chaveDe) {
+      const dados = estilo.reescrever(l);
+      const variante = chave(dados, modo);
+      r.reescritas++;
+      if (variante) porVariante.set(variante, [...(porVariante.get(variante) ?? []), l]);
+      if (variante === original) {
+        r.mesmaChave++;
+        continue;
+      }
+      if (!variante) r.semChave++;
+      else if (porChave.has(variante)) {
+        r.outroImovel++;
+        if (r.exemplosOutroImovel.length < maxExemplos) {
+          const outro = porChave.get(variante)?.[0];
+          r.exemplosOutroImovel.push(`${dados.endereco}  =  ${outro?.endereco ?? "?"}\n    ${variante}`);
+        }
+      }
+      if (r.exemplosPerdidos.length < maxExemplos) r.exemplosPerdidos.push(`${l.endereco}  →  ${dados.endereco}\n    ${original}\n    ${variante ?? "(sem chave)"}`);
     }
+    for (const grupo of porVariante.values()) {
+      if (grupo.length < 2) continue;
+      r.grupos++;
+      if (!consistente(grupo)) r.gruposInconsistentes++;
+    }
+    m.reescritas.push(r);
   }
   return m;
 }
 
 export function formatarMedicaoDedup(m: MedicaoDedup, modo: string): string {
   const pct = (a: number, b: number): string => (b === 0 ? "0" : ((100 * a) / b).toFixed(2));
-  return [
+  const linhas = [
     `Modo do bairro: ${modo}`,
     `Imóveis: ${m.imoveis}; com chave de endereço ${m.comChave} (${pct(m.comChave, m.imoveis)}%)`,
     `Sem chave: ${Object.entries(m.semChave).map(([k, v]) => `${k} ${v}`).join(" · ") || "nenhum"}`,
     `Grupos (mesma chave, N° diferentes): ${m.grupos} com ${m.imoveisEmGrupos} imóveis; consistentes ${m.gruposConsistentes} (${pct(m.gruposConsistentes, m.grupos)}%), modalidades diferentes ${m.gruposComModalidadesDiferentes}, bairros diferentes ${m.gruposComBairrosDiferentes}`,
-    `Reescrita estilo leiloeiro: mesma chave ${m.reescritasMesmaChave}/${m.reescritas} (${pct(m.reescritasMesmaChave, m.reescritas)}%); caiu na chave de outro imóvel ${m.reescritasOutroImovel}`,
     ...(m.exemplosDivergentes.length > 0 ? ["Grupos divergentes (exemplos):", ...m.exemplosDivergentes.map((e) => `  ${e}`)] : []),
-    ...(m.exemplosRecallPerdido.length > 0 ? ["Reescritas que mudaram a chave (exemplos):", ...m.exemplosRecallPerdido.map((e) => `  ${e}`)] : []),
-  ].join("\n");
+  ];
+  for (const r of m.reescritas) {
+    linhas.push(
+      `Reescrita ${r.estilo}: mesma chave ${r.mesmaChave}/${r.reescritas} (${pct(r.mesmaChave, r.reescritas)}%); sem chave ${r.semChave}; `
+        + `caiu na chave de outro imóvel ${r.outroImovel}; grupos entre reescritas ${r.grupos}, com tipo/área diferente ${r.gruposInconsistentes}`,
+    );
+    if (r.exemplosOutroImovel.length > 0) linhas.push("  Caiu na chave de outro imóvel (exemplos):", ...r.exemplosOutroImovel.map((e) => `    ${e}`));
+    if (r.exemplosPerdidos.length > 0) linhas.push("  Mudou de chave (exemplos):", ...r.exemplosPerdidos.map((e) => `    ${e}`));
+  }
+  return linhas.join("\n");
 }
 
 async function principal(argv: readonly string[]): Promise<number> {
@@ -180,7 +281,8 @@ async function principal(argv: readonly string[]): Promise<number> {
   const linhas = linhasCaixa(await lerArquivoTexto(resolve(v.arquivo)));
   const exemplos = v.exemplos ? Number(v.exemplos) : 10;
   for (const modo of ["quando_fraco", "nunca", "sempre"] as const) {
-    process.stdout.write(formatarMedicaoDedup(medirDedup(linhas, modo, modo === "quando_fraco" ? exemplos : 0), modo) + "\n\n");
+    const medicao = medirDedup(linhas, modo, modo === "quando_fraco" ? exemplos : 0, { estilos: modo === "quando_fraco" ? ESTILOS : [] });
+    process.stdout.write(formatarMedicaoDedup(medicao, modo) + "\n\n");
   }
   return 0;
 }
