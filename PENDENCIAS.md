@@ -33,9 +33,11 @@ privados, prefeituras e a maior parte dos leiloeiros não têm API: entram na op
    priorizar a opção 2 pelo que o concorrente cobre.
 3. **Opção 2** (eu): conectores por plataforma, começando pelas que cobrem mais bancos e leiloeiros de uma vez (ver
    "Opção 2: o que falta mapear" abaixo).
-4. **Tags confiáveis** (eu + advogado): ler a página e o edital de cada imóvel da Caixa; auditoria às cegas de 100 imóveis
-   pelo advogado antes de mostrar risco como fato no site.
-5. **Decisões suas** pendentes (lista abaixo) para avançar no site (formulário, advogado, preços, título, página mais curta).
+4. **Tags confiáveis** (eu + advogado): ler a página e o edital de cada imóvel com IA (custo na seção "Ler cada leilão
+   com IA"); o advogado classifica 100 imóveis às cegas e escolhemos o modelo mais barato que acertar o suficiente.
+5. **Leilões Judiciais** (você): ler os termos e mandar o pedido de autorização (rascunho em
+   `base/contatos/leiloesjudiciais-email.md`).
+6. **Decisões suas** pendentes (lista abaixo) para avançar no site (formulário, advogado, preços, título, página mais curta).
 
 ### Atualização: como funciona
 
@@ -70,6 +72,62 @@ Com o que temos hoje (só a lista da Caixa), **em parte**:
 As regras foram escritas com textos reais e têm 423 testes, mas o corpus é pequeno (10 lotes, 2 páginas da Caixa,
 cláusulas de editais) e **a precisão nunca foi medida numa amostra rotulada**. Por isso: no site, só as tags de confiança
 alta aparecem como fato; o resto fica "em revisão" ou "não informado" até a auditoria do advogado.
+
+### Fontes com API ou dados públicos: custo e dificuldade
+
+"Aberta" = sem custo e sem chave. Dificuldade = trabalho para ligar e manter (baixa/média/alta).
+
+| Fonte | O que traz | Aberta ou custo | Dificuldade | Situação |
+| --- | --- | --- | --- | --- |
+| Caixa: lista oficial (CSV) | imóveis da Caixa (preço, avaliação, modalidade, financiamento) | aberta | baixa | **no banco** (21.226) |
+| Caixa: página e edital de cada imóvel | matrícula, regras de condomínio/IPTU, datas, ocupação (no edital) | aberta | baixa a média (anti-robô Radware) | leitor pronto, falta rede |
+| Leilões Judiciais (API MCP) | lotes de vários leiloeiros, com fotos, edital, matrícula e laudo | aberta, sem chave; **pedir autorização** | baixa (pronto), mas 10 resultados por busca | 10 lotes de amostra |
+| PNCP (governo) | editais de leilão de órgãos públicos, inclusive prefeituras (ex.: São Paulo) | aberta | média (filtrar imóveis; sem foto) | pronto, falta rede |
+| Comunica PJe / Diário da Justiça | editais de leilões judiciais (texto) | aberta | média a alta (texto livre, muito volume, dados pessoais) | pronto, falta rede |
+| Diário Oficial da União (INLABS) | avisos federais (SPU, estatais) | aberta com cadastro gratuito | média | pronto, falta a conta |
+| Querido Diário | diários oficiais de parte dos municípios | aberta (projeto da Open Knowledge) | média, cobertura parcial | pronto, falta rede |
+| Resale | imóveis de Santander, BTG, Pan, BRB, BB (segundo a pesquisa) | **com chave: contrato comercial** (preço não divulgado) | baixa depois do contrato | não ligado |
+| Suporte Leilões | sistema usado por ~107 leiloeiros | autorização de **cada** leiloeiro (parceria) | baixa técnica, alta comercial | não ligado |
+| DataJud (CNJ) | andamento do processo (ação, recurso) | gratuita, mas **uso comercial só com termo do CNJ** | média | bloqueado até o termo |
+| SPU: imóveis da União | terreno de marinha, aforamento (custos extras, "só direitos") | aberta | média (endereço do arquivo não confirmado) | não ligado |
+| IPTU de SP e Fortaleza (Base dos Dados) | área construída oficial (área divergente, construção irregular) | aberta (cota gratuita) | média | não ligado |
+| Banco Central (IVG-R) | tendência de preço de imóveis (não é preço de mercado) | aberta | baixa | não ligado |
+
+Itaú, C6, Bradesco, Santander (no varejo), BB, Zukerman, Mega, Superbid e a maioria dos leiloeiros **não têm API
+pública**: ver "Opção 2" abaixo.
+
+**Leilões Judiciais: o que fazer** (você)
+1. Ler os termos de uso no site (daqui não abre).
+2. Mandar o pedido de autorização: rascunho pronto em `base/contatos/leiloesjudiciais-email.md` (uso comercial, fotos
+   por link, limite de consultas, existência de listagem completa, atribuição).
+3. Com a resposta e a rede liberada, eu rodo a primeira varredura (27 UFs × termos, cerca de 405 buscas) e medimos a
+   cobertura real.
+
+### Ler cada leilão com IA: é viável?
+
+Sim: em vez de preencher à mão, um robô baixa a página e os documentos de cada leilão (página da Caixa, edital,
+matrícula) e o Claude, pela API, devolve as tags com o trecho de onde tirou cada uma. Roda **uma vez por leilão** e de
+novo só se o edital ou a página mudar. O programa confere que o trecho citado existe mesmo no documento.
+
+Custo estimado por imóvel, em lote (Batch API, 50% mais barato, resposta em horas), com preços de 06/10/2026
+(Haiku 5.5: US$ 0,10 / 0,50 por milhão de tokens de entrada / saída; Sonnet 5.5: 2 / 10; Opus 5.5: 4 / 20). Tamanhos
+estimados (não medidos): página + trecho do edital ≈ 6 mil tokens; matrícula escaneada de ~5 páginas ≈ +10 mil
+(imagem ≈ 1.500 a 3.000 tokens por página); resposta ≈ 1 a 1,5 mil tokens.
+
+| Leitura | Haiku 5.5 | Sonnet 5.5 | Opus 5.5 |
+| --- | --- | --- | --- |
+| Página + edital (sem matrícula) | ~US$ 0,0006 por imóvel · ~US$ 12 os 21 mil | ~US$ 0,011 · ~US$ 230 | ~US$ 0,022 · ~US$ 460 |
+| Com matrícula escaneada | ~US$ 0,0012 · ~US$ 25 | ~US$ 0,024 · ~US$ 500 | ~US$ 0,047 · ~US$ 1.000 |
+| Edital judicial longo (20 páginas) | ~US$ 0,003 | ~US$ 0,05 | ~US$ 0,10 |
+
+Por mês, com 300 a 1.000 leilões novos ou alterados por dia (estimativa, não medida): Haiku ~US$ 10 a 40; Sonnet
+~US$ 100 a 700; Opus ~US$ 200 a 1.400. Escala sem problema (o lote processa milhares por vez).
+
+O que decide o modelo é a **qualidade**, não o custo: montar a amostra de 100 imóveis classificada pelo advogado,
+rodar os três modelos nela e ficar com o mais barato que acertar o suficiente (meta sugerida: 95% nas tags graves).
+Tags graves continuam com revisão humana no começo. Cuidados: os documentos têm dados pessoais (cobrir na política
+de privacidade, inclusive o envio para fora do Brasil); a Leilões Judiciais permite uso por IA como entrada
+(`ai-input=yes`) e proíbe treino (`ai-train=no`).
 
 ### Opção 2: o que falta mapear (bancos, prefeituras e leiloeiros)
 
