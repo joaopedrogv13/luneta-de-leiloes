@@ -1,6 +1,94 @@
-# Luneta de Leilões · pendências da landing
+# Luneta de Leilões · onde estamos e pendências
 
-Landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3 (ScrollTrigger), só front-end.
+Este é o arquivo central do projeto: **onde estamos, que dados temos, o que falta e o próximo passo**. Atualizado a cada
+entrega (última atualização: 13/10/2026).
+
+- **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
+  https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
+  (exemplos fictícios) e prévia com dados reais em `/previa` (sem link, noindex).
+- **Base de dados:** pasta `base/` (SQLite do Node, sem dependências). Detalhes em `base/README.md`, fontes em
+  `base/FONTES.md`, caminho até o site em `base/FASE1-SITE.md`.
+- **Análise de negócio, conversão e jurídico:** https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7
+
+## Painel (13/10/2026)
+
+### Que dados temos hoje
+
+| Fonte | Como entra | O que temos no banco | Atualização |
+| --- | --- | --- | --- |
+| Caixa (lista oficial CSV) | arquivo público oficial (opção 1) | **21.226 imóveis** da lista de 08/10/2026: endereço, preço, avaliação, deságio, modalidade, financiamento, área, quartos, link e URL da foto | carga única, ainda não ao vivo (rede bloqueada neste ambiente) |
+| Caixa (página de cada imóvel) | leitura da página (opção 2 leve) | **0**: leitor pronto e testado em 2 páginas reais (matrícula, regras de condomínio e IPTU, FGTS, datas de leilão, edital) | precisa da rede |
+| Leilões Judiciais (API MCP pública) | API documentada (opção 1) | **10 lotes de amostra** (vários leiloeiros), com fotos, edital, matrícula e laudo | conector pronto, nunca chamado ao vivo |
+| Radar de editais (PNCP, Diário da Justiça, DOU, Querido Diário) | APIs públicas (opção 1) | **0**: conectores prontos; DOU precisa de conta gratuita no INLABS | precisa da rede |
+| Itaú, C6, Bradesco, Santander, BB, prefeituras, Zukerman, Mega, Superbid… | **sem API pública**: raspagem (opção 2) | **0** | ainda não construído |
+
+Resumo: **só a Caixa está de fato no banco.** As outras fontes com API estão ligadas no código, mas esperam a rede. Bancos
+privados, prefeituras e a maior parte dos leiloeiros não têm API: entram na opção 2.
+
+### Próximos passos (em ordem)
+
+1. **Rede ou rotina de coleta** (você): liberar a rede do ambiente, ou aprovar a coleta agendada (ver "Atualização" abaixo).
+   Com isso: primeira coleta ao vivo da Caixa, da Leilões Judiciais e do radar, e leitura das páginas da Caixa.
+2. **Lista do LeilãoMap** (você): mandar print ou lista dos leiloeiros/bancos/prefeituras que aparecem lá, para eu
+   priorizar a opção 2 pelo que o concorrente cobre.
+3. **Opção 2** (eu): conectores por plataforma, começando pelas que cobrem mais bancos e leiloeiros de uma vez (ver
+   "Opção 2: o que falta mapear" abaixo).
+4. **Tags confiáveis** (eu + advogado): ler a página e o edital de cada imóvel da Caixa; auditoria às cegas de 100 imóveis
+   pelo advogado antes de mostrar risco como fato no site.
+5. **Decisões suas** pendentes (lista abaixo) para avançar no site (formulário, advogado, preços, título, página mais curta).
+
+### Atualização: como funciona
+
+Não existe "tempo real" nas fontes: cada uma publica no seu ritmo, e a base busca de tempos em tempos. Proposta de agenda:
+
+| O quê | Frequência | Por quê |
+| --- | --- | --- |
+| Lista da Caixa | 1× por dia, 7h | a Caixa gera o arquivo em dias úteis |
+| Páginas da Caixa (só novos e alterados) | 1× por dia, depois da lista | poucas centenas por dia, com intervalo de 2 s entre páginas |
+| Leilões Judiciais | a cada 6 h | lances e status mudam ao longo do dia |
+| Radar de editais | 1× por dia | publicações diárias |
+| Leilões com praça hoje ou amanhã | a cada 1 h | pegar suspensão, adiamento e resultado |
+| Alerta de 2ª praça | depois de cada coleta | compara a praça de cada favorito com a coleta anterior |
+
+Onde rodar (decisão sua): (a) **Vercel Cron** com a função na região de São Paulo gravando num Postgres gerenciado (Neon ou
+Supabase): é o caminho natural quando o site for ler do banco; limites do plano grátis a confirmar na documentação da
+Vercel; (b) **GitHub Actions** agendado (grátis, já existe a rotina manual `base-coleta.yml`), mas os servidores ficam fora
+do Brasil e a Caixa pode bloquear; (c) um **servidor pequeno no Brasil** (custo não confirmado). O lance ao vivo continua no
+site do leiloeiro: a Luneta mostra o status e leva até lá.
+
+### As tags são confiáveis?
+
+Com o que temos hoje (só a lista da Caixa), **em parte**:
+
+| Confiança | Tags | Motivo |
+| --- | --- | --- |
+| **Alta** (dado direto da fonte) | Aceita financiamento · Devedor com direito de preferência (Leilão SFI, Lei 9.514) · Deságio alto/baixo · Ocupação não informada | campo da Caixa ou conta exata sobre preço e avaliação; o limiar de deságio (40% / 20%) é provisório e a avaliação da Caixa pode estar desatualizada |
+| **Média** (inferência) | Praça única (pela modalidade) · Imóvel inteiro (venda do próprio banco, sem sinal de fração) | regra razoável, mas não está escrita no dado |
+| **Em revisão** | Preço acima do mercado (2.039 imóveis) | é "acima da avaliação", não do mercado: não temos preço de mercado |
+| **Sem dado ainda** | Ocupado/Desocupado · Condomínio e IPTU em atraso · Dívida passa ao arrematante · Ação judicial · Penhora · Recurso · Matrícula · Construção irregular · Área divergente · Cota-parte · Sem vistoria · Sem fotos (fotos não conferidas) | a lista da Caixa não traz isso; vem da página do imóvel, do edital e da matrícula |
+
+As regras foram escritas com textos reais e têm 423 testes, mas o corpus é pequeno (10 lotes, 2 páginas da Caixa,
+cláusulas de editais) e **a precisão nunca foi medida numa amostra rotulada**. Por isso: no site, só as tags de confiança
+alta aparecem como fato; o resto fica "em revisão" ou "não informado" até a auditoria do advogado.
+
+### Opção 2: o que falta mapear (bancos, prefeituras e leiloeiros)
+
+Não é difícil tecnicamente, mas é trabalho por plataforma (estimativa: 1 a 2 dias por conector, com testes) e tem cuidado
+jurídico (termos de uso, robots.txt, anti-robô e LGPD). O caminho mais curto é pelas plataformas que atendem muitos
+vendedores de uma vez (fontes em `base/FONTES.md` §5; o que está "a confirmar" ainda não foi verificado):
+
+| Quem vende | Por onde (segundo a pesquisa) | Observação |
+| --- | --- | --- |
+| Itaú | Zukerman (Portal Zuk), Frazão, Mega Leilões (a confirmar) | Zuk tem ocupação no card e documentos no detalhe |
+| C6, Bradesco, Santander, BB, BRB, Sicoob, Daycoval, BTG, Bari | Portal Zuk (lista de comitentes) e outros leiloeiros | o mesmo imóvel aparece em vários sites: deduplicar |
+| Santander, BTG, Pan, BRB, BB | Resale (API com chave) | melhor por parceria formal |
+| Prefeituras (ex.: São Paulo) | editais no PNCP (radar já pronto) e leiloeiros contratados (a confirmar) | o PNCP dá o edital, não o lote com foto |
+| Superbid, Sold e ~60 leiloeiros | uma única API interna da Superbid | tem anti-robô (Cloudflare) relatado |
+| ~30 leiloeiros | plataforma V-Lance | JSON aberto |
+| ~107 leiloeiros cada | Suporte Leilões, SOLEON, Leilão PRO | parceria ou leitura do site |
+
+O LeilãoMap não pôde ser aberto daqui (rede bloqueada) e a pesquisa só achou evidência da Caixa nele; como você vê vários
+outros lá, a lista dele é o melhor guia de prioridade (próximo passo 2).
 
 ```bash
 npm install
