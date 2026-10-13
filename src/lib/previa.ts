@@ -105,10 +105,14 @@ export function imoveisDaPrevia(plan: Plan): Listing[] {
 
 const n = (v: number) => v.toLocaleString("pt-BR");
 
-/** "08/10/2026" a partir da data de geração na fonte ("2026-10-08" ou ISO). */
+/** "08/10/2026" a partir da data de geração na fonte ("2026-10-08" ou ISO em UTC, lida no horário de Brasília). */
 function dataDaFonte(id: string) {
   const d = FONTES.find((f) => f.id === id)?.gerado_na_fonte_em;
-  return d ? formatDate(d.slice(0, 10)) : "data não informada";
+  if (!d) return "data não informada";
+  if (d.length <= 10) return formatDate(d);
+  // ISO com hora: converte para UTC−3, como a data de coleta mostrada no detalhe de cada imóvel
+  const brasilia = new Date(new Date(d).getTime() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+  return formatDate(brasilia);
 }
 
 /** Texto da faixa do topo, com as datas das fontes do instantâneo. */

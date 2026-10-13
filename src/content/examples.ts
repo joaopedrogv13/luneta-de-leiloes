@@ -42,8 +42,9 @@ export type Listing = {
   /** Por que recebeu (ou não) o selo. */
   why: string;
   /**
-   * Foto na fonte (URL do leiloeiro), mostrada com <img> simples dentro da moldura de lente: nunca passa
-   * pelo otimizador do next/image, que baixaria e re-hospedaria a foto. Sem foto (ou se ela falhar), placeholder.
+   * Foto na fonte (URL do leiloeiro). Na área do assinante e na /previa vai num <img> simples (sem o otimizador
+   * do next/image, que baixaria e re-hospedaria a foto). O AuctionCard da landing ainda usa next/image: antes de pôr
+   * casos reais ali, trocar também (base/FASE1-SITE.md, passo 7). Sem foto (ou se ela falhar), placeholder.
    */
   photo?: string;
   /** Origem, quando o caso é real. */
