@@ -1,0 +1,118 @@
+# Coleta da base da Luneta de Leilões (base/README.md).
+#
+# SÓ RODA QUANDO O DONO ACIONAR. O único gatilho é workflow_dispatch: o botão "Run workflow"
+# na aba Actions do GitHub (ou `gh workflow run base-coleta.yml`). Não há agendamento, push nem
+# pull_request. O workflow não faz commit, não abre PR e não usa nenhum segredo. O resultado
+# (banco SQLite e relatório) fica só como artefato desta execução, por 7 dias.
+#
+# Antes de acionar, leia "Limites legais" em base/README.md:
+# - os termos de uso da Caixa e da Leilões Judiciais não foram lidos;
+# - a Caixa usa anti-robô (Radware). O coletor se identifica e NÃO tenta contornar: se vier a
+#   página de desafio, a coleta da Caixa falha sem gravar nada. Há relatos de bloqueio de IP de
+#   fora do Brasil, e os runners do GitHub ficam fora do Brasil;
+# - a Leilões Judiciais declara ai-train=no: estes dados não podem treinar modelos.
+# Se o repositório for público, o artefato também fica visível para qualquer pessoa logada.
+
+name: Base - coleta manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      uf_leiloesjudiciais:
+        description: "UF da varredura da Leilões Judiciais (vazio = 27 UFs, cerca de 405 buscas e 35 min)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: base-coleta
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      # Banco e cache ficam em base/dados/ (fora do Git, ver .gitignore).
+      LUNETA_DB: ${{ github.workspace }}/base/dados/luneta.db
+      NODE_OPTIONS: --disable-warning=ExperimentalWarning
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      # Sem npm ci: a base não tem dependências (node:sqlite, fetch e node:test do próprio Node).
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+
+      - name: Conferir o Node (node:sqlite sem flag precisa do 22.13 ou mais novo)
+        run: |
+          node --version
+          node -e 'const [a,b]=process.versions.node.split(".").map(Number); if (a<22 || (a===22 && b<13)) { console.error("Node 22.13+ necessário"); process.exit(1); }'
+          node --experimental-strip-types -e 'require("node:sqlite")'
+
+      - name: Testes da base
+        run: npm run base:testar
+
+      - name: Migrar
+        run: npm run base:migrar
+
+      - name: Coletar Caixa (lista geral)
+        id: caixa
+        continue-on-error: true
+        run: npm run base:coletar -- caixa
+
+      - name: Coletar Leilões Judiciais
+        id: leiloesjudiciais
+        continue-on-error: true
+        env:
+          UF: ${{ inputs.uf_leiloesjudiciais }}
+        run: |
+          if [ -n "$UF" ]; then
+            npm run base:coletar -- leiloesjudiciais --uf "$UF"
+          else
+            npm run base:coletar -- leiloesjudiciais
+          fi
+
+      - name: Riscos
+        run: npm run base:riscos
+
+      - name: Status e instantâneo para o site
+        run: |
+          mkdir -p relatorio
+          npm run --silent base:status > relatorio/status.txt
+          npm run --silent base:status -- --json > relatorio/status.json
+          npm run --silent base:exportar -- --site --pasta relatorio/site
+          {
+            echo '## Base: status depois da coleta'
+            echo
+            echo "- Caixa: ${{ steps.caixa.outcome }}"
+            echo "- Leilões Judiciais: ${{ steps.leiloesjudiciais.outcome }}"
+            echo
+            echo '```'
+            cat relatorio/status.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar banco e relatório como artefato
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: base-coleta-${{ github.run_number }}
+          path: |
+            base/dados/luneta.db
+            relatorio/
+          retention-days: 7
+          if-no-files-found: warn
+
+      # A execução fica vermelha se alguma coleta falhou (o artefato já foi publicado acima).
+      - name: Resultado das coletas
+        if: steps.caixa.outcome != 'success' || steps.leiloesjudiciais.outcome != 'success'
+        run: |
+          echo "Caixa: ${{ steps.caixa.outcome }} · Leilões Judiciais: ${{ steps.leiloesjudiciais.outcome }}"
+          echo "Veja o log da etapa que falhou (bloqueio, robots.txt, arquivo inválido ou rede)."
+          exit 1

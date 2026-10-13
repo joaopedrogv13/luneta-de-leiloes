@@ -4,6 +4,7 @@
  *   npm run base:coletar -- <fonte> [--uf SP] [--arquivo caminho] [--limite 100] [--detalhes]
  *   npm run base:riscos -- [--fonte <id>]
  *   npm run base:exportar -- [--saida caminho] [--limite N]
+ *   npm run base:exportar -- --site [--pasta base/saida] [--amostra 60]
  *   npm run base:status -- [--json]
  * ou direto: node --experimental-strip-types base/cli.ts <comando> ...
  * Em qualquer comando, --banco <caminho> (ou LUNETA_DB) troca o arquivo do banco.
@@ -13,8 +14,8 @@ import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
 import { executarColeta, type ResumoColeta } from "./coleta.ts";
 import { abrirBanco, CAMINHO_PADRAO, migrar, versaoDoBanco } from "./db.ts";
-import { exportar, SAIDA_PADRAO } from "./exportar.ts";
-import { CONECTORES, conferirRegistro, obterConector } from "./fontes/index.ts";
+import { exportar, exportarSite, PASTA_SITE_PADRAO, SAIDA_PADRAO } from "./exportar.ts";
+import { APELIDOS, CONECTORES, conferirRegistro, obterConector, resolverIdFonte } from "./fontes/index.ts";
 import { rodarRiscos } from "./riscos/motor.ts";
 import { formatarStatus, relatorioStatus } from "./status.ts";
 import type { Conector } from "./tipos.ts";
@@ -27,14 +28,18 @@ Uso: node --experimental-strip-types base/cli.ts <comando> [opções]
 
 Comandos:
   migrar                              cria ou atualiza o banco (idempotente)
-  coletar <fonte> [opções]            coleta uma fonte e grava (transacional)
+  coletar <fonte> [opções]            coleta uma fonte e grava (transacional); <fonte> é o id
+                                      ou o apelido (caixa, leiloesjudiciais)
       --uf <UF>                       só uma UF (marca removidos só nela)
       --arquivo <caminho>             lê arquivo local em vez da rede (sinônimo: --fixture)
       --limite <N>                    para depois de N registros (não marca removidos)
       --detalhes                      também busca páginas de detalhe (mais lento)
   riscos [--fonte <id>]               roda as regras de risco e regrava as tags automáticas
   exportar [--saida <arq>] [--limite <N>]
-                                      JSON para o site (padrão base/dados/exportacao/imoveis.json)
+                                      JSON completo (padrão base/dados/exportacao/imoveis.json)
+  exportar --site [--pasta <dir>] [--amostra <N>]
+                                      instantâneo para o site: amostra-site.json (até 60 imóveis
+                                      no formato Listing) e estatisticas-uf.json (padrão base/saida)
   status [--json]                     contagens por fonte, UF, modalidade, tags, fotos e coletas
   fontes                              lista os conectores registrados
 
@@ -150,7 +155,7 @@ export async function principal(argv: readonly string[], deps: DependenciasCli =
     case "riscos": {
       const db = abrirBanco(caminhoBanco);
       try {
-        const r = rodarRiscos(db, { fonteId: v.fonte, agora: deps.agora });
+        const r = rodarRiscos(db, { fonteId: v.fonte ? resolverIdFonte(v.fonte) : undefined, agora: deps.agora });
         saida(`Riscos: ${r.riscos} tag(s) gravada(s) em ${r.imoveis} imóvel(is).`);
         for (const e of r.erros) erro(`aviso: ${e}`);
         if (r.totalErros > r.erros.length) erro(`(+${r.totalErros - r.erros.length} avisos omitidos)`);
@@ -166,9 +171,22 @@ export async function principal(argv: readonly string[], deps: DependenciasCli =
         erro(`--limite precisa ser um inteiro positivo: ${v.limite}`);
         return 2;
       }
-      const destino = v.saida ? resolve(v.saida) : SAIDA_PADRAO;
+      const amostra = v.amostra ? Number(v.amostra) : undefined;
+      if (amostra !== undefined && (!Number.isInteger(amostra) || amostra <= 0)) {
+        erro(`--amostra precisa ser um inteiro positivo: ${v.amostra}`);
+        return 2;
+      }
       const db = abrirBanco(caminhoBanco);
       try {
+        if (v.site) {
+          const pasta = v.pasta ? resolve(v.pasta) : PASTA_SITE_PADRAO;
+          const r = exportarSite(db, pasta, { amostra, agora: deps.agora });
+          const ufsAmostra = new Set(r.amostra.imoveis.map((i) => i.uf)).size;
+          saida(`Amostra para o site: ${r.amostra.total} imóvel(is) de ${ufsAmostra} UF(s) em ${r.arquivos[0]}`);
+          saida(`Estatísticas: ${r.estatisticas.brasil.ativos} ativo(s) em ${r.estatisticas.ufs.length} UF(s) em ${r.arquivos[1]}`);
+          return 0;
+        }
+        const destino = v.saida ? resolve(v.saida) : SAIDA_PADRAO;
         const dados = exportar(db, destino, { limite, agora: deps.agora });
         saida(`Exportados ${dados.total} imóvel(is) para ${destino}`);
         return 0;
@@ -192,7 +210,11 @@ export async function principal(argv: readonly string[], deps: DependenciasCli =
       const problemas = conferirRegistro(conectores);
       if (conectores.length === 0) saida("Nenhum conector registrado (base/fontes/index.ts).");
       for (const c of conectores) {
-        saida(`${c.id}\t${c.nome}\t${c.finalidade}\t${c.acesso}${c.capacidades.listaCompleta ? "\tlista completa" : ""}`);
+        const apelidos = Object.keys(APELIDOS).filter((a) => APELIDOS[a] === c.id);
+        saida(
+          `${c.id}\t${c.nome}\t${c.finalidade}\t${c.acesso}${c.capacidades.listaCompleta ? "\tlista completa" : ""}`
+            + (apelidos.length ? `\tapelido: ${apelidos.join(", ")}` : ""),
+        );
       }
       for (const p of problemas) erro(`problema no registro: ${p}`);
       return problemas.length > 0 ? 1 : 0;
@@ -218,6 +240,9 @@ function lerArgs(argv: readonly string[]) {
       detalhes: { type: "boolean" },
       fonte: { type: "string" },
       saida: { type: "string" },
+      site: { type: "boolean" },
+      pasta: { type: "string" },
+      amostra: { type: "string" },
       json: { type: "boolean" },
       ajuda: { type: "boolean", short: "h" },
     },

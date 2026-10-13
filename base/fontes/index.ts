@@ -31,9 +31,23 @@ export const CONECTORES: readonly Conector[] = [
   queridoDiario,
 ];
 
-/** Conector pelo id, ou undefined. */
+/**
+ * Apelidos aceitos na linha de comando: o nome da pasta do conector. O id gravado no banco
+ * (`fonte.id`, `imovel.fonte_id`) continua sendo o do conector.
+ */
+export const APELIDOS: Readonly<Record<string, string>> = {
+  caixa: "caixa_csv",
+  leiloesjudiciais: "leiloesjudiciais_api",
+};
+
+/** Id do conector a partir do id ou do apelido (o próprio texto, se não for apelido). */
+export function resolverIdFonte(id: string): string {
+  return APELIDOS[id] ?? id;
+}
+
+/** Conector pelo id ou apelido, ou undefined. */
 export function obterConector(id: string, conectores: readonly Conector[] = CONECTORES): Conector | undefined {
-  return conectores.find((c) => c.id === id);
+  return conectores.find((c) => c.id === id) ?? conectores.find((c) => c.id === resolverIdFonte(id));
 }
 
 /** Confere ids repetidos e campos obrigatórios; devolve a lista de problemas. */

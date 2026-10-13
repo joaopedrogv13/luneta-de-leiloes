@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { principal } from "./cli.ts";
 import { listarMigracoes } from "./db.ts";
 import type { Exportacao } from "./exportar.ts";
-import { conferirRegistro, CONECTORES } from "./fontes/index.ts";
+import { APELIDOS, conferirRegistro, CONECTORES, obterConector, resolverIdFonte } from "./fontes/index.ts";
 import type { RelatorioStatus } from "./status.ts";
 import { conectorFalso, httpProibido, imovelExemplo, lote } from "./testes/apoio.ts";
 
@@ -24,6 +24,14 @@ function rodar(args: string[], deps: Parameters<typeof principal>[1] = {}) {
 
 test("registro de conectores consistente", () => {
   assert.deepEqual(conferirRegistro(CONECTORES), []);
+  // Apelidos da linha de comando (nome da pasta) apontam para conectores registrados.
+  for (const [apelido, id] of Object.entries(APELIDOS)) {
+    assert.equal(obterConector(apelido)?.id, id, apelido);
+    assert.equal(resolverIdFonte(apelido), id);
+  }
+  assert.equal(resolverIdFonte("pncp"), "pncp");
+  assert.equal(obterConector("caixa")?.id, "caixa_csv");
+  assert.equal(obterConector("leiloesjudiciais")?.id, "leiloesjudiciais_api");
   assert.deepEqual(conferirRegistro([conectorFalso({ registros: () => [] }), conectorFalso({ registros: () => [] })]), ["id repetido: falso"]);
 });
 
@@ -79,6 +87,7 @@ test("ponta a ponta: migrar, coletar, riscos, exportar e status", async () => {
     assert.equal(rel.totais.ativos, 4);
     assert.deepEqual(rel.porUf, [{ uf: "SP", ativos: 4 }]);
     assert.equal(rel.fotos.percentual, 100);
+    assert.equal(rel.fotos.ativosComFotoVerificada, 0, "URL da fonte sem verificação não conta como verificada");
     assert.equal(rel.fontes[0]?.ultimaColeta?.gerado_na_fonte_em, "2026-10-08");
     const texto = await rodar(["status", "--banco", banco]);
     assert.match(texto.saida, /falso — Fonte falsa de teste/);

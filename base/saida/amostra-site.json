@@ -1,0 +1,3153 @@
+{
+  "versao": 1,
+  "gerado_em": "2026-10-13T02:53:57.809Z",
+  "criterio": "Até 60 imóveis ativos que o site consegue mostrar (apartamento, casa, comercial ou terreno, com avaliação, lance e posição no mapa), variando fonte, modalidade, risco, UF e tipo; escolha determinística.",
+  "fontes": [
+    {
+      "id": "caixa_csv",
+      "nome": "Caixa: Lista de Imóveis (CSV oficial)",
+      "gerado_na_fonte_em": "2026-10-08",
+      "coletado_em": "2026-10-13T02:53:08.163Z"
+    },
+    {
+      "id": "leiloesjudiciais_api",
+      "nome": "Leilões Judiciais & Extrajudiciais (API MCP pública)",
+      "gerado_na_fonte_em": "2026-10-11T01:35:00.000Z",
+      "coletado_em": "2026-10-13T02:53:20.406Z"
+    }
+  ],
+  "total": 60,
+  "imoveis": [
+    {
+      "id": "caixa-1444419018304",
+      "title": "Terreno 600 m²",
+      "place": "Nova Esperanca · Rio Branco/AC",
+      "uf": "AC",
+      "city": "Rio Branco",
+      "point": [
+        82.3,
+        153.6
+      ],
+      "type": "terreno",
+      "avaliacao": 441000,
+      "lance": 643740.15,
+      "desagio": -46,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Preço acima do mercado",
+          "severity": "grave"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444419018304",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F144441901830421.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1555527098250",
+      "title": "Casa 4 quartos",
+      "place": "Cidade Nova · Sena Madureira/AC",
+      "uf": "AC",
+      "city": "Sena Madureira",
+      "point": [
+        75.1,
+        145.5
+      ],
+      "type": "casa",
+      "avaliacao": 540000,
+      "lance": 344149.72,
+      "desagio": 36,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1555527098250",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F155552709825021.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1444417909481",
+      "title": "Prédio 8 quartos",
+      "place": "Pedra Velha · Delmiro Gouveia/AL",
+      "uf": "AL",
+      "city": "Delmiro Gouveia",
+      "point": [
+        343,
+        148.3
+      ],
+      "type": "comercial",
+      "avaliacao": 484000,
+      "lance": 489640.86,
+      "desagio": -1,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Preço acima do mercado",
+          "severity": "grave"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444417909481",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F144441790948121.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8787709722595",
+      "title": "Apartamento 2 quartos",
+      "place": "Tabuleiro do Martins · Maceió/AL",
+      "uf": "AL",
+      "city": "Maceió",
+      "point": [
+        362.8,
+        150.8
+      ],
+      "type": "apartamento",
+      "avaliacao": 190000,
+      "lance": 206565.58,
+      "desagio": -9,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Preço acima do mercado",
+          "severity": "grave"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8787709722595",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F878770972259521.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1444418236537",
+      "title": "Terreno 600 m²",
+      "place": "Ponta Negra · Manaus/AM",
+      "uf": "AM",
+      "city": "Manaus",
+      "point": [
+        150.5,
+        93.2
+      ],
+      "type": "terreno",
+      "avaliacao": 494500,
+      "lance": 291515.52,
+      "desagio": 41,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444418236537",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F144441823653721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8787709747482",
+      "title": "Apartamento 2 quartos",
+      "place": "Gilberto Mestrinho · Manaus/AM",
+      "uf": "AM",
+      "city": "Manaus",
+      "point": [
+        150.5,
+        93.2
+      ],
+      "type": "apartamento",
+      "avaliacao": 205000,
+      "lance": 123904.77,
+      "desagio": 40,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8787709747482",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F878770974748221.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1555536450883",
+      "title": "Casa 3 quartos",
+      "place": "Castanheira · Laranjal do Jari/AP",
+      "uf": "AP",
+      "city": "Laranjal do Jari",
+      "point": [
+        216.7,
+        72.9
+      ],
+      "type": "casa",
+      "avaliacao": 180000,
+      "lance": 94493.47,
+      "desagio": 48,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1555536450883",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F155553645088321.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-0000010305216",
+      "title": "Loja 642,5 m²",
+      "place": "Centro · Maiquinique/BA",
+      "uf": "BA",
+      "city": "Maiquinique",
+      "point": [
+        323.3,
+        204.3
+      ],
+      "type": "comercial",
+      "avaliacao": 1190000,
+      "lance": 758404.02,
+      "desagio": 36,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10305216",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F000001030521621.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8555515660976",
+      "title": "Terreno 123,38 m²",
+      "place": "Lomanto Junior · Itabuna/BA",
+      "uf": "BA",
+      "city": "Itabuna",
+      "point": [
+        331.9,
+        196.7
+      ],
+      "type": "terreno",
+      "avaliacao": 60000,
+      "lance": 60000,
+      "desagio": 0,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8555515660976",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F855551566097621.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-0000010303899",
+      "title": "Imóvel comercial 345,8 m²",
+      "place": "Centro · Ocara/CE",
+      "uf": "CE",
+      "city": "Ocara",
+      "point": [
+        337.8,
+        105.2
+      ],
+      "type": "comercial",
+      "avaliacao": 830000,
+      "lance": 528970.87,
+      "desagio": 36,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10303899",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F000001030389921.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1444420600917",
+      "title": "Casa 372,71 m²",
+      "place": "Mondubim · Fortaleza/CE",
+      "uf": "CE",
+      "city": "Fortaleza",
+      "point": [
+        338.3,
+        98.4
+      ],
+      "type": "casa",
+      "avaliacao": 545000,
+      "lance": 494127.48,
+      "desagio": 9,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444420600917",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F144442060091721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-0000010290993",
+      "title": "Sala comercial 32,9 m²",
+      "place": "Taguatinga Sul · Brasília/DF",
+      "uf": "DF",
+      "city": "Brasília",
+      "point": [
+        256.2,
+        205.7
+      ],
+      "type": "comercial",
+      "avaliacao": 212000,
+      "lance": 133437.74,
+      "desagio": 37,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10290993",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F000001029099321.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1555512253360",
+      "title": "Sala comercial 51 m²",
+      "place": "Sul (Aguas Claras) · Brasília/DF",
+      "uf": "DF",
+      "city": "Brasília",
+      "point": [
+        256.2,
+        205.7
+      ],
+      "type": "comercial",
+      "avaliacao": 288000,
+      "lance": 288000,
+      "desagio": 0,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1555512253360",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F155551225336021.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-0000010258747",
+      "title": "Terreno 300 m²",
+      "place": "Belvedere · Serra/ES",
+      "uf": "ES",
+      "city": "Serra",
+      "point": [
+        322.9,
+        245.6
+      ],
+      "type": "terreno",
+      "avaliacao": 66271.95,
+      "lance": 36139.97,
+      "desagio": 45,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10258747",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F000001025874721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8787701324906",
+      "title": "Apartamento 2 quartos",
+      "place": "Vera Cruz · Cariacica/ES",
+      "uf": "ES",
+      "city": "Cariacica",
+      "point": [
+        321.9,
+        246.9
+      ],
+      "type": "apartamento",
+      "avaliacao": 275000,
+      "lance": 168383.74,
+      "desagio": 39,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8787701324906",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F878770132490621.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444422343367",
+      "title": "Casa 2 quartos",
+      "place": "Itapua I · Planaltina/GO",
+      "uf": "GO",
+      "city": "Planaltina",
+      "point": [
+        259,
+        202.7
+      ],
+      "type": "casa",
+      "avaliacao": 164000,
+      "lance": 164000,
+      "desagio": 0,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444422343367",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844442234336721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444427698147",
+      "title": "Casa 60 m²",
+      "place": "Setor Leste · Padre Bernardo/GO",
+      "uf": "GO",
+      "city": "Padre Bernardo",
+      "point": [
+        253.1,
+        200.1
+      ],
+      "type": "casa",
+      "avaliacao": 43900,
+      "lance": 53166.72,
+      "desagio": -21,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Preço acima do mercado",
+          "severity": "grave"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444427698147",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844442769814721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8555507219492",
+      "title": "Casa 2 quartos",
+      "place": "Lot Girassol Residen · Cocalzinho de Goiás/GO",
+      "uf": "GO",
+      "city": "Cocalzinho de Goiás",
+      "point": [
+        248.9,
+        205.8
+      ],
+      "type": "casa",
+      "avaliacao": 79070,
+      "lance": 72357.86,
+      "desagio": 8,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8555507219492",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F855550721949221.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8555512269974",
+      "title": "Terreno 360 m²",
+      "place": "Jardim Ana Beatriz I · Santo Antônio do Descoberto/GO",
+      "uf": "GO",
+      "city": "Santo Antônio do Descoberto",
+      "point": [
+        253.4,
+        207.2
+      ],
+      "type": "terreno",
+      "avaliacao": 37000,
+      "lance": 34892.17,
+      "desagio": 6,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8555512269974",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F855551226997421.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444412225817",
+      "title": "Terreno 162,2 m²",
+      "place": "Cinturao Verde · Timon/MA",
+      "uf": "MA",
+      "city": "Timon",
+      "point": [
+        300.8,
+        110.5
+      ],
+      "type": "terreno",
+      "avaliacao": 129000,
+      "lance": 74726.23,
+      "desagio": 42,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444412225817",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844441222581721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8787701218367",
+      "title": "Apartamento 2 quartos",
+      "place": "Maiobinha · São José de Ribamar/MA",
+      "uf": "MA",
+      "city": "São José de Ribamar",
+      "point": [
+        290.1,
+        88.2
+      ],
+      "type": "apartamento",
+      "avaliacao": 146500,
+      "lance": 146500,
+      "desagio": 0,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8787701218367",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F878770121836721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-0000010300070",
+      "title": "Terreno 237 m²",
+      "place": "Parque Sao Joao · Almenara/MG",
+      "uf": "MG",
+      "city": "Almenara",
+      "point": [
+        319.5,
+        209.3
+      ],
+      "type": "terreno",
+      "avaliacao": 75000,
+      "lance": 45444.03,
+      "desagio": 39,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10300070",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F000001030007021.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444431210153",
+      "title": "Terreno 250 m²",
+      "place": "Loteamento Luizote de Freitas IV · Uberlândia/MG",
+      "uf": "MG",
+      "city": "Uberlândia",
+      "point": [
+        253.2,
+        234.4
+      ],
+      "type": "terreno",
+      "avaliacao": 155000,
+      "lance": 198998.96,
+      "desagio": -28,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Preço acima do mercado",
+          "severity": "grave"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444431210153",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844443121015321.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8787708235992",
+      "title": "Apartamento 2 quartos",
+      "place": "B. Moinho de Vento · Uberlândia/MG",
+      "uf": "MG",
+      "city": "Uberlândia",
+      "point": [
+        253.2,
+        234.4
+      ],
+      "type": "apartamento",
+      "avaliacao": 160000,
+      "lance": 94815.14,
+      "desagio": 41,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8787708235992",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F878770823599221.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444419775723",
+      "title": "Casa 2 quartos",
+      "place": "Los Angeles · Campo Grande/MS",
+      "uf": "MS",
+      "city": "Campo Grande",
+      "point": [
+        197.7,
+        248.7
+      ],
+      "type": "casa",
+      "avaliacao": 151000,
+      "lance": 88404.91,
+      "desagio": 41,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444419775723",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844441977572321.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8787717299728",
+      "title": "Apartamento 2 quartos",
+      "place": "Serraville · Campo Grande/MS",
+      "uf": "MS",
+      "city": "Campo Grande",
+      "point": [
+        197.7,
+        248.7
+      ],
+      "type": "apartamento",
+      "avaliacao": 240000,
+      "lance": 146953.08,
+      "desagio": 39,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8787717299728",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F878771729972821.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1555522424028",
+      "title": "Imóvel comercial 282,43 m²",
+      "place": "Helio Ponce de Arruda · Várzea Grande/MT",
+      "uf": "MT",
+      "city": "Várzea Grande",
+      "point": [
+        184.5,
+        204.5
+      ],
+      "type": "comercial",
+      "avaliacao": 639000,
+      "lance": 407243.84,
+      "desagio": 36,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1555522424028",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F155552242402821.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8787714187163",
+      "title": "Apartamento 2 quartos",
+      "place": "Jardim Imperial · Cuiabá/MT",
+      "uf": "MT",
+      "city": "Cuiabá",
+      "point": [
+        184.8,
+        204.1
+      ],
+      "type": "apartamento",
+      "avaliacao": 217000,
+      "lance": 257931.51,
+      "desagio": -19,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Preço acima do mercado",
+          "severity": "grave"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8787714187163",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F878771418716321.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1444409511784",
+      "title": "Loja 1 quarto",
+      "place": "Jaderlandia · Castanhal/PA",
+      "uf": "PA",
+      "city": "Castanhal",
+      "point": [
+        256.4,
+        77.2
+      ],
+      "type": "comercial",
+      "avaliacao": 275000,
+      "lance": 155321.19,
+      "desagio": 44,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444409511784",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F144440951178421.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8555535274443",
+      "title": "Casa 2 quartos",
+      "place": "Cidade Universitaria · Tucuruí/PA",
+      "uf": "PA",
+      "city": "Tucuruí",
+      "point": [
+        241,
+        98.8
+      ],
+      "type": "casa",
+      "avaliacao": 153000,
+      "lance": 153000,
+      "desagio": 0,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8555535274443",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F855553527444321.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444410139891",
+      "title": "Casa 2 quartos",
+      "place": "Prive Aeroporto · Santa Rita/PB",
+      "uf": "PB",
+      "city": "Santa Rita",
+      "point": [
+        369.5,
+        128.3
+      ],
+      "type": "casa",
+      "avaliacao": 135000,
+      "lance": 66457.71,
+      "desagio": 51,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444410139891",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844441013989121.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8555515298207",
+      "title": "Casa 2 quartos",
+      "place": "Centro · Santa Rita/PB",
+      "uf": "PB",
+      "city": "Santa Rita",
+      "point": [
+        369.5,
+        128.3
+      ],
+      "type": "casa",
+      "avaliacao": 122000,
+      "lance": 53340.16,
+      "desagio": 56,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8555515298207",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F855551529820721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444428661808",
+      "title": "Terreno 160 m²",
+      "place": "Boa Vista · Caruaru/PE",
+      "uf": "PE",
+      "city": "Caruaru",
+      "point": [
+        360.8,
+        138.6
+      ],
+      "type": "terreno",
+      "avaliacao": 79000,
+      "lance": 45891.94,
+      "desagio": 42,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444428661808",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844442866180821.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8787714392735",
+      "title": "Apartamento 2 quartos",
+      "place": "Fragoso · Paulista/PE",
+      "uf": "PE",
+      "city": "Paulista",
+      "point": [
+        370.4,
+        135.5
+      ],
+      "type": "apartamento",
+      "avaliacao": 170000,
+      "lance": 78696.56,
+      "desagio": 54,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8787714392735",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F878771439273521.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444416097317",
+      "title": "Terreno 200 m²",
+      "place": "Cidade Nova · Demerval Lobão/PI",
+      "uf": "PI",
+      "city": "Demerval Lobão",
+      "point": [
+        302.1,
+        112.8
+      ],
+      "type": "terreno",
+      "avaliacao": 75070.94,
+      "lance": 43609.5,
+      "desagio": 42,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444416097317",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844441609731721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8555528471220",
+      "title": "Apartamento 2 quartos",
+      "place": "Santo Antonio · Teresina/PI",
+      "uf": "PI",
+      "city": "Teresina",
+      "point": [
+        301,
+        110.5
+      ],
+      "type": "apartamento",
+      "avaliacao": 153581.76,
+      "lance": 80924.79,
+      "desagio": 47,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8555528471220",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F855552847122021.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-0000010311518",
+      "title": "Loja 20,72 m²",
+      "place": "Zona 01 · Maringá/PR",
+      "uf": "PR",
+      "city": "Maringá",
+      "point": [
+        221.2,
+        276.7
+      ],
+      "type": "comercial",
+      "avaliacao": 238000,
+      "lance": 346583.41,
+      "desagio": -46,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Preço acima do mercado",
+          "severity": "grave"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10311518",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F000001031151821.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1444402723743",
+      "title": "Terreno 456 m²",
+      "place": "Vila Bernardes · Arapongas/PR",
+      "uf": "PR",
+      "city": "Arapongas",
+      "point": [
+        225.7,
+        276.7
+      ],
+      "type": "terreno",
+      "avaliacao": 222000,
+      "lance": 222000,
+      "desagio": 0,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444402723743",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F144440272374321.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1444420507640",
+      "title": "Terreno 370,5 m²",
+      "place": "Jardim Atlantico Central (Itaipuacu) · Maricá/RJ",
+      "uf": "RJ",
+      "city": "Maricá",
+      "point": [
+        300.9,
+        272.1
+      ],
+      "type": "terreno",
+      "avaliacao": 240000,
+      "lance": 393700.91,
+      "desagio": -64,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Preço acima do mercado",
+          "severity": "grave"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444420507640",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F144442050764021.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1555530541801",
+      "title": "Sala comercial 24 m²",
+      "place": "Tijuca · Rio de Janeiro/RJ",
+      "uf": "RJ",
+      "city": "Rio de Janeiro",
+      "point": [
+        297.6,
+        271.9
+      ],
+      "type": "comercial",
+      "avaliacao": 266000,
+      "lance": 162419.41,
+      "desagio": 39,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1555530541801",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F155553054180121.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8555523772311",
+      "title": "Apartamento 2 quartos",
+      "place": "Colubande · São Gonçalo/RJ",
+      "uf": "RJ",
+      "city": "São Gonçalo",
+      "point": [
+        298.8,
+        271.1
+      ],
+      "type": "apartamento",
+      "avaliacao": 147000,
+      "lance": 86063.06,
+      "desagio": 41,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8555523772311",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F855552377231121.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444411519337",
+      "title": "Casa 2 quartos",
+      "place": "Caminho da Serra · Grossos/RN",
+      "uf": "RN",
+      "city": "Grossos",
+      "point": [
+        350.4,
+        109.5
+      ],
+      "type": "casa",
+      "avaliacao": 92000,
+      "lance": 92000,
+      "desagio": 0,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444411519337",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844441151933721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444412223490",
+      "title": "Casa 2 quartos",
+      "place": "Centro · Macaíba/RN",
+      "uf": "RN",
+      "city": "Macaíba",
+      "point": [
+        366.2,
+        117.2
+      ],
+      "type": "casa",
+      "avaliacao": 55000,
+      "lance": 47293.9,
+      "desagio": 14,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444412223490",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844441222349021.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444403917728",
+      "title": "Casa 2 quartos",
+      "place": "Jardim Sao Cristovao · Ji-Paraná/RO",
+      "uf": "RO",
+      "city": "Ji-Paraná",
+      "point": [
+        133.8,
+        161.6
+      ],
+      "type": "casa",
+      "avaliacao": 183000,
+      "lance": 113021.61,
+      "desagio": 38,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444403917728",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844440391772821.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444429019662",
+      "title": "Casa 2 quartos",
+      "place": "Jardim Sao Cristovao · Ji-Paraná/RO",
+      "uf": "RO",
+      "city": "Ji-Paraná",
+      "point": [
+        133.8,
+        161.6
+      ],
+      "type": "casa",
+      "avaliacao": 222000,
+      "lance": 134179.8,
+      "desagio": 40,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444429019662",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844442901966221.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444429185090",
+      "title": "Apartamento 2 quartos",
+      "place": "Cidade Satelite · Boa Vista/RR",
+      "uf": "RR",
+      "city": "Boa Vista",
+      "point": [
+        144.8,
+        41.2
+      ],
+      "type": "apartamento",
+      "avaliacao": 100000,
+      "lance": 46937.23,
+      "desagio": 53,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444429185090",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844442918509021.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444429349786",
+      "title": "Terreno 450,71 m²",
+      "place": "Operario · Boa Vista/RR",
+      "uf": "RR",
+      "city": "Boa Vista",
+      "point": [
+        144.8,
+        41.2
+      ],
+      "type": "terreno",
+      "avaliacao": 120000,
+      "lance": 68787.97,
+      "desagio": 43,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444429349786",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844442934978621.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-0000010139821",
+      "title": "Loja 545,49 m²",
+      "place": "Floresta · Porto Alegre/RS",
+      "uf": "RS",
+      "city": "Porto Alegre",
+      "point": [
+        227.6,
+        341.5
+      ],
+      "type": "comercial",
+      "avaliacao": 1500000,
+      "lance": 755608.95,
+      "desagio": 50,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10139821",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F000001013982121.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-0000010214863",
+      "title": "Prédio 454,28 m²",
+      "place": "Ideal · Novo Hamburgo/RS",
+      "uf": "RS",
+      "city": "Novo Hamburgo",
+      "point": [
+        228.2,
+        338
+      ],
+      "type": "comercial",
+      "avaliacao": 1500000,
+      "lance": 801411.58,
+      "desagio": 47,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10214863",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F000001021486321.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444410266273",
+      "title": "Apartamento 2 quartos",
+      "place": "Tres Vendas · Pelotas/RS",
+      "uf": "RS",
+      "city": "Pelotas",
+      "point": [
+        217.7,
+        359.2
+      ],
+      "type": "apartamento",
+      "avaliacao": 72000,
+      "lance": 31823.44,
+      "desagio": 56,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_online",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444410266273",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844441026627321.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-0000010142937",
+      "title": "Galpão 887 m²",
+      "place": "Saudades · Saudades/SC",
+      "uf": "SC",
+      "city": "Saudades",
+      "point": [
+        211.9,
+        310.6
+      ],
+      "type": "comercial",
+      "avaliacao": 1334000,
+      "lance": 1954750.6,
+      "desagio": -47,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Preço acima do mercado",
+          "severity": "grave"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10142937",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F000001014293721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444417605510",
+      "title": "Terreno 300 m²",
+      "place": "Vila Flor · Capivari de Baixo/SC",
+      "uf": "SC",
+      "city": "Capivari de Baixo",
+      "point": [
+        247.2,
+        325.6
+      ],
+      "type": "terreno",
+      "avaliacao": 115000,
+      "lance": 151753.38,
+      "desagio": -32,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Preço acima do mercado",
+          "severity": "grave"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444417605510",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844441760551021.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444428074147",
+      "title": "Casa 2 quartos",
+      "place": "Complexo Jardim · Nossa Senhora do Socorro/SE",
+      "uf": "SE",
+      "city": "Nossa Senhora do Socorro",
+      "point": [
+        350.7,
+        161.3
+      ],
+      "type": "casa",
+      "avaliacao": 120000,
+      "lance": 68787.97,
+      "desagio": 43,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444428074147",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844442807414721.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8444432286749",
+      "title": "Terreno 160 m²",
+      "place": "Rosa Elze · São Cristóvão/SE",
+      "uf": "SE",
+      "city": "São Cristóvão",
+      "point": [
+        350,
+        162.8
+      ],
+      "type": "terreno",
+      "avaliacao": 80000,
+      "lance": 46472.85,
+      "desagio": 42,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "licitacao_aberta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444432286749",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F844443228674921.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-8787710436363",
+      "title": "Apartamento 2 quartos",
+      "place": "Loteamento City Jaragua · São Paulo/SP",
+      "uf": "SP",
+      "city": "São Paulo",
+      "point": [
+        267.5,
+        277.8
+      ],
+      "type": "apartamento",
+      "avaliacao": 268400,
+      "lance": 268400,
+      "desagio": 0,
+      "praca": "Praça única",
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Praça única",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "venda_direta",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8787710436363",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F878771043636321.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "lj-220169",
+      "title": "Ed. Comercial - Terreno c/ 484m² - Presidente Prudente/SP",
+      "place": "Presidente Prudente/SP",
+      "uf": "SP",
+      "city": "Presidente Prudente",
+      "point": [
+        226,
+        264.5
+      ],
+      "type": "comercial",
+      "avaliacao": 1433765.96,
+      "lance": 716882.98,
+      "desagio": 50,
+      "praca": "2ª praça",
+      "date": "16 out",
+      "dataPraca": "2026-10-16T17:00:00.000Z",
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "2ª praça",
+          "severity": "positivo"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Ocupado",
+          "severity": "grave"
+        },
+        {
+          "label": "Construção irregular",
+          "severity": "grave"
+        },
+        {
+          "label": "Custos extras altos",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Leilões Judiciais",
+        "url": "https://www.leiloesjudiciais.com.br/lote/100329/220169",
+        "coletadoEm": "2026-10-10"
+      },
+      "photo": "https://s3-sa-east-1.amazonaws.com/906de634c48fb7d34136160b4c353ae4/public/fotos/imoveis/640x480/I_28748_950883_A.webp",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "lj-222069",
+      "title": "Direitos - Apartamento - 160,780m² - 03 Vagas - São Paulo/SP",
+      "place": "São Paulo/SP",
+      "uf": "SP",
+      "city": "São Paulo",
+      "point": [
+        267.5,
+        277.8
+      ],
+      "type": "apartamento",
+      "avaliacao": 1765684.03,
+      "lance": 1765684.03,
+      "desagio": 0,
+      "praca": "1ª praça",
+      "date": "23 out",
+      "dataPraca": "2026-10-23T16:00:00.000Z",
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Só direitos sobre o imóvel",
+          "severity": "grave"
+        },
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        },
+        {
+          "label": "Sem fotos",
+          "severity": "info"
+        },
+        {
+          "label": "1ª praça",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Leilões Judiciais",
+        "url": "https://www.leiloesjudiciais.com.br/lote/100663/222069",
+        "coletadoEm": "2026-10-10"
+      }
+    },
+    {
+      "id": "lj-222141",
+      "title": "Apto - 240,80m² - Box 9-10 e 20 - São Caetano do Sul/SP",
+      "place": "São Caetano do Sul/SP",
+      "uf": "SP",
+      "city": "São Caetano do Sul",
+      "point": [
+        268.1,
+        278.6
+      ],
+      "type": "apartamento",
+      "avaliacao": 1845019.7,
+      "lance": 922509.85,
+      "desagio": 50,
+      "praca": "2ª praça",
+      "date": "19 out",
+      "dataPraca": "2026-10-19T19:00:00.000Z",
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio alto",
+          "severity": "positivo"
+        },
+        {
+          "label": "2ª praça",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [
+        {
+          "label": "Dívida passa ao arrematante",
+          "severity": "grave"
+        },
+        {
+          "label": "Condomínio em atraso",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        }
+      ],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Leilões Judiciais",
+        "url": "https://www.leiloesjudiciais.com.br/lote/100703/222141",
+        "coletadoEm": "2026-10-10"
+      },
+      "photo": "https://s3-sa-east-1.amazonaws.com/906de634c48fb7d34136160b4c353ae4/public/fotos/imoveis/640x480/I_1195_590488_Y.webp",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-0000010288405",
+      "title": "Prédio 312 m²",
+      "place": "Plano Diretor Sul · Palmas/TO",
+      "uf": "TO",
+      "city": "Palmas",
+      "point": [
+        252.5,
+        155.9
+      ],
+      "type": "comercial",
+      "avaliacao": 1060000,
+      "lance": 1060000,
+      "desagio": 0,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Aceita financiamento",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=10288405",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F000001028840521.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    },
+    {
+      "id": "caixa-1787702914768",
+      "title": "Apartamento 4 quartos",
+      "place": "Jardim Filadelfia · Araguaína/TO",
+      "uf": "TO",
+      "city": "Araguaína",
+      "point": [
+        253.8,
+        129
+      ],
+      "type": "apartamento",
+      "avaliacao": 2180000,
+      "lance": 2180000,
+      "desagio": 0,
+      "praca": null,
+      "date": "data não informada",
+      "dataPraca": null,
+      "seal": 0,
+      "desocupado": false,
+      "tags": [
+        {
+          "label": "Deságio baixo",
+          "severity": "atencao"
+        },
+        {
+          "label": "Devedor com direito de preferência",
+          "severity": "atencao"
+        },
+        {
+          "label": "Imóvel inteiro",
+          "severity": "positivo"
+        },
+        {
+          "label": "Ocupação não informada",
+          "severity": "info"
+        }
+      ],
+      "tagsEmRevisao": [],
+      "why": "Sem selo por enquanto: os critérios dos selos ainda estão em definição. As tags são calculadas automaticamente a partir do anúncio; confira sempre o edital.",
+      "modalidade": "leilao",
+      "source": {
+        "leiloeiro": "Caixa",
+        "url": "https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1787702914768",
+        "coletadoEm": "2026-10-08"
+      },
+      "photo": "https://venda-imoveis.caixa.gov.br/fotos/F178770291476821.jpg",
+      "photoFonte": {
+        "origem": "padrao_url",
+        "verificadaEm": null
+      }
+    }
+  ]
+}

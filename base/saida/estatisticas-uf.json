@@ -1,0 +1,2149 @@
+{
+  "versao": 1,
+  "gerado_em": "2026-10-13T02:53:57.809Z",
+  "fontes": [
+    {
+      "id": "caixa_csv",
+      "nome": "Caixa: Lista de Imóveis (CSV oficial)",
+      "gerado_na_fonte_em": "2026-10-08",
+      "coletado_em": "2026-10-13T02:53:08.163Z"
+    },
+    {
+      "id": "leiloesjudiciais_api",
+      "nome": "Leilões Judiciais & Extrajudiciais (API MCP pública)",
+      "gerado_na_fonte_em": "2026-10-11T01:35:00.000Z",
+      "coletado_em": "2026-10-13T02:53:20.406Z"
+    }
+  ],
+  "brasil": {
+    "uf": "BR",
+    "ativos": 21231,
+    "porFonte": {
+      "caixa_csv": 21226,
+      "leiloesjudiciais_api": 5
+    },
+    "porModalidade": {
+      "leilao": 4572,
+      "licitacao_aberta": 946,
+      "venda_direta": 12143,
+      "venda_online": 3570
+    },
+    "porTipo": {
+      "apartamento": 12346,
+      "casa": 7896,
+      "comercial": 194,
+      "outro": 11,
+      "rural": 30,
+      "terreno": 754
+    },
+    "cidades": 1145,
+    "maioresCidades": [
+      {
+        "cidade": "Rio de Janeiro",
+        "ativos": 3225
+      },
+      {
+        "cidade": "São Gonçalo",
+        "ativos": 1527
+      },
+      {
+        "cidade": "Nova Iguaçu",
+        "ativos": 870
+      },
+      {
+        "cidade": "Luziânia",
+        "ativos": 689
+      },
+      {
+        "cidade": "Cidade Ocidental",
+        "ativos": 581
+      }
+    ],
+    "desagio": {
+      "mediana": 42.1,
+      "p25": 38.2,
+      "p75": 48,
+      "acimaDaAvaliacao": 2039
+    },
+    "lanceMediano": 89167,
+    "avaliacaoMediana": 154000,
+    "comFoto": 21230,
+    "comFotoVerificada": 0,
+    "geocodificados": 21228,
+    "porPrecisaoGeo": {
+      "cidade": 21226,
+      "rua": 2,
+      "sem": 3
+    },
+    "porPraca": {
+      "1ª praça": 1,
+      "2ª praça": 2,
+      "não informada": 4569,
+      "Praça única": 16659
+    },
+    "tags": {
+      "aceita-financiamento": 2468,
+      "desagio-alto": 13922,
+      "desagio-baixo": 4110,
+      "direito-preferencia": 4567,
+      "imovel-inteiro": 21226,
+      "ocupacao-nao-informada": 21230,
+      "praca-unica": 16659,
+      "primeira-praca": 1,
+      "segunda-praca": 2,
+      "sem-fotos": 1,
+      "so-direitos": 1
+    },
+    "tagsEmRevisao": {
+      "condominio-em-atraso": 1,
+      "construcao-irregular": 2,
+      "custos-extras-altos": 1,
+      "direito-preferencia": 1,
+      "divida-passa-arrematante": 1,
+      "imovel-inteiro": 3,
+      "matricula-pendencia": 1,
+      "ocupacao-nao-informada": 1,
+      "ocupado": 1,
+      "praca-unica": 2,
+      "preco-acima-mercado": 2039,
+      "so-direitos": 1
+    },
+    "centro": [
+      289,
+      224.7
+    ]
+  },
+  "ufs": [
+    {
+      "uf": "AC",
+      "ativos": 21,
+      "porFonte": {
+        "caixa_csv": 21
+      },
+      "porModalidade": {
+        "leilao": 3,
+        "licitacao_aberta": 1,
+        "venda_direta": 14,
+        "venda_online": 3
+      },
+      "porTipo": {
+        "apartamento": 1,
+        "casa": 12,
+        "rural": 1,
+        "terreno": 7
+      },
+      "cidades": 5,
+      "maioresCidades": [
+        {
+          "cidade": "Rio Branco",
+          "ativos": 12
+        },
+        {
+          "cidade": "Cruzeiro do Sul",
+          "ativos": 5
+        },
+        {
+          "cidade": "Sena Madureira",
+          "ativos": 2
+        },
+        {
+          "cidade": "Epitaciolândia",
+          "ativos": 1
+        },
+        {
+          "cidade": "Plácido de Castro",
+          "ativos": 1
+        }
+      ],
+      "desagio": {
+        "mediana": 43.5,
+        "p25": 39.6,
+        "p75": 51.2,
+        "acimaDaAvaliacao": 1
+      },
+      "lanceMediano": 184554,
+      "avaliacaoMediana": 314000,
+      "comFoto": 21,
+      "comFotoVerificada": 0,
+      "geocodificados": 21,
+      "porPrecisaoGeo": {
+        "cidade": 21
+      },
+      "porPraca": {
+        "não informada": 3,
+        "Praça única": 18
+      },
+      "tags": {
+        "aceita-financiamento": 5,
+        "desagio-alto": 15,
+        "desagio-baixo": 3,
+        "direito-preferencia": 3,
+        "imovel-inteiro": 21,
+        "ocupacao-nao-informada": 21,
+        "praca-unica": 18
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 1
+      },
+      "centro": [
+        71.4,
+        148.4
+      ]
+    },
+    {
+      "uf": "AL",
+      "ativos": 95,
+      "porFonte": {
+        "caixa_csv": 95
+      },
+      "porModalidade": {
+        "leilao": 33,
+        "licitacao_aberta": 5,
+        "venda_direta": 41,
+        "venda_online": 16
+      },
+      "porTipo": {
+        "apartamento": 18,
+        "casa": 67,
+        "comercial": 4,
+        "terreno": 6
+      },
+      "cidades": 21,
+      "maioresCidades": [
+        {
+          "cidade": "Maceió",
+          "ativos": 33
+        },
+        {
+          "cidade": "Rio Largo",
+          "ativos": 24
+        },
+        {
+          "cidade": "Arapiraca",
+          "ativos": 6
+        },
+        {
+          "cidade": "Teotônio Vilela",
+          "ativos": 5
+        },
+        {
+          "cidade": "Marechal Deodoro",
+          "ativos": 3
+        }
+      ],
+      "desagio": {
+        "mediana": 40,
+        "p25": 11.6,
+        "p75": 43.9,
+        "acimaDaAvaliacao": 11
+      },
+      "lanceMediano": 108145,
+      "avaliacaoMediana": 163211,
+      "comFoto": 95,
+      "comFotoVerificada": 0,
+      "geocodificados": 95,
+      "porPrecisaoGeo": {
+        "cidade": 95
+      },
+      "porPraca": {
+        "não informada": 33,
+        "Praça única": 62
+      },
+      "tags": {
+        "aceita-financiamento": 12,
+        "desagio-alto": 51,
+        "desagio-baixo": 25,
+        "direito-preferencia": 33,
+        "imovel-inteiro": 95,
+        "ocupacao-nao-informada": 95,
+        "praca-unica": 62
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 11
+      },
+      "centro": [
+        360.4,
+        150.2
+      ]
+    },
+    {
+      "uf": "AM",
+      "ativos": 216,
+      "porFonte": {
+        "caixa_csv": 216
+      },
+      "porModalidade": {
+        "leilao": 30,
+        "licitacao_aberta": 14,
+        "venda_direta": 122,
+        "venda_online": 50
+      },
+      "porTipo": {
+        "apartamento": 145,
+        "casa": 61,
+        "comercial": 3,
+        "terreno": 7
+      },
+      "cidades": 12,
+      "maioresCidades": [
+        {
+          "cidade": "Manaus",
+          "ativos": 153
+        },
+        {
+          "cidade": "Iranduba",
+          "ativos": 35
+        },
+        {
+          "cidade": "Parintins",
+          "ativos": 8
+        },
+        {
+          "cidade": "Borba",
+          "ativos": 5
+        },
+        {
+          "cidade": "Rio Preto da Eva",
+          "ativos": 3
+        }
+      ],
+      "desagio": {
+        "mediana": 40.4,
+        "p25": 38.2,
+        "p75": 42.1,
+        "acimaDaAvaliacao": 8
+      },
+      "lanceMediano": 103704,
+      "avaliacaoMediana": 175500,
+      "comFoto": 216,
+      "comFotoVerificada": 0,
+      "geocodificados": 216,
+      "porPrecisaoGeo": {
+        "cidade": 216
+      },
+      "porPraca": {
+        "não informada": 30,
+        "Praça única": 186
+      },
+      "tags": {
+        "aceita-financiamento": 27,
+        "desagio-alto": 109,
+        "desagio-baixo": 28,
+        "direito-preferencia": 30,
+        "imovel-inteiro": 216,
+        "ocupacao-nao-informada": 216,
+        "praca-unica": 186
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 8
+      },
+      "centro": [
+        150.6,
+        93.8
+      ]
+    },
+    {
+      "uf": "AP",
+      "ativos": 2,
+      "porFonte": {
+        "caixa_csv": 2
+      },
+      "porModalidade": {
+        "venda_direta": 1,
+        "venda_online": 1
+      },
+      "porTipo": {
+        "casa": 2
+      },
+      "cidades": 1,
+      "maioresCidades": [
+        {
+          "cidade": "Laranjal do Jari",
+          "ativos": 2
+        }
+      ],
+      "desagio": {
+        "mediana": 41.9,
+        "p25": 39.1,
+        "p75": 44.7,
+        "acimaDaAvaliacao": 0
+      },
+      "lanceMediano": 132966,
+      "avaliacaoMediana": 224500,
+      "comFoto": 2,
+      "comFotoVerificada": 0,
+      "geocodificados": 2,
+      "porPrecisaoGeo": {
+        "cidade": 2
+      },
+      "porPraca": {
+        "Praça única": 2
+      },
+      "tags": {
+        "aceita-financiamento": 2,
+        "desagio-alto": 1,
+        "imovel-inteiro": 2,
+        "ocupacao-nao-informada": 2,
+        "praca-unica": 2
+      },
+      "tagsEmRevisao": {},
+      "centro": [
+        216.7,
+        72.9
+      ]
+    },
+    {
+      "uf": "BA",
+      "ativos": 717,
+      "porFonte": {
+        "caixa_csv": 717
+      },
+      "porModalidade": {
+        "leilao": 225,
+        "licitacao_aberta": 45,
+        "venda_direta": 341,
+        "venda_online": 106
+      },
+      "porTipo": {
+        "apartamento": 441,
+        "casa": 229,
+        "comercial": 12,
+        "rural": 2,
+        "terreno": 33
+      },
+      "cidades": 61,
+      "maioresCidades": [
+        {
+          "cidade": "Salvador",
+          "ativos": 278
+        },
+        {
+          "cidade": "Feira de Santana",
+          "ativos": 121
+        },
+        {
+          "cidade": "Camaçari",
+          "ativos": 82
+        },
+        {
+          "cidade": "Lauro de Freitas",
+          "ativos": 38
+        },
+        {
+          "cidade": "Iaçu",
+          "ativos": 32
+        }
+      ],
+      "desagio": {
+        "mediana": 40.7,
+        "p25": 0,
+        "p75": 47.9,
+        "acimaDaAvaliacao": 112
+      },
+      "lanceMediano": 95230,
+      "avaliacaoMediana": 144000,
+      "comFoto": 717,
+      "comFotoVerificada": 0,
+      "geocodificados": 717,
+      "porPrecisaoGeo": {
+        "cidade": 717
+      },
+      "porPraca": {
+        "não informada": 225,
+        "Praça única": 492
+      },
+      "tags": {
+        "aceita-financiamento": 62,
+        "desagio-alto": 393,
+        "desagio-baixo": 204,
+        "direito-preferencia": 225,
+        "imovel-inteiro": 717,
+        "ocupacao-nao-informada": 717,
+        "praca-unica": 492
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 112
+      },
+      "centro": [
+        333.6,
+        180.1
+      ]
+    },
+    {
+      "uf": "CE",
+      "ativos": 620,
+      "porFonte": {
+        "caixa_csv": 620
+      },
+      "porModalidade": {
+        "leilao": 88,
+        "licitacao_aberta": 34,
+        "venda_direta": 345,
+        "venda_online": 153
+      },
+      "porTipo": {
+        "apartamento": 113,
+        "casa": 481,
+        "comercial": 4,
+        "rural": 1,
+        "terreno": 21
+      },
+      "cidades": 37,
+      "maioresCidades": [
+        {
+          "cidade": "Horizonte",
+          "ativos": 304
+        },
+        {
+          "cidade": "Fortaleza",
+          "ativos": 94
+        },
+        {
+          "cidade": "Pacajus",
+          "ativos": 48
+        },
+        {
+          "cidade": "Itaitinga",
+          "ativos": 45
+        },
+        {
+          "cidade": "Caucaia",
+          "ativos": 21
+        }
+      ],
+      "desagio": {
+        "mediana": 44.1,
+        "p25": 39.6,
+        "p75": 53.2,
+        "acimaDaAvaliacao": 44
+      },
+      "lanceMediano": 85488,
+      "avaliacaoMediana": 156217,
+      "comFoto": 620,
+      "comFotoVerificada": 0,
+      "geocodificados": 619,
+      "porPrecisaoGeo": {
+        "cidade": 619,
+        "sem": 1
+      },
+      "porPraca": {
+        "não informada": 88,
+        "Praça única": 532
+      },
+      "tags": {
+        "aceita-financiamento": 112,
+        "desagio-alto": 460,
+        "desagio-baixo": 80,
+        "direito-preferencia": 88,
+        "imovel-inteiro": 620,
+        "ocupacao-nao-informada": 620,
+        "praca-unica": 532
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 44
+      },
+      "centro": [
+        338,
+        102.3
+      ]
+    },
+    {
+      "uf": "DF",
+      "ativos": 63,
+      "porFonte": {
+        "caixa_csv": 63
+      },
+      "porModalidade": {
+        "leilao": 43,
+        "licitacao_aberta": 4,
+        "venda_direta": 14,
+        "venda_online": 2
+      },
+      "porTipo": {
+        "apartamento": 37,
+        "casa": 14,
+        "comercial": 12
+      },
+      "cidades": 7,
+      "maioresCidades": [
+        {
+          "cidade": "Brasília",
+          "ativos": 42
+        },
+        {
+          "cidade": "Ceilandia",
+          "ativos": 6
+        },
+        {
+          "cidade": "Samambaia",
+          "ativos": 6
+        },
+        {
+          "cidade": "Recanto das Emas",
+          "ativos": 3
+        },
+        {
+          "cidade": "Taguatinga",
+          "ativos": 3
+        }
+      ],
+      "desagio": {
+        "mediana": 0,
+        "p25": -6.1,
+        "p75": 37.1,
+        "acimaDaAvaliacao": 23
+      },
+      "lanceMediano": 213421,
+      "avaliacaoMediana": 232000,
+      "comFoto": 63,
+      "comFotoVerificada": 0,
+      "geocodificados": 63,
+      "porPrecisaoGeo": {
+        "cidade": 63
+      },
+      "porPraca": {
+        "não informada": 43,
+        "Praça única": 20
+      },
+      "tags": {
+        "aceita-financiamento": 3,
+        "desagio-alto": 5,
+        "desagio-baixo": 38,
+        "direito-preferencia": 43,
+        "imovel-inteiro": 63,
+        "ocupacao-nao-informada": 63,
+        "praca-unica": 20
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 23
+      },
+      "centro": [
+        256.2,
+        205.7
+      ]
+    },
+    {
+      "uf": "ES",
+      "ativos": 44,
+      "porFonte": {
+        "caixa_csv": 44
+      },
+      "porModalidade": {
+        "leilao": 25,
+        "licitacao_aberta": 5,
+        "venda_direta": 12,
+        "venda_online": 2
+      },
+      "porTipo": {
+        "apartamento": 26,
+        "casa": 5,
+        "comercial": 2,
+        "terreno": 11
+      },
+      "cidades": 7,
+      "maioresCidades": [
+        {
+          "cidade": "Serra",
+          "ativos": 31
+        },
+        {
+          "cidade": "Cariacica",
+          "ativos": 5
+        },
+        {
+          "cidade": "Vila Velha",
+          "ativos": 3
+        },
+        {
+          "cidade": "Cachoeiro de Itapemirim",
+          "ativos": 2
+        },
+        {
+          "cidade": "Montanha",
+          "ativos": 1
+        }
+      ],
+      "desagio": {
+        "mediana": 28.4,
+        "p25": 0,
+        "p75": 40.5,
+        "acimaDaAvaliacao": 10
+      },
+      "lanceMediano": 206836,
+      "avaliacaoMediana": 231000,
+      "comFoto": 44,
+      "comFotoVerificada": 0,
+      "geocodificados": 44,
+      "porPrecisaoGeo": {
+        "cidade": 44
+      },
+      "porPraca": {
+        "não informada": 25,
+        "Praça única": 19
+      },
+      "tags": {
+        "aceita-financiamento": 4,
+        "desagio-alto": 12,
+        "desagio-baixo": 21,
+        "direito-preferencia": 25,
+        "imovel-inteiro": 44,
+        "ocupacao-nao-informada": 44,
+        "praca-unica": 19
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 10
+      },
+      "centro": [
+        322.4,
+        245.4
+      ]
+    },
+    {
+      "uf": "GO",
+      "ativos": 2897,
+      "porFonte": {
+        "caixa_csv": 2897
+      },
+      "porModalidade": {
+        "leilao": 368,
+        "licitacao_aberta": 101,
+        "venda_direta": 2035,
+        "venda_online": 393
+      },
+      "porTipo": {
+        "apartamento": 1760,
+        "casa": 1099,
+        "comercial": 3,
+        "rural": 1,
+        "terreno": 34
+      },
+      "cidades": 40,
+      "maioresCidades": [
+        {
+          "cidade": "Luziânia",
+          "ativos": 689
+        },
+        {
+          "cidade": "Cidade Ocidental",
+          "ativos": 581
+        },
+        {
+          "cidade": "Santo Antônio do Descoberto",
+          "ativos": 485
+        },
+        {
+          "cidade": "Valparaíso de Goiás",
+          "ativos": 308
+        },
+        {
+          "cidade": "Águas Lindas de Goiás",
+          "ativos": 301
+        }
+      ],
+      "desagio": {
+        "mediana": 45.5,
+        "p25": 41.5,
+        "p75": 49.8,
+        "acimaDaAvaliacao": 174
+      },
+      "lanceMediano": 75375,
+      "avaliacaoMediana": 138600,
+      "comFoto": 2897,
+      "comFotoVerificada": 0,
+      "geocodificados": 2897,
+      "porPrecisaoGeo": {
+        "cidade": 2897
+      },
+      "porPraca": {
+        "não informada": 368,
+        "Praça única": 2529
+      },
+      "tags": {
+        "aceita-financiamento": 427,
+        "desagio-alto": 2411,
+        "desagio-baixo": 336,
+        "direito-preferencia": 368,
+        "imovel-inteiro": 2897,
+        "ocupacao-nao-informada": 2897,
+        "praca-unica": 2529
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 174
+      },
+      "centro": [
+        254,
+        208.5
+      ]
+    },
+    {
+      "uf": "MA",
+      "ativos": 221,
+      "porFonte": {
+        "caixa_csv": 221
+      },
+      "porModalidade": {
+        "leilao": 83,
+        "licitacao_aberta": 22,
+        "venda_direta": 88,
+        "venda_online": 28
+      },
+      "porTipo": {
+        "apartamento": 35,
+        "casa": 160,
+        "comercial": 6,
+        "terreno": 20
+      },
+      "cidades": 34,
+      "maioresCidades": [
+        {
+          "cidade": "Timon",
+          "ativos": 92
+        },
+        {
+          "cidade": "São José de Ribamar",
+          "ativos": 32
+        },
+        {
+          "cidade": "São Luís",
+          "ativos": 15
+        },
+        {
+          "cidade": "Açailândia",
+          "ativos": 9
+        },
+        {
+          "cidade": "Chapadinha",
+          "ativos": 8
+        }
+      ],
+      "desagio": {
+        "mediana": 39.6,
+        "p25": 0,
+        "p75": 42.1,
+        "acimaDaAvaliacao": 14
+      },
+      "lanceMediano": 121280,
+      "avaliacaoMediana": 160000,
+      "comFoto": 221,
+      "comFotoVerificada": 0,
+      "geocodificados": 221,
+      "porPrecisaoGeo": {
+        "cidade": 221
+      },
+      "porPraca": {
+        "não informada": 83,
+        "Praça única": 138
+      },
+      "tags": {
+        "aceita-financiamento": 23,
+        "desagio-alto": 101,
+        "desagio-baixo": 79,
+        "direito-preferencia": 83,
+        "imovel-inteiro": 221,
+        "ocupacao-nao-informada": 221,
+        "praca-unica": 138
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 14
+      },
+      "centro": [
+        291.3,
+        100.9
+      ]
+    },
+    {
+      "uf": "MG",
+      "ativos": 747,
+      "porFonte": {
+        "caixa_csv": 747
+      },
+      "porModalidade": {
+        "leilao": 358,
+        "licitacao_aberta": 60,
+        "venda_direta": 222,
+        "venda_online": 107
+      },
+      "porTipo": {
+        "apartamento": 477,
+        "casa": 171,
+        "comercial": 9,
+        "rural": 2,
+        "terreno": 88
+      },
+      "cidades": 115,
+      "maioresCidades": [
+        {
+          "cidade": "Uberlândia",
+          "ativos": 109
+        },
+        {
+          "cidade": "Uberaba",
+          "ativos": 83
+        },
+        {
+          "cidade": "Ribeirão das Neves",
+          "ativos": 82
+        },
+        {
+          "cidade": "Juiz de Fora",
+          "ativos": 52
+        },
+        {
+          "cidade": "Belo Horizonte",
+          "ativos": 37
+        }
+      ],
+      "desagio": {
+        "mediana": 36.3,
+        "p25": 0,
+        "p75": 40.7,
+        "acimaDaAvaliacao": 133
+      },
+      "lanceMediano": 139015,
+      "avaliacaoMediana": 180000,
+      "comFoto": 747,
+      "comFotoVerificada": 0,
+      "geocodificados": 747,
+      "porPrecisaoGeo": {
+        "cidade": 747
+      },
+      "porPraca": {
+        "não informada": 358,
+        "Praça única": 389
+      },
+      "tags": {
+        "aceita-financiamento": 66,
+        "desagio-alto": 247,
+        "desagio-baixo": 310,
+        "direito-preferencia": 358,
+        "imovel-inteiro": 747,
+        "ocupacao-nao-informada": 747,
+        "praca-unica": 389
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 133
+      },
+      "centro": [
+        278,
+        242.6
+      ]
+    },
+    {
+      "uf": "MS",
+      "ativos": 169,
+      "porFonte": {
+        "caixa_csv": 169
+      },
+      "porModalidade": {
+        "leilao": 77,
+        "licitacao_aberta": 5,
+        "venda_direta": 56,
+        "venda_online": 31
+      },
+      "porTipo": {
+        "apartamento": 56,
+        "casa": 108,
+        "comercial": 1,
+        "terreno": 4
+      },
+      "cidades": 16,
+      "maioresCidades": [
+        {
+          "cidade": "Campo Grande",
+          "ativos": 127
+        },
+        {
+          "cidade": "Três Lagoas",
+          "ativos": 10
+        },
+        {
+          "cidade": "Aquidauana",
+          "ativos": 8
+        },
+        {
+          "cidade": "Dourados",
+          "ativos": 8
+        },
+        {
+          "cidade": "Aparecida do Taboado",
+          "ativos": 2
+        }
+      ],
+      "desagio": {
+        "mediana": 37.1,
+        "p25": 0,
+        "p75": 40.7,
+        "acimaDaAvaliacao": 28
+      },
+      "lanceMediano": 142897,
+      "avaliacaoMediana": 188000,
+      "comFoto": 169,
+      "comFotoVerificada": 0,
+      "geocodificados": 169,
+      "porPrecisaoGeo": {
+        "cidade": 169
+      },
+      "porPraca": {
+        "não informada": 77,
+        "Praça única": 92
+      },
+      "tags": {
+        "aceita-financiamento": 21,
+        "desagio-alto": 51,
+        "desagio-baixo": 72,
+        "direito-preferencia": 77,
+        "imovel-inteiro": 169,
+        "ocupacao-nao-informada": 169,
+        "praca-unica": 92
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 28
+      },
+      "centro": [
+        198.7,
+        250.4
+      ]
+    },
+    {
+      "uf": "MT",
+      "ativos": 156,
+      "porFonte": {
+        "caixa_csv": 156
+      },
+      "porModalidade": {
+        "leilao": 66,
+        "licitacao_aberta": 5,
+        "venda_direta": 55,
+        "venda_online": 30
+      },
+      "porTipo": {
+        "apartamento": 41,
+        "casa": 100,
+        "comercial": 2,
+        "rural": 1,
+        "terreno": 12
+      },
+      "cidades": 27,
+      "maioresCidades": [
+        {
+          "cidade": "Cuiabá",
+          "ativos": 49
+        },
+        {
+          "cidade": "Várzea Grande",
+          "ativos": 49
+        },
+        {
+          "cidade": "Rondonópolis",
+          "ativos": 14
+        },
+        {
+          "cidade": "Sinop",
+          "ativos": 4
+        },
+        {
+          "cidade": "Acorizal",
+          "ativos": 3
+        }
+      ],
+      "desagio": {
+        "mediana": 36.3,
+        "p25": 0,
+        "p75": 39.6,
+        "acimaDaAvaliacao": 19
+      },
+      "lanceMediano": 195597,
+      "avaliacaoMediana": 220094,
+      "comFoto": 156,
+      "comFotoVerificada": 0,
+      "geocodificados": 156,
+      "porPrecisaoGeo": {
+        "cidade": 156
+      },
+      "porPraca": {
+        "não informada": 66,
+        "Praça única": 90
+      },
+      "tags": {
+        "aceita-financiamento": 36,
+        "desagio-alto": 32,
+        "desagio-baixo": 59,
+        "direito-preferencia": 66,
+        "imovel-inteiro": 156,
+        "ocupacao-nao-informada": 156,
+        "praca-unica": 90
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 19
+      },
+      "centro": [
+        187.4,
+        202.2
+      ]
+    },
+    {
+      "uf": "PA",
+      "ativos": 227,
+      "porFonte": {
+        "caixa_csv": 227
+      },
+      "porModalidade": {
+        "leilao": 78,
+        "licitacao_aberta": 10,
+        "venda_direta": 119,
+        "venda_online": 20
+      },
+      "porTipo": {
+        "apartamento": 27,
+        "casa": 182,
+        "comercial": 2,
+        "rural": 1,
+        "terreno": 15
+      },
+      "cidades": 50,
+      "maioresCidades": [
+        {
+          "cidade": "Ananindeua",
+          "ativos": 26
+        },
+        {
+          "cidade": "Castanhal",
+          "ativos": 20
+        },
+        {
+          "cidade": "Mãe do Rio",
+          "ativos": 16
+        },
+        {
+          "cidade": "Tailândia",
+          "ativos": 15
+        },
+        {
+          "cidade": "Moju",
+          "ativos": 12
+        }
+      ],
+      "desagio": {
+        "mediana": 39.6,
+        "p25": 0,
+        "p75": 44.3,
+        "acimaDaAvaliacao": 14
+      },
+      "lanceMediano": 114839,
+      "avaliacaoMediana": 155000,
+      "comFoto": 227,
+      "comFotoVerificada": 0,
+      "geocodificados": 226,
+      "porPrecisaoGeo": {
+        "cidade": 226,
+        "sem": 1
+      },
+      "porPraca": {
+        "não informada": 78,
+        "Praça única": 149
+      },
+      "tags": {
+        "aceita-financiamento": 23,
+        "desagio-alto": 108,
+        "desagio-baixo": 71,
+        "direito-preferencia": 78,
+        "imovel-inteiro": 227,
+        "ocupacao-nao-informada": 227,
+        "praca-unica": 149
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 14
+      },
+      "centro": [
+        251.4,
+        84.5
+      ]
+    },
+    {
+      "uf": "PB",
+      "ativos": 691,
+      "porFonte": {
+        "caixa_csv": 691
+      },
+      "porModalidade": {
+        "leilao": 133,
+        "licitacao_aberta": 28,
+        "venda_direta": 463,
+        "venda_online": 67
+      },
+      "porTipo": {
+        "apartamento": 360,
+        "casa": 319,
+        "comercial": 3,
+        "terreno": 9
+      },
+      "cidades": 35,
+      "maioresCidades": [
+        {
+          "cidade": "João Pessoa",
+          "ativos": 320
+        },
+        {
+          "cidade": "Santa Rita",
+          "ativos": 217
+        },
+        {
+          "cidade": "Bayeux",
+          "ativos": 47
+        },
+        {
+          "cidade": "Campina Grande",
+          "ativos": 31
+        },
+        {
+          "cidade": "Itabaiana",
+          "ativos": 22
+        }
+      ],
+      "desagio": {
+        "mediana": 42.7,
+        "p25": 40.7,
+        "p75": 48.3,
+        "acimaDaAvaliacao": 70
+      },
+      "lanceMediano": 74377,
+      "avaliacaoMediana": 133000,
+      "comFoto": 691,
+      "comFotoVerificada": 0,
+      "geocodificados": 691,
+      "porPrecisaoGeo": {
+        "cidade": 691
+      },
+      "porPraca": {
+        "não informada": 133,
+        "Praça única": 558
+      },
+      "tags": {
+        "aceita-financiamento": 20,
+        "desagio-alto": 550,
+        "desagio-baixo": 124,
+        "direito-preferencia": 133,
+        "imovel-inteiro": 691,
+        "ocupacao-nao-informada": 691,
+        "praca-unica": 558
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 70
+      },
+      "centro": [
+        368.4,
+        128.4
+      ]
+    },
+    {
+      "uf": "PE",
+      "ativos": 1158,
+      "porFonte": {
+        "caixa_csv": 1158
+      },
+      "porModalidade": {
+        "leilao": 115,
+        "licitacao_aberta": 36,
+        "venda_direta": 794,
+        "venda_online": 213
+      },
+      "porTipo": {
+        "apartamento": 551,
+        "casa": 531,
+        "comercial": 13,
+        "rural": 6,
+        "terreno": 57
+      },
+      "cidades": 72,
+      "maioresCidades": [
+        {
+          "cidade": "Jaboatão dos Guararapes",
+          "ativos": 220
+        },
+        {
+          "cidade": "Paulista",
+          "ativos": 153
+        },
+        {
+          "cidade": "Belo Jardim",
+          "ativos": 91
+        },
+        {
+          "cidade": "Chã de Alegria",
+          "ativos": 82
+        },
+        {
+          "cidade": "Igarassu",
+          "ativos": 80
+        }
+      ],
+      "desagio": {
+        "mediana": 43.8,
+        "p25": 40.7,
+        "p75": 49.3,
+        "acimaDaAvaliacao": 54
+      },
+      "lanceMediano": 79125,
+      "avaliacaoMediana": 141350,
+      "comFoto": 1158,
+      "comFotoVerificada": 0,
+      "geocodificados": 1157,
+      "porPrecisaoGeo": {
+        "cidade": 1157,
+        "sem": 1
+      },
+      "porPraca": {
+        "não informada": 115,
+        "Praça única": 1043
+      },
+      "tags": {
+        "aceita-financiamento": 169,
+        "desagio-alto": 921,
+        "desagio-baixo": 102,
+        "direito-preferencia": 115,
+        "imovel-inteiro": 1158,
+        "ocupacao-nao-informada": 1158,
+        "praca-unica": 1043
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 54
+      },
+      "centro": [
+        365.8,
+        136.6
+      ]
+    },
+    {
+      "uf": "PI",
+      "ativos": 724,
+      "porFonte": {
+        "caixa_csv": 724
+      },
+      "porModalidade": {
+        "leilao": 65,
+        "licitacao_aberta": 20,
+        "venda_direta": 538,
+        "venda_online": 101
+      },
+      "porTipo": {
+        "apartamento": 67,
+        "casa": 644,
+        "comercial": 1,
+        "terreno": 12
+      },
+      "cidades": 45,
+      "maioresCidades": [
+        {
+          "cidade": "Demerval Lobão",
+          "ativos": 196
+        },
+        {
+          "cidade": "Altos",
+          "ativos": 184
+        },
+        {
+          "cidade": "Teresina",
+          "ativos": 124
+        },
+        {
+          "cidade": "Água Branca",
+          "ativos": 43
+        },
+        {
+          "cidade": "Piracuruca",
+          "ativos": 28
+        }
+      ],
+      "desagio": {
+        "mediana": 42.9,
+        "p25": 41.9,
+        "p75": 48.3,
+        "acimaDaAvaliacao": 26
+      },
+      "lanceMediano": 62383,
+      "avaliacaoMediana": 115623,
+      "comFoto": 724,
+      "comFotoVerificada": 0,
+      "geocodificados": 724,
+      "porPrecisaoGeo": {
+        "cidade": 724
+      },
+      "porPraca": {
+        "não informada": 65,
+        "Praça única": 659
+      },
+      "tags": {
+        "aceita-financiamento": 52,
+        "desagio-alto": 618,
+        "desagio-baixo": 61,
+        "direito-preferencia": 65,
+        "imovel-inteiro": 724,
+        "ocupacao-nao-informada": 724,
+        "praca-unica": 659
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 26
+      },
+      "centro": [
+        303.7,
+        111.3
+      ]
+    },
+    {
+      "uf": "PR",
+      "ativos": 391,
+      "porFonte": {
+        "caixa_csv": 391
+      },
+      "porModalidade": {
+        "leilao": 134,
+        "licitacao_aberta": 43,
+        "venda_direta": 149,
+        "venda_online": 65
+      },
+      "porTipo": {
+        "apartamento": 216,
+        "casa": 145,
+        "comercial": 5,
+        "rural": 4,
+        "terreno": 21
+      },
+      "cidades": 82,
+      "maioresCidades": [
+        {
+          "cidade": "Campo Largo",
+          "ativos": 76
+        },
+        {
+          "cidade": "Londrina",
+          "ativos": 76
+        },
+        {
+          "cidade": "Ponta Grossa",
+          "ativos": 24
+        },
+        {
+          "cidade": "Curitiba",
+          "ativos": 22
+        },
+        {
+          "cidade": "Fazenda Rio Grande",
+          "ativos": 18
+        }
+      ],
+      "desagio": {
+        "mediana": 39.6,
+        "p25": 0,
+        "p75": 40.7,
+        "acimaDaAvaliacao": 28
+      },
+      "lanceMediano": 128619,
+      "avaliacaoMediana": 196000,
+      "comFoto": 391,
+      "comFotoVerificada": 0,
+      "geocodificados": 391,
+      "porPrecisaoGeo": {
+        "cidade": 391
+      },
+      "porPraca": {
+        "não informada": 134,
+        "Praça única": 257
+      },
+      "tags": {
+        "aceita-financiamento": 50,
+        "desagio-alto": 134,
+        "desagio-baixo": 110,
+        "direito-preferencia": 134,
+        "imovel-inteiro": 391,
+        "ocupacao-nao-informada": 391,
+        "praca-unica": 257
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 28
+      },
+      "centro": [
+        232.4,
+        286.8
+      ]
+    },
+    {
+      "uf": "RJ",
+      "ativos": 7193,
+      "porFonte": {
+        "caixa_csv": 7193
+      },
+      "porModalidade": {
+        "leilao": 741,
+        "licitacao_aberta": 206,
+        "venda_direta": 4995,
+        "venda_online": 1251
+      },
+      "porTipo": {
+        "apartamento": 5371,
+        "casa": 1668,
+        "comercial": 48,
+        "outro": 2,
+        "terreno": 104
+      },
+      "cidades": 44,
+      "maioresCidades": [
+        {
+          "cidade": "Rio de Janeiro",
+          "ativos": 3225
+        },
+        {
+          "cidade": "São Gonçalo",
+          "ativos": 1527
+        },
+        {
+          "cidade": "Nova Iguaçu",
+          "ativos": 870
+        },
+        {
+          "cidade": "Itaboraí",
+          "ativos": 460
+        },
+        {
+          "cidade": "Belford Roxo",
+          "ativos": 306
+        }
+      ],
+      "desagio": {
+        "mediana": 44.8,
+        "p25": 40.7,
+        "p75": 50.4,
+        "acimaDaAvaliacao": 475
+      },
+      "lanceMediano": 83200,
+      "avaliacaoMediana": 152000,
+      "comFoto": 7193,
+      "comFotoVerificada": 0,
+      "geocodificados": 7193,
+      "porPrecisaoGeo": {
+        "cidade": 7193
+      },
+      "porPraca": {
+        "não informada": 741,
+        "Praça única": 6452
+      },
+      "tags": {
+        "aceita-financiamento": 751,
+        "desagio-alto": 5647,
+        "desagio-baixo": 680,
+        "direito-preferencia": 741,
+        "imovel-inteiro": 7193,
+        "ocupacao-nao-informada": 7193,
+        "praca-unica": 6452
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 475
+      },
+      "centro": [
+        298.1,
+        271
+      ]
+    },
+    {
+      "uf": "RN",
+      "ativos": 644,
+      "porFonte": {
+        "caixa_csv": 644
+      },
+      "porModalidade": {
+        "leilao": 56,
+        "licitacao_aberta": 30,
+        "venda_direta": 455,
+        "venda_online": 103
+      },
+      "porTipo": {
+        "apartamento": 44,
+        "casa": 583,
+        "comercial": 7,
+        "rural": 1,
+        "terreno": 9
+      },
+      "cidades": 39,
+      "maioresCidades": [
+        {
+          "cidade": "Ceará-Mirim",
+          "ativos": 186
+        },
+        {
+          "cidade": "Mossoró",
+          "ativos": 110
+        },
+        {
+          "cidade": "São Gonçalo do Amarante",
+          "ativos": 99
+        },
+        {
+          "cidade": "Extremoz",
+          "ativos": 70
+        },
+        {
+          "cidade": "Macaíba",
+          "ativos": 37
+        }
+      ],
+      "desagio": {
+        "mediana": 44.1,
+        "p25": 41.5,
+        "p75": 52.8,
+        "acimaDaAvaliacao": 21
+      },
+      "lanceMediano": 59290,
+      "avaliacaoMediana": 110000,
+      "comFoto": 644,
+      "comFotoVerificada": 0,
+      "geocodificados": 644,
+      "porPrecisaoGeo": {
+        "cidade": 644
+      },
+      "porPraca": {
+        "não informada": 56,
+        "Praça única": 588
+      },
+      "tags": {
+        "aceita-financiamento": 15,
+        "desagio-alto": 564,
+        "desagio-baixo": 55,
+        "direito-preferencia": 56,
+        "imovel-inteiro": 644,
+        "ocupacao-nao-informada": 644,
+        "praca-unica": 588
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 21
+      },
+      "centro": [
+        361.8,
+        115.3
+      ]
+    },
+    {
+      "uf": "RO",
+      "ativos": 20,
+      "porFonte": {
+        "caixa_csv": 20
+      },
+      "porModalidade": {
+        "leilao": 2,
+        "venda_direta": 14,
+        "venda_online": 4
+      },
+      "porTipo": {
+        "casa": 16,
+        "outro": 1,
+        "terreno": 3
+      },
+      "cidades": 7,
+      "maioresCidades": [
+        {
+          "cidade": "Porto Velho",
+          "ativos": 7
+        },
+        {
+          "cidade": "Ji-Paraná",
+          "ativos": 6
+        },
+        {
+          "cidade": "Guajará-Mirim",
+          "ativos": 3
+        },
+        {
+          "cidade": "Alta Floresta D'Oeste",
+          "ativos": 1
+        },
+        {
+          "cidade": "Cacoal",
+          "ativos": 1
+        }
+      ],
+      "desagio": {
+        "mediana": 41.3,
+        "p25": 39.2,
+        "p75": 45.1,
+        "acimaDaAvaliacao": 0
+      },
+      "lanceMediano": 172746,
+      "avaliacaoMediana": 265000,
+      "comFoto": 20,
+      "comFotoVerificada": 0,
+      "geocodificados": 20,
+      "porPrecisaoGeo": {
+        "cidade": 20
+      },
+      "porPraca": {
+        "não informada": 2,
+        "Praça única": 18
+      },
+      "tags": {
+        "aceita-financiamento": 6,
+        "desagio-alto": 13,
+        "desagio-baixo": 2,
+        "direito-preferencia": 2,
+        "imovel-inteiro": 20,
+        "ocupacao-nao-informada": 20,
+        "praca-unica": 18
+      },
+      "tagsEmRevisao": {},
+      "centro": [
+        121.3,
+        154.5
+      ]
+    },
+    {
+      "uf": "RR",
+      "ativos": 2,
+      "porFonte": {
+        "caixa_csv": 2
+      },
+      "porModalidade": {
+        "venda_direta": 2
+      },
+      "porTipo": {
+        "apartamento": 1,
+        "terreno": 1
+      },
+      "cidades": 1,
+      "maioresCidades": [
+        {
+          "cidade": "Boa Vista",
+          "ativos": 2
+        }
+      ],
+      "desagio": {
+        "mediana": 47.9,
+        "p25": 45.3,
+        "p75": 50.5,
+        "acimaDaAvaliacao": 0
+      },
+      "lanceMediano": 57863,
+      "avaliacaoMediana": 110000,
+      "comFoto": 2,
+      "comFotoVerificada": 0,
+      "geocodificados": 2,
+      "porPrecisaoGeo": {
+        "cidade": 2
+      },
+      "porPraca": {
+        "Praça única": 2
+      },
+      "tags": {
+        "desagio-alto": 2,
+        "imovel-inteiro": 2,
+        "ocupacao-nao-informada": 2,
+        "praca-unica": 2
+      },
+      "tagsEmRevisao": {},
+      "centro": [
+        144.8,
+        41.2
+      ]
+    },
+    {
+      "uf": "RS",
+      "ativos": 833,
+      "porFonte": {
+        "caixa_csv": 833
+      },
+      "porModalidade": {
+        "leilao": 423,
+        "licitacao_aberta": 33,
+        "venda_direta": 190,
+        "venda_online": 187
+      },
+      "porTipo": {
+        "apartamento": 503,
+        "casa": 221,
+        "comercial": 25,
+        "outro": 5,
+        "rural": 1,
+        "terreno": 78
+      },
+      "cidades": 99,
+      "maioresCidades": [
+        {
+          "cidade": "Porto Alegre",
+          "ativos": 233
+        },
+        {
+          "cidade": "Pelotas",
+          "ativos": 69
+        },
+        {
+          "cidade": "São Leopoldo",
+          "ativos": 60
+        },
+        {
+          "cidade": "Canoas",
+          "ativos": 52
+        },
+        {
+          "cidade": "Sapucaia do Sul",
+          "ativos": 36
+        }
+      ],
+      "desagio": {
+        "mediana": 36.3,
+        "p25": 0,
+        "p75": 41.9,
+        "acimaDaAvaliacao": 174
+      },
+      "lanceMediano": 154000,
+      "avaliacaoMediana": 183000,
+      "comFoto": 833,
+      "comFotoVerificada": 0,
+      "geocodificados": 833,
+      "porPrecisaoGeo": {
+        "cidade": 833
+      },
+      "porPraca": {
+        "não informada": 423,
+        "Praça única": 410
+      },
+      "tags": {
+        "aceita-financiamento": 187,
+        "desagio-alto": 296,
+        "desagio-baixo": 371,
+        "direito-preferencia": 423,
+        "imovel-inteiro": 833,
+        "ocupacao-nao-informada": 833,
+        "praca-unica": 410
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 174
+      },
+      "centro": [
+        224.4,
+        341
+      ]
+    },
+    {
+      "uf": "SC",
+      "ativos": 130,
+      "porFonte": {
+        "caixa_csv": 130
+      },
+      "porModalidade": {
+        "leilao": 97,
+        "licitacao_aberta": 9,
+        "venda_direta": 16,
+        "venda_online": 8
+      },
+      "porTipo": {
+        "apartamento": 73,
+        "casa": 44,
+        "comercial": 3,
+        "terreno": 10
+      },
+      "cidades": 52,
+      "maioresCidades": [
+        {
+          "cidade": "Joinville",
+          "ativos": 16
+        },
+        {
+          "cidade": "Criciúma",
+          "ativos": 10
+        },
+        {
+          "cidade": "São José",
+          "ativos": 10
+        },
+        {
+          "cidade": "Blumenau",
+          "ativos": 9
+        },
+        {
+          "cidade": "Palhoça",
+          "ativos": 7
+        }
+      ],
+      "desagio": {
+        "mediana": 0,
+        "p25": 0,
+        "p75": 36.3,
+        "acimaDaAvaliacao": 20
+      },
+      "lanceMediano": 240000,
+      "avaliacaoMediana": 254000,
+      "comFoto": 130,
+      "comFotoVerificada": 0,
+      "geocodificados": 130,
+      "porPrecisaoGeo": {
+        "cidade": 130
+      },
+      "porPraca": {
+        "não informada": 97,
+        "Praça única": 33
+      },
+      "tags": {
+        "aceita-financiamento": 15,
+        "desagio-alto": 16,
+        "desagio-baixo": 82,
+        "direito-preferencia": 97,
+        "imovel-inteiro": 130,
+        "ocupacao-nao-informada": 130,
+        "praca-unica": 33
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 20
+      },
+      "centro": [
+        242.2,
+        314.8
+      ]
+    },
+    {
+      "uf": "SE",
+      "ativos": 389,
+      "porFonte": {
+        "caixa_csv": 389
+      },
+      "porModalidade": {
+        "leilao": 55,
+        "licitacao_aberta": 19,
+        "venda_direta": 274,
+        "venda_online": 41
+      },
+      "porTipo": {
+        "apartamento": 19,
+        "casa": 316,
+        "comercial": 1,
+        "rural": 2,
+        "terreno": 51
+      },
+      "cidades": 25,
+      "maioresCidades": [
+        {
+          "cidade": "Nossa Senhora do Socorro",
+          "ativos": 305
+        },
+        {
+          "cidade": "Aracaju",
+          "ativos": 15
+        },
+        {
+          "cidade": "Pacatuba",
+          "ativos": 9
+        },
+        {
+          "cidade": "Capela",
+          "ativos": 8
+        },
+        {
+          "cidade": "São Cristóvão",
+          "ativos": 8
+        }
+      ],
+      "desagio": {
+        "mediana": 43.7,
+        "p25": 41.5,
+        "p75": 49.2,
+        "acimaDaAvaliacao": 29
+      },
+      "lanceMediano": 60745,
+      "avaliacaoMediana": 112000,
+      "comFoto": 389,
+      "comFotoVerificada": 0,
+      "geocodificados": 389,
+      "porPrecisaoGeo": {
+        "cidade": 389
+      },
+      "porPraca": {
+        "não informada": 55,
+        "Praça única": 334
+      },
+      "tags": {
+        "aceita-financiamento": 22,
+        "desagio-alto": 313,
+        "desagio-baixo": 52,
+        "direito-preferencia": 55,
+        "imovel-inteiro": 389,
+        "ocupacao-nao-informada": 389,
+        "praca-unica": 334
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 29
+      },
+      "centro": [
+        350.4,
+        161.1
+      ]
+    },
+    {
+      "uf": "SP",
+      "ativos": 2843,
+      "porFonte": {
+        "caixa_csv": 2838,
+        "leiloesjudiciais_api": 5
+      },
+      "porModalidade": {
+        "leilao": 1266,
+        "licitacao_aberta": 211,
+        "venda_direta": 780,
+        "venda_online": 586
+      },
+      "porTipo": {
+        "apartamento": 1960,
+        "casa": 710,
+        "comercial": 27,
+        "outro": 3,
+        "rural": 6,
+        "terreno": 137
+      },
+      "cidades": 222,
+      "maioresCidades": [
+        {
+          "cidade": "São Paulo",
+          "ativos": 490
+        },
+        {
+          "cidade": "Ribeirão Preto",
+          "ativos": 436
+        },
+        {
+          "cidade": "Bauru",
+          "ativos": 143
+        },
+        {
+          "cidade": "São José do Rio Preto",
+          "ativos": 120
+        },
+        {
+          "cidade": "Piracicaba",
+          "ativos": 95
+        }
+      ],
+      "desagio": {
+        "mediana": 38.8,
+        "p25": 0,
+        "p75": 40.7,
+        "acimaDaAvaliacao": 549
+      },
+      "lanceMediano": 148796,
+      "avaliacaoMediana": 195000,
+      "comFoto": 2842,
+      "comFotoVerificada": 0,
+      "geocodificados": 2843,
+      "porPrecisaoGeo": {
+        "cidade": 2841,
+        "rua": 2
+      },
+      "porPraca": {
+        "1ª praça": 1,
+        "2ª praça": 2,
+        "não informada": 1263,
+        "Praça única": 1577
+      },
+      "tags": {
+        "aceita-financiamento": 350,
+        "desagio-alto": 848,
+        "desagio-baixo": 1137,
+        "direito-preferencia": 1261,
+        "imovel-inteiro": 2838,
+        "ocupacao-nao-informada": 2842,
+        "praca-unica": 1577,
+        "primeira-praca": 1,
+        "segunda-praca": 2,
+        "sem-fotos": 1,
+        "so-direitos": 1
+      },
+      "tagsEmRevisao": {
+        "condominio-em-atraso": 1,
+        "construcao-irregular": 2,
+        "custos-extras-altos": 1,
+        "direito-preferencia": 1,
+        "divida-passa-arrematante": 1,
+        "imovel-inteiro": 3,
+        "matricula-pendencia": 1,
+        "ocupacao-nao-informada": 1,
+        "ocupado": 1,
+        "praca-unica": 2,
+        "preco-acima-mercado": 549,
+        "so-direitos": 1
+      },
+      "centro": [
+        257.5,
+        267
+      ]
+    },
+    {
+      "uf": "TO",
+      "ativos": 18,
+      "porFonte": {
+        "caixa_csv": 18
+      },
+      "porModalidade": {
+        "leilao": 8,
+        "venda_direta": 8,
+        "venda_online": 2
+      },
+      "porTipo": {
+        "apartamento": 4,
+        "casa": 8,
+        "comercial": 1,
+        "rural": 1,
+        "terreno": 4
+      },
+      "cidades": 7,
+      "maioresCidades": [
+        {
+          "cidade": "Araguaína",
+          "ativos": 6
+        },
+        {
+          "cidade": "Palmas",
+          "ativos": 5
+        },
+        {
+          "cidade": "Paraíso do Tocantins",
+          "ativos": 3
+        },
+        {
+          "cidade": "Brasilândia do Tocantins",
+          "ativos": 1
+        },
+        {
+          "cidade": "Cachoeirinha",
+          "ativos": 1
+        }
+      ],
+      "desagio": {
+        "mediana": 36.3,
+        "p25": 0,
+        "p75": 39.4,
+        "acimaDaAvaliacao": 2
+      },
+      "lanceMediano": 224500,
+      "avaliacaoMediana": 400000,
+      "comFoto": 18,
+      "comFotoVerificada": 0,
+      "geocodificados": 18,
+      "porPrecisaoGeo": {
+        "cidade": 18
+      },
+      "porPraca": {
+        "não informada": 8,
+        "Praça única": 10
+      },
+      "tags": {
+        "aceita-financiamento": 8,
+        "desagio-alto": 4,
+        "desagio-baixo": 8,
+        "direito-preferencia": 8,
+        "imovel-inteiro": 18,
+        "ocupacao-nao-informada": 18,
+        "praca-unica": 10
+      },
+      "tagsEmRevisao": {
+        "preco-acima-mercado": 2
+      },
+      "centro": [
+        253,
+        144.3
+      ]
+    }
+  ]
+}

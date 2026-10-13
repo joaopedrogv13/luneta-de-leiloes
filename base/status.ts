@@ -40,7 +40,11 @@ export interface RelatorioStatus {
   porUf: Array<{ uf: string; ativos: number }>;
   porModalidade: Array<{ modalidade: string; ativos: number }>;
   porTag: Array<{ tag: string; rotulo: string; imoveis: number; revisaoPendente: number }>;
-  fotos: { ativosComFoto: number; ativos: number; percentual: number };
+  /**
+   * Ativos com ao menos uma URL de foto não reprovada (verificada ou não) e, à parte, com foto
+   * verificada (HEAD ok). URL montada por padrão (`padrao_url`) conta como foto, mas não como verificada.
+   */
+  fotos: { ativosComFoto: number; ativos: number; percentual: number; ativosComFotoVerificada: number };
   /** Ativos por precisão da coordenada ("cidade" = sede do município; "sem" = cidade não reconhecida). */
   geo: Array<{ precisao: string; ativos: number }>;
   /** Ativos que dividem a chave_dedup com outro ativo (mesmo imóvel em mais de um anúncio). */
@@ -124,6 +128,11 @@ export function relatorioStatus(db: Banco): RelatorioStatus {
     `SELECT count(*) AS n FROM imovel i WHERE i.status = 'ativo'
        AND EXISTS (SELECT 1 FROM foto f WHERE f.imovel_id = i.id AND (f.ok IS NULL OR f.ok = 1))`,
   );
+  const comFotoVerificada = contagem(
+    db,
+    `SELECT count(*) AS n FROM imovel i WHERE i.status = 'ativo'
+       AND EXISTS (SELECT 1 FROM foto f WHERE f.imovel_id = i.id AND f.ok = 1)`,
+  );
   const geo = db
     .prepare("SELECT coalesce(precisao_geo, 'sem') AS p, count(*) AS n FROM imovel WHERE status = 'ativo' GROUP BY p ORDER BY n DESC, p")
     .all()
@@ -153,7 +162,12 @@ export function relatorioStatus(db: Banco): RelatorioStatus {
     porUf,
     porModalidade,
     porTag,
-    fotos: { ativosComFoto: comFoto, ativos, percentual: ativos > 0 ? Math.round((comFoto / ativos) * 1000) / 10 : 0 },
+    fotos: {
+      ativosComFoto: comFoto,
+      ativos,
+      percentual: ativos > 0 ? Math.round((comFoto / ativos) * 1000) / 10 : 0,
+      ativosComFotoVerificada: comFotoVerificada,
+    },
     geo,
     duplicatas: { grupos: Number(dup?.grupos ?? 0), imoveis: Number(dup?.imoveis ?? 0), gruposEntreFontes: Number(dup?.entre_fontes ?? 0) },
     mesmoImovel: {
@@ -195,7 +209,10 @@ export function formatarStatus(r: RelatorioStatus): string {
   linhas.push("");
   linhas.push(`Por UF (ativos): ${r.porUf.length ? r.porUf.map((u) => `${u.uf} ${n(u.ativos)}`).join(" · ") : "—"}`);
   linhas.push(`Por modalidade (ativos): ${r.porModalidade.length ? r.porModalidade.map((m) => `${m.modalidade} ${n(m.ativos)}`).join(" · ") : "—"}`);
-  linhas.push(`Fotos: ${r.fotos.percentual.toLocaleString("pt-BR")}% dos ativos com ao menos uma foto (${n(r.fotos.ativosComFoto)} de ${n(r.fotos.ativos)})`);
+  linhas.push(
+    `Fotos: ${r.fotos.percentual.toLocaleString("pt-BR")}% dos ativos com ao menos uma URL de foto (${n(r.fotos.ativosComFoto)} de ${n(r.fotos.ativos)}); `
+      + `${n(r.fotos.ativosComFotoVerificada)} com foto verificada`,
+  );
   linhas.push(`Coordenadas (ativos, por precisão): ${r.geo.length ? r.geo.map((g) => `${g.precisao} ${n(g.ativos)}`).join(" · ") : "—"}`);
   linhas.push(`Duplicatas (mesma chave_dedup): ${n(r.duplicatas.grupos)} grupo(s) com ${n(r.duplicatas.imoveis)} anúncios, ${n(r.duplicatas.gruposEntreFontes)} entre fontes diferentes`);
   const m = r.mesmoImovel;
