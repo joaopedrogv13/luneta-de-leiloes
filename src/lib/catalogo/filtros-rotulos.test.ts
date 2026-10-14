@@ -25,7 +25,9 @@ import {
 } from "./filtros-rotulos";
 import type { Filtros } from "./tipos";
 
-const rotulos = (f: Filtros) => pilulas(f).map((p) => p.rotulo);
+/** Os rótulos usam espaço que não quebra entre "R$" e o valor; nos testes, comparamos com espaço comum. */
+const comum = <T,>(s: T): T => (typeof s === "string" ? (s.replace(/\u00a0/g, " ") as T) : s);
+const rotulos = (f: Filtros) => pilulas(f).map((p) => comum(p.rotulo));
 
 describe("pílulas", () => {
   it("dá os textos do combinado com o dono", () => {
@@ -190,9 +192,9 @@ describe("botões rápidos", () => {
     assert.equal(resumoBotao({ cidade: ["MG|Uberlândia"] }, "cidade"), "Uberlândia");
     assert.equal(resumoBotao({ cidade: ["MG|Uberlândia", "MG|Uberaba"], bairro: ["MG|Uberaba|Centro"] }, "cidade"), "2 cidades · 1 bairro");
     assert.equal(resumoBotao({ tipo: ["apartamento", "casa"] }, "tipo"), "Apartamento +1");
-    assert.equal(resumoBotao({ lanceMax: 300_000 }, "preco"), "Até R$ 300 mil");
-    assert.equal(resumoBotao({ lanceMin: 100_000, lanceMax: 1_500_000 }, "preco"), "R$ 100 mil a 1,5 mi");
-    assert.equal(resumoBotao({ lanceMin: 100_000 }, "preco"), "A partir de R$ 100 mil");
+    assert.equal(comum(resumoBotao({ lanceMax: 300_000 }, "preco")), "Até R$ 300 mil");
+    assert.equal(comum(resumoBotao({ lanceMin: 100_000, lanceMax: 1_500_000 }, "preco")), "R$ 100 mil a 1,5 mi");
+    assert.equal(comum(resumoBotao({ lanceMin: 100_000 }, "preco")), "A partir de R$ 100 mil");
     assert.equal(resumoBotao({ desagioMin: 40 }, "desagio"), "Deságio ≥ 40%");
     assert.equal(resumoBotao({ quartosMin: 2, vagasMin: 1 }, "quartos"), "2+ quartos · 1+ vaga");
   });
@@ -242,7 +244,7 @@ describe("números digitados", () => {
 
   it("texto de faixa e de data", () => {
     assert.equal(textoFaixa(undefined, undefined, "moeda"), null);
-    assert.equal(textoFaixa(undefined, 2500, "moedaM2"), "até R$ 2,5 mil/m²");
+    assert.equal(comum(textoFaixa(undefined, 2500, "moedaM2")), "até R$ 2,5 mil/m²");
     assert.equal(textoFaixa(-10, undefined, "pct"), "≥ −10%");
     assert.equal(textoData(undefined, undefined), null);
     assert.equal(textoData("2026-10-14"), "Praça a partir de 14/10/2026");

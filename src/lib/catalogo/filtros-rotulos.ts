@@ -496,7 +496,7 @@ export function resumoBotao(f: Filtros, botao: BotaoRapido): string | null {
     }
     case "preco": {
       // curto no botão: "R$ 100 mil a 350 mil"
-      if (f.lanceMin !== undefined && f.lanceMax !== undefined) return `${moedaCurta(f.lanceMin)} a ${moedaCurta(f.lanceMax).replace("R$ ", "")}`;
+      if (f.lanceMin !== undefined && f.lanceMax !== undefined) return `${moedaCurta(f.lanceMin)} a ${moedaCurta(f.lanceMax).replace(/^R\$\s/, "")}`;
       const t = textoFaixa(f.lanceMin, f.lanceMax, "moeda");
       return t ? maiusc(t) : null;
     }
