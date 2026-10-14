@@ -4,17 +4,17 @@
  *   npm run base:coletar -- <fonte> [--uf SP] [--arquivo caminho] [--limite 100] [--detalhes]
  *   npm run base:riscos -- [--fonte <id>]
  *   npm run base:exportar -- [--saida caminho] [--limite N]
- *   npm run base:exportar -- --site [--pasta base/saida] [--amostra 60]
+ *   npm run base:exportar -- --site [--pasta base/saida] [--amostra 60]   (amostra, estatísticas e catálogo em site/)
  *   npm run base:status -- [--json]
  * ou direto: node --experimental-strip-types base/cli.ts <comando> ...
  * Em qualquer comando, --banco <caminho> (ou LUNETA_DB) troca o arquivo do banco.
  */
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
 import { executarColeta, type ResumoColeta } from "./coleta.ts";
 import { abrirBanco, CAMINHO_PADRAO, migrar, versaoDoBanco } from "./db.ts";
-import { exportar, exportarSite, PASTA_SITE_PADRAO, SAIDA_PADRAO } from "./exportar.ts";
+import { exportar, exportarSite, PASTA_CATALOGO, PASTA_SITE_PADRAO, SAIDA_PADRAO } from "./exportar.ts";
 import { APELIDOS, CONECTORES, conferirRegistro, obterConector, resolverIdFonte } from "./fontes/index.ts";
 import { rodarRiscos } from "./riscos/motor.ts";
 import { formatarStatus, relatorioStatus } from "./status.ts";
@@ -38,8 +38,9 @@ Comandos:
   exportar [--saida <arq>] [--limite <N>]
                                       JSON completo (padrão base/dados/exportacao/imoveis.json)
   exportar --site [--pasta <dir>] [--amostra <N>]
-                                      instantâneo para o site: amostra-site.json (até 60 imóveis
-                                      no formato Listing) e estatisticas-uf.json (padrão base/saida)
+                                      instantâneo para o site (padrão base/saida): amostra-site.json
+                                      (até 60 imóveis no formato Listing), estatisticas-uf.json e o
+                                      catálogo completo em site/ (lista e detalhes em .json.gz)
   status [--json]                     contagens por fonte, UF, modalidade, tags, fotos e coletas
   fontes                              lista os conectores registrados
 
@@ -184,6 +185,11 @@ export async function principal(argv: readonly string[], deps: DependenciasCli =
           const ufsAmostra = new Set(r.amostra.imoveis.map((i) => i.uf)).size;
           saida(`Amostra para o site: ${r.amostra.total} imóvel(is) de ${ufsAmostra} UF(s) em ${r.arquivos[0]}`);
           saida(`Estatísticas: ${r.estatisticas.brasil.ativos} ativo(s) em ${r.estatisticas.ufs.length} UF(s) em ${r.arquivos[1]}`);
+          const kb = (b: number) => `${Math.round(b / 1024).toLocaleString("pt-BR")} KB`;
+          saida(
+            `Catálogo do site: ${r.catalogo.total} imóvel(is) em ${join(pasta, PASTA_CATALOGO)} `
+              + `(lista ${kb(r.catalogo.bytes.lista)}, detalhes ${kb(r.catalogo.bytes.detalhes)} em ${r.catalogo.arquivos.length - 1} pedaços)`,
+          );
           return 0;
         }
         const destino = v.saida ? resolve(v.saida) : SAIDA_PADRAO;

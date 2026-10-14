@@ -10,13 +10,16 @@
  * (mesma projeção de src/lib/brazil.ts, latLonToMap). Imóvel gravado sem coordenada é
  * geocodificado na hora pela cidade.
  *
- * Para o site (`exportar --site`): um instantâneo pequeno e estável no formato `Listing` de
- * src/content/examples.ts (base/saida/amostra-site.json, até 60 imóveis variados) e um agregado
- * por UF para estatísticas (base/saida/estatisticas-uf.json). Ver "Instantâneo para o site" abaixo.
+ * Para o site (`exportar --site`): o catálogo completo em base/saida/site (todos os imóveis
+ * exportáveis no formato de src/lib/catalogo/tipos.ts, em .json.gz; ver "Catálogo completo do site"
+ * abaixo), um instantâneo pequeno e estável no formato `Listing` de src/content/examples.ts
+ * (base/saida/amostra-site.json, até 60 imóveis variados) e um agregado por UF para estatísticas
+ * (base/saida/estatisticas-uf.json). Ver "Instantâneo para o site" abaixo.
  */
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 import { carregarImoveis } from "./consultas.ts";
 import { lerBool, lerTexto, type Banco } from "./db.ts";
 import { geocodificar } from "./geo/geocodificar.ts";
@@ -25,7 +28,7 @@ import { tabelaPadrao } from "./geo/municipios.ts";
 import { chaveNome } from "./geo/nomes.ts";
 import { consolidarTags, type LinhaRisco } from "./riscos/motor.ts";
 import { CATEGORIAS, definicaoTag, TAGS, type Severidade } from "./riscos/tags.ts";
-import type { Confianca, ImovelGravado, ValorRisco } from "./tipos.ts";
+import type { Confianca, ImovelGravado, Modalidade, ValorRisco } from "./tipos.ts";
 import { hojeBrasilia, instanteDe } from "./util/data.ts";
 import { hashTexto } from "./util/hash.ts";
 import { truncar } from "./util/texto.ts";
@@ -80,6 +83,8 @@ export interface ImovelExportado {
   aceita_financiamento: boolean | null;
   aceita_fgts: boolean | null;
   aceita_parcelamento: boolean | null;
+  /** Ocupação informada pela fonte em campo próprio ("ocupado" | "desocupado"), ou null. */
+  ocupacao: string | null;
   leiloeiro: string | null;
   comitente: string | null;
   numero_processo: string | null;
@@ -125,6 +130,22 @@ const UM_DIA = 24 * 3600 * 1000;
 /** Monta o objeto de exportação (sem gravar arquivo). */
 export function montarExportacao(db: Banco, opcoes: OpcoesExportar = {}): Exportacao {
   const agora = opcoes.agora ?? new Date();
+  const imoveis = montarExportaveis(db, { ...opcoes, agora }).map((p) => p.exportado);
+  return { versao: VERSAO_EXPORTACAO, gerado_em: agora.toISOString(), total: imoveis.length, imoveis };
+}
+
+/** Um imóvel exportável: como foi gravado (com `extras` e `textos`) e como sai na exportação. */
+interface Exportavel {
+  gravado: ImovelGravado;
+  exportado: ImovelExportado;
+}
+
+/**
+ * Os imóveis que saem em qualquer exportação: ativos e sem praça vencida há mais de 1 dia. Mesma
+ * regra para o JSON completo, a amostra, as estatísticas e o catálogo do site.
+ */
+function montarExportaveis(db: Banco, opcoes: OpcoesExportar & { agora: Date }): Exportavel[] {
+  const agora = opcoes.agora;
   const nomes = new Map(db.prepare("SELECT id, nome FROM fonte").all().map((l) => [String(l.id), String(l.nome)]));
   const riscos = new Map<number, LinhaRisco[]>();
   for (const l of db
@@ -148,7 +169,7 @@ export function montarExportacao(db: Banco, opcoes: OpcoesExportar = {}): Export
     riscos.set(id, [...(riscos.get(id) ?? []), linha]);
   }
 
-  const imoveis: ImovelExportado[] = [];
+  const imoveis: Exportavel[] = [];
   for (const i of carregarImoveis(db, { status: ["ativo"] })) {
     if (i.data_praca) {
       const quando = instanteDe(i.data_praca);
@@ -172,7 +193,7 @@ export function montarExportacao(db: Banco, opcoes: OpcoesExportar = {}): Export
       });
     // Gravado antes da geocodificação (ou sem ela): resolve agora pela cidade.
     const geo = geocodificar({ uf: i.uf, cidade: i.cidade, lat: i.lat, lon: i.lon, precisao_geo: i.precisao_geo });
-    imoveis.push({
+    const exportado: ImovelExportado = {
       id: i.id,
       fonte: i.fonte_id,
       fonte_nome: nomes.get(i.fonte_id) ?? i.fonte_id,
@@ -202,6 +223,7 @@ export function montarExportacao(db: Banco, opcoes: OpcoesExportar = {}): Export
       aceita_financiamento: i.aceita_financiamento ?? null,
       aceita_fgts: i.aceita_fgts ?? null,
       aceita_parcelamento: i.aceita_parcelamento ?? null,
+      ocupacao: i.ocupacao ?? null,
       leiloeiro: i.leiloeiro ?? null,
       comitente: i.comitente ?? null,
       numero_processo: i.numero_processo ?? null,
@@ -222,10 +244,11 @@ export function montarExportacao(db: Banco, opcoes: OpcoesExportar = {}): Export
       ultima_vez_em: i.ultima_vez_em,
       atualizado_em: i.atualizado_em,
       gerado_na_fonte_em: i.gerado_na_fonte_em ?? null,
-    });
+    };
+    imoveis.push({ gravado: i, exportado });
     if (opcoes.limite && imoveis.length >= opcoes.limite) break;
   }
-  return { versao: VERSAO_EXPORTACAO, gerado_em: agora.toISOString(), total: imoveis.length, imoveis };
+  return imoveis;
 }
 
 /** Grava `conteudo` em `caminho` de forma atômica (arquivo temporário + rename). */
@@ -594,8 +617,11 @@ function fontesExportadas(db: Banco): FonteExportada[] {
 /** Monta a amostra e o agregado por UF (sem gravar). */
 export function montarExportacaoSite(db: Banco, opcoes: OpcoesExportarSite = {}): { amostra: AmostraSite; estatisticas: EstatisticasUf } {
   const agora = opcoes.agora ?? new Date();
-  const n = opcoes.amostra ?? TAMANHO_AMOSTRA_SITE;
-  const { imoveis } = montarExportacao(db, { agora });
+  return montarArquivosSite(db, montarExportaveis(db, { agora }), opcoes.amostra ?? TAMANHO_AMOSTRA_SITE, agora);
+}
+
+function montarArquivosSite(db: Banco, exportaveis: readonly Exportavel[], n: number, agora: Date): { amostra: AmostraSite; estatisticas: EstatisticasUf } {
+  const imoveis = exportaveis.map((p) => p.exportado);
   const fontes = fontesExportadas(db);
   // Um anúncio por imóvel: quem divide chave_dedup ou chave_endereco com um anterior fica de fora.
   const vistas = new Set<string>();
@@ -629,16 +655,537 @@ export function montarExportacaoSite(db: Banco, opcoes: OpcoesExportarSite = {})
   };
 }
 
-/** Grava amostra-site.json e estatisticas-uf.json em `pasta` (padrão base/saida). */
+/**
+ * Grava, em `pasta` (padrão base/saida), os dois formatos do site: amostra-site.json e
+ * estatisticas-uf.json (a /previa antiga) e o catálogo completo em `site/` (lista e detalhes em .json.gz).
+ */
 export function exportarSite(
   db: Banco,
   pasta: string = PASTA_SITE_PADRAO,
   opcoes: OpcoesExportarSite = {},
-): { amostra: AmostraSite; estatisticas: EstatisticasUf; arquivos: string[] } {
-  const { amostra, estatisticas } = montarExportacaoSite(db, opcoes);
+): { amostra: AmostraSite; estatisticas: EstatisticasUf; catalogo: ResumoCatalogo; arquivos: string[] } {
+  const agora = opcoes.agora ?? new Date();
+  const exportaveis = montarExportaveis(db, { agora });
+  const { amostra, estatisticas } = montarArquivosSite(db, exportaveis, opcoes.amostra ?? TAMANHO_AMOSTRA_SITE, agora);
   const arquivos = [join(pasta, ARQUIVO_AMOSTRA_SITE), join(pasta, ARQUIVO_ESTATISTICAS_UF)];
   // Indentado: são arquivos pequenos, versionados, e o diff precisa ser legível.
   gravarAtomico(arquivos[0]!, JSON.stringify(amostra, null, 2) + "\n");
   gravarAtomico(arquivos[1]!, JSON.stringify(estatisticas, null, 2) + "\n");
-  return { amostra, estatisticas, arquivos };
+  const catalogo = gravarCatalogo(join(pasta, PASTA_CATALOGO), montarCatalogoDe(db, exportaveis, agora));
+  // `arquivos`: os dois JSON de sempre; os do catálogo estão em `catalogo.arquivos`.
+  return { amostra, estatisticas, catalogo, arquivos };
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo completo do site (base/saida/site)
+// ---------------------------------------------------------------------------
+//
+// O catálogo de imóveis do site (/previa, /api/catalogo, /previa/imovel/[id]) lê todos os imóveis
+// exportáveis, no formato de src/lib/catalogo/tipos.ts:
+//
+//   site/imoveis.json.gz        lista: ImovelResumo de todos (com tags e selo, sem plano aplicado:
+//                               quem tira tags e selo no plano Lente é o servidor do site), mais
+//                               `endereco` (só para o índice de busca do servidor), e os metadados
+//                               (versão, gerado_em, fontes com gerado_na_fonte_em e totais). Em
+//                               colunas (`colunas.titulo[k]` é o título do k-ésimo imóvel): 40% menor
+//                               que uma lista de objetos depois do gzip;
+//   site/detalhes/00..1f.json.gz o resto do ImovelDetalhe (o que não está na lista), repartido em 32
+//                               pedaços pelo hash do id (FNV-1a de 32 bits, módulo 32): a página do
+//                               imóvel carrega só um pedaço.
+//
+// O detalhe completo = linha da lista + pedaço do detalhe; as tags do detalhe trazem confiança,
+// origem e evidência (trecho já mascarado) e são casadas pelo slug com as da lista. O link
+// "Ver endereço no Google Maps" é montado pelo servidor a partir do endereço da lista (não ocupa
+// espaço aqui). Tudo gzip nível 9; mesma base, mesmos bytes (fora `gerado_em`).
+
+// Espelho do contrato do site (src/lib/catalogo/tipos.ts). A base é um projeto TypeScript à parte
+// (ESM, module nodenext) e não consegue importar aquele arquivo; o site confere cada campo ao carregar
+// (src/lib/catalogo/instantaneo.ts) e o teste do site lê os arquivos gerados. Mudou lá, mude aqui.
+type TipoCatalogo = "apartamento" | "casa" | "terreno" | "comercial" | "rural" | "outro";
+type PracaCatalogo = "1" | "2" | "unica";
+type PrecisaoGeo = "exata" | "rua" | "cep" | "bairro" | "cidade";
+type Ocupacao = "ocupado" | "desocupado";
+
+export interface TagResumo {
+  slug: string;
+  rotulo: string;
+  severidade: Severidade;
+  emRevisao: boolean;
+}
+
+export interface TagDetalhe extends TagResumo {
+  confianca: Confianca;
+  origem: string;
+  evidencia: string | null;
+}
+
+/** ImovelResumo do site. */
+export interface ImovelResumo {
+  id: string;
+  titulo: string;
+  tipo: TipoCatalogo;
+  uf: string;
+  cidade: string;
+  bairro: string | null;
+  lat: number | null;
+  lon: number | null;
+  precisaoGeo: PrecisaoGeo | null;
+  area: number | null;
+  areaTerreno: number | null;
+  quartos: number | null;
+  vagas: number | null;
+  avaliacao: number | null;
+  lance: number;
+  desagio: number | null;
+  lanceM2: number | null;
+  avaliacaoM2: number | null;
+  modalidade: Modalidade;
+  modalidadeFonte: string | null;
+  praca: PracaCatalogo | null;
+  dataPraca: string | null;
+  financiamento: boolean | null;
+  fgts: boolean | null;
+  parcelamento: boolean | null;
+  ocupacao: Ocupacao | null;
+  judicial: boolean | null;
+  fonte: { id: string; nome: string };
+  foto: string | null;
+  totalFotos: number;
+  selo: 0 | 1 | 2 | 3;
+  seloPendente: boolean;
+  tags: TagResumo[];
+  coletadoEm: string;
+}
+
+export interface LinkImovel {
+  tipo: "anuncio" | "edital" | "matricula" | "laudo" | "avaliacao" | "leiloeiro" | "processo" | "mapa" | "outro";
+  rotulo: string;
+  url: string;
+  descricao?: string;
+}
+
+export interface PracaDetalhe {
+  numero: 0 | 1 | 2 | 3;
+  data: string | null;
+  valorMinimo: number | null;
+}
+
+/** ImovelDetalhe do site. */
+export interface ImovelDetalhe extends Omit<ImovelResumo, "tags"> {
+  tags: TagDetalhe[];
+  endereco: string | null;
+  areaTotal: number | null;
+  areaPrivativa: number | null;
+  descricao: string | null;
+  fotos: string[];
+  pracas: PracaDetalhe[];
+  matricula: string | null;
+  cartorio: string | null;
+  numeroProcesso: string | null;
+  leiloeiro: string | null;
+  comitente: string | null;
+  links: LinkImovel[];
+  condicoesPagamento: string | null;
+  geradoNaFonteEm: string | null;
+  porQueSelo: string;
+}
+
+export const PASTA_CATALOGO = "site";
+export const ARQUIVO_CATALOGO_LISTA = "imoveis.json.gz";
+export const PASTA_CATALOGO_DETALHES = "detalhes";
+export const PARTES_CATALOGO = 32;
+/** Versão do formato do catálogo (lista e detalhes). Suba quando mudar algo de forma incompatível. */
+export const VERSAO_CATALOGO = 1;
+
+/** Uma linha da lista: o resumo do imóvel e o endereço (para a busca por texto no servidor). */
+export interface LinhaCatalogo extends ImovelResumo {
+  endereco: string | null;
+}
+
+/** O que o detalhe tem além da linha da lista. */
+export interface DetalheCatalogo extends Omit<ImovelDetalhe, keyof ImovelResumo | "endereco"> {
+  /** Mesma ordem e mesmos slugs das tags da linha. */
+  tags: Array<Pick<TagDetalhe, "slug" | "confianca" | "origem" | "evidencia">>;
+}
+
+export interface FonteCatalogo extends FonteExportada {
+  /** Imóveis desta fonte no catálogo. */
+  total: number;
+}
+
+/** Campos de uma linha, na ordem das colunas do arquivo. */
+export const CAMPOS_LINHA = [
+  "id", "titulo", "tipo", "uf", "cidade", "bairro", "lat", "lon", "precisaoGeo", "area", "areaTerreno", "quartos", "vagas",
+  "avaliacao", "lance", "desagio", "lanceM2", "avaliacaoM2", "modalidade", "modalidadeFonte", "praca", "dataPraca",
+  "financiamento", "fgts", "parcelamento", "ocupacao", "judicial", "fonte", "foto", "totalFotos", "selo", "seloPendente",
+  "tags", "coletadoEm", "endereco",
+] as const satisfies readonly (keyof LinhaCatalogo)[];
+// Campo novo em LinhaCatalogo sem coluna não compila.
+const TODOS_OS_CAMPOS: [Exclude<keyof LinhaCatalogo, (typeof CAMPOS_LINHA)[number]>] extends [never] ? true : never = true;
+void TODOS_OS_CAMPOS;
+
+/** Colunas da lista: um array por campo, todos com `total` posições. */
+export type ColunasCatalogo = { [K in keyof LinhaCatalogo]: Array<LinhaCatalogo[K]> };
+
+export interface ListaCatalogo {
+  formato: "luneta-catalogo";
+  versao: number;
+  gerado_em: string;
+  criterio: string;
+  fontes: FonteCatalogo[];
+  total: number;
+  /** Em quantos pedaços estão os detalhes (arquivos detalhes/00.json.gz em diante). */
+  partes: number;
+  colunas: ColunasCatalogo;
+}
+
+/** Linhas → colunas (o arquivo guarda colunas). */
+export function emColunas(linhas: readonly LinhaCatalogo[]): ColunasCatalogo {
+  const colunas = {} as Record<string, unknown[]>;
+  for (const campo of CAMPOS_LINHA) colunas[campo] = linhas.map((l) => l[campo]);
+  return colunas as ColunasCatalogo;
+}
+
+/** Colunas → linhas (o contrário de `emColunas`). */
+export function deColunas(colunas: ColunasCatalogo, total: number): LinhaCatalogo[] {
+  return Array.from({ length: total }, (_, k) => {
+    const linha = {} as Record<string, unknown>;
+    for (const campo of CAMPOS_LINHA) linha[campo] = colunas[campo][k];
+    return linha as unknown as LinhaCatalogo;
+  });
+}
+
+export interface ParteCatalogo {
+  formato: "luneta-catalogo-detalhes";
+  versao: number;
+  /** Igual ao da lista: pedaço de outra geração é recusado pelo site. */
+  gerado_em: string;
+  parte: string;
+  total: number;
+  detalhes: Record<string, DetalheCatalogo>;
+}
+
+export interface Catalogo {
+  lista: ListaCatalogo;
+  partes: ParteCatalogo[];
+}
+
+export interface ResumoCatalogo {
+  total: number;
+  arquivos: string[];
+  /** Tamanho em bytes da lista e de todos os pedaços juntos. */
+  bytes: { lista: number; detalhes: number };
+}
+
+/**
+ * Pedaço dos detalhes de um id do site: FNV-1a de 32 bits sobre as unidades UTF-16 do id, módulo
+ * `partes`, em 2 dígitos hexadecimais ("00".."1f"). O site repete esta conta em
+ * src/lib/catalogo/instantaneo.ts; o teste do site confere que cada id está no pedaço calculado.
+ */
+export function parteDoId(id: string, partes: number = PARTES_CATALOGO): string {
+  let h = 0x811c9dc5;
+  for (let k = 0; k < id.length; k++) {
+    h ^= id.charCodeAt(k);
+    h = Math.imul(h, 0x01000193);
+  }
+  return ((h >>> 0) % partes).toString(16).padStart(2, "0");
+}
+
+const TIPOS_CATALOGO: ReadonlySet<string> = new Set<TipoCatalogo>(["apartamento", "casa", "terreno", "comercial", "rural", "outro"]);
+const PRACA_CATALOGO: Readonly<Record<number, PracaCatalogo>> = { 0: "unica", 1: "1", 2: "2" };
+const PRECISOES: ReadonlySet<string> = new Set<PrecisaoGeo>(["exata", "rua", "cep", "bairro", "cidade"]);
+const ROTULO_DOCUMENTO: Readonly<Record<string, string>> = {
+  edital: "Edital",
+  matricula: "Matrícula",
+  laudo: "Laudo",
+  avaliacao: "Avaliação",
+  outro: "Documento",
+};
+
+/** Só https (o site nunca abre http); http vira https, o resto (javascript:, ftp:...) cai fora. */
+function https(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const limpo = url.trim();
+  if (/^https:\/\//i.test(limpo)) return limpo;
+  if (/^http:\/\//i.test(limpo)) return `https://${limpo.slice(7)}`;
+  return null;
+}
+
+const positivo = (v: number | null | undefined): number | null => (v !== null && v !== undefined && Number.isFinite(v) && v > 0 ? v : null);
+const semZeroNegativo = (v: number): number => (Object.is(v, -0) ? 0 : v);
+
+/** Abaixo disso, área privativa de casa ou apartamento é erro de digitação da fonte (5,69 m² com total de 71,35 m²). */
+const PRIVATIVA_MINIMA_RESIDENCIAL = 15;
+
+/**
+ * Área principal (m²), a que o R$/m² usa: a privativa, senão a total, senão a do terreno. Terreno e
+ * rural: a do terreno primeiro (é a que o título mostra; a fonte às vezes põe 1 m² na "total" de um
+ * terreno de 800 m², ou a área da casa na "privativa" de uma gleba de 21 ha). Casa ou apartamento com
+ * privativa abaixo de 15 m² usa a total (vírgula fora do lugar na fonte); o detalhe continua mostrando
+ * as três áreas como a fonte publica.
+ */
+export function areaPrincipal(i: Pick<ImovelExportado, "tipo" | "area_privativa" | "area_total" | "area_terreno">): number | null {
+  const privativa = positivo(i.area_privativa);
+  const total = positivo(i.area_total);
+  const terreno = positivo(i.area_terreno);
+  if (i.tipo === "terreno" || i.tipo === "rural") return terreno ?? total ?? privativa;
+  const residencial = i.tipo === "apartamento" || i.tipo === "casa";
+  const privativaPlausivel = privativa !== null && (!residencial || privativa >= PRIVATIVA_MINIMA_RESIDENCIAL) ? privativa : null;
+  return privativaPlausivel ?? total ?? terreno ?? privativa;
+}
+
+/** R$/m² inteiro; com centavos abaixo de R$ 10/m² (glebas e áreas rurais), para não virar "R$ 0/m²". */
+function porM2(valor: number, area: number): number {
+  const x = valor / area;
+  return x >= 10 ? Math.round(x) : Math.round(x * 100) / 100;
+}
+
+/** "MATRÍCULA 13.941" → "Matrícula 13.941" (títulos todos em maiúsculas viram frase). */
+function tituloLegivel(titulo: string): string {
+  const t = titulo.replace(/\s+/g, " ").trim();
+  if (/\p{Ll}/u.test(t)) return t;
+  const minusculo = t.toLocaleLowerCase("pt-BR");
+  return minusculo.charAt(0).toLocaleUpperCase("pt-BR") + minusculo.slice(1);
+}
+
+function numeroExtra(v: unknown): number | null {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.replace(",", ".")) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Parcelamento oferecido pela fonte, quando ela diz (hoje só a Leilões Judiciais, nos campos
+ * nu_parcelas, vl_percentualentrada e indice_correcao): "Entrada de 25% e o restante em até 30
+ * parcelas (IPCA)". Pagamento à vista não vira frase: o padrão da fonte (1 parcela, 100% de entrada)
+ * não distingue "à vista" de "não informado".
+ */
+export function condicoesDePagamento(extras: Readonly<Record<string, unknown>>): string | null {
+  const parcelas = numeroExtra(extras.nu_parcelas);
+  const entrada = numeroExtra(extras.vl_percentualentrada);
+  if (parcelas === null || parcelas <= 1 || entrada === null || entrada <= 0 || entrada >= 100) return null;
+  const indice = typeof extras.indice_correcao === "string" ? extras.indice_correcao.replace(/\s*\(.*?\)\s*/g, " ").trim() : "";
+  const pct = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(entrada);
+  return `Entrada de ${pct}% e o restante em até ${Math.round(parcelas)} parcelas${indice ? ` (${indice})` : ""}`;
+}
+
+/**
+ * Nome do leiloeiro para o site. Os lotes da Leilões Judiciais gravados a partir da fixture têm
+ * nomes sintéticos ("Leiloeiro Exemplo Dois"): esses ficam de fora, como na amostra.
+ */
+function leiloeiroParaSite(nome: string | null): string | null {
+  if (!nome || /\bexemplo\b/i.test(nome)) return null;
+  return nome;
+}
+
+/** Links da página do imóvel (fora o do Google Maps, que o servidor monta pelo endereço). */
+function linksDoCatalogo(i: ImovelExportado, extras: Readonly<Record<string, unknown>>): LinkImovel[] {
+  const links: LinkImovel[] = [];
+  const portal = PORTAL[i.fonte] ?? i.fonte_nome;
+  const anuncio = https(i.url);
+  if (anuncio) {
+    const lote = i.fonte === "leiloesjudiciais_api";
+    links.push({
+      tipo: "anuncio",
+      rotulo: `Ver ${lote ? "lote" : "anúncio"} na ${portal}`,
+      url: anuncio,
+      descricao: `Página do ${lote ? "lote" : "imóvel"} no site da ${portal}`,
+    });
+  }
+  for (const d of i.documentos) {
+    const url = https(d.url);
+    if (!url) continue;
+    const tipo = (["edital", "matricula", "laudo", "avaliacao"] as const).find((t) => t === d.tipo) ?? "outro";
+    links.push({
+      tipo,
+      rotulo: d.titulo ? tituloLegivel(d.titulo) : (ROTULO_DOCUMENTO[d.tipo] ?? "Documento"),
+      url,
+      descricao: /\.pdf(?:$|[?#])/i.test(url) ? `PDF publicado pela ${portal}` : `Documento publicado pela ${portal}`,
+    });
+  }
+  const site = https(typeof extras.site_leiloeiro === "string" ? extras.site_leiloeiro : null);
+  if (site) {
+    let host = site;
+    try {
+      host = new URL(site).hostname.replace(/^www\./, "");
+    } catch {
+      // URL estranha: mostra como veio
+    }
+    links.push({ tipo: "leiloeiro", rotulo: "Site do leiloeiro", url: site, descricao: host });
+  }
+  return links;
+}
+
+/** Converte um imóvel exportável em linha da lista e detalhe do catálogo; null se o site não consegue mostrá-lo. */
+export function paraCatalogo(i: ImovelExportado, extras: Readonly<Record<string, unknown>> = {}): { linha: LinhaCatalogo; detalhe: DetalheCatalogo } | null {
+  const lance = positivo(i.preco);
+  if (lance === null) return null;
+  const tags = [...i.tags]
+    .map((t) => ({ ...t, severity: (t.severidade as Severidade) ?? "info" }))
+    .sort((a, b) => ORDEM_SEVERIDADE[a.severity] - ORDEM_SEVERIDADE[b.severity] || (ORDEM_TAG.get(a.slug) ?? 99) - (ORDEM_TAG.get(b.slug) ?? 99));
+  const area = areaPrincipal(i);
+  const avaliacao = positivo(i.valor_avaliacao);
+  const fotos = [...i.fotos].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0)).flatMap((f) => https(f.url) ?? []);
+  const linha: LinhaCatalogo = {
+    id: `${PREFIXO_ID[i.fonte] ?? i.fonte.replace(/_/g, "-")}-${i.id_na_fonte}`,
+    titulo: i.titulo,
+    tipo: TIPOS_CATALOGO.has(i.tipo) ? (i.tipo as TipoCatalogo) : "outro",
+    uf: i.uf,
+    cidade: cidadeParaSite(i),
+    bairro: i.bairro,
+    lat: i.lat,
+    lon: i.lon,
+    precisaoGeo: i.precisao_geo && PRECISOES.has(i.precisao_geo) ? (i.precisao_geo as PrecisaoGeo) : null,
+    area,
+    areaTerreno: positivo(i.area_terreno),
+    quartos: positivo(i.quartos),
+    vagas: positivo(i.vagas),
+    avaliacao,
+    lance,
+    desagio: avaliacao === null ? null : semZeroNegativo(Math.round(100 * (1 - lance / avaliacao))),
+    lanceM2: area === null ? null : porM2(lance, area),
+    avaliacaoM2: area === null || avaliacao === null ? null : porM2(avaliacao, area),
+    modalidade: i.modalidade as Modalidade,
+    modalidadeFonte: i.modalidade_fonte,
+    praca: i.praca_atual === null ? null : (PRACA_CATALOGO[i.praca_atual] ?? null),
+    // data que não é data fica de fora: o site recusa o arquivo inteiro se uma linha vier inválida
+    dataPraca: i.data_praca && !Number.isNaN(Date.parse(i.data_praca)) ? i.data_praca : null,
+    financiamento: i.aceita_financiamento,
+    fgts: i.aceita_fgts,
+    parcelamento: i.aceita_parcelamento,
+    ocupacao: i.ocupacao === "ocupado" || i.ocupacao === "desocupado" ? (i.ocupacao satisfies Ocupacao) : null,
+    judicial: i.judicial,
+    fonte: { id: i.fonte, nome: PORTAL[i.fonte] ?? i.fonte_nome },
+    foto: fotos[0] ?? null,
+    totalFotos: fotos.length,
+    selo: 0,
+    seloPendente: true,
+    tags: tags.map((t): TagResumo => ({ slug: t.slug, rotulo: t.rotulo, severidade: t.severity, emRevisao: t.revisao_pendente })),
+    coletadoEm: diaBrasilia(i.primeira_vez_em),
+    endereco: i.endereco,
+  };
+  const detalhe: DetalheCatalogo = {
+    areaTotal: positivo(i.area_total),
+    areaPrivativa: positivo(i.area_privativa),
+    descricao: i.descricao,
+    fotos,
+    pracas: i.pracas.map((p): PracaDetalhe => ({ numero: p.numero, data: p.data ?? null, valorMinimo: p.valor_minimo ?? null })),
+    matricula: i.matricula,
+    cartorio: i.cartorio,
+    numeroProcesso: i.numero_processo,
+    leiloeiro: leiloeiroParaSite(i.leiloeiro),
+    comitente: i.comitente,
+    links: linksDoCatalogo(i, extras),
+    condicoesPagamento: condicoesDePagamento(extras),
+    geradoNaFonteEm: i.gerado_na_fonte_em,
+    porQueSelo: POR_QUE_SEM_SELO,
+    tags: tags.map((t) => ({ slug: t.slug, confianca: t.confianca, origem: t.origem, evidencia: t.trecho })),
+  };
+  return { linha, detalhe };
+}
+
+/** Monta a lista e os pedaços do catálogo (sem gravar). */
+export function montarCatalogo(db: Banco, opcoes: { agora?: Date } = {}): Catalogo {
+  const agora = opcoes.agora ?? new Date();
+  return montarCatalogoDe(db, montarExportaveis(db, { agora }), agora);
+}
+
+/** "São Jorge", "Sao Jorge" e "SAO JORGE" → "sao jorge"; "Gebara (Itambi)" e "Gebara Itambi" → "gebara itambi". */
+function chaveBairro(bairro: string): string {
+  return bairro.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/**
+ * Uma grafia só para o mesmo bairro da mesma cidade. A fonte escreve o mesmo bairro de jeitos
+ * diferentes ("Sao Jorge" 28 vezes e "São Jorge" 1 vez; "Cabucu" e "Cabuçu"), o que repetiria o bairro
+ * no filtro e dividiria a contagem. Fica a grafia acentuada (a do português), depois a que tem
+ * minúsculas, depois a mais usada; no empate, a primeira em ordem alfabética.
+ */
+export function unificarBairros(linhas: LinhaCatalogo[]): void {
+  const grafias = new Map<string, Map<string, number>>();
+  const chave = (l: LinhaCatalogo) => `${l.uf}|${l.cidade}|${chaveBairro(l.bairro!)}`;
+  for (const l of linhas) {
+    if (!l.bairro) continue;
+    const k = chave(l);
+    const contagem = grafias.get(k) ?? new Map<string, number>();
+    contagem.set(l.bairro, (contagem.get(l.bairro) ?? 0) + 1);
+    grafias.set(k, contagem);
+  }
+  const acentos = (s: string) => (s.normalize("NFD").match(/[̀-ͯ]/g) ?? []).length;
+  const escolhida = new Map<string, string>();
+  for (const [k, contagem] of grafias) {
+    if (contagem.size < 2) continue;
+    const [melhor] = [...contagem].sort(
+      ([a, na], [b, nb]) => acentos(b) - acentos(a) || Number(/\p{Ll}/u.test(b)) - Number(/\p{Ll}/u.test(a)) || nb - na || (a < b ? -1 : a > b ? 1 : 0),
+    );
+    escolhida.set(k, melhor![0]);
+  }
+  if (escolhida.size === 0) return;
+  for (const l of linhas) if (l.bairro) l.bairro = escolhida.get(chave(l)) ?? l.bairro;
+}
+
+function montarCatalogoDe(db: Banco, exportaveis: readonly Exportavel[], agora: Date): Catalogo {
+  const gerado_em = agora.toISOString();
+  const convertidos = exportaveis
+    .flatMap((p) => paraCatalogo({ ...p.exportado, descricao: p.gravado.descricao ? truncar(p.gravado.descricao, 4000) : null }, p.gravado.extras) ?? [])
+    .sort((a, b) => (a.linha.id < b.linha.id ? -1 : a.linha.id > b.linha.id ? 1 : 0));
+  unificarBairros(convertidos.map((c) => c.linha));
+  const porFonte = new Map<string, number>();
+  for (const c of convertidos) porFonte.set(c.linha.fonte.id, (porFonte.get(c.linha.fonte.id) ?? 0) + 1);
+  const fontes = fontesExportadas(db).map((f) => ({ ...f, nome: PORTAL[f.id] ?? f.nome, total: porFonte.get(f.id) ?? 0 }));
+  const detalhes = new Map<string, Record<string, DetalheCatalogo>>();
+  for (let k = 0; k < PARTES_CATALOGO; k++) detalhes.set(k.toString(16).padStart(2, "0"), {});
+  for (const c of convertidos) detalhes.get(parteDoId(c.linha.id))![c.linha.id] = c.detalhe;
+  return {
+    lista: {
+      formato: "luneta-catalogo",
+      versao: VERSAO_CATALOGO,
+      gerado_em,
+      criterio: "Todos os imóveis ativos da base, sem praça vencida há mais de 1 dia e com lance informado.",
+      fontes,
+      total: convertidos.length,
+      partes: PARTES_CATALOGO,
+      colunas: emColunas(convertidos.map((c) => c.linha)),
+    },
+    partes: [...detalhes].map(([parte, d]) => ({
+      formato: "luneta-catalogo-detalhes",
+      versao: VERSAO_CATALOGO,
+      gerado_em,
+      parte,
+      total: Object.keys(d).length,
+      detalhes: d,
+    })),
+  };
+}
+
+function gravarGzipAtomico(caminho: string, valor: unknown): number {
+  mkdirSync(dirname(caminho), { recursive: true });
+  // mtime zerado no cabeçalho do gzip (padrão do zlib): mesmo conteúdo, mesmos bytes.
+  const dados = gzipSync(Buffer.from(JSON.stringify(valor), "utf8"), { level: 9 });
+  const temporario = `${caminho}.${process.pid}.tmp`;
+  writeFileSync(temporario, dados);
+  renameSync(temporario, caminho);
+  return dados.length;
+}
+
+/** Grava o catálogo em `pasta` (padrão base/saida/site), tirando pedaços de uma geração anterior que sobrarem. */
+export function gravarCatalogo(pasta: string, catalogo: Catalogo): ResumoCatalogo {
+  const pastaDetalhes = join(pasta, PASTA_CATALOGO_DETALHES);
+  const arquivos: string[] = [];
+  let bytesDetalhes = 0;
+  const esperados = new Set<string>();
+  for (const p of catalogo.partes) {
+    const nome = `${p.parte}.json.gz`;
+    esperados.add(nome);
+    const caminho = join(pastaDetalhes, nome);
+    bytesDetalhes += gravarGzipAtomico(caminho, p);
+    arquivos.push(caminho);
+  }
+  for (const nome of existsSync(pastaDetalhes) ? readdirSync(pastaDetalhes) : []) {
+    if (nome.endsWith(".json.gz") && !esperados.has(nome)) rmSync(join(pastaDetalhes, nome));
+  }
+  // A lista por último: quem lê a lista já encontra os pedaços da mesma geração.
+  const caminhoLista = join(pasta, ARQUIVO_CATALOGO_LISTA);
+  const bytesLista = gravarGzipAtomico(caminhoLista, catalogo.lista);
+  arquivos.unshift(caminhoLista);
+  return { total: catalogo.lista.total, arquivos, bytes: { lista: bytesLista, detalhes: bytesDetalhes } };
 }

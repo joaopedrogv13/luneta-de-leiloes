@@ -66,7 +66,10 @@ export interface ImovelResumo {
   lat: number | null;
   lon: number | null;
   precisaoGeo: PrecisaoGeo | null;
-  /** área principal: privativa, senão total, senão do terreno (m²) */
+  /**
+   * área principal (m²): privativa, senão total, senão do terreno. Terreno e rural: a do terreno primeiro.
+   * Casa/apartamento com privativa abaixo de 15 m² (erro de digitação da fonte) usa a total.
+   */
   area: number | null;
   areaTerreno: number | null;
   quartos: number | null;
@@ -77,9 +80,9 @@ export interface ImovelResumo {
   lance: number;
   /** deságio em % inteiro: 100 × (1 − lance/avaliação); negativo se o lance passa da avaliação; null sem avaliação */
   desagio: number | null;
-  /** lance ÷ área (R$/m²), arredondado; null sem área */
+  /** lance ÷ área (R$/m²), inteiro (com centavos abaixo de R$ 10/m², em glebas); null sem área */
   lanceM2: number | null;
-  /** avaliação ÷ área (R$/m²), arredondado; null sem avaliação ou área */
+  /** avaliação ÷ área (R$/m²), inteiro (com centavos abaixo de R$ 10/m²); null sem avaliação ou área */
   avaliacaoM2: number | null;
   modalidade: Modalidade;
   /** como a fonte chama a modalidade ("Leilão SFI - Edital Único", "Venda Online"...) */
@@ -247,8 +250,12 @@ export interface Facetas {
   ocupacao: OpcaoFaceta[];
   natureza: OpcaoFaceta[];
   fonte: OpcaoFaceta[];
-  /** Luneta: tags com contagem (vazio no Lente) */
-  tags: (OpcaoFaceta & { severidade: Severidade })[];
+  /**
+   * Luneta: tags com contagem (vazio no Lente). Vem toda tag presente nos resultados, confirmada ou em
+   * revisão. `total` = com a tag CONFIRMADA (o que "exigir" daria; pode ser 0 quando só há em revisão);
+   * `comRevisao` = confirmada ou em revisão (o que "esconder" tira). Use `comRevisao` na lista de esconder.
+   */
+  tags: (OpcaoFaceta & { severidade: Severidade; comRevisao?: number })[];
   /** Luneta: selos (vazio no Lente ou com selos pendentes) */
   selo: OpcaoFaceta[];
   lance: Histograma | null;

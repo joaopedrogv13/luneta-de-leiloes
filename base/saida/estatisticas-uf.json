@@ -1,18 +1,18 @@
 {
   "versao": 1,
-  "gerado_em": "2026-10-13T02:53:57.809Z",
+  "gerado_em": "2026-10-14T11:55:00.107Z",
   "fontes": [
     {
       "id": "caixa_csv",
       "nome": "Caixa: Lista de Imóveis (CSV oficial)",
       "gerado_na_fonte_em": "2026-10-08",
-      "coletado_em": "2026-10-13T02:53:08.163Z"
+      "coletado_em": "2026-10-13T02:55:59.703Z"
     },
     {
       "id": "leiloesjudiciais_api",
       "nome": "Leilões Judiciais & Extrajudiciais (API MCP pública)",
       "gerado_na_fonte_em": "2026-10-11T01:35:00.000Z",
-      "coletado_em": "2026-10-13T02:53:20.406Z"
+      "coletado_em": "2026-10-13T02:57:05.200Z"
     }
   ],
   "brasil": {

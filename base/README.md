@@ -34,7 +34,7 @@ npm run base:coletar -- leiloesjudiciais --fixture base/fontes/leiloesjudiciais/
 npm run base:riscos                                        # regras das 26 tags
 npm run base:status                                        # contagens, fotos, geo, tags e última coleta
 npm run base:exportar                                      # JSON completo em base/dados/exportacao/imoveis.json
-npm run base:exportar -- --site                            # instantâneo do site em base/saida/
+npm run base:exportar -- --site                            # instantâneo do site em base/saida/ (amostra, estatísticas e catálogo em site/)
 ```
 
 Checagens e ferramentas:
@@ -102,7 +102,33 @@ Leitura: o CSV da Caixa não traz texto sobre posse, dívidas, processo nem docu
 
 ## Exportação para o site
 
-`npm run base:exportar -- --site [--pasta base/saida] [--amostra 60]` grava dois arquivos pequenos e estáveis, versionados em `base/saida/`:
+`npm run base:exportar -- --site [--pasta base/saida] [--amostra 60] [--banco caminho/luneta.db]` grava, em `base/saida/`, os dois formatos do site: o **catálogo completo** em `site/` (o que a nova área de imóveis lê) e a amostra antiga de 60 imóveis com as estatísticas por UF (a `/previa` antiga ainda usa).
+
+### Catálogo completo (`base/saida/site/`)
+
+Todos os imóveis exportáveis (mesma regra do JSON completo: ativos, sem praça vencida há mais de 1 dia, com lance), no formato de `src/lib/catalogo/tipos.ts` (`ImovelResumo` e `ImovelDetalhe`). Tudo em `.json.gz` (gzip nível 9; mesma base, mesmos bytes, fora `gerado_em`) e versionado no Git: **2,3 MB** com os 21.231 imóveis gerados em 14/10/2026 (meta: até 4 MB; o teste da base confere). O site aplica de novo, a cada busca, o corte de praça vencida há mais de 1 dia: o instantâneo fica no ar por dias e um leilão que já passou sai da lista sem precisar gerar de novo.
+
+- **`imoveis.json.gz`** (≈ 1,0 MB): a lista. `formato: "luneta-catalogo"`, `versao` (hoje 1), `gerado_em`, `criterio`, `fontes` (`id`, `nome`, `gerado_na_fonte_em`, `coletado_em`, `total`), `total`, `partes` (32) e `colunas`: um array por campo do `ImovelResumo` (mais `endereco`, só para a busca por texto do servidor), todos do mesmo tamanho; `colunas.titulo[k]` é o título do k-ésimo imóvel. Em colunas o arquivo fica 40% menor que uma lista de objetos. Vai **com** tags e selo: quem tira tags e selo no plano Lente é o servidor do site, antes de responder.
+- **`detalhes/00.json.gz` … `1f.json.gz`** (≈ 1,3 MB juntos): o resto do `ImovelDetalhe` (áreas, descrição, todas as fotos, praças, matrícula, cartório, processo, comitente, links, condições de pagamento, data na fonte, por que tem ou não selo e, nas tags, `confianca`, `origem` e `evidencia`), num mapa `{id: detalhe}`. O pedaço de cada id é o FNV-1a de 32 bits do id, módulo 32, em hexadecimal (`parteDoId`); a página do imóvel carrega só um pedaço. Cada pedaço leva o `gerado_em` da lista: pedaço de outra geração é recusado.
+
+Regras dos campos:
+- `id` do site: `caixa-<id na fonte>` e `lj-<id na fonte>` (como na amostra). Os 6 tipos entram (rural e outro também).
+- `bairro`: uma grafia só por bairro da mesma cidade (`unificarBairros`): a fonte escreve "Sao Jorge" e "São Jorge", "Cabucu" e "Cabuçu"; fica a acentuada, senão a mais usada. Sem isso o filtro de bairro repetia o bairro e dividia a contagem.
+- `area` (`areaPrincipal`): privativa, senão total, senão do terreno; terreno e rural pela do terreno (a fonte às vezes põe 1 m² na total de um terreno de 800 m², ou a casa na privativa de uma gleba); casa ou apartamento com privativa abaixo de 15 m² (vírgula fora do lugar: 5,69 m² com total de 71,35 m²) usa a total. O detalhe mostra as três áreas como a fonte publica. `lanceM2` e `avaliacaoM2` inteiros, com centavos abaixo de R$ 10/m² (glebas); `desagio` inteiro, negativo quando o lance passa da avaliação, `null` sem avaliação.
+- `praca`: 0 → `"unica"` (venda direta, venda online e licitação da Caixa), 1 → `"1"`, 2 → `"2"`; `null` quando a fonte não diz (Leilão SFI sem ficha, lote da LJ com regra "seg_nulo"). Não há 3ª praça nos dados de hoje; se vier, sai `null`.
+- `ocupacao`: só o campo estruturado da fonte (hoje sempre `null`); a tag "Ocupado" fica nas tags, que o Lente não vê.
+- `tags`: as "sim" consolidadas, da mais grave para a informativa; `emRevisao` = aguarda leitura humana (nunca mostrar como fato); `evidencia` é o trecho já mascarado.
+- `selo: 0` e `seloPendente: true` em tudo (critérios pendentes); `porQueSelo` explica.
+- `coletadoEm`: dia (Brasília) em que o imóvel **apareceu pela primeira vez** na base; é o que ordena "Mais recentes". A data do dado na fonte fica em `geradoNaFonteEm`.
+- Links (sempre `https`; `http` vira `https`, outros esquemas caem fora): anúncio na fonte, documentos (edital, matrícula, laudo, avaliação, com o título da fonte em frase) e site do leiloeiro (`extras.site_leiloeiro` da LJ). O "Ver endereço no Google Maps" é montado pelo site a partir do endereço, para não ocupar espaço aqui.
+- `condicoesPagamento`: da LJ (`nu_parcelas`, `vl_percentualentrada`, `indice_correcao`): "Entrada de 25% e o restante em até 30 parcelas (IPCA)". O padrão da fonte (1 parcela, 100% de entrada) não vira "à vista": não dá para distinguir de "não informado".
+- `leiloeiro`: os nomes da fixture da LJ são sintéticos ("Leiloeiro Exemplo Dois") e ficam de fora. Nenhum campo traz nome de devedor ou parte (LGPD).
+
+O site lê com `src/lib/catalogo/instantaneo.ts` (confere cada campo; versão errada ou arquivo faltando dá erro com o comando para gerar de novo) e guarda em memória por instância (`src/lib/catalogo/dados.ts`). Na Vercel, `outputFileTracingIncludes` em `next.config.ts` leva a pasta para `/api/catalogo` e `/previa/**`. Formato mudou de forma incompatível: suba `VERSAO_CATALOGO` em `base/exportar.ts` e em `src/lib/catalogo/instantaneo.ts`.
+
+### Amostra e estatísticas (`base/saida/*.json`)
+
+Dois arquivos pequenos e estáveis:
 
 - **`amostra-site.json`** (≈ 90 KB): até 60 imóveis no formato `Listing` de `src/content/examples.ts`, com os mesmos nomes de campo do tipo do site: `id`, `title`, `place` ("Bairro · Cidade/UF"), `uf`, `type`, `avaliacao`, `lance`, `desagio`, `praca`, `date` ("19 out"), `seal`, `desocupado`, `tags` (`{label, severity}`), `why`, `photo`, `source` (`{leiloeiro, url, coletadoEm}`) e `point` (`latLonToMap`). Acrescenta `city`, `modalidade`, `dataPraca`, `tagsEmRevisao` e `photoFonte` (`{origem, verificadaEm}`). Correspondência com os nomes em inglês: appraisal = `avaliacao`, minBid = `lance`, discountPct = `desagio`.
 - **`estatisticas-uf.json`** (≈ 45 KB): por UF e para o Brasil, ativos por fonte, modalidade e tipo; cidades e as 5 maiores; deságio (mediana e quartis) e quantos têm preço acima da avaliação; lance e avaliação medianos; com foto e com foto verificada; geocodificados por precisão; praças; tags confirmadas e em revisão; centro no mapa do site.
