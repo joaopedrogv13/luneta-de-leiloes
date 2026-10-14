@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { LockIcon, RingsIcon } from "./parts";
-import { OPEN_FILTERS, prefersReducedMotion, type FilterKey, type Filters, type Plan } from "./shared";
+import { OPEN_FILTERS, UF_NOMES, prefersReducedMotion, type FilterKey, type Filters, type Plan } from "./shared";
 
 /** A contagem "conta" até o novo valor em 300ms (instantânea com "reduzir movimento"). */
 function useCountTo(value: number, ms = 300) {
@@ -33,8 +33,9 @@ const chipOn = "border-latao bg-latao/15 text-luar";
 const chipOff = "border-nevoa/35 text-nevoa hover:border-nevoa/70 hover:text-luar";
 
 /**
- * Barra de filtros: chips com aria-pressed e o "pressionar" de 120ms. "Só com selo" fica travado no
- * plano Lente (cadeado balança e abre o upgrade). A contagem é anunciada a leitores de tela.
+ * Barra de filtros: seletor de estado (as UFs da lista, com quantos itens cada uma tem), chips com
+ * aria-pressed e o "pressionar" de 120ms. "Só com selo" fica travado no plano Lente (cadeado balança e
+ * abre o upgrade). A contagem é anunciada a leitores de tela.
  */
 export function FilterBar({
   plan,
@@ -42,6 +43,9 @@ export function FilterBar({
   count,
   onToggle,
   onLocked,
+  uf,
+  ufs,
+  onUf,
   noun = ["exemplo", "exemplos"],
 }: {
   plan: Plan;
@@ -49,6 +53,11 @@ export function FilterBar({
   count: number;
   onToggle: (k: FilterKey) => void;
   onLocked: (opener: HTMLElement) => void;
+  /** UF escolhida ("" = todos os estados) */
+  uf: string;
+  /** UFs da lista, com o total de cada uma */
+  ufs: readonly { uf: string; total: number }[];
+  onUf: (uf: string) => void;
   /** singular e plural da contagem ("exemplo", "imóvel"…) */
   noun?: readonly [string, string];
 }) {
@@ -71,6 +80,30 @@ export function FilterBar({
       <div role="group" aria-labelledby="rotulo-filtros" className="flex flex-wrap items-center gap-2">
         <span id="rotulo-filtros" className="mr-1 text-[10px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">
           Filtros
+        </span>
+        <span className="relative inline-flex">
+          <select
+            aria-label="Estado"
+            value={uf}
+            onChange={(e) => onUf(e.target.value)}
+            className={`${chipBase} appearance-none pr-8 pointer-fine:pr-7 ${uf ? chipOn : chipOff} [&>option]:bg-tinta [&>option]:text-luar`}
+          >
+            <option value="">Estado: todos</option>
+            {ufs.map((o) => (
+              <option key={o.uf} value={o.uf}>
+                {`${o.uf} · ${UF_NOMES[o.uf] ?? o.uf} (${o.total})`}
+              </option>
+            ))}
+          </select>
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            aria-hidden="true"
+            className={`pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 pointer-fine:right-3 ${uf ? "text-luar" : "text-nevoa"}`}
+          >
+            <path d="M1.5 3.5L5 7l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </span>
         {OPEN_FILTERS.map((f) => (
           <button

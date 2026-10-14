@@ -62,6 +62,7 @@ test("fixture: leilão de imóvel vira edital válido; veículos e concessão de
   const [imovel, misto] = editais;
   assert.ok(imovel && misto);
   assert.equal(imovel.url, "https://pncp.gov.br/app/editais/11222333000181/2026/45");
+  assert.equal(imovel.site_leilao, "https://leiloes.exemplo.test/leilao/3-2026", "linkSistemaOrigem: onde a disputa corre");
   assert.equal(imovel.uf, "SP");
   assert.equal(imovel.cidade, "Exemplópolis");
   assert.equal(imovel.publicado_em, "2026-10-08");

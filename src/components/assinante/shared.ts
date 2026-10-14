@@ -5,14 +5,16 @@ import { SEAL_NAMES } from "@/components/ui/Seal";
 /** Plano mostrado na demonstração (o Telescópio não muda a visão da lista). */
 export type Plan = "lente" | "luneta";
 
-export type FilterKey = "sp" | "apto" | "des30" | "praca2" | "desoc" | "selo";
+export type FilterKey = "apto" | "des30" | "praca2" | "desoc" | "selo";
 export type Filters = Record<FilterKey, boolean>;
 
-export const NO_FILTERS: Filters = { sp: false, apto: false, des30: false, praca2: false, desoc: false, selo: false };
+export const NO_FILTERS: Filters = { apto: false, des30: false, praca2: false, desoc: false, selo: false };
 
-/** Filtros livres nos dois planos. "Só com selo" fica à parte: no plano Lente ele é travado. */
+/**
+ * Filtros livres nos dois planos. "Só com selo" fica à parte: no plano Lente ele é travado.
+ * O estado é um seletor à parte (FilterBar), com as UFs que a lista tem.
+ */
 export const OPEN_FILTERS: { key: Exclude<FilterKey, "selo">; label: string; test: (l: Listing) => boolean }[] = [
-  { key: "sp", label: "Estado: SP", test: (l) => l.uf === "SP" },
   { key: "apto", label: "Apartamentos", test: (l) => l.type === "apartamento" },
   { key: "des30", label: "Deságio ≥ 30%", test: (l) => l.desagio >= 30 },
   { key: "praca2", label: "2ª praça", test: (l) => l.praca === "2ª praça" },
@@ -43,6 +45,8 @@ export type ListOrigin = {
   subtitle: string;
   listLabel: string;
   note: string;
+  /** Frase extra quando nada casa com os filtros (a /previa lembra que é só uma amostra do banco). */
+  emptyNote?: string;
 };
 
 /** Praça como a fonte informou; casos reais sem praça dizem isso, sem adivinhar. */
@@ -101,21 +105,62 @@ export function normalize(text: string) {
 /** Palavras normalizadas (sem acento, minúsculas), separadas por qualquer coisa que não seja letra ou número. */
 const words = (text: string) => normalize(text).split(/[^a-z0-9]+/).filter(Boolean);
 
-const UFS = new Set(
-  "ac al ap am ba ce df es go ma mt ms mg pa pb pr pe pi rj rn rs ro rr sc sp se to".split(" "),
-);
+/** Sigla → nome do estado (seletor de estado e busca por nome). */
+export const UF_NOMES: Record<string, string> = {
+  AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará", DF: "Distrito Federal",
+  ES: "Espírito Santo", GO: "Goiás", MA: "Maranhão", MT: "Mato Grosso", MS: "Mato Grosso do Sul",
+  MG: "Minas Gerais", PA: "Pará", PB: "Paraíba", PR: "Paraná", PE: "Pernambuco", PI: "Piauí",
+  RJ: "Rio de Janeiro", RN: "Rio Grande do Norte", RS: "Rio Grande do Sul", RO: "Rondônia", RR: "Roraima",
+  SC: "Santa Catarina", SP: "São Paulo", SE: "Sergipe", TO: "Tocantins",
+};
+
+const UFS = new Set(Object.keys(UF_NOMES).map((uf) => uf.toLowerCase()));
+
+/** Nomes de estado em palavras normalizadas, o mais longo primeiro ("mato grosso do sul" antes de "mato grosso"); "minas" sozinho vale MG. */
+const ESTADOS: { palavras: string[]; uf: string }[] = [
+  ...Object.entries(UF_NOMES).map(([uf, nome]) => ({ palavras: words(nome), uf: uf.toLowerCase() })),
+  { palavras: ["minas"], uf: "mg" },
+].sort((a, b) => b.palavras.length - a.palavras.length);
+
+/** UFs presentes na lista, com quantos itens cada uma tem, da maior para a menor. */
+export function ufsDaLista(listings: readonly Listing[]) {
+  const n = new Map<string, number>();
+  for (const l of listings) n.set(l.uf, (n.get(l.uf) ?? 0) + 1);
+  return [...n].map(([uf, total]) => ({ uf, total })).sort((a, b) => b.total - a.total || a.uf.localeCompare(b.uf));
+}
 
 /**
- * Busca por título, bairro, cidade e UF; cada termo digitado precisa casar.
- * Termo de 2 letras que é uma UF ("BA", "sp") compara só com a UF do imóvel, para "BA" não trazer
- * Curitiba (PR); os demais casam pelo início de uma palavra ("cur" acha Curitiba, "itiba" não).
+ * Busca por título, bairro, cidade, UF e nome do estado; cada termo digitado precisa casar.
+ * - Nome de estado ("minas gerais", "São Paulo", "pará"; a última palavra pode estar pela metade, "minas ge")
+ *   casa com a UF do imóvel ou com as mesmas palavras no título ou no local (a cidade São Paulo, o bairro
+ *   Minas Gerais).
+ * - Termo de 2 letras que é uma UF ("BA", "sp") compara só com a UF do imóvel, para "BA" não trazer
+ *   Curitiba (PR).
+ * - Os demais casam pelo início de uma palavra ("cur" acha Curitiba, "itiba" não).
  */
 export function matchesQuery(l: Listing, query: string) {
   const terms = words(query);
   if (terms.length === 0) return true;
   const uf = normalize(l.uf);
   const tokens = words(`${l.title} ${l.place}`);
-  return terms.every((t) => (t.length === 2 && UFS.has(t) ? t === uf : tokens.some((w) => w.startsWith(t))));
+  const last = terms.length - 1;
+  for (let i = 0; i < terms.length; ) {
+    const estado = ESTADOS.find(
+      (e) => i + e.palavras.length <= terms.length && e.palavras.every((p, j) => terms[i + j] === p || (j > 0 && i + j === last && p.startsWith(terms[i + j]))),
+    );
+    if (estado) {
+      const grupo = terms.slice(i, i + estado.palavras.length);
+      const naoParcial = grupo.every((t, j) => t === estado.palavras[j]);
+      const nasPalavras = grupo.every((t) => tokens.some((w) => (naoParcial ? w === t : w.startsWith(t))));
+      if (uf !== estado.uf && !nasPalavras) return false;
+      i += grupo.length;
+      continue;
+    }
+    const t = terms[i];
+    if (t.length === 2 && UFS.has(t) ? t !== uf : !tokens.some((w) => w.startsWith(t))) return false;
+    i += 1;
+  }
+  return true;
 }
 
 /** Respeita "reduzir movimento" nas animações feitas em JS (Web Animations API, contagens). */

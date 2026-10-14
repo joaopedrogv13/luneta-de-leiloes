@@ -23,6 +23,8 @@ test("migração cria o esquema v1, aplica as migrações do repositório e é i
   assert.equal(primeira.aplicadas[0], "esquema.sql");
   assert.ok(primeira.aplicadas.includes("002-edital-documentos.sql"));
   assert.ok(db.prepare("PRAGMA table_info(edital)").all().some((c) => c.name === "documentos"));
+  assert.ok(primeira.aplicadas.includes("003-edital-site-leilao.sql"));
+  assert.ok(db.prepare("PRAGMA table_info(edital)").all().some((c) => c.name === "site_leilao"));
   const antes = tabelas(db);
   for (const t of ["fonte", "coleta", "imovel", "praca", "preco_historico", "foto", "documento", "risco", "edital", "imovel_busca", "edital_busca"]) {
     assert.ok(antes.includes(t), `falta a tabela ${t}`);

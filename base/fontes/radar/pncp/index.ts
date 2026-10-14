@@ -52,7 +52,7 @@ import {
 } from "../comum.ts";
 import { diaCompacto, janelaDoAmbiente, robotsLigado, somarDias, type Ambiente, type Janela } from "../config.ts";
 import { analisarLeilaoImovel, type AnaliseLeilaoImovel } from "../filtro.ts";
-import { extrairDataLeilao, extrairLocal, type Local } from "../texto.ts";
+import { extrairDataLeilao, extrairLocal, extrairSiteLeilao, type Local } from "../texto.ts";
 
 export const BASE_PNCP = "https://pncp.gov.br";
 
@@ -474,6 +474,8 @@ export function criarConectorPncp(config: ConfigPncp = {}): Conector<BrutoPncp> 
         // Leilão eletrônico: a disputa abre quando o recebimento de propostas encerra.
         data_leilao: encerramento ?? abertura ?? extrairDataLeilao(analise.texto, publicado, agora()),
         url,
+        // o sistema onde a disputa corre (linkSistemaOrigem); sem ele, o site citado no objeto ou no complemento
+        site_leilao: origem ?? extrairSiteLeilao(analise.texto),
         resumo: linhas.join("\n"),
         // null (sem --detalhes): o núcleo mantém os arquivos já gravados.
         documentos: documentosDoPncp(bruto.arquivos),

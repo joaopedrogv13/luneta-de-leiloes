@@ -10,7 +10,7 @@ entrega (última atualização: 13/10/2026).
   `base/FONTES.md`, caminho até o site em `base/FASE1-SITE.md`.
 - **Análise de negócio, conversão e jurídico:** https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7
 
-## Painel (13/10/2026)
+## Painel (14/10/2026)
 
 ### Que dados temos hoje
 
@@ -24,6 +24,19 @@ entrega (última atualização: 13/10/2026).
 
 Resumo: **só a Caixa está de fato no banco.** As outras fontes com API estão ligadas no código, mas esperam a rede. Bancos
 privados, prefeituras e a maior parte dos leiloeiros não têm API: entram na opção 2.
+
+**"Não acho Minas Gerais" (14/10/2026): os dados estão lá, a tela é que não ajudava.** O banco tem **747 imóveis de MG**
+(Uberlândia 109, Uberaba 83, Ribeirão das Neves 82, Juiz de Fora 52, Belo Horizonte 37...), igual às 747 linhas de MG no
+CSV da Caixa. A /previa mostra só uma **amostra de 60** (3 de MG: Almenara e Uberlândia), o único filtro de estado era o
+chip fixo "Estado: SP" e a busca só entendia a sigla ("MG"), não "Minas" nem "Minas Gerais". Corrigido:
+- seletor de estado com as UFs da lista e quantas cada uma tem ("MG · Minas Gerais (3)");
+- a busca entende o nome do estado ("minas", "Minas Gerais", "São Paulo", "pará"), além da sigla;
+- com um estado escolhido, a barra diz "Minas Gerais: 3 imóveis nesta amostra, de 747 no banco inteiro";
+- o resumo do topo abre as 27 UFs, e a busca sem resultado lembra que a prévia é uma amostra.
+
+MG pesa pouco (3,5% do banco) porque reflete o estoque da Caixa em 08/10/2026 (RJ sozinho tem 34%). Leilões judiciais,
+de bancos privados e de leiloeiros de MG ainda não entraram (radar e opção 2). Falta a prévia com o banco inteiro (busca
+e paginação no servidor; ver "Técnico").
 
 ### Próximos passos (em ordem)
 
@@ -69,7 +82,7 @@ Com o que temos hoje (só a lista da Caixa), **em parte**:
 | **Em revisão** | Preço acima do mercado (2.039 imóveis) | é "acima da avaliação", não do mercado: não temos preço de mercado |
 | **Sem dado ainda** | Ocupado/Desocupado · Condomínio e IPTU em atraso · Dívida passa ao arrematante · Ação judicial · Penhora · Recurso · Matrícula · Construção irregular · Área divergente · Cota-parte · Sem vistoria · Sem fotos (fotos não conferidas) | a lista da Caixa não traz isso; vem da página do imóvel, do edital e da matrícula |
 
-As regras foram escritas com textos reais e têm 423 testes, mas o corpus é pequeno (10 lotes, 2 páginas da Caixa,
+As regras foram escritas com textos reais e a base tem 425 testes, mas o corpus é pequeno (10 lotes, 2 páginas da Caixa,
 cláusulas de editais) e **a precisão nunca foi medida numa amostra rotulada**. Por isso: no site, só as tags de confiança
 alta aparecem como fato; o resto fica "em revisão" ou "não informado" até a auditoria do advogado.
 
@@ -102,6 +115,41 @@ pública**: ver "Opção 2" abaixo.
    por link, limite de consultas, existência de listagem completa, atribuição).
 3. Com a resposta e a rede liberada, eu rodo a primeira varredura (27 UFs × termos, cerca de 405 buscas) e medimos a
    cobertura real.
+
+### Diários e editais em texto (DJEN, DOU, Querido Diário): o que dão
+
+Os três são **grátis** (o DOU pede só uma conta no INLABS) e entregam **texto**, sem foto e sem campos de preço por praça. O
+PNCP é a exceção: traz campos estruturados e os arquivos do edital (PDF do edital, laudo, matrícula).
+
+| Fonte | O que vem | Link do documento (`url`) | Link do leilão (`site_leilao`, desde 14/10/2026) |
+| --- | --- | --- | --- |
+| Diário da Justiça (DJEN / Comunica PJe) | texto do edital, processo, vara, tribunal (MG: TJMG, TRT3 e TRF6) | comunicação no sistema do tribunal | site do leiloeiro citado no texto ou no HTML |
+| DOU, seção 3 | avisos de órgãos federais (ex.: Patrimônio da União) | página da matéria no DOU | site citado no texto (muitas vezes gov.br ou o leiloeiro) |
+| Querido Diário | trechos dos diários oficiais de parte dos municípios | PDF do diário | site citado nos trechos (o trecho pode cortar o site) |
+| PNCP | objeto, datas, valor, órgão e arquivos do edital | página da compra no PNCP | `linkSistemaOrigem`, o sistema onde a disputa corre |
+
+**Como chegar ao leilão:** o edital judicial quase sempre diz onde o leilão acontece ("leilão eletrônico pelo site
+www..."). O CPC (art. 887, §2º) manda publicar o edital na internet, num site designado pelo juiz, em geral o do leiloeiro. A
+base agora extrai esse endereço e o guarda em `site_leilao`, separado do documento oficial. Limites:
+- o link costuma levar à página do leiloeiro ou do leilão, nem sempre ao lote exato; casar com o lote exige ler o site do
+  leiloeiro (opção 2);
+- quando o texto não cita site, sobram o nome do leiloeiro e o número do processo, para busca manual;
+- o DJEN pode vir truncado (a única amostra real de edital veio cortada antes da descrição do bem), e aí o texto completo
+  fica no documento do tribunal.
+
+**Leilões que nenhum outro site tem?** Ninguém tem acesso exclusivo: os editais são públicos por lei, e o leilão judicial
+também está no site do leiloeiro. A vantagem é **achar** o que os portais grandes não juntam:
+- **Prefeituras pequenas** (Querido Diário): é a melhor chance. Municípios com até 20 mil habitantes ainda podem publicar só
+  no diário oficial em vez do PNCP (Lei 14.133, art. 176, prazo até 2027), e terrenos e lotes de prefeitura raramente
+  entram nos portais de leilão.
+- **Leiloeiros pequenos e varas do interior** (DJEN): o leilão está no site do leiloeiro, mas os agregadores leem só as
+  plataformas maiores. Ainda não está confirmado que todo edital de leilão passa pela Plataforma de Editais (`meio=E`).
+- **Órgãos federais** (DOU): imóveis da União e de autarquias, que costumam estar também no site do órgão.
+- **Fora dos diários:** os leilões extrajudiciais dos bancos (Itaú, Bradesco, Santander, C6, alienação fiduciária) não
+  passam por nenhum desses diários. Saem em jornal e no site do leiloeiro: continuam sendo opção 2.
+
+**Quantos são, não sabemos ainda.** Medir quando a rede abrir: 2 semanas de radar, depois uma amostra de 50 editais
+conferida à mão no LeilãoMap e nos portais grandes, para saber quantos são "só nossos" e quantos trazem `site_leilao`.
 
 ### Ler cada leilão com IA: é viável?
 
@@ -209,6 +257,13 @@ pelo valor real no arquivo de conteúdo.
 - [ ] Tirar a `/previa` do ar antes do lançamento (ou protegê-la), e regerar `base/saida/` a partir da coleta oficial.
 - [ ] Opção 2 (raspagem): plataformas white-label primeiro (Superbid, V-Lance, Suporte Leilões, SOLEON, Leilão PRO), depois
   leiloeiros e bancos, sempre respeitando robots.txt e termos; DataJud e Suporte Leilões só com termo/parceria.
+- [ ] Prévia com o banco inteiro: busca, filtro por estado e paginação no servidor (hoje a /previa leva só a amostra de 60
+  para o navegador; o seletor de estado e a busca por nome do estado já funcionam, 14/10/2026).
+- [ ] Medir o radar ao vivo (quando a rede abrir): 2 semanas de PNCP, DJEN, DOU e Querido Diário; quantos editais de imóvel
+  por semana e por UF, quantos com `site_leilao`, e uma amostra de 50 conferida à mão nos portais para saber quantos são
+  "só nossos".
+- [ ] Querido Diário: quando o trecho não trouxer o site do leiloeiro, ler o texto completo do diário (`txt_url`, já vem na
+  resposta da API).
 
 ## Antes de publicar: checagem e buscadores
 

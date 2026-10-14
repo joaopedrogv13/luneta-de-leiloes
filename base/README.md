@@ -207,7 +207,7 @@ base/
   testes/apoio.ts     banco em memória, imóvel de exemplo, conector falso
   geo/                municípios do IBGE (sede e raio), apelidos, geocodificação, posição no mapa do site
   dedup/              chaves de deduplicação: matrícula + cartório, endereço em partes (README com a precisão)
-  migracoes/          002-edital-documentos.sql; as próximas: 003-descricao.sql, ...
+  migracoes/          002-edital-documentos.sql, 003-edital-site-leilao.sql; as próximas: 004-descricao.sql, ...
 ```
 
 ## Contrato de um conector
@@ -273,7 +273,7 @@ O que os conectores podem preencher para as regras: `ocupacao` (campo estruturad
 
 ## Banco
 
-Tabelas: `fonte`, `coleta` (log de cada execução), `imovel`, `praca`, `preco_historico`, `foto`, `documento`, `risco`, `edital`, mais `imovel_busca`/`edital_busca` (FTS5, sem acento). Migrações: `esquema.sql` é a versão 1 e não muda mais depois de publicado; cada mudança nova vai em `base/migracoes/NNN-descricao.sql` (002, 003...) e `migrar` aplica em ordem, cada uma na sua transação. `002-edital-documentos.sql` acrescenta `edital.documentos` (JSON com os links dos arquivos do edital); uma coleta que não consulta os arquivos (`documentos` ausente) mantém os gravados. O topo de `esquema.sql` diz como portar para Postgres.
+Tabelas: `fonte`, `coleta` (log de cada execução), `imovel`, `praca`, `preco_historico`, `foto`, `documento`, `risco`, `edital`, mais `imovel_busca`/`edital_busca` (FTS5, sem acento). Migrações: `esquema.sql` é a versão 1 e não muda mais depois de publicado; cada mudança nova vai em `base/migracoes/NNN-descricao.sql` (002, 003...) e `migrar` aplica em ordem, cada uma na sua transação. `002-edital-documentos.sql` acrescenta `edital.documentos` (JSON com os links dos arquivos do edital); uma coleta que não consulta os arquivos (`documentos` ausente) mantém os gravados. `003-edital-site-leilao.sql` acrescenta `edital.site_leilao`, o site onde se dá o lance (leiloeiro ou plataforma), separado de `url`, que é o documento oficial; coleta sem site mantém o gravado. O topo de `esquema.sql` diz como portar para Postgres.
 
 ## LGPD
 

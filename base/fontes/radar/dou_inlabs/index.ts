@@ -44,7 +44,7 @@ import { colapsarEspacos, decodificarEntidades, semHtml } from "../../../util/te
 import { esperarPadrao, exigirObjeto, texto, urlOuNulo, type Esperar } from "../comum.ts";
 import { diasDaJanela, janelaDoAmbiente, listaDoAmbiente, robotsLigado, type Ambiente, type Janela } from "../config.ts";
 import { analisarLeilaoImovel, ehCabecalhoDeResultado, motivoSemLeilaoFuturo } from "../filtro.ts";
-import { extrairDataLeilao, extrairLocal, resumoRelevante } from "../texto.ts";
+import { extrairDataLeilao, extrairLocal, extrairSiteLeilao, resumoRelevante } from "../texto.ts";
 import { lerZip, pareceZip } from "../zip.ts";
 
 export const URL_INLABS = "https://inlabs.in.gov.br";
@@ -375,6 +375,8 @@ export function criarConectorDouInlabs(config: ConfigDouInlabs = {}): Conector<A
         publicado_em: publicado,
         data_leilao: dataLeilao,
         url,
+        // o texto, e depois os href do HTML ("clique aqui" com o link do leiloeiro)
+        site_leilao: extrairSiteLeilao(analise.texto) ?? extrairSiteLeilao(corpoSemCabecalho),
         resumo: resumoRelevante(analise),
       };
     },

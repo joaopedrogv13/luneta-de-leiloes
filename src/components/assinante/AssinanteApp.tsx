@@ -10,7 +10,7 @@ import { FilterBar } from "./FilterBar";
 import { ListingRow } from "./ListingRow";
 import { MapPanel } from "./MapPanel";
 import { RingsIcon } from "./parts";
-import { LUNETA_PRICE, NO_FILTERS, OPEN_FILTERS, matchesQuery, type FilterKey, type Filters, type ListOrigin, type Plan } from "./shared";
+import { LUNETA_PRICE, NO_FILTERS, OPEN_FILTERS, UF_NOMES, matchesQuery, ufsDaLista, type FilterKey, type Filters, type ListOrigin, type Plan } from "./shared";
 import { UpgradeModal } from "./UpgradeModal";
 
 type Toast = { id: number; text: string; leaving: boolean };
@@ -31,17 +31,23 @@ const EXEMPLOS: ListOrigin = {
  * Área do assinante (demonstração, só front-end): filtros, busca, lista em linhas, mapa e detalhe,
  * vista como plano Lente (tags e selos desfocados) ou Luneta (tudo nítido). Começa na Luneta;
  * ?plano=lente na URL começa no Lente. Sem `listings`, usa os exemplos fictícios de src/content/examples.ts;
- * a /previa passa os casos reais da base, com `origin` e `planOnServer`.
+ * a /previa passa os casos reais da base, com `origin`, `planOnServer` e `ufNoBanco`.
  */
 export function AssinanteApp({
   initialPlan,
   listings = LISTINGS,
   origin = EXEMPLOS,
   planOnServer = false,
+  ufNoBanco,
 }: {
   initialPlan: Plan;
   listings?: Listing[];
   origin?: ListOrigin;
+  /**
+   * Quantos imóveis cada UF tem no banco inteiro (a /previa mostra só uma amostra): com um estado
+   * escolhido, a barra diz quantos dele estão na amostra e quantos há no banco.
+   */
+  ufNoBanco?: Readonly<Record<string, number>>;
   /**
    * A lista vem do servidor já no formato do plano (no Lente, sem tags nem explicação): trocar de plano
    * pede a página de novo (?plano=lente) e o plano mostrado é o da lista recebida, nunca à frente dela.
@@ -58,6 +64,7 @@ export function AssinanteApp({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [uf, setUf] = useState("");
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [shownId, setShownId] = useState(listings[0].id);
@@ -111,13 +118,17 @@ export function AssinanteApp({
       listings
         .filter(
           (l) =>
+            (!uf || l.uf === uf) &&
             OPEN_FILTERS.every((f) => !filters[f.key] || f.test(l)) &&
             (!filters.selo || lente || l.seal > 0) &&
             matchesQuery(l, query),
         )
         .sort((a, b) => b.desagio - a.desagio),
-    [listings, filters, lente, query],
+    [listings, uf, filters, lente, query],
   );
+  const ufs = useMemo(() => ufsDaLista(listings), [listings]);
+  const ufNaLista = ufs.find((o) => o.uf === uf)?.total ?? 0;
+  const ufBanco = uf && ufNoBanco ? ufNoBanco[uf] : undefined;
 
   const openDetail = (id: string, opener: HTMLElement) => {
     drawerOpener.current = opener;
@@ -152,6 +163,7 @@ export function AssinanteApp({
 
   const clearAll = () => {
     setFilters(NO_FILTERS);
+    setUf("");
     setQuery("");
     requestAnimationFrame(() => listRef.current?.querySelector<HTMLElement>("[data-open]")?.focus());
   };
@@ -168,7 +180,24 @@ export function AssinanteApp({
           <h1 className="mb-3.5 font-display text-[13px] leading-none font-bold tracking-[-0.005em] text-luar">
             Leilões de imóveis <span className="font-medium text-nevoa">{`· ${origin.subtitle}`}</span>
           </h1>
-          <FilterBar plan={plan} filters={filters} count={results.length} onToggle={toggleFilter} onLocked={openUpsell} noun={[origin.one, origin.other]} />
+          <FilterBar
+            plan={plan}
+            filters={filters}
+            count={results.length}
+            onToggle={toggleFilter}
+            onLocked={openUpsell}
+            uf={uf}
+            ufs={ufs}
+            onUf={setUf}
+            noun={[origin.one, origin.other]}
+          />
+          {ufBanco !== undefined && (
+            <p className="mt-3 text-xs leading-normal text-nevoa">
+              {`${UF_NOMES[uf] ?? uf}: ${ufNaLista} ${ufNaLista === 1 ? origin.one : origin.other} nesta amostra, de `}
+              <strong className="font-semibold text-luar tabular-nums">{ufBanco.toLocaleString("pt-BR")}</strong>
+              {` no banco inteiro.`}
+            </p>
+          )}
         </div>
 
         <div className="lg:grid lg:min-h-[calc(100svh-4rem)] lg:grid-cols-[minmax(0,1fr)_400px] 2xl:grid-cols-[minmax(0,1fr)_520px]">
@@ -219,7 +248,7 @@ export function AssinanteApp({
                 <RingsIcon rings={2} size={28} className="mx-auto text-nevoa" />
                 <p className="mt-3 font-display text-lg font-bold">{`Nenhum ${origin.one} com esses filtros.`}</p>
                 <p className="mx-auto mt-1 max-w-[42ch] text-sm leading-normal text-nevoa">
-                  Tire um filtro ou mude a busca para abrir o foco da luneta.
+                  Tire um filtro ou mude a busca para abrir o foco da luneta.{origin.emptyNote && ` ${origin.emptyNote}`}
                 </p>
                 <button type="button" onClick={clearAll} className="btn-ghost mt-5 !min-h-11 cursor-pointer !text-sm">
                   Limpar filtros e busca

@@ -93,6 +93,8 @@ test("fixture: só editais ativos de leilão de imóvel viram edital, sem nomes 
   assert.equal(tjpr.publicado_em, "2026-10-08");
   assert.equal(tjpr.data_leilao, "2026-11-25T17:00:00.000Z");
   assert.equal(tjpr.url, "https://projudi.tjpr.jus.br/projudi/processo/validacaoDocumentos.do?_tj=exemplo0001");
+  assert.equal(tjpr.site_leilao, "https://www.leiloeiro-exemplo.test", "site do leiloeiro citado no texto");
+  assert.equal(trt15.site_leilao, null, "o texto não cita site");
   assert.match(tjpr.resumo ?? "", /^Processo 0009999-11\.2017\.8\.16\.0140; classe Cumprimento de Sentença; documento: Edital\.\n/);
   assert.match(tjpr.resumo ?? "", /executado \[NOME\] \(CPF \[CPF\]\)/);
   assert.match(tjpr.resumo ?? "", /Advogada do exequente: \[NOME\]/);

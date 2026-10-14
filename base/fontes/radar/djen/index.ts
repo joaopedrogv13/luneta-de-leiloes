@@ -40,7 +40,7 @@ import { ehUf } from "../../../util/uf.ts";
 import { comNovaTentativa, ehObjeto, esperarPadrao, exigirObjeto, lerJsonLocal, montarUrl, obterJson, texto, urlOuNulo, type Esperar } from "../comum.ts";
 import { diasDaJanela, janelaDoAmbiente, listaDoAmbiente, robotsLigado, termosDoAmbiente, type Ambiente, type Janela } from "../config.ts";
 import { analisarLeilaoImovel, motivoSemLeilaoFuturo } from "../filtro.ts";
-import { extrairDataLeilao, extrairLocal, mascararNomesConhecidos, resumoRelevante, type Local } from "../texto.ts";
+import { extrairDataLeilao, extrairLocal, extrairSiteLeilao, mascararNomesConhecidos, resumoRelevante, type Local } from "../texto.ts";
 
 export const URL_DJEN = "https://comunicaapi.pje.jus.br/api/v1/comunicacao";
 /** A API só aceita 5 ou 100 itens por página. */
@@ -419,6 +419,8 @@ export function criarConectorDjen(config: ConfigDjen = {}): Conector<Comunicacao
         publicado_em: publicado,
         data_leilao: dataLeilao,
         url,
+        // o texto, e depois os href do HTML (só a URL sai daqui; nada mais do texto bruto é gravado)
+        site_leilao: extrairSiteLeilao(analise.texto) ?? extrairSiteLeilao(c.texto ?? ""),
         resumo: `${cabecalho.length > 0 ? cabecalho.join("; ") + ".\n" : ""}${resumoRelevante(analise)}`,
       };
     },

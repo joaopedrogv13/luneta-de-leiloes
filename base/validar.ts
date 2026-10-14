@@ -134,6 +134,7 @@ export function validarEdital(edital: EditalNormalizado): string[] {
   p(textoPreenchido(edital.id_na_fonte) && edital.id_na_fonte.length <= 300, "id_na_fonte vazio ou longo demais");
   p(textoPreenchido(edital.titulo), "titulo vazio");
   p(ehUrl(edital.url), `url inválida: ${String(edital.url)}`);
+  p(ausente(edital.site_leilao) || ehUrl(edital.site_leilao), `site_leilao inválido: ${String(edital.site_leilao)}`);
   p(ausente(edital.uf) || ehUf(edital.uf), `uf inválida: ${String(edital.uf)}`);
   p(dataOuAusente(edital.publicado_em), "publicado_em fora do padrão");
   p(dataOuAusente(edital.data_leilao), "data_leilao fora do padrão");

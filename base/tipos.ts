@@ -233,8 +233,13 @@ export interface EditalNormalizado {
   publicado_em?: string | null;
   /** Data do leilão, se o aviso informar. */
   data_leilao?: string | null;
-  /** Link para o edital ou o aviso na fonte. */
+  /** Link para o edital ou o aviso na fonte (o documento oficial: diário, DOU, PJe, PNCP). */
   url: string;
+  /**
+   * Site do leilão, onde se dá o lance: o leiloeiro ou a plataforma citados no texto, ou o sistema de
+   * origem informado pela fonte. `null`/`undefined` = não achado: o núcleo mantém o já gravado.
+   */
+  site_leilao?: string | null;
   /** Resumo curto do texto (o núcleo mascara dados pessoais e corta em 2.000 caracteres). */
   resumo?: string | null;
   /** Imóvel da base a que o edital se refere, quando já se sabe. */

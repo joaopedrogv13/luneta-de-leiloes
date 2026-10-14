@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { analisarLeilaoImovel } from "./filtro.ts";
-import { extrairDataLeilao, extrairLocal, mascararNomesConhecidos, numeroDoAviso, resumoRelevante } from "./texto.ts";
+import { extrairDataLeilao, extrairLocal, extrairSiteLeilao, mascararNomesConhecidos, numeroDoAviso, resumoRelevante } from "./texto.ts";
 
 test("data do leilão: primeira data futura depois de leilão/praça, com hora de Brasília em UTC", () => {
   const edital = "1º leilão: 25/11/2026 às 14h00, pela avaliação. 2º leilão: 09/12/2026 às 14h00, por 60% da avaliação.";
@@ -100,4 +100,22 @@ test("nomes rotulados pela fonte são mascarados em qualquer caixa e acento; nom
   assert.equal(saida, "executado [NOME] (CPF ...). Intimem-se [NOME] e a BANCO. Talesfulano FICTICIO DE TALES.");
   assert.equal(mascararNomesConhecidos("RECLAMADO: 50.229.022 ROBSON EXEMPLO, ROBSON EXEMPLO", ["50.229.022 ROBSON EXEMPLO"]), "RECLAMADO: 50.229.022 [NOME], [NOME]");
   assert.equal(mascararNomesConhecidos("sem nomes", []), "sem nomes");
+});
+
+test("site do leilão: leiloeiro ou plataforma citados no texto, com https; tribunal, diário, prefeitura e e-mail não", () => {
+  const casos: Array<[string, string | null]> = [
+    ["EDITAL DE LEILÃO JUDICIAL. Leilão exclusivamente eletrônico (www.leiloeiro-exemplo.test). O Juiz...", "https://www.leiloeiro-exemplo.test"],
+    ["Os lances serão ofertados pelo site www.megaleiloes.com.br, até 10/11/2026.", "https://www.megaleiloes.com.br"],
+    ["leilão pelo portal https://www.zukerman.com.br/leilao/123, valide em https://esaj.tjsp.jus.br/pastadigital", "https://www.zukerman.com.br/leilao/123"],
+    ["Leiloeiro Oficial, JUCEMG 123, site: fulanoleiloes.lel.br.", "https://fulanoleiloes.lel.br"],
+    ["sessão pública de leilão no endereço eletrônico www.gov.br/compras, UASG 123", "https://www.gov.br/compras"],
+    // domínio com cara de leilão vence o site da prefeitura, mesmo vindo depois
+    ["Leilão eletrônico; edital em www.pmexemplo.mg.gov.br e lances na plataforma bll.org.br", "https://bll.org.br"],
+    ["Documento assinado. Valide em https://pje.trt2.jus.br/pjekz/validacao/exemplo0002", null],
+    ["O edital está disponível em www.prefeitura.exemplo.sp.gov.br.", null],
+    ["Contato: leiloeiro@leiloes.com.br, telefone 31 9999-9999", null],
+    ["Leilão, publicado em www.in.gov.br e no DJEN", null],
+    ["Leilão de imóvel. Sem endereço eletrônico.", null],
+  ];
+  for (const [texto, esperado] of casos) assert.equal(extrairSiteLeilao(texto), esperado, texto);
 });

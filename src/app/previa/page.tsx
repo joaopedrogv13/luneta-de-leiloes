@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SITE } from "@/content/site";
 import { AssinanteApp } from "@/components/assinante/AssinanteApp";
 import { BACK_TO_SITE, type ListOrigin, type Plan } from "@/components/assinante/shared";
-import { FAIXA_PREVIA, RESUMO_BANCO, imoveisDaPrevia } from "@/lib/previa";
+import { ATIVOS_POR_UF, FAIXA_PREVIA, RESUMO_BANCO, imoveisDaPrevia } from "@/lib/previa";
 
 const TITLE = "Prévia interna com dados reais | Luneta de Leilões";
 const DESCRIPTION =
@@ -36,6 +36,7 @@ const ORIGEM: ListOrigin = {
   subtitle: "prévia com dados reais",
   listLabel: "Imóveis reais da base, por maior deságio",
   note: `Amostra de ${RESUMO_BANCO.amostra} imóveis reais do banco, escolhidos para variar fonte, modalidade, risco, UF e tipo. Preços, praças e datas mudam: confira sempre o edital no site da fonte.`,
+  emptyNote: `Esta prévia mostra só ${RESUMO_BANCO.amostra} dos ${RESUMO_BANCO.ativos} imóveis do banco: uma cidade pode estar no banco e fora da amostra.`,
 };
 
 const AVISO =
@@ -92,6 +93,20 @@ export default async function PreviaPage({ searchParams }: PageProps<"/previa">)
                 </span>
               ))}
             </dd>
+            <dd className="mt-1.5">
+              <details className="group">
+                <summary className="inline-flex min-h-11 cursor-pointer items-center text-xs font-medium text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-6">
+                  {`Ver as ${RESUMO_BANCO.todasUfs.length} UFs`}
+                </summary>
+                <p className="mt-1 flex max-w-[72ch] flex-wrap gap-x-2.5 gap-y-1 font-semibold text-luar tabular-nums">
+                  {RESUMO_BANCO.todasUfs.map((u) => (
+                    <span key={u.uf} className="whitespace-nowrap">
+                      {u.uf} <span className="font-normal text-nevoa">{u.ativos}</span>
+                    </span>
+                  ))}
+                </p>
+              </details>
+            </dd>
           </div>
           <div>
             <dt className="text-nevoa">Deságio mediano</dt>
@@ -107,7 +122,7 @@ export default async function PreviaPage({ searchParams }: PageProps<"/previa">)
         </p>
       </section>
 
-      <AssinanteApp initialPlan={initialPlan} listings={imoveisDaPrevia(initialPlan)} origin={ORIGEM} planOnServer />
+      <AssinanteApp initialPlan={initialPlan} listings={imoveisDaPrevia(initialPlan)} origin={ORIGEM} planOnServer ufNoBanco={ATIVOS_POR_UF} />
 
       <footer className="border-t border-nevoa/15 px-4 pt-8 pb-16 text-[13px] leading-relaxed text-nevoa sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">

@@ -129,4 +129,12 @@ export const RESUMO_BANCO = {
   // tag "Aceita financiamento" confirmada (vem do campo da fonte; a contagem não soma tags em revisão)
   financiamento: n(BRASIL.tags["aceita-financiamento"] ?? 0),
   amostra: n(LISTAGEM.length),
+  /** Todas as UFs com imóvel ativo, da maior para a menor (o resumo mostra as 5 primeiras e abre o resto). */
+  todasUfs: [...UFS]
+    .filter((u) => u.ativos > 0)
+    .sort((a, b) => b.ativos - a.ativos || a.uf.localeCompare(b.uf))
+    .map((u) => ({ uf: u.uf, ativos: n(u.ativos) })),
 };
+
+/** Imóveis ativos por UF no banco inteiro (a amostra tem poucos de cada): a barra de filtros mostra os dois números. */
+export const ATIVOS_POR_UF: Readonly<Record<string, number>> = Object.fromEntries(UFS.map((u) => [u.uf, u.ativos]));

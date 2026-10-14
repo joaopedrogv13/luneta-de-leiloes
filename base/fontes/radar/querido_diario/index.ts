@@ -36,7 +36,7 @@ import { normalizarUf } from "../../../util/uf.ts";
 import { diaBr, ehObjeto, exigirObjeto, lerJsonLocal, montarUrl, obterJson, texto, urlOuNulo } from "../comum.ts";
 import { janelaDoAmbiente, listaDoAmbiente, robotsLigado, type Ambiente, type Janela } from "../config.ts";
 import { analisarLeilaoImovel, sinaisDeResultado, type AnaliseLeilaoImovel } from "../filtro.ts";
-import { extrairDataLeilao, numeroDoAviso, resumoRelevante } from "../texto.ts";
+import { extrairDataLeilao, extrairSiteLeilao, numeroDoAviso, resumoRelevante } from "../texto.ts";
 
 export const URL_QUERIDO_DIARIO = "https://api.queridodiario.ok.org.br/gazettes";
 
@@ -230,6 +230,8 @@ export function criarConectorQueridoDiario(config: ConfigQueridoDiario = {}): Co
         publicado_em: data,
         data_leilao: extrairDataLeilao(analise.texto, data, agora()),
         url,
+        // só nos trechos que a API devolve: um site citado longe da palavra "leilão" fica de fora
+        site_leilao: extrairSiteLeilao(analise.texto),
         resumo: colapsarEspacos(resumoRelevante(analise)) + "\nFonte: Querido Diário – Open Knowledge Brasil.",
       };
     },

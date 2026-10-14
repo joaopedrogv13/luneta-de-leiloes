@@ -266,6 +266,24 @@ test("editais do radar: upsert, inalterado e vínculo com imóvel", () => {
   assert.equal(e?.cidade_norm, "sao-paulo");
 });
 
+test("site do leilão: gravado quando achado; coleta sem site não apaga o que já estava", () => {
+  const db = novoBanco();
+  const edital = {
+    registro: "edital" as const,
+    id_na_fonte: "qd-1",
+    titulo: "Leilão de imóvel",
+    url: "https://exemplo.test/diario/1.pdf",
+    site_leilao: "https://www.leiloeiro-exemplo.test",
+  };
+  gravarEditais(db, "falso", [edital], { agora: T1 });
+  const ler = () => db.prepare("SELECT site_leilao FROM edital WHERE id_na_fonte = 'qd-1'").get()?.site_leilao;
+  assert.equal(ler(), "https://www.leiloeiro-exemplo.test");
+  gravarEditais(db, "falso", [{ ...edital, site_leilao: null, resumo: "trecho mais curto" }], { agora: T2 });
+  assert.equal(ler(), "https://www.leiloeiro-exemplo.test");
+  gravarEditais(db, "falso", [{ ...edital, site_leilao: "https://outro-leiloeiro.test" }], { agora: T3 });
+  assert.equal(ler(), "https://outro-leiloeiro.test");
+});
+
 test("arquivos do edital: só trocam quando a coleta os consultou; sem consulta, ficam os gravados", () => {
   const db = novoBanco();
   const edital = {

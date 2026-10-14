@@ -557,7 +557,8 @@ function documentosDoEdital(documentos: readonly Documento[] | null | undefined)
 
 /**
  * Grava editais de UMA fonte numa transação (upsert; editais não são removidos). Os
- * `documentos` só são trocados quando o edital normalizado os traz (a fonte foi consultada).
+ * `documentos` só são trocados quando o edital normalizado os traz (a fonte foi consultada),
+ * e o `site_leilao` só quando a coleta acha um (um trecho mais curto do mesmo aviso não apaga).
  */
 export function gravarEditais(
   db: Banco,
@@ -570,12 +571,12 @@ export function gravarEditais(
   const buscar = db.prepare(`SELECT id, hash_conteudo, documentos FROM edital WHERE fonte_id = ? AND id_na_fonte = ?`);
   const existeImovel = db.prepare(`SELECT 1 AS ok FROM imovel WHERE id = ?`);
   const inserir = db.prepare(
-    `INSERT INTO edital (fonte_id, id_na_fonte, titulo, orgao, uf, cidade, cidade_norm, publicado_em, data_leilao, url, resumo, imovel_id, primeira_vez_em, ultima_vez_em, hash_conteudo, documentos)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO edital (fonte_id, id_na_fonte, titulo, orgao, uf, cidade, cidade_norm, publicado_em, data_leilao, url, site_leilao, resumo, imovel_id, primeira_vez_em, ultima_vez_em, hash_conteudo, documentos)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const atualizar = db.prepare(
     `UPDATE edital SET titulo = ?, orgao = ?, uf = ?, cidade = ?, cidade_norm = ?, publicado_em = ?, data_leilao = ?, url = ?,
-       resumo = ?, imovel_id = COALESCE(?, imovel_id), ultima_vez_em = ?, hash_conteudo = ?, documentos = COALESCE(?, documentos)
+       site_leilao = COALESCE(?, site_leilao), resumo = ?, imovel_id = COALESCE(?, imovel_id), ultima_vez_em = ?, hash_conteudo = ?, documentos = COALESCE(?, documentos)
      WHERE id = ?`,
   );
   const tocar = db.prepare(`UPDATE edital SET ultima_vez_em = ? WHERE id = ?`);
@@ -597,6 +598,7 @@ export function gravarEditais(
         publicado_em: edital.publicado_em ?? null,
         data_leilao: edital.data_leilao ?? null,
         url: edital.url.trim(),
+        site_leilao: edital.site_leilao?.trim() || null,
         resumo: edital.resumo ? (() => {
           const limpo = textoLimpo(edital.resumo);
           return limpo ? truncar(limpo, 2000) : null;
@@ -609,7 +611,7 @@ export function gravarEditais(
       if (!atual) {
         inserir.run(
           fonteId, edital.id_na_fonte.trim(), campos.titulo, campos.orgao, campos.uf, campos.cidade, campos.cidade_norm,
-          campos.publicado_em, campos.data_leilao, campos.url, campos.resumo, imovelId, quando, quando, hash, documentos,
+          campos.publicado_em, campos.data_leilao, campos.url, campos.site_leilao, campos.resumo, imovelId, quando, quando, hash, documentos,
         );
         resultado.novos++;
       } else if (lerTexto(atual.hash_conteudo) === hash && (documentos === null || documentos === lerTexto(atual.documentos))) {
@@ -618,7 +620,7 @@ export function gravarEditais(
       } else {
         atualizar.run(
           campos.titulo, campos.orgao, campos.uf, campos.cidade, campos.cidade_norm, campos.publicado_em,
-          campos.data_leilao, campos.url, campos.resumo, imovelId, quando, hash, documentos, Number(atual.id),
+          campos.data_leilao, campos.url, campos.site_leilao, campos.resumo, imovelId, quando, hash, documentos, Number(atual.id),
         );
         resultado.atualizados++;
       }

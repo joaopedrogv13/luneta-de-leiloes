@@ -1,7 +1,7 @@
 /**
  * Extração de campos a partir do texto dos avisos (data do leilão, cidade/UF, número do
- * aviso), resumo com os trechos que importam e máscara dos nomes que a própria fonte rotula
- * como partes (destinatários do DJEN). Funções puras, sem rede.
+ * aviso, site do leilão), resumo com os trechos que importam e máscara dos nomes que a própria
+ * fonte rotula como partes (destinatários do DJEN). Funções puras, sem rede.
  */
 import type { Uf } from "../../tipos.ts";
 import { hojeBrasilia, instanteDe, lerDataHoraBR } from "../../util/data.ts";
@@ -284,6 +284,54 @@ export function resumoRelevante(analise: AnaliseLeilaoImovel, maximo = 1800): st
   const partes = unidas.map(([a, b]) => colapsarEspacos(texto.slice(a, b)));
   const resumo = partes.join(" … ") + (unidas[unidas.length - 1]?.[1] === texto.length ? "" : " …");
   return truncar(resumo, maximo);
+}
+
+// ---------------------------------------------------------------------------
+// Site do leilão
+// ---------------------------------------------------------------------------
+
+/** URL com protocolo, ou endereço que começa com "www.", em qualquer domínio. */
+const URL_COMPLETA = /\b(?:https?:\/\/|www\.)[^\s<>"'()[\]{}]+/gi;
+/** Domínio sem "www." nem protocolo, só nos sufixos comuns de leiloeiro ("megaleiloes.com.br", "x.lel.br"). */
+const DOMINIO_SOLTO = /(?<![\w@./-])[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9-]+)*\.(?:com|net|lel|leilao|org|adv)(?:\.br)?(?:\/[^\s<>"'()[\]{}]*)?(?![\w@-])/gi;
+/** Domínios que não são o site do leilão: tribunais, diários, conselhos, validação de documentos, e-mail. */
+const NAO_E_LEILAO = /(?:^|\.)(?:jus\.br|in\.gov\.br|leg\.br|mp\.br|def\.br|planalto\.gov\.br|queridodiario\.ok\.org\.br|oab\.org\.br|gmail\.com|hotmail\.com|outlook\.com|yahoo\.com(?:\.br)?|uol\.com\.br|bol\.com\.br)$/;
+/** Domínio com cara de leilão ou de plataforma de licitação. */
+const DOMINIO_DE_LEILAO = /leil|lance|hasta|arremat|bid|licita|compras|pregao|bll/;
+/** Antes do endereço: "leilão eletrônico pelo site", "lances no portal", "plataforma"... */
+const CONTEXTO_DE_LEILAO = /\b(?:leil(?:ao|oes|oeiro|oeira)|lances?|hasta|praca|sitio|site|portal|plataforma|endereco eletronico|eletronic[oa])\b/;
+
+/**
+ * Site do leilão citado no texto do aviso: o leiloeiro ("www.fulanoleiloes.com.br") ou a
+ * plataforma ("www.gov.br/compras", "bll.org.br"), já com https://. Endereços de tribunal, diário,
+ * validação de documento e e-mail ficam de fora. Vence o domínio com cara de leilão; depois, o que
+ * vem logo após "leilão", "lances", "site", "portal" ou "plataforma" (até 150 caracteres antes).
+ * Endereço sem nada disso não conta (pode ser o site da prefeitura). `null` se nada servir.
+ */
+export function extrairSiteLeilao(texto: string): string | null {
+  let melhor: { url: string; pontos: number; pos: number } | null = null;
+  // As duas buscas não se sobrepõem: o domínio solto não pode vir depois de ".", "/" ou "@".
+  for (const regex of [URL_COMPLETA, DOMINIO_SOLTO]) {
+    for (const achado of texto.matchAll(regex)) {
+      const bruto = achado[0].replace(/[.,;:!?]+$/, "");
+      let url: URL;
+      try {
+        url = new URL(/^https?:\/\//i.test(bruto) ? bruto : `https://${bruto}`);
+      } catch {
+        continue;
+      }
+      const host = url.hostname.toLowerCase().replace(/^www\./, "");
+      if (!host.includes(".") || NAO_E_LEILAO.test(host)) continue;
+      const antes = dobrarCaixaEAcento(texto.slice(Math.max(0, achado.index - 150), achado.index));
+      const pontos = (DOMINIO_DE_LEILAO.test(host + url.pathname.toLowerCase()) ? 2 : 0) + (CONTEXTO_DE_LEILAO.test(antes) ? 1 : 0);
+      if (pontos === 0) continue;
+      if (!melhor || pontos > melhor.pontos || (pontos === melhor.pontos && achado.index < melhor.pos)) {
+        url.protocol = "https:";
+        melhor = { url: url.toString().replace(/\/$/, ""), pontos, pos: achado.index };
+      }
+    }
+  }
+  return melhor?.url ?? null;
 }
 
 // ---------------------------------------------------------------------------

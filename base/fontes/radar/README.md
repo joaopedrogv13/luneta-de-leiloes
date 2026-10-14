@@ -1,6 +1,17 @@
 # Radar de editais
 
-Quatro conectores que descobrem **avisos e editais de leilão de imóveis** em fontes oficiais e gravam na tabela `edital` (finalidade `radar`). Eles não alimentam a vitrine: nenhuma dessas fontes traz o imóvel com endereço, preço por praça e fotos em campos estruturados, então nada vai para a tabela `imovel`. O edital guarda título, órgão, UF, cidade, data de publicação, data do leilão (quando o texto diz), link, um resumo mascarado e, no PNCP com `--detalhes`, os links dos arquivos do edital (`documentos`).
+Quatro conectores que descobrem **avisos e editais de leilão de imóveis** em fontes oficiais e gravam na tabela `edital` (finalidade `radar`). Eles não alimentam a vitrine: nenhuma dessas fontes traz o imóvel com endereço, preço por praça e fotos em campos estruturados, então nada vai para a tabela `imovel`. O edital guarda título, órgão, UF, cidade, data de publicação, data do leilão (quando o texto diz), dois links (`url`, o documento oficial, e `site_leilao`, onde se dá o lance; ver "Os dois links"), um resumo mascarado e, no PNCP com `--detalhes`, os links dos arquivos do edital (`documentos`).
+
+## Os dois links
+
+| Fonte | `url` (documento oficial) | `site_leilao` (onde se dá o lance) |
+|---|---|---|
+| PNCP | página da compra no PNCP | `linkSistemaOrigem` (o sistema onde a disputa corre); sem ele, o site citado no objeto ou no complemento |
+| DJEN | `link` da comunicação (validação do documento no PJe, eSAJ, Projudi...) | site citado no texto; depois, os `href` do HTML |
+| DOU | página da matéria (`pdfPage`) ou a leitura do dia | site citado no texto; depois, os `href` do HTML |
+| Querido Diário | PDF do diário oficial do município | site citado nos trechos que a API devolve (um site longe da palavra "leilão" não vem nos trechos) |
+
+`extrairSiteLeilao` (em `texto.ts`) lê URLs com protocolo, endereços com "www." e domínios soltos com sufixo comum de leiloeiro (.com, .net, .lel, .org, .adv, com ou sem .br). Ficam de fora tribunais (.jus.br), DOU (in.gov.br), legislativo, MP, Defensoria, Querido Diário, OAB e provedores de e-mail, e nunca se lê domínio depois de "@". Vence o domínio com cara de leilão ou de plataforma (leil, lance, hasta, arremat, bid, licita, compras, pregão, bll); depois, o que vem até 150 caracteres após "leilão", "lances", "site", "portal", "plataforma" ou "endereço eletrônico". Endereço sem nenhum dos dois não conta, porque pode ser o site da prefeitura. O link costuma levar à página do leiloeiro ou do leilão, nem sempre ao lote exato: casar com o lote é trabalho da opção 2 (leitura do site do leiloeiro).
 
 | id | Fonte | Acesso | O que consulta | Entrada local (`--arquivo`/`--fixture`) |
 |---|---|---|---|---|
