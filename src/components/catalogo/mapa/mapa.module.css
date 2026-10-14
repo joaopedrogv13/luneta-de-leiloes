@@ -1,0 +1,303 @@
+/*
+  Mapa do Brasil do catálogo. Cores próprias por tema (variáveis --m-*):
+  - escuro (padrão): fundo noite, terra um pouco mais clara que a tinta, bordas de latão discretas;
+  - claro: água cinza-azulada bem suave, terra branca, bordas cinza.
+  As bolhas são latão nos dois temas; o contorno muda para contrastar com a terra (≥ 3:1).
+  Durante um gesto, a camada das bolhas recebe um transform e --contra = 1/escala: cada bolha desfaz a
+  escala da camada e continua com o mesmo tamanho na tela, sem o React desenhar de novo.
+*/
+.mapa {
+  --m-fundo: #070b16;
+  --m-fundo-2: #0d1630;
+  /* terra sem resultado / com resultado / UF filtrada */
+  --m-terra: #101933;
+  --m-terra-ativa: #16224a;
+  --m-terra-foco: #1c2c59;
+  --m-borda: rgba(201, 162, 77, 0.22);
+  --m-borda-foco: rgba(201, 162, 77, 0.6);
+  --m-costa: rgba(201, 162, 77, 0.4);
+  --m-sigla: rgba(142, 155, 181, 0.7);
+  --m-rotulo: #e3e9f8;
+  --m-halo: rgba(7, 11, 22, 0.94);
+  --m-bolha: #c9a24d;
+  --m-bolha-hover: #e2bf6c;
+  --m-bolha-contorno: #070b16;
+  --m-bolha-brilho: rgba(201, 162, 77, 0.3);
+  --m-grupo-halo: rgba(201, 162, 77, 0.32);
+  --m-anel: #eaf0ff;
+  --m-numero: #070b16;
+  --m-vidro: rgba(15, 24, 48, 0.86);
+  --m-vidro-borda: rgba(142, 155, 181, 0.24);
+  --m-sombra: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+:global(:root[data-theme="light"]) .mapa {
+  --m-fundo: #e4eaf1;
+  --m-fundo-2: #eff3f8;
+  /* sem resultado um tom abaixo do branco: os estados com resultado (brancos) se destacam de leve */
+  --m-terra: #f0f3f7;
+  --m-terra-ativa: #ffffff;
+  --m-terra-foco: #fffbf1;
+  --m-borda: #d2d9e3;
+  --m-borda-foco: rgba(138, 106, 36, 0.55);
+  --m-costa: #aebacb;
+  --m-sigla: rgba(79, 90, 114, 0.72);
+  --m-rotulo: #0f1830;
+  --m-halo: rgba(255, 255, 255, 0.96);
+  --m-bolha: #c9a24d;
+  --m-bolha-hover: #b38b38;
+  --m-bolha-contorno: #7d5f1f;
+  --m-bolha-brilho: rgba(15, 24, 48, 0.18);
+  --m-grupo-halo: rgba(170, 133, 52, 0.28);
+  --m-anel: #0f1830;
+  --m-numero: #070b16;
+  --m-vidro: rgba(255, 255, 255, 0.92);
+  --m-vidro-borda: rgba(79, 90, 114, 0.22);
+  --m-sombra: 0 14px 40px rgba(15, 24, 48, 0.16);
+}
+
+/* Caixa e alturas padrão das variantes. Na camada "components" do Tailwind: uma classe utilitária do pai
+   (sticky, h-[300px], rounded-none...) ganha destas. */
+@layer components {
+  .mapa {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: radial-gradient(120% 90% at 55% 40%, var(--m-fundo-2), var(--m-fundo) 72%);
+    color: var(--luar);
+  }
+  .painel {
+    height: 100%;
+    min-height: 320px;
+  }
+  .faixa {
+    --m-raio: 24px;
+    height: 320px;
+    border-radius: var(--m-raio);
+    border: 1px solid rgba(var(--fog-rgb), 0.2);
+  }
+  @media (min-width: 40rem) {
+    .faixa {
+      height: 360px;
+    }
+  }
+  @media (min-width: 64rem) {
+    .faixa {
+      height: 380px;
+    }
+  }
+  .mini {
+    --m-raio: 24px;
+    height: 260px;
+    border-radius: var(--m-raio);
+    border: 1px solid rgba(var(--fog-rgb), 0.2);
+  }
+}
+
+/* ---- área que recebe os gestos ---- */
+.viewport {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.viewport[data-arrastando] {
+  cursor: grabbing;
+}
+.viewport[data-arrastando] .bolha {
+  cursor: grabbing;
+}
+.viewport:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: max(6px, calc(var(--m-raio, 0px) - 3px));
+  outline: 2px solid var(--latao-texto);
+  outline-offset: -2px;
+  pointer-events: none;
+  z-index: 5;
+}
+.direta {
+  touch-action: none;
+}
+.cooperativa {
+  touch-action: pan-x pan-y;
+}
+
+/* ---- terra ---- */
+.costa path {
+  fill: none;
+  stroke: var(--m-costa);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.uf {
+  fill: var(--m-terra);
+  stroke: var(--m-borda);
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+  transition:
+    fill 0.3s ease,
+    stroke 0.3s ease;
+}
+.uf[data-ativa] {
+  fill: var(--m-terra-ativa);
+}
+.uf[data-foco] {
+  fill: var(--m-terra-foco);
+}
+.contornoFoco path {
+  fill: none;
+  stroke: var(--m-borda-foco);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+/* ---- camada das bolhas e rótulos ---- */
+.camada {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  --contra: 1;
+}
+
+.sigla {
+  position: absolute;
+  transform-origin: 0 0;
+  transform: scale(var(--contra)) translate(-50%, -50%);
+  font: 600 10px/1 var(--font-sans);
+  letter-spacing: 0.12em;
+  color: var(--m-sigla);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.rotulo {
+  position: absolute;
+  transform-origin: 0 0;
+  font: 500 11.5px/16px var(--font-sans);
+  color: var(--m-rotulo);
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow:
+    0 0 2px var(--m-halo),
+    0 0 3px var(--m-halo),
+    0 0 6px var(--m-halo);
+}
+
+.bolha {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transform-origin: 0 0;
+  transform: scale(var(--contra)) translate(-50%, -50%);
+}
+.bolha:focus-visible {
+  outline: 2px solid var(--m-anel);
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+
+.disco {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--m-bolha);
+  box-shadow:
+    0 0 0 1.5px var(--m-bolha-contorno),
+    0 0 12px var(--m-bolha-brilho);
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.7, 0.2, 1),
+    background-color 0.15s ease,
+    box-shadow 0.18s ease;
+}
+.disco[data-grupo] {
+  box-shadow:
+    0 0 0 1.5px var(--m-bolha-contorno),
+    0 0 0 5px var(--m-grupo-halo),
+    0 0 14px var(--m-bolha-brilho);
+}
+.bolha:hover .disco,
+.bolha:focus-visible .disco {
+  background: var(--m-bolha-hover);
+}
+.bolha[data-aceso] .disco {
+  transform: scale(1.22);
+  background: var(--m-bolha-hover);
+  box-shadow:
+    0 0 0 1.5px var(--m-bolha-contorno),
+    0 0 0 4px var(--m-anel),
+    0 0 18px var(--m-bolha-brilho);
+}
+.bolha[data-aceso] .disco[data-grupo] {
+  transform: scale(1.12);
+}
+
+.numero {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--m-numero);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ponto da página do imóvel: pulsa devagar */
+.marco {
+  position: absolute;
+  transform-origin: 0 0;
+  transform: scale(var(--contra)) translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--m-bolha);
+  box-shadow:
+    0 0 0 2px var(--m-bolha-contorno),
+    0 0 14px var(--m-bolha-brilho);
+  pointer-events: none;
+}
+.marco::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 999px;
+  border: 2px solid var(--m-bolha);
+  animation: pulso 2s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+}
+@keyframes pulso {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marco::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* superfícies de vidro sobre o mapa (controles, legenda, avisos) */
+.vidro {
+  background: var(--m-vidro);
+  border: 1px solid var(--m-vidro-borda);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.cartao {
+  box-shadow: var(--m-sombra);
+}
