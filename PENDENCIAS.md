@@ -151,6 +151,65 @@ também está no site do leiloeiro. A vantagem é **achar** o que os portais gra
 **Quantos são, não sabemos ainda.** Medir quando a rede abrir: 2 semanas de radar, depois uma amostra de 50 editais
 conferida à mão no LeilãoMap e nos portais grandes, para saber quantos são "só nossos" e quantos trazem `site_leilao`.
 
+### Radar de diários × raspagem dos leiloeiros: custo e ganho (pesquisa de 14/10/2026)
+
+Os números de mercado conflitam e nenhum é oficial. Faixa de trabalho: **19 a 25 mil imóveis por mês** entram em leilão
+no país (Abraim: 116,6 mil no 1º semestre de 2025; SPY Leilões: cerca de 300 mil "leilões" em 2025, contando praças).
+Cerca de **68% são extrajudiciais** (bancos e Caixa, Lei 9.514), e esses **não passam por diário oficial**: só aparecem
+em jornal e no site do leiloeiro. Os outros 32–40% (6 a 10 mil/mês) são judiciais.
+
+| | Radar (DJEN, DOU, Querido Diário, PNCP) | Raspar os ~30 maiores (10 plataformas white-label, ~15 leiloeiros, ~5 bancos) |
+| --- | --- | --- |
+| Imóveis/mês (estimativa) | ~1 mil / 3 mil / 6,5 mil (baixa/média/alta), antes de tirar repetidos | estoque fora da Caixa ~6 mil / 12 mil / 20 mil |
+| Quantos "só nossos" | **sem dado** (medir: amostra de 200) | ~0 em relação aos portais, mas todos novos para a Luneta |
+| Traz foto e lance atual? | não (texto oficial + link) | sim |
+| Construção | 40–80 h (conectores já prontos) | 160–520 h |
+| Custo mensal | ~R$ 300–1.700 (manutenção 2–8 h) + €0–6 de servidor + US$ 1–20 de IA (Haiku 5.5 em lote) | ~R$ 650–24.000 (manutenção 5–120 h) + US$ 0–1.000 de proxy/anti-robô |
+| Risco | baixo (atos oficiais não têm direito autoral; LGPD com máscara) | termos de uso, anti-robô (Superbid, Grupo Lance), CPF de depositário em algumas plataformas |
+
+O que sustenta os números:
+- **Querido Diário:** 440 municípios com raspador (7,9% do país), medido no repositório oficial.
+- **DJEN:** a Justiça do Trabalho publica nele desde 01/08/2024; os TJs podem publicar o edital só no site do leiloeiro
+  (CPC art. 887 §2), por isso a fração de editais judiciais no DJEN é **hipótese** (15% / 35% / 60%).
+- **Horas e tokens:** são estimativas próprias. Tudo vem de buscas na web, porque o proxy deste ambiente bloqueou as
+  páginas oficiais; conferir antes de usar em material público.
+
+**Conclusão: não é um ou outro, é os dois, em ordem.** O radar é barato, seguro e traz o texto oficial para as tags de
+risco (ônus, ocupação, débitos) e leilões judiciais e públicos de leiloeiros pequenos. A raspagem traz volume, fotos e
+o extrajudicial dos bancos. Ordem proposta:
+1. **Semana 1, medição** (8–16 h, < US$ 5 de IA), quando a rede abrir. Medir: volume real do DJEN, DO3, Querido Diário
+   e PNCP; tokens de 50 editais; amostra de 200 para a fração de "novos". Decisão: com ≥ 2 mil/mês e > 15% novos, o
+   radar vira fonte; com < 500/mês ou < 5% novos, fica só para enriquecer as tags.
+2. **Semanas 2–3:** radar em produção (filtro + Haiku 5.5 em lote; Sonnet 5.5 só nos ~15% ambíguos).
+3. **Semanas 2–4:** ficha, fotos e edital da Caixa (completam os 21 mil imóveis).
+4. **Semanas 3–6:** plataformas white-label com JSON (~10 conectores alcançam ~490 sites de leiloeiros).
+5. **Em paralelo:** pedir parceria à Resale (Santander, BB, BTG), Suporte Leilões e Superbid.
+6. **Depois:** leiloeiros individuais escolhidos pelo que o radar mostrar que falta; por último, os sites com Cloudflare.
+
+**Novidades jurídicas a vigiar** (fontes secundárias; o proxy bloqueou planalto.gov.br e cnj.jus.br):
+- **PNAJ:** Provimento CN-CNJ 255/2026 (19/08/2026) criaria a Plataforma Nacional de Alienações Judiciais, obrigatória
+  120 dias depois da homologação. **Não confirmado:** se valer, vira a fonte nacional única de leilão judicial eletrônico.
+- **Lei 14.133, art. 176:** municípios até 20 mil habitantes publicam só em diário oficial até **01/04/2027** (depois,
+  PNCP). Caixa e BB seguem a Lei 13.303 e não precisam estar no PNCP.
+
+### Preço do m² na região e anúncios: o que dá sem custo (pesquisa de 14/10/2026)
+
+- **Já no site (sem rede):** referência de R$/m² entre imóveis da base do mesmo tipo (bairro com ≥ 5 imóveis, senão
+  cidade, senão UF), com mediana e faixa, comparando com o lance por m². Rótulo fixo: "avaliação da fonte, não é preço
+  de mercado". Cobertura: 680 grupos bairro+tipo com ≥ 5 imóveis (13,6 mil imóveis); por cidade+tipo, ~18,8 mil.
+- **Anúncios:** **não existe API pública e grátis de anúncios** no Brasil, e os termos do ZAP (Grupo OLX) proíbem robôs.
+  O legal e sem custo é **link de busca** já filtrado, abrindo o portal em nova aba. No site, usamos busca no Google com
+  "site:" para cada portal (funciona sem depender do formato de URL de cada um). Cards de anúncios dentro do site
+  exigiriam contrato (DataZAP, QuintoAndar, Loft: pagos, sem preço público).
+- **Próximo passo grátis: ITBI** (imposto da compra; transações reais com valor e área). Dado aberto em **Rio** (3.225
+  imóveis da base), **São Paulo** (490), **Porto Alegre** (233), **Fortaleza** (94, CC-BY, com coordenadas), **BH** (37,
+  CC-BY) e **Recife** (26, ODbL): 19,3% da base. Mostrar a mediana do m² por bairro e tipo nos últimos 12 meses, com
+  n e as ressalvas (valor declarado, área do IPTU). Salvador, Goiânia, Brasília, Curitiba e Florianópolis: sem base
+  aberta encontrada; pedir pela LAI.
+- **Tendência:** série IVG-R do Banco Central (SGS 21340, JSON), só nacional.
+- **FipeZAP** (56 cidades, mensal): consulta grátis, mas sem termos de uso comercial encontrados. **Pedir autorização à
+  Fipe** antes de exibir; até lá, no máximo um link para o informe.
+
 ### Ler cada leilão com IA: é viável?
 
 Sim: em vez de preencher à mão, um robô baixa a página e os documentos de cada leilão (página da Caixa, edital,
