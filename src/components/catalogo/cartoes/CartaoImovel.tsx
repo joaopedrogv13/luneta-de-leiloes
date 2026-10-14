@@ -33,9 +33,11 @@ export function LinkTitulo({
 }: Pick<PropsImovel, "imovel" | "hrefImovel" | "onHover"> & { como?: "h2" | "h3"; className?: string }) {
   return (
     <Como className={`font-display text-[17px] leading-snug font-semibold tracking-[-0.01em] text-luar ${className}`}>
+      {/* sem prefetch (24 por página, rotas dinâmicas): a página do imóvel é pedida no clique */}
       <Link
         data-titulo
         href={hrefImovel}
+        prefetch={false}
         onFocus={() => onHover?.(imovel.id)}
         onBlur={() => onHover?.(null)}
         className="after:absolute after:inset-0 after:z-0 after:rounded-3xl after:content-[''] focus-visible:outline-none"

@@ -111,15 +111,22 @@ interface Ativo {
   fixo: boolean;
 }
 
+/**
+ * "1.234 imóveis"; a partir de 10 mil, o número da bolha ("14 mil imóveis (14.123)"): o nome do botão
+ * contém o texto que se vê nele (WCAG 2.5.3, comando de voz).
+ */
+const qtdImoveis = (total: number) =>
+  total >= 10_000 ? `${textoContagem(total)} imóveis (${numero(total)})` : plural(total, "imóvel", "imóveis");
+
 const rotuloCidade = (p: Pick<PontoMapa, "cidade" | "uf" | "total" | "lanceMin" | "desagioMax">) =>
-  `${p.cidade}/${p.uf}: ${plural(p.total, "imóvel", "imóveis")}, a partir de ${moedaCurta(p.lanceMin)}` +
+  `${p.cidade}/${p.uf}: ${qtdImoveis(p.total)}, a partir de ${moedaCurta(p.lanceMin)}` +
   (p.desagioMax !== null && p.desagioMax > 0 ? `, deságio de até ${p.desagioMax}%` : "");
 
 function rotuloNo(n: NoMapa) {
   if (!n.grupo) return rotuloCidade({ ...n.membros[0], total: n.total, lanceMin: n.lanceMin, desagioMax: n.desagioMax });
   const nomes = n.membros.slice(0, 3).map((m) => `${m.cidade}/${m.uf}`);
   const resto = n.membros.length > 3 ? " e outras" : "";
-  return `Grupo de ${numero(n.membros.length)} cidades com ${plural(n.total, "imóvel", "imóveis")}: ${nomes.join(", ")}${resto}. Ative para aproximar.`;
+  return `${qtdImoveis(n.total)} em ${numero(n.membros.length)} cidades próximas: ${nomes.join(", ")}${resto}. Ative para aproximar.`;
 }
 
 const seletorNo = (id: string) => `[data-no="${typeof CSS !== "undefined" && CSS.escape ? CSS.escape(id) : id}"]`;

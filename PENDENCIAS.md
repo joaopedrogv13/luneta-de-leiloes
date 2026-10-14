@@ -35,8 +35,26 @@ chip fixo "Estado: SP" e a busca só entendia a sigla ("MG"), não "Minas" nem "
 - o resumo do topo abre as 27 UFs, e a busca sem resultado lembra que a prévia é uma amostra.
 
 MG pesa pouco (3,5% do banco) porque reflete o estoque da Caixa em 08/10/2026 (RJ sozinho tem 34%). Leilões judiciais,
-de bancos privados e de leiloeiros de MG ainda não entraram (radar e opção 2). Falta a prévia com o banco inteiro (busca
-e paginação no servidor; ver "Técnico").
+de bancos privados e de leiloeiros de MG ainda não entraram (radar e opção 2).
+
+**App do catálogo (14/10/2026): a /previa agora mostra o banco inteiro** (21.231 imóveis, não mais a amostra de 60), com
+a busca, os filtros, a ordem e a paginação no servidor; "Estado: Minas Gerais" dá os 747. O mesmo app serve a
+/assinante (os 6 exemplos fictícios, selos ligados):
+- lista (linhas com foto grande e o mapa numa coluna fixa à direita) ou cards (grade de 1 a 4 colunas, mapa em faixa em
+  cima); a escolha fica salva no navegador; no celular, cards e o botão flutuante "Ver no mapa";
+- passar o mouse num imóvel acende a cidade no mapa, e a cidade no mapa acende os imóveis dela; "Ver só esta cidade";
+- a barra de filtros fica fixa (no celular some ao rolar para baixo e volta ao rolar para cima);
+- a busca inteira vai na URL: o link compartilhado e o "voltar" do navegador reabrem a mesma busca, na mesma posição;
+- "Ver como: Lente | Luneta" no cabeçalho; no Lente, tags, selos e favoritos travados com o convite à Luneta.
+- Peso no navegador (build de produção): 209 KB de JavaScript comprimido na primeira carga (139 KB são do Next e do
+  React, ~70 KB do app); o mapa (37 KB) só baixa quando aparece; a página chega pronta do servidor (HTML de 41 KB
+  comprimido), sem esqueleto. Os links para a landing ("voltar ao site", "Plano Luneta") não a pré-carregam mais (eram
+  ~300 KB baixados em toda visita ao catálogo).
+- Revisão (14/10/2026): o mapa ao lado da lista cabe inteiro na tela já no topo da página (a legenda saía cortada pela
+  faixa de aviso); saindo do "Nenhum imóvel" a lista mostra esqueletos em vez de tela vazia; busca por texto sem espera
+  extra no Enter (a espera de 300 ms fica só para texto mudando seguido); a lista é pedida antes do mapa; pop-up fechado
+  sem mudança não volta à página 1; com erro, a lista antiga fica esmaecida; o aviso da troca para a Luneta na prévia não
+  promete selos (estão em análise); botões de toque com 44 px.
 
 ### Próximos passos (em ordem)
 
@@ -316,8 +334,19 @@ pelo valor real no arquivo de conteúdo.
 - [ ] Tirar a `/previa` do ar antes do lançamento (ou protegê-la), e regerar `base/saida/` a partir da coleta oficial.
 - [ ] Opção 2 (raspagem): plataformas white-label primeiro (Superbid, V-Lance, Suporte Leilões, SOLEON, Leilão PRO), depois
   leiloeiros e bancos, sempre respeitando robots.txt e termos; DataJud e Suporte Leilões só com termo/parceria.
-- [ ] Prévia com o banco inteiro: busca, filtro por estado e paginação no servidor (hoje a /previa leva só a amostra de 60
-  para o navegador; o seletor de estado e a busca por nome do estado já funcionam, 14/10/2026).
+- [x] Prévia com o banco inteiro: busca, filtros, ordem, mapa e paginação no servidor (app do catálogo, 14/10/2026).
+- [ ] Limpar o que sobrou da área do assinante antiga (`src/components/assinante/*` menos `UpgradeModal`, `useDialog`,
+  `parts` e `shared`): fica para depois de juntar o app do catálogo e a página do imóvel. Junto, levar `LUNETA_PRICE` e
+  `BACK_TO_SITE` para um módulo pequeno (hoje `shared.ts` puxa o `site.ts` inteiro para o navegador, ~11 KB).
+- [ ] Catálogo, técnico: a resposta do mapa do Brasil inteiro (`/api/catalogo`, ~720 KB de JSON) sai sem compressão no
+  `next start` (a Vercel comprime na borda, então no ar é ~120 KB); se um dia rodar fora da Vercel, comprimir ou enxugar os
+  `destaques` de cada cidade. A API responde `no-store`: cada visita baixa o mapa de novo (dá para cachear por URL).
+- [ ] Catálogo, técnico: cada cartão pesa ~15 KB de HTML (classes e o desenho SVG do "sem foto"); 24 por página dão ~400 KB de
+  HTML (41 KB comprimido). Vale enxugar o desenho repetido (um `<symbol>` só) se o celular sentir.
+- [ ] Catálogo, visual: com 6 ou mais filtros a barra fixa passa de 220 px em 1280 px (pílulas em duas linhas). Avaliar
+  pílulas numa linha só com rolagem lateral no computador também.
+- [ ] `base/saida/amostra-site.json` e `estatisticas-uf.json` não são mais lidos pelo site (a /previa usa `base/saida/site/`).
+  Decidir se a exportação (`base/exportar.ts`, com teste) continua a gerá-los ou se saem.
 - [ ] Medir o radar ao vivo (quando a rede abrir): 2 semanas de PNCP, DJEN, DOU e Querido Diário; quantos editais de imóvel
   por semana e por UF, quantos com `site_leilao`, e uma amostra de 50 conferida à mão nos portais para saber quantos são
   "só nossos".

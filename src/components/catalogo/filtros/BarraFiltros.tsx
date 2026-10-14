@@ -76,7 +76,14 @@ export function TotalResultados({ total, carregando, className = "" }: { total: 
  *   painel; abaixo, as pílulas dos filtros ativos e, à direita, o total e "Ordenar".
  * - celular: busca + "Filtros (N)" + total e ordenar; as pílulas rolam de lado; tudo o mais no painel.
  */
-export function BarraFiltros(props: PropsFiltros & { className?: string }) {
+export function BarraFiltros({
+  acoes,
+  ...props
+}: PropsFiltros & {
+  className?: string;
+  /** controles do app no fim da linha do total e de "Ordenar" (ex.: o seletor Lista | Cards | Mapa) */
+  acoes?: ReactNode;
+}) {
   const { filtros, facetas, total, carregando, plano, selosDesligados, ordem, onOrdem, onChange, onUpsell, className = "" } = props;
   const { aplicar, descarregar } = useAplicador(filtros, onChange, 300);
   const [painel, setPainel] = useState<{ aberto: boolean; secao?: SecaoFiltro }>({ aberto: false });
@@ -168,17 +175,19 @@ export function BarraFiltros(props: PropsFiltros & { className?: string }) {
           onChange={onChange}
           rolavel
           aoEsvaziar={() => busca.current?.focus()}
-          className="order-3 w-full md:order-1 md:w-auto md:min-w-0 md:flex-1"
+          // com as ações do app (seletor de vista) a linha só cabe as pílulas ao lado a partir de xl
+          className={acoes ? "order-3 w-full xl:order-1 xl:w-auto xl:min-w-0 xl:flex-1" : "order-3 w-full md:order-1 md:w-auto md:min-w-0 md:flex-1"}
         />
-        <TotalResultados total={total} carregando={carregando} className="order-1 md:order-2 md:ml-auto" />
+        <TotalResultados total={total} carregando={carregando} className={acoes ? "order-1 xl:order-2 xl:ml-auto" : "order-1 md:order-2 md:ml-auto"} />
         <OrdenarPor
           ordem={ordem}
           onOrdem={onOrdem}
           plano={plano}
           selosDesligados={selosDesligados}
           onUpsell={onUpsell}
-          className="order-2 ml-auto md:order-3 md:ml-0"
+          className={acoes ? "order-2 ml-auto xl:order-3 xl:ml-0" : "order-2 ml-auto md:order-3 md:ml-0"}
         />
+        {acoes && <div className="order-2 flex shrink-0 empty:hidden xl:order-4">{acoes}</div>}
       </div>
 
       <PainelFiltros

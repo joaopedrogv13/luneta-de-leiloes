@@ -21,6 +21,7 @@ export function SeletorVista({
   mapa,
   onMapa,
   semMapa = false,
+  rotuloClassName = "",
   className = "",
 }: {
   vista: Vista;
@@ -29,6 +30,8 @@ export function SeletorVista({
   onMapa: (visivel: boolean) => void;
   /** esconde o botão do mapa (ex.: tela onde o mapa não cabe) */
   semMapa?: boolean;
+  /** classes dos rótulos ("max-lg:sr-only": só os ícones em telas médias; o nome continua para leitores de tela) */
+  rotuloClassName?: string;
   className?: string;
 }) {
   return (
@@ -41,6 +44,7 @@ export function SeletorVista({
               key={o.valor}
               type="button"
               aria-pressed={ativo}
+              title={o.rotulo}
               onClick={() => onVista(o.valor)}
               className={`inline-flex ${ALTURA} cursor-pointer items-center gap-2 rounded-full px-3.5 text-[13px] leading-none font-medium transition-[background-color,color,box-shadow] duration-150 ease-luneta motion-reduce:transition-none ${
                 ativo
@@ -49,7 +53,7 @@ export function SeletorVista({
               }`}
             >
               {o.icone}
-              {o.rotulo}
+              <span className={rotuloClassName}>{o.rotulo}</span>
             </button>
           );
         })}
@@ -58,13 +62,14 @@ export function SeletorVista({
         <button
           type="button"
           aria-pressed={mapa}
+          title="Mapa"
           onClick={() => onMapa(!mapa)}
           className={`inline-flex ${ALTURA} cursor-pointer items-center gap-2 rounded-full border px-3.5 text-[13px] leading-none font-medium transition-[background-color,border-color,color] duration-150 ease-luneta motion-reduce:transition-none ${
             mapa ? "border-latao/70 bg-latao/15 text-latao-texto" : "border-nevoa/25 bg-tinta text-nevoa hover:border-nevoa/55 hover:text-luar"
           }`}
         >
           <IconeMapa />
-          Mapa
+          <span className={rotuloClassName}>Mapa</span>
           <span aria-hidden="true" className={`ml-0.5 inline-flex h-4 w-7 items-center rounded-full p-0.5 transition-colors duration-150 ${mapa ? "bg-latao" : "bg-nevoa/30"}`}>
             <span className={`size-3 rounded-full bg-tinta shadow-sm transition-transform duration-150 ease-luneta motion-reduce:transition-none ${mapa ? "translate-x-3" : ""}`} />
           </span>
