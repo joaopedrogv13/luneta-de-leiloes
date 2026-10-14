@@ -188,6 +188,38 @@ export function caixaDosPontos(pontos: readonly { x: number; y: number }[]): Cai
   return [x0, y0, x1, y1];
 }
 
+/**
+ * Caixa do grupo principal: as cidades mais perto do centro (ponderado pelos imóveis) que somam `fracao` dos
+ * imóveis. Só substitui a caixa de todos quando os de fora a esticam muito (área 4× maior): resultados
+ * espalhados pelo país continuam mostrando o país; 55 imóveis em Campinas e 1 na BA mostram Campinas.
+ */
+export function caixaPrincipal(pontos: readonly { x: number; y: number; total: number }[], fracao = 0.9): Caixa | null {
+  const todos = caixaDosPontos(pontos);
+  if (!todos || pontos.length < 3) return todos;
+  let soma = 0;
+  let cx = 0;
+  let cy = 0;
+  for (const p of pontos) {
+    const w = Math.max(1, p.total);
+    soma += w;
+    cx += p.x * w;
+    cy += p.y * w;
+  }
+  cx /= soma;
+  cy /= soma;
+  const perto = [...pontos].sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy));
+  const escolhidos: { x: number; y: number }[] = [];
+  let acumulado = 0;
+  for (const p of perto) {
+    escolhidos.push(p);
+    acumulado += Math.max(1, p.total);
+    if (acumulado >= soma * fracao) break;
+  }
+  const principal = caixaDosPontos(escolhidos)!;
+  const area = (c: Caixa) => Math.max(CAIXA_MINIMA, c[2] - c[0]) * Math.max(CAIXA_MINIMA, c[3] - c[1]);
+  return area(todos) > 4 * area(principal) ? principal : todos;
+}
+
 /** Caixa das UFs (siglas desconhecidas são ignoradas). */
 export function caixaDasUfs(ufs: readonly string[]): Caixa | null {
   return uniao(ufs.map((uf) => UFS_MAPA[uf.toUpperCase()]?.caixa).filter((c): c is Caixa => !!c));

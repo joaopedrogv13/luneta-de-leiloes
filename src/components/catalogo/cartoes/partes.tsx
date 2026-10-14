@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { Seal } from "@/components/ui/Seal";
-import { area, moeda, MODALIDADE_ROTULO, numero, PRACA_ROTULO, SELO_ROTULO } from "@/lib/catalogo/rotulos";
+import { area, local, moeda, moedaCurta, MODALIDADE_ROTULO, numero, PRACA_ROTULO, SELO_ROTULO } from "@/lib/catalogo/rotulos";
 import type { ImovelResumo, Plano } from "@/lib/catalogo/tipos";
 import { quandoPraca } from "./datas";
 import { IconeArea, IconeCadeado, IconeCalendario, IconeCoracao, IconeQuarto, IconeRegua, IconeVaga } from "./icones";
@@ -41,29 +41,37 @@ export function BlocoPreco({
   imovel,
   tamanho = "md",
   alinhamento = "inicio",
+  compacto = false,
 }: {
   imovel: Pick<ImovelResumo, "lance" | "avaliacao" | "desagio">;
   tamanho?: "md" | "lg";
   /** "linha": à esquerda, e à direita quando a linha larga põe o preço na própria coluna (container query) */
   alinhamento?: "inicio" | "fim" | "linha";
+  /** num @container estreito (< 36rem: a linha compacta do celular), números menores e a avaliação curta */
+  compacto?: boolean;
 }) {
-  const d = textoDesagio(imovel.desagio);
-  const abaixo = imovel.desagio !== null && imovel.desagio > 0;
+  // lance acima de 5× a avaliação: quase sempre erro de digitação da fonte (R$ 69,7 milhões num apartamento
+  // avaliado em R$ 401 mil); em vez de "17.259% acima da avaliação", o aviso para conferir
+  const foraDoPadrao = imovel.avaliacao !== null && imovel.avaliacao > 0 && imovel.lance > 5 * imovel.avaliacao;
+  const d = foraDoPadrao ? { curto: "", frase: "valor fora do padrão: confira no anúncio" } : textoDesagio(imovel.desagio);
+  const abaixo = !foraDoPadrao && imovel.desagio !== null && imovel.desagio > 0;
   const fim = alinhamento === "fim" ? "text-right" : alinhamento === "linha" ? "@4xl:text-right" : "";
   const fimFlex = alinhamento === "fim" ? "justify-end" : alinhamento === "linha" ? "@4xl:justify-end" : "";
   const valor = moeda(imovel.lance);
   // R$ 10 milhões ou mais: um degrau menor, para caber na coluna de preço da linha e no cartão estreito
   const longo = valor.length > 12;
   const fonte = tamanho === "lg" ? (longo ? "text-[26px]" : "text-[30px]") : longo ? "text-[24px]" : "text-[27px]";
+  const menor = compacto ? "@max-xl:text-[21px]" : "";
   return (
     <div className={fim}>
-      <p className="text-[11px] leading-none font-semibold tracking-[0.12em] text-nevoa uppercase">Lance mínimo</p>
-      <p className={`mt-1.5 font-display leading-none font-bold tracking-[-0.03em] whitespace-nowrap text-luar tabular-nums ${fonte}`}>{valor}</p>
-      <p className={`mt-2 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[13px] leading-snug text-nevoa ${fimFlex}`}>
+      <p className={`text-[11px] leading-none font-semibold tracking-[0.12em] text-nevoa uppercase ${compacto ? "@max-xl:text-[10px]" : ""}`}>Lance mínimo</p>
+      <p className={`mt-1.5 font-display leading-none font-bold tracking-[-0.03em] whitespace-nowrap text-luar tabular-nums ${fonte} ${menor}`}>{valor}</p>
+      <p className={`mt-2 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[13px] leading-snug text-nevoa ${fimFlex} ${compacto ? "@max-xl:mt-1 @max-xl:text-xs" : ""}`}>
         {imovel.avaliacao !== null ? (
           <>
             <span>
-              Avaliação <span className="text-luar/85 tabular-nums">{moeda(imovel.avaliacao)}</span>
+              Avaliação <span className={`text-luar/85 tabular-nums ${compacto ? "@max-xl:hidden" : ""}`}>{moeda(imovel.avaliacao)}</span>
+              {compacto && <span aria-hidden="true" className="hidden text-luar/85 tabular-nums @max-xl:inline">{moedaCurta(imovel.avaliacao)}</span>}
             </span>
             {d && abaixo && (
               // o ponto vai junto do número: se quebrar a linha, não fica um "·" solto no fim
@@ -180,6 +188,20 @@ export function LinhaPraca({ imovel, className = "" }: { imovel: Pick<ImovelResu
 const SELO_GENERICO = 2;
 
 /**
+ * O cartão mostra o selo? Não quando ele está "em análise" (na prévia, todos os imóveis: a faixa do topo e
+ * "Ordenar" já avisam; repetir "Selo em análise" em cada cartão era ruído). No Lente, o selo travado aparece
+ * (é o convite à Luneta).
+ */
+export function mostrarSelo(imovel: Pick<ImovelResumo, "seloPendente">, plano: Plano) {
+  return plano === "lente" || !imovel.seloPendente;
+}
+
+/** Complemento do nome acessível de um imóvel: com 24 "Casa 2 quartos" na página, o local e o lance distinguem. */
+export function complementoSr(imovel: Pick<ImovelResumo, "bairro" | "cidade" | "uf" | "lance">) {
+  return `, ${local(imovel)}, lance ${moeda(imovel.lance)}`;
+}
+
+/**
  * Selo do imóvel. Luneta: anéis + nome ("Alvo"), ou "Selo em análise" (critérios pendentes) com o anel
  * tracejado. Lente: bloco neutro e desfocado, sem o selo real no DOM.
  */
@@ -214,7 +236,8 @@ export function SeloImovel({ imovel, plano, tamanho = 30 }: { imovel: Pick<Imove
 
 /**
  * Favoritar. Luneta: alterna (aria-pressed; o rótulo fica igual e o coração enche). Lente: cadeado, abre o
- * convite à Luneta. Fica por cima do link do cartão (z-10) e não navega.
+ * convite à Luneta. Fica por cima do link do cartão (z-10) e não navega. `icone`: só o coração, num botão
+ * redondo de 40 px (44 no toque), para o canto do cartão, como nos portais de imóveis.
  */
 export function BotaoFavoritar({
   imovel,
@@ -222,13 +245,16 @@ export function BotaoFavoritar({
   favorito,
   onFavoritar,
   onUpsell,
+  icone = false,
   className = "",
 }: {
-  imovel: Pick<ImovelResumo, "id" | "titulo">;
+  /** com o local e o lance, o nome acessível distingue um imóvel do outro na lista */
+  imovel: Pick<ImovelResumo, "id" | "titulo"> & Partial<Pick<ImovelResumo, "bairro" | "cidade" | "uf" | "lance">>;
   plano: Plano;
   favorito: boolean;
   onFavoritar: (id: string) => void;
   onUpsell: (opener: HTMLElement) => void;
+  icone?: boolean;
   className?: string;
 }) {
   const lente = plano === "lente";
@@ -239,6 +265,33 @@ export function BotaoFavoritar({
     if (lente) onUpsell(e.currentTarget);
     else onFavoritar(imovel.id);
   };
+  const { cidade, uf, lance } = imovel;
+  const complemento = cidade && uf && lance !== undefined ? complementoSr({ bairro: imovel.bairro ?? null, cidade, uf, lance }) : "";
+  if (icone) {
+    return (
+      <button
+        type="button"
+        onClick={clicar}
+        aria-pressed={lente ? undefined : ligado}
+        aria-haspopup={lente ? "dialog" : undefined}
+        title={lente ? "Favoritar (plano Luneta)" : ligado ? "Favorito" : "Favoritar"}
+        className={`relative z-10 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-[background-color,border-color,color,scale] duration-150 ease-luneta active:scale-[0.92] motion-reduce:transition-none pointer-fine:size-10 ${
+          ligado ? "border-latao/80 bg-latao/15 text-latao" : "border-nevoa/30 bg-tinta/80 text-nevoa hover:border-latao hover:text-luar"
+        } ${className}`}
+      >
+        <IconeCoracao cheio={ligado} size={18} />
+        {lente && (
+          <span aria-hidden="true" className="absolute -right-0.5 -bottom-0.5 inline-flex size-4 items-center justify-center rounded-full bg-tinta text-latao-texto ring-1 ring-latao/50">
+            <IconeCadeado size={9} />
+          </span>
+        )}
+        <span className="sr-only">
+          Favoritar{lente ? " (plano Luneta)" : ""}: {imovel.titulo}
+          {complemento}
+        </span>
+      </button>
+    );
+  }
   return (
     <button
       type="button"
@@ -253,6 +306,7 @@ export function BotaoFavoritar({
       Favoritar
       <span className="sr-only">
         {lente ? " (plano Luneta)" : ""}: {imovel.titulo}
+        {complemento}
       </span>
     </button>
   );

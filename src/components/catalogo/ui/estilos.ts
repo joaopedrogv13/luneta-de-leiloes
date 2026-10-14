@@ -8,12 +8,18 @@ export const CHIP =
   "inline-flex min-h-11 cursor-pointer select-none items-center gap-2 rounded-full border px-4 text-[13.5px] leading-none font-medium whitespace-nowrap transition-[background-color,border-color,color,scale,box-shadow] duration-150 ease-luneta active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45 disabled:active:scale-100 motion-reduce:transition-none pointer-fine:min-h-9 pointer-fine:px-3.5";
 export const CHIP_OFF = "border-nevoa/30 text-luar hover:border-nevoa/65 hover:bg-nevoa/[0.07]";
 export const CHIP_ON = "border-latao bg-latao/15 text-luar hover:bg-latao/20";
-/** Escolhido, mas é o "sem filtro" ("Qualquer"): marcado sem o latão, que fica só para filtro ativo. */
-export const CHIP_NEUTRO_ON = "border-nevoa/55 bg-nevoa/[0.14] text-luar hover:bg-nevoa/20";
+/**
+ * Escolhido, mas é o "sem filtro" ("Qualquer"): sem destaque (é o padrão; o ✓ e o aria-pressed dizem que está
+ * escolhido), para nunca parecer um filtro ativo nem destoar dos chips dourados.
+ */
+export const CHIP_NEUTRO_ON = "border-nevoa/30 text-luar hover:border-nevoa/65 hover:bg-nevoa/[0.07]";
 
-/** Caixa de texto (busca, mínimo/máximo, datas). */
+/**
+ * Caixa de texto (busca, mínimo/máximo, datas). 16 px no toque (o Safari do iPhone não dá zoom ao focar) e
+ * 14 px no mouse; foco com borda e anel na cor de texto do latão (contraste ≥ 3:1 nos dois temas).
+ */
 export const CAMPO =
-  "h-11 w-full min-w-0 rounded-xl border border-nevoa/30 bg-noite/40 px-3.5 text-[15px] text-luar tabular-nums placeholder:text-nevoa/80 transition-[border-color,box-shadow] duration-150 outline-none hover:border-nevoa/55 focus:border-latao focus:shadow-[0_0_0_3px_rgba(201,162,77,.22)] focus-visible:outline-none pointer-fine:h-10 pointer-fine:text-sm";
+  "h-11 w-full min-w-0 rounded-xl border border-nevoa/30 bg-noite/40 px-3.5 text-base text-luar tabular-nums placeholder:text-nevoa transition-[border-color,box-shadow] duration-150 outline-none hover:border-nevoa/55 focus:border-latao-texto focus:ring-2 focus:ring-latao-texto/60 focus-visible:outline-none pointer-fine:h-10 pointer-fine:text-sm";
 
 /** Rótulo de um campo dentro de uma seção ("Lance mínimo", "Quartos"). */
 export const ROTULO = "text-[13px] leading-tight font-semibold text-luar";

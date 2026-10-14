@@ -44,11 +44,12 @@ export function buscaDaUrl(conjunto: Conjunto, entrada: Entrada): Busca {
 
 /**
  * Filtra, ordena, pagina e agrega no servidor; devolve só a página pedida, com o plano aplicado.
- * `{ mapa: false }` devolve `mapa: []` (o mapa escondido não precisa dos pontos; ver `?mapa=0` na API).
+ * `{ mapa: false }` devolve `mapa: []` (o mapa escondido não precisa dos pontos; ver `?mapa=0` na API);
+ * `{ facetas: false }`, facetas vazias (o pedido do mapa não as usa; `?facetas=0`).
  */
-export async function buscar(busca: Busca, opcoes: { mapa?: boolean } = {}): Promise<ResultadoBusca> {
+export async function buscar(busca: Busca, opcoes: { mapa?: boolean; facetas?: boolean } = {}): Promise<ResultadoBusca> {
   const d = await dadosDoConjunto(busca.conjunto);
-  const r = buscarNoIndice(d.indice, busca, { selosDesligados: d.selosDesligados, mapa: opcoes.mapa });
+  const r = buscarNoIndice(d.indice, busca, { selosDesligados: d.selosDesligados, mapa: opcoes.mapa, facetas: opcoes.facetas });
   return { ...r, sobre: d.sobre };
 }
 

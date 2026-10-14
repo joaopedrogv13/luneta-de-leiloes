@@ -77,10 +77,10 @@ export const TAG_CATEGORIES: TagCategory[] = [
         practice: "Somando comissão do leiloeiro, impostos e cartório, a vantagem pode sumir. Compare com o preço de imóveis parecidos na região.",
       },
       {
-        label: "Preço acima do mercado",
+        label: "Lance acima da avaliação",
         severity: "grave",
-        what: "O lance mínimo está acima do que imóveis parecidos da região costumam valer, muitas vezes porque a avaliação do edital está desatualizada.",
-        practice: "Leilão só compensa com desconto real. Compare com anúncios da mesma região antes de dar qualquer lance.",
+        what: "O lance mínimo está acima do valor de avaliação publicado pela fonte. A avaliação não é preço de mercado e pode estar desatualizada.",
+        practice: "Compare com o preço do m² da região e com anúncios antes de dar qualquer lance.",
       },
       {
         label: "Custos extras altos",

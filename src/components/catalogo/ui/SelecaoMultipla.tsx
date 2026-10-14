@@ -79,6 +79,7 @@ export function SelecaoMultipla({
   vazio,
   aviso,
   alturaLista = "max-h-[min(46vh,336px)]",
+  loteInicial = LOTE,
 }: {
   /** nome da lista para leitores de tela ("Cidades") */
   rotulo: string;
@@ -97,19 +98,21 @@ export function SelecaoMultipla({
   aviso?: ReactNode;
   /** classe da altura máxima da lista */
   alturaLista?: string;
+  /** quantos itens aparecem antes de "Mostrar mais" (o celular, sem rolagem interna, mostra poucos) */
+  loteInicial?: number;
 }) {
   const id = useId();
   const [consulta, setConsulta] = useState("");
   const [ativo, setAtivo] = useState(-1);
   const [nasSetas, setNasSetas] = useState(false);
-  const [limite, setLimite] = useState(LOTE);
+  const [limite, setLimite] = useState(loteInicial);
   const [fixados, setFixados] = useState(() => new Set(selecionados));
   const [consultaFixada, setConsultaFixada] = useState(consulta);
   if (consulta !== consultaFixada) {
     // busca mudou: os escolhidos de agora sobem para o topo, a lista volta ao primeiro lote
     setConsultaFixada(consulta);
     setFixados(new Set(selecionados));
-    setLimite(LOTE);
+    setLimite(loteInicial);
     setAtivo(-1);
   }
 
@@ -148,7 +151,7 @@ export function SelecaoMultipla({
   const irPara = (i: number) => {
     if (!lista.length) return;
     const alvo = Math.max(0, Math.min(lista.length - 1, i));
-    if (alvo >= limite) setLimite(Math.ceil((alvo + 1) / LOTE) * LOTE);
+    if (alvo >= limite) setLimite(Math.max(limite, Math.ceil((alvo + 1) / LOTE) * LOTE));
     setAtivo(alvo);
     setNasSetas(true);
     requestAnimationFrame(() => document.getElementById(opId(alvo))?.scrollIntoView({ block: "nearest" }));
@@ -227,7 +230,8 @@ export function SelecaoMultipla({
             setNasSetas(false);
           }}
           onKeyDown={onTecla}
-          className="h-11 w-full min-w-0 rounded-xl border border-nevoa/30 bg-noite/40 pr-11 pl-10 text-[15px] text-luar placeholder:text-nevoa/80 transition-[border-color,box-shadow] duration-150 outline-none hover:border-nevoa/55 focus:border-latao focus:shadow-[0_0_0_3px_rgba(201,162,77,.22)] focus-visible:outline-none pointer-fine:h-10 pointer-fine:text-sm"
+          // 16 px no toque (o Safari do iPhone não dá zoom ao focar), 14 px no mouse; foco com anel de contraste
+          className="h-11 w-full min-w-0 rounded-xl border border-nevoa/30 bg-noite/40 pr-11 pl-10 text-base text-luar placeholder:text-nevoa transition-[border-color,box-shadow] duration-150 outline-none hover:border-nevoa/55 focus:border-latao-texto focus:ring-2 focus:ring-latao-texto/60 focus-visible:outline-none pointer-fine:h-10 pointer-fine:text-sm"
         />
         {consulta && (
           <button
@@ -271,6 +275,9 @@ export function SelecaoMultipla({
         role="listbox"
         aria-label={rotulo}
         aria-multiselectable="true"
+        // a lista é dirigida pelo campo (setas, aria-activedescendant): fora do Tab (o Chrome põe toda área que
+        // rola sem filho focável na ordem do Tab, e ali nada se escolhia)
+        tabIndex={-1}
         // sem overscroll-contain: no fim da lista o dedo continua rolando a folha em volta (senão a
         // rolagem "trava" em cima da lista no celular)
         className={`-mx-1 overflow-y-auto px-1 ${alturaLista}`}
@@ -290,7 +297,7 @@ export function SelecaoMultipla({
                 alternar(o.valor);
               }}
               className={`group/op flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-2.5 py-1.5 transition-colors duration-100 select-none pointer-fine:min-h-9 ${
-                atual ? "bg-nevoa/15 ring-1 ring-latao/50 ring-inset" : "hover:bg-nevoa/[0.08]"
+                atual ? "bg-nevoa/15 ring-2 ring-latao-texto ring-inset" : "hover:bg-nevoa/[0.08]"
               }`}
             >
               <span
@@ -313,7 +320,7 @@ export function SelecaoMultipla({
               <span className="shrink-0 text-xs text-nevoa tabular-nums">
                 <span className="sr-only">, </span>
                 {numero(o.total)}
-                <span className="sr-only"> imóveis</span>
+                <span className="sr-only"> {o.total === 1 ? "imóvel" : "imóveis"}</span>
               </span>
             </li>
           );
@@ -328,11 +335,12 @@ export function SelecaoMultipla({
       {restantes > 0 && (
         <button
           type="button"
-          onClick={() => setLimite((l) => l + LOTE)}
+          onClick={() => setLimite((l) => (restantes <= LOTE ? l + restantes : l + LOTE))}
           className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 self-start rounded-lg px-1 text-[13px] font-semibold text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8"
         >
           {restantes <= LOTE ? (
-            `Mostrar mais ${numero(restantes)}`
+            // "Mostrar todos os 27 estados", "Mostrar todas as 12 cidades"
+            `Mostrar ${feminino ? "todas as" : "todos os"} ${numero(lista.length)} ${termos.length ? (lista.length === 1 ? "resultado" : "resultados") : lista.length === 1 ? um : varios}`
           ) : (
             <>
               Mostrar mais {numero(LOTE)}

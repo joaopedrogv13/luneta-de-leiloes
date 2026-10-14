@@ -61,32 +61,29 @@ export function EsqueletoLinha({ className = "" }: { className?: string }) {
     <div aria-hidden="true" className={`@container ${className}`}>
       <div className={`${MOLDURA} ${PULSO} ${GRADE_LINHA}`}>
         <FotoVazia className={FOTO_LINHA} />
-        <div className="px-5 pt-4 [grid-area:preco] @xl:pt-5 @4xl:flex @4xl:flex-col @4xl:items-end @4xl:pt-6 @4xl:pr-6 @4xl:pl-2">
-          <div className={`h-2.5 w-24 ${BLOCO}`} />
-          <div className={`mt-2.5 h-7 w-40 ${BLOCO}`} />
-          <div className={`mt-2.5 h-3 w-44 max-w-full ${BLOCO}`} />
+        <div className="pt-3 pr-3 pl-3 [grid-area:preco] @xl:px-5 @xl:pt-5 @4xl:flex @4xl:flex-col @4xl:items-end @4xl:pt-6 @4xl:pr-6 @4xl:pl-2">
+          <div className={`h-2.5 w-20 ${BLOCO}`} />
+          <div className={`mt-2.5 h-6 w-32 ${BLOCO} @xl:h-7 @xl:w-40`} />
+          <div className={`mt-2.5 h-3 w-36 max-w-full ${BLOCO} @xl:w-44`} />
         </div>
-        <div className="px-5 pt-4 [grid-area:info] @xl:pt-3.5 @4xl:pt-6 @4xl:pr-4">
+        <div className="px-3 pt-2 pb-3 [grid-area:info] @xl:px-5 @xl:pt-3.5 @xl:pb-5 @4xl:pt-6 @4xl:pr-4">
           <div className={`h-4 w-full max-w-80 ${BLOCO}`} />
-          <div className={`mt-2 h-4 w-2/3 ${BLOCO}`} />
-          <div className={`mt-2.5 h-3 w-36 ${BLOCO}`} />
-          <div className="mt-4 flex gap-3">
+          <div className={`mt-2 h-4 w-2/3 ${BLOCO} @max-xl:hidden`} />
+          <div className={`mt-2.5 h-3 w-36 max-w-full ${BLOCO}`} />
+          <div className="mt-3 flex gap-3 @xl:mt-4">
             <div className={`h-3 w-14 ${BLOCO}`} />
             <div className={`h-3 w-10 ${BLOCO}`} />
-            <div className={`h-3 w-20 ${BLOCO}`} />
+            <div className={`h-3 w-20 ${BLOCO} @max-xl:hidden`} />
           </div>
-          <div className={`mt-3.5 h-3 w-44 ${BLOCO}`} />
-        </div>
-        <div className="flex gap-1.5 px-5 pt-4 [grid-area:tags] @4xl:pr-4 @4xl:pb-5">
-          <div className={`h-[26px] w-24 ${BLOCO}`} />
-          <div className={`h-[26px] w-20 ${BLOCO}`} />
-          <div className={`h-[26px] w-16 ${BLOCO}`} />
-        </div>
-        <div className="px-5 pt-4 pb-4 [grid-area:rodape] @4xl:flex @4xl:items-end @4xl:justify-end @4xl:pt-3 @4xl:pr-6 @4xl:pb-5">
-          <div className="flex items-center justify-between border-t border-nevoa/10 pt-3.5 @4xl:flex-col @4xl:items-end @4xl:gap-3 @4xl:border-t-0 @4xl:pt-0">
-            <div className={`h-3 w-28 ${BLOCO}`} />
-            <div className={`h-9 w-28 ${BLOCO}`} />
+          <div className={`mt-3.5 h-3 w-44 ${BLOCO} @max-xl:hidden`} />
+          <div className="mt-4 flex gap-1.5 @max-xl:hidden">
+            <div className={`h-[26px] w-24 ${BLOCO}`} />
+            <div className={`h-[26px] w-20 ${BLOCO}`} />
+            <div className={`h-[26px] w-16 ${BLOCO}`} />
           </div>
+        </div>
+        <div className="hidden px-6 pt-3 pb-5 pl-2 [grid-area:rodape] @4xl:flex @4xl:items-end @4xl:justify-end">
+          <div className={`h-9 w-28 ${BLOCO}`} />
         </div>
       </div>
     </div>

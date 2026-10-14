@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { pilulas, removerFiltro, type NomesDasFacetas } from "@/lib/catalogo/filtros-rotulos";
+import { pilulas, removerFiltro, type GrupoFiltro, type NomesDasFacetas } from "@/lib/catalogo/filtros-rotulos";
 import type { Filtros } from "@/lib/catalogo/tipos";
 import { IconeX } from "../ui/icones";
 
@@ -9,6 +9,8 @@ import { IconeX } from "../ui/icones";
  * Linha dos filtros ativos: cada pílula remove o seu (estados e cidades em cascata) e "Limpar tudo"
  * zera. Depois de remover, o foco vai para a pílula seguinte (ou para "Limpar tudo"), para quem usa
  * teclado não cair no começo da página. No celular a linha rola de lado; no computador quebra.
+ * `ocultarNoComputador`: grupos cujas pílulas somem a partir de md (o botão rápido deles já mostra o
+ * filtro e tem o × para limpar); "Limpar tudo" aparece no computador com qualquer filtro ativo.
  */
 export function PilulasFiltros({
   filtros,
@@ -17,6 +19,7 @@ export function PilulasFiltros({
   rolavel = false,
   className = "",
   aoEsvaziar,
+  ocultarNoComputador,
 }: {
   filtros: Filtros;
   /** nomes de fontes e tags (opcional) */
@@ -27,6 +30,8 @@ export function PilulasFiltros({
   className?: string;
   /** para onde vai o foco quando não sobra pílula (ex.: o campo de busca) */
   aoEsvaziar?: () => void;
+  /** grupos que não viram pílula no computador (a partir de md) */
+  ocultarNoComputador?: ReadonlySet<GrupoFiltro>;
 }) {
   const lista = useRef<HTMLUListElement>(null);
   const itens = pilulas(filtros, facetas);
@@ -45,8 +50,9 @@ export function PilulasFiltros({
     focoPendente.current = null;
     // o pai demorou demais (ou ignorou a remoção): não rouba o foco de onde a pessoa já está
     if (performance.now() - p.em > 3000) return;
-    const botoes = lista.current?.querySelectorAll<HTMLButtonElement>("[data-pilula]");
-    const alvo = botoes?.length ? botoes[Math.min(p.indice, botoes.length - 1)] : null;
+    // só as que estão à vista (no computador, as dos botões rápidos ficam escondidas)
+    const botoes = Array.from(lista.current?.querySelectorAll<HTMLButtonElement>("[data-pilula]") ?? []).filter((b) => b.getClientRects().length > 0);
+    const alvo = botoes.length ? botoes[Math.min(p.indice, botoes.length - 1)] : null;
     if (alvo) alvo.focus();
     else ultimoAoEsvaziar.current?.();
   }, [chave]);
@@ -66,7 +72,7 @@ export function PilulasFiltros({
       className={`flex items-center gap-2 ${rolavel ? "-mx-4 snap-x scroll-px-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden" : "flex-wrap"} ${className}`}
     >
       {itens.map((p, i) => (
-        <li key={p.id} className="shrink-0 snap-start">
+        <li key={p.id} className={`shrink-0 snap-start ${ocultarNoComputador?.has(p.grupo) ? "md:hidden" : ""}`}>
           <button
             type="button"
             data-pilula
@@ -85,8 +91,8 @@ export function PilulasFiltros({
           </button>
         </li>
       ))}
-      {itens.length > 1 && (
-        <li className="shrink-0 snap-start">
+      {itens.length > 0 && (
+        <li className={`shrink-0 snap-start ${itens.length === 1 ? "max-md:hidden" : ""}`}>
           <button
             type="button"
             onClick={(e) => remover({}, 0, e.timeStamp)}

@@ -13,11 +13,12 @@ import { chaveDoEstado, enderecoPagina, type PedidoLista } from "./app/consultas
 import { EstadoVazio } from "./app/EstadoVazio";
 import { criarLojaDestaque, salvarPreferencias, useAcesoPeloMapa, useMidia, usePreferencias, type LojaDestaque } from "./app/hooks";
 import { Paginacao } from "./app/Paginacao";
-import { CONSULTA_COMPUTADOR, CONSULTA_CELULAR, type Preferencias } from "./app/preferencias";
+import { CONSULTA_BARRA_COMPACTA, CONSULTA_BARRA_RECOLHE, CONSULTA_COMPUTADOR, CONSULTA_CELULAR, type Preferencias } from "./app/preferencias";
 import { Cabecalho, type FaixaAviso } from "./Cabecalho";
 import { CartaoImovel, LinhaImovel, ListaEsqueletos, SeletorVista } from "./cartoes";
 import { IconeLista, IconeMapa } from "./cartoes/icones";
 import { BarraFiltros } from "./filtros";
+import { consumirVoltaPropria, depoisDoHistorico } from "./ui/historico";
 import { semMovimento } from "./ui/useAdiado";
 import { useBusca } from "./useBusca";
 import { useFavoritos } from "./useFavoritos";
@@ -37,7 +38,13 @@ const FACETAS_VAZIAS: Facetas = {
 
 /** Grade dos cards: 1 a 4 colunas pela largura da área (cada cartão com pelo menos 300 px). */
 const GRADE_CARDS = "grid grid-cols-1 gap-4 sm:gap-5 @min-[620px]:grid-cols-2 @min-[940px]:grid-cols-3 @min-[1260px]:grid-cols-4";
-const LISTA_LINHAS = "flex flex-col gap-4";
+const LISTA_LINHAS = "flex flex-col gap-3 sm:gap-4";
+/** Largura máxima do conteúdo sem a coluna do mapa (a barra de filtros segue a mesma, para as bordas alinharem). */
+const LARGURA_LISTA = "max-w-[1180px]";
+const LARGURA_CARDS = "max-w-[1680px]";
+
+/** Botão flutuante do mapa no celular: altura + margem de baixo (o foco pelo Tab não para atrás dele). */
+const ESPACO_BOTAO_MAPA = 84;
 
 export interface PropsCatalogoApp {
   conjunto: Conjunto;
@@ -68,9 +75,11 @@ export interface PropsCatalogoApp {
  * App do catálogo (/previa com os dados reais e /assinante com os exemplos): cabeçalho, barra de filtros fixa,
  * lista ou cards, mapa ligado à lista, paginação, favoritos e a demonstração Lente × Luneta.
  *
- * Estado na URL (history.replaceState: compartilhar o link reabre a mesma busca; o "Voltar à busca" da página
- * do imóvel usa a última URL guardada no sessionStorage). A vista e o mapa seguem a escolha da pessoa
- * (salva no navegador) ou o padrão do aparelho: lista com o mapa ao lado no computador, cards no celular.
+ * Estado na URL: trocar de página, aplicar o painel "Todos os filtros", buscar um texto e escolher a cidade no
+ * mapa criam uma entrada no histórico (o "voltar" do navegador volta à busca anterior, sem sair do catálogo);
+ * os ajustes dos pop-ups rápidos só substituem a entrada atual. O "Voltar à busca" da página do imóvel usa a
+ * última URL guardada no sessionStorage. A vista e o mapa seguem a escolha da pessoa (salva no navegador) ou
+ * o padrão do aparelho: lista com o mapa ao lado no computador, cards no celular.
  */
 export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, selosDesligados, textos, faixa, rodape }: PropsCatalogoApp) {
   // Ao voltar pelo navegador, o Next pode montar a página antiga (do cache) com a URL nova: vale a URL.
@@ -110,11 +119,26 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   const facetas = resultado?.facetas ?? FACETAS_VAZIAS;
   const total = resultado?.total ?? 0;
 
-  // ---- URL e última busca (para o "Voltar à busca" da página do imóvel) ----
+  // ---- URL, histórico e última busca (para o "Voltar à busca" da página do imóvel) ----
   const caminho = ROTA_LISTA[conjunto];
   const endereco = enderecoPagina(caminho, { ...pedido, vista: vistaEscolhida, mapa: mapaEscolhido });
+  /** a próxima mudança de URL cria uma entrada no histórico ("push") ou substitui a atual */
+  const proximaEntrada = useRef<"push" | "replace">("replace");
+  const marcarEntrada = useCallback(() => {
+    proximaEntrada.current = "push";
+  }, []);
+  const enderecoAtual = useRef(endereco);
   useEffect(() => {
-    if (window.location.pathname + window.location.search !== endereco) window.history.replaceState(null, "", endereco);
+    enderecoAtual.current = endereco;
+    const modo = proximaEntrada.current;
+    proximaEntrada.current = "replace";
+    // a folha de filtros pode estar saindo do histórico (history.back): a URL nova vai depois dela
+    depoisDoHistorico(() => {
+      const url = enderecoAtual.current;
+      if (window.location.pathname + window.location.search === url) return;
+      if (modo === "push") window.history.pushState(null, "", url);
+      else window.history.replaceState(window.history.state, "", url);
+    });
     try {
       window.sessionStorage.setItem(chaveUltimaBusca(conjunto), endereco);
     } catch {
@@ -123,31 +147,55 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   }, [endereco, conjunto]);
   const hrefPagina = (p: number) => enderecoPagina(caminho, { ...pedido, pagina: p, vista: vistaEscolhida, mapa: mapaEscolhido });
 
+  // "voltar" e "avançar" do navegador: a busca da URL volta para a tela
+  const { restaurar } = busca;
+  useEffect(() => {
+    const aoNavegar = () => {
+      if (consumirVoltaPropria()) return; // a folha de filtros saiu do histórico: não há o que restaurar
+      if (window.location.pathname !== caminho) return;
+      const e = lerBusca(new URLSearchParams(window.location.search));
+      restaurar({ filtros: e.filtros, ordem: e.ordem, pagina: e.pagina, plano: e.plano });
+      setVistaEscolhida(e.vista);
+      setMapaEscolhido(e.mapa);
+    };
+    window.addEventListener("popstate", aoNavegar);
+    return () => window.removeEventListener("popstate", aoNavegar);
+  }, [caminho, restaurar]);
+
   // ---- partes fixas (cabeçalho no computador + barra de filtros): alturas e sombra quando colada ----
-  // --cab-h: onde a barra para (abaixo do cabeçalho fixo; 0 no celular); --topo-h: cabeçalho + barra
-  // (a coluna do mapa começa ali e ocupa o resto da tela; o foco do Tab para abaixo disso); --faixa-v: quanto
-  // da faixa de aviso ainda aparece acima do cabeçalho fixo (só no topo da página).
+  // --cab-h: onde a barra para (abaixo do cabeçalho fixo; 0 no celular e em tela baixa); --topo-h: cabeçalho +
+  // barra (a coluna do mapa começa ali e ocupa o resto da tela; o foco do Tab para abaixo disso); --faixa-v:
+  // quanto da faixa de aviso ainda aparece acima do cabeçalho fixo (só no topo da página).
   const raiz = useRef<HTMLDivElement>(null);
   const cabecalho = useRef<HTMLElement>(null);
   const barra = useRef<HTMLDivElement>(null);
+  const barraVisivel = useRef<HTMLDivElement>(null);
   const sentinela = useRef<HTMLDivElement>(null);
   const topoFixo = useRef(0);
   const cabFixo = useRef(0);
   const [colada, setColada] = useState(false);
-  /** celular: a barra sai de cena ao rolar para baixo e volta ao rolar para cima (a lista ganha a tela) */
+  /** a barra sai de cena ao rolar para baixo e volta ao rolar para cima (celular, tablet, tela baixa) */
   const [recolhida, setRecolhida] = useState(false);
+  /**
+   * Colada em tela de tablet ou baixa: uma linha só (busca, total, ordenar, filtros). A altura cheia fica
+   * reservada (transparente, sem receber cliques) para a lista não pular quando a barra encolhe.
+   */
+  const [compacta, setCompacta] = useState<{ altura: number } | null>(null);
   useEffect(() => {
     const r = raiz.current;
     const b = barra.current;
+    const v = barraVisivel.current;
     const c = cabecalho.current;
     const marco = sentinela.current;
-    if (!r || !b || !c || !marco) return;
+    if (!r || !b || !v || !c || !marco) return;
     const html = document.documentElement;
     const antes = html.style.scrollPaddingTop;
-    const celularMq = window.matchMedia(CONSULTA_CELULAR);
+    const recolheMq = window.matchMedia(CONSULTA_BARRA_RECOLHE);
+    const compactaMq = window.matchMedia(CONSULTA_BARRA_COMPACTA);
     let quadro = 0;
     let ultimoY = window.scrollY;
     let faixaAntes = -1;
+    let compactaAgora = false;
     const verColada = () => {
       quadro = 0;
       // o marco (1 px logo acima da barra) passou por baixo do cabeçalho fixo: a barra está colada
@@ -160,17 +208,25 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
         faixaAntes = faixa;
         r.style.setProperty("--faixa-v", `${faixa}px`);
       }
+      // nunca muda com algo aberto ou em uso dentro dela (pop-up de filtro, busca digitando)
+      const ativo = document.activeElement;
+      const emUso = !!b.querySelector("[aria-expanded=true]") || (b.contains(ativo) && ativo instanceof HTMLInputElement);
+      const querCompacta = estaColada && compactaMq.matches;
+      if (querCompacta !== compactaAgora && !emUso) {
+        compactaAgora = querCompacta;
+        setCompacta(querCompacta ? { altura: Math.round(v.getBoundingClientRect().height) } : null);
+      }
       const y = window.scrollY;
       const dy = y - ultimoY;
       if (Math.abs(dy) < 6) return;
       ultimoY = y;
-      // nunca some com algo aberto ou em uso dentro dela (busca digitando, pop-up de filtro)
-      const emUso = b.contains(document.activeElement) || !!b.querySelector("[aria-expanded=true]");
-      setRecolhida(celularMq.matches && estaColada && dy > 0 && y > marco.offsetTop + 240 && !emUso);
+      // recolhe no celular, no toque e em tela baixa, e sempre que a barra ocupa mais de 1/4 da tela
+      const recolhe = recolheMq.matches || v.offsetHeight > window.innerHeight * 0.25;
+      setRecolhida(recolhe && estaColada && dy > 0 && y > marco.offsetTop + 240 && !emUso && !b.contains(ativo));
     };
     const medir = () => {
       const cab = getComputedStyle(c).position === "sticky" ? Math.round(c.getBoundingClientRect().height) : 0;
-      const topo = cab + Math.round(b.getBoundingClientRect().height);
+      const topo = cab + Math.round(v.getBoundingClientRect().height);
       topoFixo.current = topo;
       cabFixo.current = cab;
       r.style.setProperty("--cab-h", `${cab}px`);
@@ -183,7 +239,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     };
     medir();
     const ro = new ResizeObserver(medir);
-    ro.observe(b);
+    ro.observe(v);
     ro.observe(c);
     window.addEventListener("scroll", aoRolar, { passive: true });
     window.addEventListener("resize", medir);
@@ -196,16 +252,31 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     };
   }, []);
 
-  // ---- rodapé à vista (o botão flutuante do mapa sai do caminho) ----
-  const fimDaPagina = useRef<HTMLDivElement>(null);
-  const [rodapeVisivel, setRodapeVisivel] = useState(false);
+  // ---- paginação à vista (o botão flutuante do mapa sai do caminho dela e do rodapé) ----
+  const fimDaLista = useRef<HTMLDivElement>(null);
+  const [fimVisivel, setFimVisivel] = useState(false);
   useEffect(() => {
-    const el = fimDaPagina.current;
+    const el = fimDaLista.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => setRodapeVisivel(e.isIntersecting), { threshold: 0 });
+    // 96 px antes de a paginação entrar na tela o botão já saiu (ele ocupa os ~70 px de baixo)
+    const io = new IntersectionObserver(([e]) => setFimVisivel(e.isIntersecting || e.boundingClientRect.top < 0), {
+      threshold: 0,
+      rootMargin: "0px 0px 96px 0px",
+    });
     io.observe(el);
     return () => io.disconnect();
   }, []);
+  const botaoMapaVisivel = !fimVisivel;
+  // celular, com o botão do mapa na tela: o foco pelo Tab nunca para atrás dele (scroll-padding embaixo)
+  useEffect(() => {
+    if (!celular || !botaoMapaVisivel) return;
+    const html = document.documentElement;
+    const antes = html.style.scrollPaddingBottom;
+    html.style.scrollPaddingBottom = `${ESPACO_BOTAO_MAPA}px`;
+    return () => {
+      html.style.scrollPaddingBottom = antes;
+    };
+  }, [celular, botaoMapaVisivel]);
 
   // ---- rolagem até o topo da lista ----
   const tituloLista = useRef<HTMLHeadingElement>(null);
@@ -231,10 +302,20 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   const mudarFiltros = useCallback(
     (f: Filtros) => {
       const mudou = !filtrosIguais(vigente.current.filtros, f);
+      // texto novo na busca é como uma pesquisa nova: entra no histórico
+      if (mudou && (f.q ?? "") !== (vigente.current.filtros.q ?? "")) marcarEntrada();
       aplicarFiltros(f);
       if (mudou) subirSeRolou();
     },
-    [aplicarFiltros, subirSeRolou],
+    [aplicarFiltros, subirSeRolou, marcarEntrada],
+  );
+  /** O painel "Todos os filtros" aplicado ("Mostrar N imóveis"): entra no histórico. */
+  const aplicarPainel = useCallback(
+    (f: Filtros) => {
+      if (!filtrosIguais(vigente.current.filtros, f)) marcarEntrada();
+      mudarFiltros(f);
+    },
+    [mudarFiltros, marcarEntrada],
   );
   const onOrdem = useCallback(
     (o: Ordem) => {
@@ -245,6 +326,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     [aplicarOrdem, subirSeRolou],
   );
   const irParaPagina = (p: number) => {
+    if (p !== pedido.pagina) marcarEntrada();
     busca.irParaPagina(p);
     irAoTopo(true);
   };
@@ -258,11 +340,32 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     setMapaEscolhido(visivel);
     salvarPreferencias({ mapa: visivel });
   };
-  /** Botão flutuante do celular: o mapa abre em faixa no topo da lista, e a tela vai até ele. */
+  /** Onde a pessoa estava na lista quando abriu o mapa no celular (para voltar ao mesmo imóvel ao fechar). */
+  const antesDoMapa = useRef<{ id: string | null; y: number; chave: string } | null>(null);
+  /**
+   * Botão flutuante do celular: o mapa abre em faixa no topo da lista e a tela vai até ele; "Esconder mapa"
+   * devolve a pessoa ao imóvel em que estava (se a busca não mudou nesse meio-tempo).
+   */
   const alternarMapaCelular = () => {
     const ligar = !mapaVisivel;
-    escolherMapa(ligar);
-    if (ligar) requestAnimationFrame(() => irAoTopo(false));
+    // a mesma busca (filtros, ordem, página), sem contar o próprio mapa
+    const chave = enderecoPagina(caminho, { ...pedido, vista: null, mapa: null });
+    if (ligar) {
+      const primeiro = Array.from(document.querySelectorAll<HTMLElement>("[data-imovel]")).find((el) => el.getBoundingClientRect().bottom > topoFixo.current + 8);
+      antesDoMapa.current = { id: primeiro?.dataset.imovel ?? null, y: window.scrollY, chave };
+      escolherMapa(true);
+      requestAnimationFrame(() => irAoTopo(false));
+      return;
+    }
+    escolherMapa(false);
+    const voltar = antesDoMapa.current;
+    antesDoMapa.current = null;
+    if (!voltar || voltar.chave !== chave) return;
+    requestAnimationFrame(() => {
+      const el = voltar.id ? document.querySelector<HTMLElement>(`[data-imovel="${CSS.escape(voltar.id)}"]`) : null;
+      if (el) el.scrollIntoView({ block: "start" });
+      else window.scrollTo({ top: voltar.y });
+    });
   };
 
   // ---- avisos, upgrade e favoritos ----
@@ -300,10 +403,11 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   const filtros = pedido.filtros;
   const verSoCidade = useCallback(
     (p: PontoMapa) => {
+      marcarEntrada();
       mudarFiltros(limparVazios({ ...filtros, uf: undefined, cidade: [p.chave], bairro: undefined }));
       loja.definirDoMapa(null);
     },
-    [filtros, mudarFiltros, loja],
+    [filtros, mudarFiltros, loja, marcarEntrada],
   );
   // com cidade escolhida, o mapa enquadra os resultados (não o estado inteiro)
   const ufsFoco = filtros.cidade?.length ? undefined : filtros.uf;
@@ -320,6 +424,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
       onSelecionarCidade={verSoCidade}
       hrefImovel={hrefImovel}
       className={className}
+      recolhivel={variante === "faixa"}
     />
   );
 
@@ -329,15 +434,19 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   const classeFaixa =
     vista === "lista" ? (mapaPedido === true ? "lg:hidden" : "hidden") : mapaPedido === true ? "" : mapaPedido === null ? "hidden lg:block" : "hidden";
   const comColuna = vista === "lista" && mapaPedido !== false;
+  const largura = comColuna ? "" : vista === "lista" ? LARGURA_LISTA : LARGURA_CARDS;
 
   const itens = resultado?.itens ?? [];
   const pilulasValendo = filtrosEfetivos(filtros, plano, selosDesligados);
   const semResultado = resultado !== null && !busca.carregando && total === 0;
 
   return (
-    <div ref={raiz} className="[--cab-h:0px] [--faixa-v:0px] [--topo-h:136px] lg:[--cab-h:65px] lg:[--topo-h:190px]">
+    <div
+      ref={raiz}
+      className="[--cab-h:0px] [--faixa-v:0px] [--topo-h:136px] lg:[--topo-h:125px] [@media(min-width:64rem)_and_(min-height:50.0625rem)]:[--cab-h:65px] [@media(min-width:64rem)_and_(min-height:50.0625rem)]:[--topo-h:190px]"
+    >
       <a
-        href="#resultados"
+        href="#lista-imoveis"
         className="fixed top-2 left-2 z-[70] -translate-y-24 rounded-full bg-latao px-4 py-2.5 text-sm font-semibold text-noite-fixa transition-transform focus:translate-y-0 focus-visible:outline-noite-fixa"
       >
         Pular para os resultados
@@ -355,40 +464,52 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
 
       <main id="conteudo">
         <div ref={sentinela} aria-hidden="true" className="h-px" />
+        {/* a barra (sticky): por fora, só a posição, o recolher e a altura reservada quando compacta (transparente
+            e sem receber cliques); por dentro, a superfície visível */}
         <div
           ref={barra}
           data-colada={colada ? "" : undefined}
           data-recolhida={recolhida ? "" : undefined}
           onFocusCapture={() => setRecolhida(false)}
-          className="sticky top-[var(--cab-h)] z-30 border-b border-transparent bg-noite/90 px-4 py-3 backdrop-blur-md transition-[box-shadow,border-color,translate] duration-200 ease-luneta data-[colada]:border-nevoa/15 data-[colada]:shadow-[0_12px_30px_-14px_rgba(0,0,0,.7)] data-[recolhida]:-translate-y-[calc(100%+2px)] data-[recolhida]:shadow-none motion-reduce:transition-none sm:px-6 lg:px-8 [[data-theme=light]_&]:data-[colada]:shadow-[0_10px_28px_-14px_rgba(15,24,48,.28)]"
+          style={compacta ? { minHeight: compacta.altura } : undefined}
+          className={`group/barra sticky top-[var(--cab-h)] z-30 transition-[translate] duration-200 ease-luneta data-[recolhida]:-translate-y-[calc(100%+2px)] motion-reduce:transition-none ${compacta ? "pointer-events-none" : ""}`}
         >
-          <BarraFiltros
-            filtros={filtros}
-            facetas={facetas}
-            total={total}
-            carregando={busca.carregando}
-            plano={plano}
-            selosDesligados={selosDesligados}
-            ordem={pedido.ordem}
-            onOrdem={onOrdem}
-            onChange={mudarFiltros}
-            onUpsell={onUpsell}
-            contar={busca.contar}
-            consultar={busca.consultar}
-            acoes={
-              <SeletorVista
-                vista={vista}
-                onVista={escolherVista}
-                mapa={mapaVisivel}
-                onMapa={escolherMapa}
-                // no celular lista e cards são o mesmo cartão em coluna, e o mapa tem o botão flutuante
-                className="max-sm:hidden"
-                // em telas médias só os ícones (o nome fica para leitores de tela e na dica do mouse)
-                rotuloClassName="max-lg:sr-only"
+          <div
+            ref={barraVisivel}
+            className="pointer-events-auto relative border-b border-transparent bg-noite/90 px-4 py-3 backdrop-blur-md transition-[box-shadow,border-color] duration-200 ease-luneta group-data-[colada]/barra:border-nevoa/15 group-data-[colada]/barra:shadow-[0_12px_30px_-14px_rgba(0,0,0,.7)] group-data-[recolhida]/barra:shadow-none motion-reduce:transition-none sm:px-6 lg:px-8 [[data-theme=light]_&]:group-data-[colada]/barra:shadow-[0_10px_28px_-14px_rgba(15,24,48,.28)]"
+          >
+            <div className={`mx-auto ${largura}`}>
+              <BarraFiltros
+                filtros={filtros}
+                facetas={facetas}
+                total={total}
+                carregando={busca.carregando}
+                plano={plano}
+                selosDesligados={selosDesligados}
+                ordem={pedido.ordem}
+                onOrdem={onOrdem}
+                onChange={mudarFiltros}
+                onAplicarPainel={aplicarPainel}
+                onUpsell={onUpsell}
+                contar={busca.contar}
+                consultar={busca.consultar}
+                compacta={!!compacta}
+                acoes={
+                  <SeletorVista
+                    vista={vista}
+                    onVista={escolherVista}
+                    mapa={mapaVisivel}
+                    onMapa={escolherMapa}
+                    // no celular o mapa tem o botão flutuante: aqui só Lista | Cards, em ícones de 44 px
+                    semMapaCelular
+                    // em telas médias e no celular só os ícones (o nome fica para leitores de tela e na dica do mouse)
+                    rotuloClassName="max-lg:sr-only"
+                  />
+                }
               />
-            }
-          />
-          <div aria-hidden="true" data-ativo={busca.carregando ? "" : undefined} className={s.progresso} />
+            </div>
+            <div aria-hidden="true" data-ativo={busca.carregando ? "" : undefined} className={s.progresso} />
+          </div>
         </div>
 
         {/* coluna do mapa: ~40% (36% em 1024 px, para a linha ainda caber com a foto ao lado) */}
@@ -398,7 +519,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
               {resultado ? `Resultados, página ${resultado.pagina} de ${resultado.totalPaginas}` : "Resultados"}
             </h2>
 
-            <div className={`mx-auto flex flex-col gap-5 ${comColuna ? "" : vista === "lista" ? "max-w-[1180px]" : "max-w-[1680px]"}`}>
+            <div className={`mx-auto flex flex-col gap-5 ${largura}`}>
               {lente && <AvisoLente onAssinar={() => assinar("aviso")} />}
 
               {mapaVisivel && !mapaNaColuna ? <div className={classeFaixa}>{mapa("faixa")}</div> : null}
@@ -414,38 +535,43 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
                 </div>
               )}
 
-              {itens.length === 0 ? (
-                // nada a mostrar ainda: esqueletos (primeira carga sem dados, ou saindo do estado vazio
-                // para a busca nova); com erro, só o aviso acima; pronto e sem nada, o estado vazio
-                busca.erro ? null : semResultado ? (
-                  <EstadoVazio
-                    filtros={pilulasValendo}
-                    nomes={facetas}
-                    contar={busca.contar}
-                    onChange={mudarFiltros}
-                    onLimparTudo={() => mudarFiltros({})}
-                  />
+              {/* destino do "Pular para os resultados": a lista, depois do mapa em faixa */}
+              <div id="lista-imoveis" tabIndex={-1} className="scroll-mt-[calc(var(--topo-h)+16px)] outline-none">
+                {itens.length === 0 ? (
+                  // nada a mostrar ainda: esqueletos (primeira carga sem dados, ou saindo do estado vazio
+                  // para a busca nova); com erro, só o aviso acima; pronto e sem nada, o estado vazio
+                  busca.erro ? null : semResultado ? (
+                    <EstadoVazio
+                      filtros={pilulasValendo}
+                      nomes={facetas}
+                      contar={busca.contar}
+                      onChange={mudarFiltros}
+                      onLimparTudo={() => mudarFiltros({})}
+                    />
+                  ) : (
+                    <div className="@container">
+                      <ListaEsqueletos vista={vista} quantidade={6} className={vista === "cards" ? GRADE_CARDS : LISTA_LINHAS} />
+                    </div>
+                  )
                 ) : (
-                  <div className="@container">
-                    <ListaEsqueletos vista={vista} quantidade={6} className={vista === "cards" ? GRADE_CARDS : LISTA_LINHAS} />
+                  // lista anterior esmaecida enquanto a nova chega, ou se a nova falhou (o aviso diz que não atualizou)
+                  <div aria-busy={busca.carregando} data-desatualizada={busca.erro ? "" : undefined} className={`${s.lista} @container`}>
+                    <ListaImoveis
+                      itens={itens}
+                      vista={vista}
+                      plano={planoDosDados}
+                      conjunto={conjunto}
+                      ehFavorito={ehFavorito}
+                      onFavoritar={onFavoritar}
+                      onUpsell={onUpsell}
+                      loja={loja}
+                    />
                   </div>
-                )
-              ) : (
-                // lista anterior esmaecida enquanto a nova chega, ou se a nova falhou (o aviso diz que não atualizou)
-                <div aria-busy={busca.carregando} data-desatualizada={busca.erro ? "" : undefined} className={`${s.lista} @container`}>
-                  <ListaImoveis
-                    itens={itens}
-                    vista={vista}
-                    plano={planoDosDados}
-                    conjunto={conjunto}
-                    ehFavorito={ehFavorito}
-                    onFavoritar={onFavoritar}
-                    onUpsell={onUpsell}
-                    loja={loja}
-                  />
-                </div>
-              )}
+                )}
+              </div>
 
+              {/* a paginação entrando na tela tira o botão flutuante do mapa do caminho */}
+              <div ref={fimDaLista} aria-hidden="true" className="h-px" />
               {resultado && total > 0 && (
                 <Paginacao
                   pagina={resultado.pagina}
@@ -468,18 +594,19 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
         </div>
       </main>
 
-      <div ref={fimDaPagina}>{rodape}</div>
+      {rodape}
 
-      {/* celular: o mapa liga e desliga num botão flutuante (a barra fixa fica com duas linhas só);
-          sai do caminho quando o rodapé aparece */}
+      {/* Celular: o mapa liga e desliga num botão flutuante (a barra fixa fica com duas linhas só); sai do caminho
+          quando a paginação aparece. Abaixo dos pop-ups (z-20): um pop-up de filtro, de ordem ou de tag que desce
+          até o pé da tela fica por cima dele, e o botão some enquanto houver um aberto. */}
       <button
         type="button"
         onClick={alternarMapaCelular}
-        className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-40 inline-flex min-h-12 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full bg-luar px-5 text-[15px] font-semibold text-noite shadow-[0_14px_36px_rgba(0,0,0,.45)] transition-[opacity,translate,scale] duration-200 ease-luneta active:scale-[0.96] motion-reduce:transition-none sm:hidden ${
-          rodapeVisivel ? "pointer-events-none translate-y-4 opacity-0" : ""
+        className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-20 inline-flex min-h-12 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full bg-luar px-5 text-[15px] font-semibold text-noite shadow-[0_14px_36px_rgba(0,0,0,.45)] transition-[opacity,translate,scale] duration-200 ease-luneta active:scale-[0.96] motion-reduce:transition-none sm:hidden [body:has([data-popover])_&]:pointer-events-none [body:has([data-popover])_&]:opacity-0 ${
+          botaoMapaVisivel ? "" : "pointer-events-none translate-y-4 opacity-0"
         }`}
-        tabIndex={rodapeVisivel ? -1 : undefined}
-        aria-hidden={rodapeVisivel || undefined}
+        tabIndex={botaoMapaVisivel ? undefined : -1}
+        aria-hidden={!botaoMapaVisivel || undefined}
       >
         {mapaVisivel ? <IconeLista /> : <IconeMapa />}
         {mapaVisivel ? "Esconder mapa" : "Ver no mapa"}
@@ -530,7 +657,7 @@ const ListaImoveis = memo(function ListaImoveis({
             onUpsell={onUpsell}
             loja={loja}
             // primeira dobra: as fotos carregam já (as demais, ao chegar perto da tela)
-            eager={i < (vista === "cards" ? 4 : 2)}
+            eager={i < (vista === "cards" ? 4 : 3)}
           />
         </li>
       ))}

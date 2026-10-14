@@ -93,7 +93,7 @@ export function Chips({
               <span className={`text-xs tabular-nums ${on ? "text-latao-texto" : "text-nevoa"}`}>
                 <span className="sr-only">, </span>
                 {numero(o.total)}
-                <span className="sr-only"> imóveis</span>
+                <span className="sr-only"> {o.total === 1 ? "imóvel" : "imóveis"}</span>
               </span>
             )}
           </button>

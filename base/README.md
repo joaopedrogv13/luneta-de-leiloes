@@ -87,7 +87,7 @@ O banco ficou com 176 MB, quase tudo na tabela `risco` (todo imóvel recebe as 2
 | Devedor com direito de preferência | 4.568 (1) | 21,5% |
 | Deságio baixo | 4.110 | 19,4% |
 | Aceita financiamento | 2.468 | 11,6% |
-| Preço acima do mercado | 2.039 (2.039) | 9,6% |
+| Lance acima da avaliação (slug `preco-acima-mercado`; antes "Preço acima do mercado") | 2.039 (2.039) | 9,6% |
 | Só direitos sobre o imóvel | 2 (1) | |
 | 2ª praça | 2 | |
 | Construção irregular | 2 (2) | |

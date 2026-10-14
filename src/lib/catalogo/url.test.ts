@@ -72,6 +72,11 @@ test("valores inválidos são ignorados, nunca quebram", () => {
   assert.deepEqual(lerBusca(new URLSearchParams("uf=MG,SP&tipo=casa,,terreno")).filtros, { uf: ["MG", "SP"], tipo: ["casa", "terreno"] }, "vírgula também separa");
 });
 
+test("faixa ao contrário num link: as pontas trocam (URL, pílula e campos iguais ao que o servidor aplica)", () => {
+  const e = lerBusca(new URLSearchParams("lanceMin=300000&lanceMax=100000&desagioMin=80&desagioMax=20&areaMin=50"));
+  assert.deepEqual(e.filtros, { lanceMin: 100000, lanceMax: 300000, desagioMin: 20, desagioMax: 80, areaMin: 50 });
+});
+
 test("contarFiltros: faixa conta uma vez", () => {
   const f: Filtros = { lanceMin: 1, lanceMax: 2, uf: ["MG"], q: "x", financiamento: false };
   assert.equal(contarFiltros(f), 4);

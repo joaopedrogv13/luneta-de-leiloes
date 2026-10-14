@@ -22,6 +22,7 @@ import {
   resumoBotao,
   textoData,
   textoFaixa,
+  valorCurto,
 } from "./filtros-rotulos";
 import type { Filtros } from "./tipos";
 
@@ -46,7 +47,11 @@ describe("pílulas", () => {
     assert.deepEqual(rotulos({ lanceMin: 100_000, lanceMax: 1_500_000 }), ["Lance de R$ 100 mil a R$ 1,5 mi"]);
     assert.deepEqual(rotulos({ avaliacaoMax: 2_000_000 }), ["Avaliação até R$ 2 mi"]);
     assert.deepEqual(rotulos({ desagioMin: 30, desagioMax: 60 }), ["Deságio de 30% a 60%"]);
-    assert.deepEqual(rotulos({ desagioMax: -5 }), ["Deságio ≤ −5%"]);
+    // deságio negativo = lance acima da avaliação: em palavras, nunca "−5%" (que nos cartões quer dizer desconto)
+    assert.deepEqual(rotulos({ desagioMax: -5 }), ["Lance 5% ou mais acima da avaliação"]);
+    assert.deepEqual(rotulos({ desagioMin: -10 }), ["Lance até 10% acima da avaliação"]);
+    assert.deepEqual(rotulos({ desagioMin: -10, desagioMax: 20 }), ["De 10% acima a 20% abaixo da avaliação"]);
+    assert.deepEqual(rotulos({ desagioMax: 40 }), ["Deságio ≤ 40%"]);
     assert.deepEqual(rotulos({ lanceM2Max: 2000 }), ["Lance por m² até R$ 2 mil"]);
     assert.deepEqual(rotulos({ areaMin: 50, areaMax: 120 }), ["Área de 50 a 120 m²"]);
     assert.deepEqual(rotulos({ areaMin: 50 }), ["Área a partir de 50 m²"]);
@@ -246,6 +251,10 @@ describe("números digitados", () => {
     assert.equal(textoFaixa(undefined, undefined, "moeda"), null);
     assert.equal(comum(textoFaixa(undefined, 2500, "moedaM2")), "até R$ 2,5 mil/m²");
     assert.equal(textoFaixa(-10, undefined, "pct"), "≥ −10%");
+    assert.equal(textoFaixa(30, undefined, "desagio"), "Deságio ≥ 30%");
+    assert.equal(valorCurto(-50, "desagio"), "50% acima");
+    assert.equal(valorCurto(100, "desagio"), "100% abaixo");
+    assert.equal(valorCurto(0, "desagio"), "na avaliação");
     assert.equal(textoData(undefined, undefined), null);
     assert.equal(textoData("2026-10-14"), "Praça a partir de 14/10/2026");
     assert.equal(textoData(undefined, "2026-10-21"), "Praça até 21/10/2026");

@@ -268,6 +268,10 @@ export interface Facetas {
   fgts: number;
   parcelamento: number;
   comFoto: number;
+  /** resultados com data da praça (a ordem "Praça mais próxima" só ajuda se houver) */
+  comData?: number;
+  /** todos os resultados coletados no mesmo dia (a ordem "Mais recentes" não muda nada) */
+  coletaUnica?: boolean;
 }
 
 /** Um ponto do mapa: os imóveis filtrados de uma cidade, agregados (a posição é a da cidade). */

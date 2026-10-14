@@ -45,6 +45,19 @@ export interface ListaLida {
 
 const COMO_REGERAR = "Gere de novo com `npm run base:exportar -- --site` (ver base/README.md).";
 
+/**
+ * Rótulos de tag que mudaram depois que o instantâneo foi gerado (o slug fica; o texto mostrado segue o de
+ * base/riscos/tags.ts de hoje). "Preço acima do mercado" só comparava com a avaliação: virou "Lance acima da
+ * avaliação". Exportações novas já saem com o rótulo novo.
+ */
+const ROTULO_ATUAL: Readonly<Record<string, string>> = { "preco-acima-mercado": "Lance acima da avaliação" };
+
+function atualizarRotulos(tags: TagResumo[]): TagResumo[] {
+  return tags.some((t) => ROTULO_ATUAL[t.slug] !== undefined && ROTULO_ATUAL[t.slug] !== t.rotulo)
+    ? tags.map((t) => (ROTULO_ATUAL[t.slug] ? { ...t, rotulo: ROTULO_ATUAL[t.slug]! } : t))
+    : tags;
+}
+
 export class ErroInstantaneo extends Error {
   constructor(mensagem: string) {
     super(`Catálogo (base/saida/site): ${mensagem} ${COMO_REGERAR}`);
@@ -184,7 +197,7 @@ export async function lerLista(pasta: string = pastaPadrao()): Promise<ListaLida
       lanceM2: c.lanceM2[k]!, avaliacaoM2: c.avaliacaoM2[k]!, modalidade: c.modalidade[k]!, modalidadeFonte: c.modalidadeFonte[k]!,
       praca: c.praca[k]!, dataPraca: c.dataPraca[k]!, financiamento: c.financiamento[k]!, fgts: c.fgts[k]!,
       parcelamento: c.parcelamento[k]!, ocupacao: c.ocupacao[k]!, judicial: c.judicial[k]!, fonte: c.fonte[k]!, foto: c.foto[k]!,
-      totalFotos: c.totalFotos[k]!, selo: c.selo[k]!, seloPendente: c.seloPendente[k]!, tags: c.tags[k]!, coletadoEm: c.coletadoEm[k]!,
+      totalFotos: c.totalFotos[k]!, selo: c.selo[k]!, seloPendente: c.seloPendente[k]!, tags: atualizarRotulos(c.tags[k]!), coletadoEm: c.coletadoEm[k]!,
     };
     if (ids.has(i.id)) throw new ErroInstantaneo(`id repetido: ${i.id}.`);
     ids.add(i.id);

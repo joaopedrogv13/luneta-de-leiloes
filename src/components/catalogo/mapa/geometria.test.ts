@@ -7,6 +7,7 @@ import {
   ZOOM_MIN,
   caixaDasUfs,
   caixaDosPontos,
+  caixaPrincipal,
   cameraBrasil,
   enquadrar,
   enquadrarResultados,
@@ -91,6 +92,21 @@ describe("câmera do mapa", () => {
     assert.ok(umaCidade.z > 5 && umaCidade.z <= 9, `zoom ${umaCidade.z}`);
     const [sx, sy] = paraTela(x, y, umaCidade, TELA);
     assert.ok(sx > 0 && sx < TELA.w && sy > 0 && sy < TELA.h);
+  });
+
+  it("grupo principal: um resultado fora da curva não estica o enquadramento; o país todo continua o país", () => {
+    const pt = (lat: number, lon: number, total: number) => {
+      const [x, y] = projetar(lat, lon);
+      return { x, y, total };
+    };
+    // 55 em Campinas, 1 em São Paulo e 1 em Salvador (busca "campinas" achando o endereço de um imóvel na BA)
+    const campinas = pt(-22.9, -47.06, 55);
+    const caixa = caixaPrincipal([campinas, pt(-23.55, -46.63, 1), pt(-12.97, -38.5, 1)])!;
+    assert.deepEqual(caixa, [campinas.x, campinas.y, campinas.x, campinas.y]);
+    // capitais espalhadas com totais parecidos: a caixa de todos
+    const espalhados = [pt(-9.97, -67.82, 20), pt(2.82, -60.67, 25), pt(-30.03, -51.23, 30), pt(-7.12, -34.86, 22), pt(-15.8, -47.9, 28)];
+    assert.deepEqual(caixaPrincipal(espalhados), caixaDosPontos(espalhados));
+    assert.equal(caixaPrincipal([]), null);
   });
 
   it("a projeção dos pontos é a mesma do contorno: Uberlândia cai dentro da caixa de MG", () => {

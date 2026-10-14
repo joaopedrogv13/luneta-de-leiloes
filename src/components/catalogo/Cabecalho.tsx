@@ -31,8 +31,16 @@ export interface FaixaAviso {
 const PLANOS_DO_SITE = "/#planos";
 
 /**
+ * Fixo só no computador com altura de sobra (≥ 801 px): numa tela de notebook mais baixa (1280×800, 1366×768)
+ * ele rola com a página e só a barra de filtros fica fixa, para a lista ter a tela.
+ */
+const FIXO_NO_COMPUTADOR =
+  "[@media(min-width:64rem)_and_(min-height:50.0625rem)]:sticky [@media(min-width:64rem)_and_(min-height:50.0625rem)]:top-0 [@media(min-width:64rem)_and_(min-height:50.0625rem)]:z-40";
+
+/**
  * Cabeçalho do catálogo. No computador fica fixo no topo (com a barra de filtros logo abaixo e o mapa
- * ao lado da lista, tudo cabe na tela); no celular rola com a página e só a barra de filtros fica fixa.
+ * ao lado da lista, tudo cabe na tela); no celular e em tela baixa rola com a página e só a barra de
+ * filtros fica fixa.
  * - faixa de aviso (rola sempre): na /previa, a da prévia interna com as datas das fontes (latão); na
  *   /assinante, "exemplos fictícios", discreta e só no celular (no computador a linha sob o título já diz);
  * - logo com "voltar ao site" e o título da página (h1; no celular, só para leitores de tela);
@@ -76,7 +84,7 @@ export function Cabecalho({
           <p className="sm:hidden">{faixa.curta}</p>
         </aside>
       )}
-      <header ref={cabecalhoRef} className="border-b border-nevoa/12 bg-noite lg:sticky lg:top-0 lg:z-40">
+      <header ref={cabecalhoRef} className={`border-b border-nevoa/12 bg-noite ${FIXO_NO_COMPUTADOR}`}>
         <div className="flex min-h-14 items-center gap-x-3 px-4 sm:min-h-16 sm:px-6 lg:px-8">
           <Link
             href={BACK_TO_SITE}
@@ -113,7 +121,8 @@ export function Cabecalho({
                     aria-pressed={ativo}
                     onClick={() => !ativo && onPlano(p.id)}
                     className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-[background-color,color,scale] duration-200 ease-luneta active:scale-[0.96] motion-reduce:transition-none pointer-fine:min-h-8 ${
-                      ativo ? "bg-latao text-noite-fixa" : "text-nevoa hover:text-luar"
+                      // ativo neutro (como as abas): o latão cheio fica só para o convite "Plano Luneta" ao lado
+                      ativo ? "bg-luar text-noite" : "text-nevoa hover:text-luar"
                     }`}
                   >
                     {p.rotulo}

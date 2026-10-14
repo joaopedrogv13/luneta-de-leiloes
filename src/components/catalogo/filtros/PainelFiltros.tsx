@@ -5,6 +5,7 @@ import { chaveFiltros, contarGrupos, filtrosEfetivos, limparVazios, type GrupoFi
 import { numero } from "@/lib/catalogo/rotulos";
 import type { Facetas, Filtros } from "@/lib/catalogo/tipos";
 import { contarFiltros } from "@/lib/catalogo/url";
+import { useMidia } from "../app/hooks";
 import { CampoData } from "../ui/CampoData";
 import { AJUDA } from "../ui/estilos";
 import { Folha, rolarPara } from "../ui/Folha";
@@ -40,8 +41,12 @@ export const SECOES: readonly { id: SecaoFiltro; rotulo: string; grupos: readonl
   { id: "foto", rotulo: "Foto", grupos: ["comFoto"] },
 ];
 
-/** Altura das listas de seleção dentro do painel (a folha já rola). */
-const ALTURA_LISTA = "max-h-[264px]";
+/**
+ * Listas de seleção dentro do painel. No computador, caixa de 264 px que rola por dentro; no celular, sem
+ * altura máxima (uma lista que rola dentro da folha que rola prende o dedo): 8 itens e "Mostrar todos".
+ */
+const ALTURA_LISTA = "md:max-h-[264px]";
+const LOTE_CELULAR = 8;
 
 type Resultado = { chave: string; total: number | null; facetas?: Facetas };
 
@@ -76,6 +81,8 @@ export function PainelFiltros({
 }) {
   const uid = useId();
   const corpo = useRef<HTMLDivElement>(null);
+  const computador = useMidia("(min-width: 768px)", true);
+  const lote = computador ? undefined : LOTE_CELULAR;
   // o painel parte só do que vale neste plano (no Lente, tags e selo da URL não contam)
   const aplicados = filtrosEfetivos(filtros, plano, selosDesligados);
   const [rascunho, setRascunho] = useState<Filtros>(aplicados);
@@ -209,38 +216,50 @@ export function PainelFiltros({
     onFechar();
   };
 
+  const itemNav = (s: (typeof SECOES)[number], vertical: boolean) => {
+    const n = contarGrupos(rascunho, s.grupos);
+    const on = secaoAtiva === s.id;
+    const travada = lente && (s.id === "riscos" || s.id === "selo");
+    return (
+      <li key={s.id} className="shrink-0">
+        <button
+          type="button"
+          data-nav={s.id}
+          aria-current={on ? "true" : undefined}
+          onClick={() => irPara(s.id)}
+          className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-[13px] font-medium whitespace-nowrap transition-[background-color,color] duration-150 pointer-fine:min-h-9 ${
+            vertical ? "w-full rounded-xl px-3" : "rounded-full px-3.5 pointer-fine:min-h-8"
+          } ${on ? "bg-luar text-noite" : "text-nevoa hover:bg-nevoa/10 hover:text-luar"}`}
+        >
+          {s.rotulo}
+          {travada && <IconeCadeado tamanho={12} className={on ? "" : "text-latao-texto"} />}
+          {n > 0 && (
+            <span
+              className={`inline-flex size-[18px] items-center justify-center rounded-full text-[11px] font-semibold tabular-nums ${vertical ? "ml-auto" : ""} ${
+                on ? "bg-latao text-noite-fixa" : "bg-latao/20 text-latao-texto"
+              }`}
+            >
+              {n}
+              <span className="sr-only"> {n === 1 ? "filtro ativo" : "filtros ativos"}</span>
+            </span>
+          )}
+        </button>
+      </li>
+    );
+  };
+
+  // celular: as seções numa linha que rola de lado, sob o título; computador: coluna à esquerda, sempre à vista
   const nav = (
-    <nav aria-label="Seções dos filtros" className="relative">
-      <ul ref={navLista} className="relative flex gap-1.5 overflow-x-auto px-5 pb-3 [scrollbar-width:none] md:px-6 [&::-webkit-scrollbar]:hidden">
-        {SECOES.map((s) => {
-          const n = contarGrupos(rascunho, s.grupos);
-          const on = secaoAtiva === s.id;
-          const travada = lente && (s.id === "riscos" || s.id === "selo");
-          return (
-            <li key={s.id} className="shrink-0">
-              <button
-                type="button"
-                data-nav={s.id}
-                aria-current={on ? "true" : undefined}
-                onClick={() => irPara(s.id)}
-                className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium whitespace-nowrap transition-[background-color,color] duration-150 pointer-fine:min-h-8 ${
-                  on ? "bg-luar text-noite" : "text-nevoa hover:bg-nevoa/10 hover:text-luar"
-                }`}
-              >
-                {s.rotulo}
-                {travada && <IconeCadeado tamanho={12} className={on ? "" : "text-latao-texto"} />}
-                {n > 0 && (
-                  <span className={`inline-flex size-[18px] items-center justify-center rounded-full text-[11px] font-semibold tabular-nums ${on ? "bg-latao text-noite-fixa" : "bg-latao/20 text-latao-texto"}`}>
-                    {n}
-                    <span className="sr-only"> {n === 1 ? "filtro ativo" : "filtros ativos"}</span>
-                  </span>
-                )}
-              </button>
-            </li>
-          );
-        })}
+    <nav aria-label="Seções dos filtros" className="relative md:hidden">
+      <ul ref={navLista} className="relative flex gap-1.5 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {SECOES.map((s) => itemNav(s, false))}
       </ul>
       <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-tinta" />
+    </nav>
+  );
+  const navLateral = (
+    <nav aria-label="Seções dos filtros" className="px-3 py-4">
+      <ul className="flex flex-col gap-1">{SECOES.map((s) => itemNav(s, true))}</ul>
     </nav>
   );
 
@@ -282,21 +301,24 @@ export function PainelFiltros({
       titulo="Filtros"
       subtitulo={ativos ? `${numero(ativos)} ${ativos === 1 ? "ativo" : "ativos"}` : undefined}
       abaixoDoCabecalho={nav}
+      lateral={navLateral}
       rodape={rodape}
       openerRef={openerRef}
       corpoRef={corpo}
       rotuloFechar="Fechar filtros sem aplicar"
+      historico
     >
       {jaAbriu && (
         <div key={sessao} className="flex flex-col pb-8">
           <Secao uid={uid} id="local" titulo="Localização">
             <Campo rotulo="Estados">
-              <ControleEstados {...props} alturaLista={ALTURA_LISTA} />
+              <ControleEstados {...props} alturaLista={ALTURA_LISTA} lote={lote} />
             </Campo>
             <Campo rotulo="Cidades" ajuda={rascunho.uf?.length ? "Só das cidades dos estados escolhidos." : undefined}>
               <ControleCidades
                 {...props}
                 alturaLista={ALTURA_LISTA}
+                lote={lote}
                 ufsSemCidades={consultar ? undefined : ufsSemCidades}
                 vazio={consultar && contando ? "Buscando as cidades…" : undefined}
               />
@@ -305,6 +327,7 @@ export function PainelFiltros({
               <ControleBairros
                 {...props}
                 alturaLista={ALTURA_LISTA}
+                lote={lote}
                 semBairros={consultar ? (contando ? "Buscando os bairros…" : "A fonte não informa o bairro dos imóveis destas cidades.") : undefined}
               />
             </Campo>
@@ -404,7 +427,11 @@ export function PainelFiltros({
           </Secao>
 
           <Secao uid={uid} id="foto" titulo="Foto">
-            <ControleSimNao {...props} chave="comFoto" ajuda="“Com foto”: a fonte publica ao menos uma foto do imóvel." />
+            <ControleSimNao
+              {...props}
+              chave="comFoto"
+              ajuda="“Com foto”: o anúncio traz o endereço de ao menos uma foto (na Caixa, o endereço segue o padrão do site e não é conferido; a foto pode não abrir)."
+            />
           </Secao>
         </div>
       )}

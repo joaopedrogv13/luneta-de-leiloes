@@ -2,7 +2,13 @@
  * Bolhas do mapa e agrupamento (funções puras, testadas em Node: sem "@/" nos imports).
  *
  * Cada cidade vira uma bolha com raio em px de TELA (não cresce com o zoom), pela raiz do total.
- * Bolhas que se encostam na tela viram uma bolha de grupo (soma dos imóveis, centro ponderado pelo total).
+ * Bolhas DO MESMO ESTADO que se encostam na tela viram uma bolha de grupo (soma dos imóveis), desenhada
+ * sobre a maior cidade do grupo: a bolha cai sempre numa cidade de verdade (antes, o centro ponderado de
+ * um grupo SP + RJ caía sobre o RJ com os imóveis da capital paulista dentro).
+ * Entre estados, só se junta o que já estaria escondido: a bolha pequena (até 20% da outra) cujo CENTRO
+ * ficaria coberto pela bolha de outra UF (cidades na divisa, como Juazeiro/BA e Petrolina/PE). As demais
+ * continuam separadas mesmo se encostando (podem se sobrepor; a menor fica por cima): SP e RJ nunca viram
+ * uma bolha só.
  * O agrupamento só depende do zoom (arrastar não muda a distância em px entre dois pontos), então é
  * recalculado ao fim de cada gesto de zoom, nunca a cada quadro.
  */
@@ -18,7 +24,7 @@ export interface NoMapa {
   /** "c:MG|Uberlândia" (cidade) ou "g:MG|Uberlândia" (grupo, pela maior cidade dele) */
   id: string;
   grupo: boolean;
-  /** posição no mundo (grupo: centro ponderado pelo total) */
+  /** posição no mundo (grupo: a da maior cidade dele) */
   x: number;
   y: number;
   total: number;
@@ -32,6 +38,11 @@ export interface NoMapa {
 
 export const RAIO_CIDADE_MIN = 6;
 export const RAIO_CIDADE_MAX = 28;
+/**
+ * Piso da régua: a maior cidade vale pelo menos isto. Num conjunto pequeno (os 6 exemplos da /assinante,
+ * uma busca bem filtrada), uma cidade com 1 imóvel não vira a bolha do tamanho máximo.
+ */
+export const REGUA_MINIMA = 50;
 /**
  * Grupos usam a mesma régua das cidades até o total da maior cidade; acima disso crescem devagar (log)
  * até 38 px. Assim o tamanho nunca mente: um grupo com 15 mil imóveis não sai menor que uma cidade com 900.
@@ -64,11 +75,12 @@ export function raioParaTexto(texto: string): number {
 }
 
 /**
- * Raio de uma cidade: 6 a 28 px pela raiz do total (a maior cidade do conjunto tem o máximo).
- * `fator` (0,68 a 1) encolhe o máximo em mapas pequenos (celular, faixa baixa).
+ * Raio de uma cidade: 6 a 28 px pela raiz do total (a maior cidade do conjunto tem o máximo; a régua vai
+ * até pelo menos REGUA_MINIMA imóveis). `fator` (0,68 a 1) encolhe o máximo em mapas pequenos (celular,
+ * faixa baixa).
  */
 export function raioCidade(total: number, maiorCidade: number, fator = 1): number {
-  const f = Math.sqrt(Math.min(1, Math.max(0, total) / Math.max(1, maiorCidade)));
+  const f = Math.sqrt(Math.min(1, Math.max(0, total) / Math.max(REGUA_MINIMA, maiorCidade)));
   return RAIO_CIDADE_MIN + (RAIO_CIDADE_MAX * fator - RAIO_CIDADE_MIN) * f;
 }
 
@@ -78,7 +90,7 @@ export function raioCidade(total: number, maiorCidade: number, fator = 1): numbe
  * Sempre com espaço para o número.
  */
 export function raioGrupo(total: number, maiorCidade: number, somaTotal: number, fator = 1): number {
-  const maior = Math.max(1, maiorCidade);
+  const maior = Math.max(REGUA_MINIMA, maiorCidade);
   let r = raioCidade(total, maior, fator);
   if (total > maior) {
     const teto = RAIO_CIDADE_MAX * fator;
@@ -87,8 +99,12 @@ export function raioGrupo(total: number, maiorCidade: number, somaTotal: number,
     const t = amplitude > 0 ? Math.min(1, Math.log(total / maior) / amplitude) : 1;
     r = teto + (topo - teto) * t;
   }
-  return Math.max(r, RAIO_GRUPO_MIN, raioParaTexto(textoContagem(total)));
+  // + o anel interno que distingue o grupo da cidade (ver .disco[data-grupo] em mapa.module.css)
+  return Math.max(r, RAIO_GRUPO_MIN, raioParaTexto(textoContagem(total)) + ANEL_GRUPO);
 }
+
+/** Espaço (px) do anel interno do desenho do grupo: o número não encosta nele. */
+const ANEL_GRUPO = 3;
 
 /**
  * Fonte do número dentro de uma bolha de cidade: a padrão, ou 10 px se só assim couber; null quando nem
@@ -118,13 +134,21 @@ export function fatorRaio(largura: number, altura: number): number {
   return Math.min(1, Math.max(0.68, Math.min(largura, altura) / 560));
 }
 
+/**
+ * Fator dos raios pelo zoom: no Brasil inteiro as bolhas ficam ~25% menores (estados vizinhos não se juntam,
+ * e bolhas grandes de UFs diferentes se cobririam); a partir de 3× têm o tamanho cheio.
+ */
+export function fatorZoom(z: number): number {
+  return Math.min(1, Math.max(0.74, 0.74 + 0.13 * (z - 1)));
+}
+
 interface NoTrabalho {
   membros: PontoProjetado[];
   total: number;
-  /** somas ponderadas para o centro (peso = total, mínimo 1) */
-  sx: number;
-  sy: number;
-  peso: number;
+  /** UF da maior cidade do nó (cidades do mesmo estado se juntam ao se encostar) */
+  uf: string;
+  /** a maior cidade do nó: a bolha fica sobre ela */
+  maior: PontoProjetado;
   x: number;
   y: number;
   r: number;
@@ -156,18 +180,18 @@ function fechar(n: NoTrabalho, o: OpcoesAgrupar): NoMapa {
 }
 
 /**
- * Agrupa as cidades cujas bolhas se encostariam na tela nesta escala. Aglomerativo: a cada passada, cada
- * nó (do maior para o menor) engole os vizinhos que encostam nele; repete até nada mais encostar.
- * Uma grade de células evita comparar todos com todos (1.200 pontos: menos de 2 ms).
+ * Agrupa as cidades do mesmo estado cujas bolhas se encostariam na tela nesta escala (e, entre estados, a
+ * bolha cujo centro a maior cobriria). Aglomerativo: a cada passada, cada nó (do maior para o menor) engole
+ * os vizinhos; repete até nada mais encostar. Uma grade de células evita comparar todos com todos (1.200
+ * pontos: menos de 2 ms).
  */
 export function agrupar(pontos: readonly PontoProjetado[], o: OpcoesAgrupar): NoMapa[] {
   const ordenados = [...pontos].sort(ordemPontos);
   const nos: NoTrabalho[] = ordenados.map((p) => ({
     membros: [p],
     total: p.total,
-    sx: p.x * Math.max(1, p.total),
-    sy: p.y * Math.max(1, p.total),
-    peso: Math.max(1, p.total),
+    uf: p.uf,
+    maior: p,
     x: p.x,
     y: p.y,
     r: raioCidade(p.total, o.maiorCidade, o.fator),
@@ -177,7 +201,10 @@ export function agrupar(pontos: readonly PontoProjetado[], o: OpcoesAgrupar): No
 
   const k = o.escala;
   const celula = 2 * Math.max(RAIO_GRUPO_MAX, RAIO_ALVO) + ESPACO;
-  for (let passada = 0; passada < 12; passada++) {
+  // Primeiro cada estado se agrupa por inteiro; só então uma bolha pequena com o centro coberto pela de outro
+  // estado entra nela (comparar a capital paulista sozinha com o grupo do RJ a faria sumir dentro dele).
+  let entreEstados = false;
+  for (let passada = 0; passada < 16; passada++) {
     const grade = new Map<string, number[]>();
     nos.forEach((n, i) => {
       if (!n.vivo) return;
@@ -200,15 +227,19 @@ export function agrupar(pontos: readonly PontoProjetado[], o: OpcoesAgrupar): No
             const b = nos[j];
             if (j === i || !b.vivo) continue;
             const d = Math.hypot((a.x - b.x) * k, (a.y - b.y) * k);
-            if (d >= Math.max(a.r, RAIO_ALVO) + Math.max(b.r, RAIO_ALVO) + ESPACO) continue;
-            // b entra em a
+            if (b.uf === a.uf) {
+              if (d >= Math.max(a.r, RAIO_ALVO) + Math.max(b.r, RAIO_ALVO) + ESPACO) continue;
+            } else if (!entreEstados || b.total * 5 > a.total || d >= a.r) {
+              // outro estado: só entra a bolha pequena (até 20% da outra) cujo centro a maior cobre
+              continue;
+            }
+            // b entra em a; a bolha vai para a maior cidade dos dois
             a.membros = a.membros.concat(b.membros);
             a.total += b.total;
-            a.sx += b.sx;
-            a.sy += b.sy;
-            a.peso += b.peso;
-            a.x = a.sx / a.peso;
-            a.y = a.sy / a.peso;
+            if (ordemPontos(b.maior, a.maior) < 0) a.maior = b.maior;
+            a.uf = a.maior.uf;
+            a.x = a.maior.x;
+            a.y = a.maior.y;
             a.r = raioGrupo(a.total, o.maiorCidade, o.somaTotal, o.fator);
             b.vivo = false;
             mudou = true;
@@ -216,7 +247,9 @@ export function agrupar(pontos: readonly PontoProjetado[], o: OpcoesAgrupar): No
         }
       }
     }
-    if (!mudou) break;
+    if (mudou) entreEstados = false;
+    else if (!entreEstados) entreEstados = true;
+    else break;
   }
   return nos.filter((n) => n.vivo).map((n) => fechar(n, o));
 }

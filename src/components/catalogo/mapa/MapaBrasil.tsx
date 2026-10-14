@@ -22,6 +22,7 @@ import {
   agrupar,
   escolherRotulos,
   fatorRaio,
+  fatorZoom,
   fonteContagem,
   fonteNumero,
   nomeDoNo,
@@ -37,6 +38,7 @@ import {
   ZOOM_MIN,
   caixaDasUfs,
   caixaDosPontos,
+  caixaPrincipal,
   cameraBrasil,
   enquadrar,
   enquadrarResultados,
@@ -90,19 +92,22 @@ const UFS = Object.entries(UFS_MAPA);
  * estreitas). Funções fixas por variante: a câmera mede de novo quando a tela muda de tamanho.
  */
 const FOLGAS: Record<VarianteMapa, (w: number, h: number) => Folga> = {
-  painel: (w) => ({ cima: 24, dir: 68, baixo: w < 560 ? 64 : 52, esq: 24 }),
-  faixa: (w) => ({ cima: 16, dir: 62, baixo: w < 560 ? 62 : 44, esq: 16 }),
+  // painel: folga larga dos dois lados, para nenhuma bolha encostar na borda nem nos botões de zoom
+  painel: (w) => ({ cima: 28, dir: 84, baixo: w < 560 ? 76 : 60, esq: 40 }),
+  faixa: (w) => ({ cima: 16, dir: 66, baixo: w < 560 ? 72 : 50, esq: 20 }),
   mini: (w) => ({ cima: 18, dir: 58, baixo: w < 400 ? 52 : 40, esq: 18 }),
 };
 /** Margem extra ao enquadrar pontos: a maior bolha não fica cortada na borda. */
-const MARGEM_PONTOS = 26;
+const MARGEM_PONTOS = 34;
 /** Até quantas bolhas na tela cada uma é um botão no Tab; acima disso, a lista "Cidades com mais imóveis". */
 const LIMITE_BOTOES = 60;
 const MAIORES_ACESSIVEIS = 20;
 /** Bolhas desenhadas além da borda (fração da tela): arrastar não mostra área vazia antes do fim do gesto. */
 const MARGEM_DESENHO = 0.6;
-/** Nomes das cidades ao lado das bolhas a partir deste zoom. */
+/** Nomes das cidades ao lado das bolhas a partir deste zoom (ou com poucas bolhas na tela). */
 const ZOOM_ROTULOS = 2.4;
+/** Com até tantas bolhas na tela, todas disputam um nome, até as de 1 imóvel (a /assinante, buscas filtradas). */
+const POUCAS_BOLHAS = 14;
 const ATRASO_FECHAR = 220;
 /** Com um cartão aberto, outra bolha só toma o lugar depois de o mouse parar nela (atravessar não troca). */
 const ATRASO_TROCAR = 140;
@@ -193,6 +198,7 @@ export function MapaBrasil({
   const idInstrucoes = `${idBase}-instrucoes`;
   const idCartao = `${idBase}-cartao`;
   const idLista = `${idBase}-lista`;
+  const fimDoMapa = useRef<HTMLSpanElement>(null);
 
   const [auto, setAuto] = useState(true);
   const autoRef = useRef(true);
@@ -289,12 +295,17 @@ export function MapaBrasil({
   }, [chaveUfs, ufMini]);
   const focoSet = useMemo(() => new Set(focoUfs), [focoUfs]);
 
-  // o que enquadrar: as UFs filtradas; senão, os pontos (com margem para as bolhas); senão, o Brasil
-  const alvo = useMemo<{ caixa: Caixa; margem: number }>(() => {
+  // O que enquadrar: as UFs filtradas; senão, os pontos (com margem para as bolhas); senão, o Brasil.
+  // Sozinho, o mapa enquadra o grupo principal: um resultado fora da curva ("campinas" no endereço de um
+  // imóvel na BA) não joga Campinas para o canto. O botão "Enquadrar resultados" mostra todos.
+  const { alvo, alvoTodos } = useMemo(() => {
     const ufs = focoUfs.length ? caixaDasUfs(focoUfs) : null;
-    if (ufs) return { caixa: ufs, margem: 0 };
-    const pts = caixaDosPontos(projetados);
-    return pts ? { caixa: pts, margem: mini ? 0 : MARGEM_PONTOS } : { caixa: CAIXA_BRASIL, margem: 0 };
+    if (ufs) return { alvo: { caixa: ufs, margem: 0 }, alvoTodos: { caixa: ufs, margem: 0 } };
+    const todos = caixaDosPontos(projetados);
+    if (!todos) return { alvo: { caixa: CAIXA_BRASIL, margem: 0 }, alvoTodos: { caixa: CAIXA_BRASIL, margem: 0 } };
+    const margem = mini ? 0 : MARGEM_PONTOS;
+    const principal = mini ? todos : (caixaPrincipal(projetados) ?? todos);
+    return { alvo: { caixa: principal as Caixa, margem }, alvoTodos: { caixa: todos, margem } };
   }, [focoUfs, projetados, mini]);
   const chaveAlvo = `${alvo.caixa.map((v) => Math.round(v)).join(",")}+${alvo.margem}`;
 
@@ -325,7 +336,7 @@ export function MapaBrasil({
     setAuto(true);
     setPendente(false);
     enquadrado.current = { chave: chaveAlvo, w: tela.w, h: tela.h };
-    irPara(enquadrarResultados(alvo.caixa, tela, alvo.margem));
+    irPara(enquadrarResultados(alvoTodos.caixa, tela, alvoTodos.margem));
   };
   const brasilInteiro = () => {
     if (tela) irPara(cameraBrasil(tela), { usuario: true });
@@ -333,7 +344,7 @@ export function MapaBrasil({
 
   // ---- bolhas ----
   const s0 = tela ? escalaBase(tela) : 0;
-  const fator = tela ? fatorRaio(tela.w, tela.h) : 1;
+  const fator = tela ? fatorRaio(tela.w, tela.h) * (mini ? 1 : fatorZoom(camera.z)) : 1;
   const agruparLigado = !mini && camera.z < ZOOM_MAX - 1e-6;
   const nos = useMemo(
     () => (s0 > 0 ? agrupar(projetados, { escala: s0 * camera.z, maiorCidade, somaTotal, agrupar: agruparLigado, fator }) : []),
@@ -364,6 +375,8 @@ export function MapaBrasil({
     // as maiores primeiro: ficam por baixo no desenho e vêm antes no Tab
     itens.sort((a, b) => b.n.r - a.n.r || b.n.total - a.n.total);
 
+    // Siglas dos estados: só as que nenhuma bolha cobre (uma sigla pela metade atrás de uma bolha vira uma
+    // letra solta no mapa). Retângulo de ~24×14 px em volta do centro da sigla contra o círculo de cada bolha.
     const siglas: { uf: string; x: number; y: number }[] = [];
     for (const [uf, u] of UFS) {
       const [x0, y0, x1, y1] = u.caixa;
@@ -371,18 +384,26 @@ export function MapaBrasil({
       const x = u.rotulo[0] * k + tx;
       const y = u.rotulo[1] * k + ty;
       if (x < -20 || y < -20 || x > tela.w + 20 || y > tela.h + 20) continue;
-      siglas.push({ uf, x, y });
+      const coberta =
+        !mini &&
+        itens.some(({ n, sx, sy }) => {
+          const px = Math.max(x - 12, Math.min(sx, x + 12));
+          const py = Math.max(y - 7, Math.min(sy, y + 7));
+          return Math.hypot(sx - px, sy - py) < n.r + 3;
+        });
+      if (!coberta) siglas.push({ uf, x, y });
     }
 
+    const poucas = !mini && visiveis <= POUCAS_BOLHAS;
     const rotulos =
-      mini || camera.z >= ZOOM_ROTULOS
+      mini || poucas || camera.z >= ZOOM_ROTULOS
         ? escolherRotulos(
             itens.map(({ n, sx, sy }) => ({ id: n.id, sx, sy, r: mini ? 9 : n.r, total: n.total, texto: nomeDoNo(n) })),
             tela.w,
             tela.h,
             mini
               ? { maximo: 1, limiteDir: tela.w - tela.folga.dir }
-              : { maximo: 14, considerar: 24, totalMinimo: Math.max(2, maiorCidade * 0.02), limiteDir: tela.w - tela.folga.dir },
+              : { maximo: 14, considerar: 24, totalMinimo: poucas ? 1 : Math.max(2, maiorCidade * 0.02), limiteDir: tela.w - tela.folga.dir },
           )
         : [];
     return { itens, visiveis, siglas, rotulos, k, tx, ty };
@@ -575,6 +596,22 @@ export function MapaBrasil({
     cartaoRef.current?.focus({ preventScroll: true });
   }, [ativo, isPositioned, docado]);
 
+  // Cartão aberto pelo mouse (sem clique): Esc fecha de qualquer lugar da página, sem mexer no foco
+  // (WCAG 1.4.13: o que aparece ao passar o mouse precisa poder ser dispensado).
+  const abertoPeloMouse = !!ativo && !ativo.fixo;
+  useEffect(() => {
+    if (!abertoPeloMouse) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      window.clearTimeout(fecharTimer.current);
+      window.clearTimeout(trocarTimer.current);
+      setAtivo(null);
+      onHover?.(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [abertoPeloMouse, onHover]);
+
   // cartão fixo: clique fora fecha
   const fixo = !!ativo?.fixo;
   useEffect(() => {
@@ -673,10 +710,20 @@ export function MapaBrasil({
       data-zoom={camera.z.toFixed(2)}
       className={`${s.mapa} ${s[variante]} ${className}`}
     >
+      {!mini && (
+        // pelo Tab, as bolhas podem passar de 30 paradas: quem usa teclado pula o mapa inteiro
+        <button
+          type="button"
+          onClick={() => fimDoMapa.current?.focus()}
+          className={`${s.vidro} absolute top-3 left-3 z-50 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-luar not-focus-visible:sr-only`}
+        >
+          Pular o mapa
+        </button>
+      )}
       <p id={idInstrucoes} className="sr-only">
         {resumo} Arraste ou use as setas para mover; use a roda do mouse{modoRolagem === "ctrl" ? " com Ctrl (ou ⌘)" : ""}, a pinça
         {modoRolagem === "ctrl" ? " com dois dedos" : ""}, o duplo clique ou as teclas + e − para aproximar e afastar; 0 volta ao Brasil inteiro.
-        {mini ? "" : " Cada círculo reúne os imóveis de uma cidade; círculos com número e anel são grupos de cidades próximas."}
+        {mini ? "" : " Cada círculo reúne os imóveis de uma cidade; círculos com um anel por dentro são grupos de cidades próximas do mesmo estado (aproxime para separar)."}
         {muitos ? " Com muitas cidades na tela, a tecla Tab leva à lista das cidades com mais imóveis." : ""}
       </p>
 
@@ -860,15 +907,36 @@ export function MapaBrasil({
         </BotaoControle>
       </div>
 
-      <p className={`${s.vidro} pointer-events-none absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] items-start gap-2 rounded-xl px-2.5 py-1.5 text-[11px] leading-snug text-nevoa sm:max-w-[calc(100%-5.5rem)]`}>
-        <svg viewBox="0 0 22 12" className="mt-px h-3 w-[22px] shrink-0" aria-hidden="true">
-          <circle cx="4" cy="7" r="3" className="fill-latao" />
-          <circle cx="15" cy="6" r="5.4" className="fill-latao" />
-        </svg>
-        <span>
-          {mini ? notaPosicao : "Cada círculo reúne os imóveis de uma cidade · posição aproximada (centro da cidade)"}
-        </span>
-      </p>
+      {mini ? (
+        <p className={`${s.vidro} pointer-events-none absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] items-start gap-2 rounded-xl px-2.5 py-1.5 text-[11px] leading-snug text-nevoa sm:max-w-[calc(100%-5.5rem)]`}>
+          <svg viewBox="0 0 12 12" className="mt-px size-3 shrink-0" aria-hidden="true">
+            <circle cx="6" cy="6" r="4.2" className={s.simbolo} />
+          </svg>
+          <span>{notaPosicao}</span>
+        </p>
+      ) : (
+        // legenda: cidade × grupo (o grupo tem um anel por dentro) e a precisão da posição; para leitores de
+        // tela, a mesma explicação está nas instruções do mapa
+        <div
+          aria-hidden="true"
+          className={`${s.vidro} pointer-events-none absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-2.5 py-1.5 text-[11px] leading-snug text-nevoa sm:max-w-[calc(100%-5.5rem)]`}
+        >
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-luar">
+            <svg viewBox="0 0 12 12" className="size-3 shrink-0">
+              <circle cx="6" cy="6" r="4.2" className={s.simbolo} />
+            </svg>
+            Uma cidade
+          </span>
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-luar">
+            <svg viewBox="0 0 16 16" className="size-4 shrink-0">
+              <circle cx="8" cy="8" r="6.8" className={s.simbolo} />
+              <circle cx="8" cy="8" r="4" className={s.simboloAnel} />
+            </svg>
+            Cidades próximas (aproxime)
+          </span>
+          <span className="whitespace-nowrap">Posição: centro da cidade</span>
+        </div>
+      )}
 
       {!mini && tela && projetados.length === 0 && (
         <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center p-6">
@@ -918,6 +986,7 @@ export function MapaBrasil({
           }}
         />
       )}
+      {!mini && <span ref={fimDoMapa} tabIndex={-1} className="sr-only">Fim do mapa</span>}
     </section>
   );
 }

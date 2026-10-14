@@ -55,7 +55,8 @@ export const TAGS = [
   // Preço
   { slug: "desagio-alto", rotulo: "Deságio alto", categoria: "preco", severidade: "positivo", grupo: "desagio" },
   { slug: "desagio-baixo", rotulo: "Deságio baixo", categoria: "preco", severidade: "atencao", grupo: "desagio" },
-  { slug: "preco-acima-mercado", rotulo: "Preço acima do mercado", categoria: "preco", severidade: "grave" },
+  // rótulo "Lance acima da avaliação": a regra só compara o lance com a avaliação da fonte, nunca com o mercado
+  { slug: "preco-acima-mercado", rotulo: "Lance acima da avaliação", categoria: "preco", severidade: "grave" },
   { slug: "custos-extras-altos", rotulo: "Custos extras altos", categoria: "preco", severidade: "atencao" },
   // Dívidas
   { slug: "condominio-em-atraso", rotulo: "Condomínio em atraso", categoria: "dividas", severidade: "atencao" },

@@ -35,7 +35,16 @@ export const CAMPOS_FAIXA = [
   "lanceM2Min", "lanceM2Max", "areaMin", "areaMax", "quartosMin", "vagasMin",
 ] as const satisfies readonly (keyof Filtros)[];
 
-export const CAMPOS_SIM_NAO = ["financiamento", "fgts", "parcelamento", "comFoto"] as const satisfies readonly (keyof Filtros)[];
+/** Pares mínimo/máximo das faixas. */
+const FAIXAS_PARES = [
+  ["lanceMin", "lanceMax"],
+  ["avaliacaoMin", "avaliacaoMax"],
+  ["desagioMin", "desagioMax"],
+  ["lanceM2Min", "lanceM2Max"],
+  ["areaMin", "areaMax"],
+] as const satisfies readonly (readonly [keyof Filtros, keyof Filtros])[];
+
+export const CAMPOS_SIM_NAO =["financiamento", "fgts", "parcelamento", "comFoto"] as const satisfies readonly (keyof Filtros)[];
 
 type Entrada = URLSearchParams | Record<string, string | string[] | undefined>;
 
@@ -106,6 +115,16 @@ export function lerBusca(p: Entrada): EstadoBusca {
   for (const c of CAMPOS_FAIXA) {
     const n = numero(p, c);
     if (n !== undefined) f[c] = n;
+  }
+  // Faixa ao contrário num link ("lanceMin=300000&lanceMax=100000"): o servidor já a aplica como a faixa certa;
+  // aqui ela é corrigida para a URL reescrita, as pílulas e os campos dizerem o mesmo.
+  for (const [a, b] of FAIXAS_PARES) {
+    const lo = f[a];
+    const hi = f[b];
+    if (lo !== undefined && hi !== undefined && lo > hi) {
+      f[a] = hi;
+      f[b] = lo;
+    }
   }
   const modalidade = lista(p, "modalidade", MODALIDADES);
   if (modalidade) f.modalidade = modalidade;

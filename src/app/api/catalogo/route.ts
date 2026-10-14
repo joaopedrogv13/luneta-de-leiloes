@@ -3,7 +3,8 @@
  *
  * Mesmos parâmetros da URL da página (src/lib/catalogo/url.ts): uf, cidade, bairro, tipo, faixas,
  * ordem, pagina, plano... mais `porPagina` (1 a 96, padrão 24). `mapa=0` (mapa escondido) devolve
- * `mapa: []`: o mapa do Brasil inteiro é a maior parte da resposta. Parâmetro desconhecido ou inválido
+ * `mapa: []`: o mapa do Brasil inteiro é a maior parte da resposta. `facetas=0` (o pedido do mapa) devolve
+ * as facetas vazias. Parâmetro desconhecido ou inválido
  * é ignorado, nunca dá erro 500. Sem `conjunto` válido: 400. Fora dos buscadores e sem cache (a
  * resposta depende do plano).
  */
@@ -22,7 +23,10 @@ export async function GET(request: NextRequest) {
     return Response.json({ erro: 'Informe o conjunto: "previa" ou "exemplos".' }, { status: 400, headers: CABECALHOS });
   }
   try {
-    const resultado = await buscar(buscaDaUrl(conjunto, parametros), { mapa: lerBusca(parametros).mapa !== false });
+    const resultado = await buscar(buscaDaUrl(conjunto, parametros), {
+      mapa: lerBusca(parametros).mapa !== false,
+      facetas: parametros.get("facetas") !== "0",
+    });
     return Response.json(resultado, { headers: CABECALHOS });
   } catch (e) {
     // Dados indisponíveis (arquivo do instantâneo faltando ou de outra versão): 503, com a causa no log.

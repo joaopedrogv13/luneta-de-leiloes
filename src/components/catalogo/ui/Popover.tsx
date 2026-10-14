@@ -147,6 +147,8 @@ export function Popover({
             refs.setFloating(el);
           }}
           id={id}
+          // marca de "pop-up aberto": o botão flutuante do mapa (celular) sai da frente enquanto houver um
+          data-popover=""
           role={papel === "dialog" ? "dialog" : "note"}
           aria-label={rotulo}
           tabIndex={-1}

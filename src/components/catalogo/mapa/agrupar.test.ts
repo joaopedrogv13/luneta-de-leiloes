@@ -9,6 +9,7 @@ import {
   agrupar,
   escolherRotulos,
   fatorRaio,
+  fatorZoom,
   fonteNumero,
   nomeDoNo,
   raioCidade,
@@ -86,7 +87,7 @@ describe("raios", () => {
 
 describe("agrupamento", () => {
   for (const z of [1, 2, 4, 8, 13]) {
-    it(`zoom ${z}: nenhuma bolha encosta em outra, nada se perde e o total se mantém`, () => {
+    it(`zoom ${z}: nenhuma bolha encosta em outra do mesmo estado, nada se perde e o total se mantém`, () => {
       const escala = S0 * z;
       const nos = agrupar(PONTOS, { escala, maiorCidade, somaTotal });
       const vistos = new Set<string>();
@@ -100,17 +101,71 @@ describe("agrupamento", () => {
         for (let j = i + 1; j < nos.length; j++) {
           const a = nos[i];
           const b = nos[j];
+          // estados vizinhos podem se sobrepor (a menor fica por cima); uma bolha pequena com o centro coberto
+          // pela de outro estado entra nela
+          if (a.membros[0].uf !== b.membros[0].uf) {
+            const [g, p] = a.total >= b.total ? [a, b] : [b, a];
+            const d = Math.hypot(a.x - b.x, a.y - b.y) * escala;
+            assert.ok(p.total * 5 > g.total || d >= g.r - 1e-6, `${g.id} cobre o centro de ${p.id}`);
+            continue;
+          }
           const d = Math.hypot(a.x - b.x, a.y - b.y) * escala;
           assert.ok(d >= Math.max(a.r, 11) + Math.max(b.r, 11) + 2 - 1e-6, `${a.id} × ${b.id}: ${d.toFixed(1)} px`);
         }
       }
-      // membros do maior para o menor; id do grupo pela maior cidade
+      // membros do maior para o menor; id e posição do grupo pela maior cidade; um estado só por bolha
       for (const n of nos) {
         assert.equal(n.id, `${n.grupo ? "g" : "c"}:${n.membros[0].chave}`);
         for (let k = 1; k < n.membros.length; k++) assert.ok(n.membros[k - 1].total >= n.membros[k].total);
+        assert.equal(n.x, n.membros[0].x);
+        assert.equal(n.y, n.membros[0].y);
       }
     });
   }
+
+  it("SP e RJ nunca viram uma bolha só: a capital paulista fica sobre São Paulo", () => {
+    const p = (uf: string, cidade: string, lat: number, lon: number, total: number): PontoProjetado => {
+      const [x, y] = projetar(lat, lon);
+      return { chave: `${uf}|${cidade}`, cidade, uf, lat, lon, total, lanceMin: 1, desagioMax: null, destaques: [], x, y };
+    };
+    const pts = [
+      p("RJ", "Rio de Janeiro", -22.91, -43.2, 3225),
+      p("RJ", "Niterói", -22.88, -43.1, 300),
+      p("SP", "São Paulo", -23.55, -46.63, 490),
+      p("SP", "Guarulhos", -23.45, -46.53, 520),
+      p("SP", "Campinas", -22.9, -47.06, 600),
+    ];
+    // escala do Brasil inteiro num painel pequeno: tudo se encostaria
+    const nos = agrupar(pts, { escala: 0.15, maiorCidade: 3225, somaTotal: 5155 });
+    assert.equal(nos.length, 2);
+    const sp = nos.find((n) => n.membros[0].uf === "SP")!;
+    assert.equal(sp.membros[0].cidade, "Campinas");
+    assert.equal(sp.total, 1610);
+    assert.ok(sp.membros.every((m) => m.uf === "SP"));
+    assert.deepEqual([sp.x, sp.y], [pts[4].x, pts[4].y]);
+  });
+
+  it("divisa: a cidade cujo centro a bolha vizinha cobriria entra no grupo dela (Juazeiro/BA com Petrolina/PE)", () => {
+    const p = (uf: string, cidade: string, lat: number, lon: number, total: number): PontoProjetado => {
+      const [x, y] = projetar(lat, lon);
+      return { chave: `${uf}|${cidade}`, cidade, uf, lat, lon, total, lanceMin: 1, desagioMax: null, destaques: [], x, y };
+    };
+    const nos = agrupar([p("PE", "Petrolina", -9.39, -40.5, 80), p("BA", "Juazeiro", -9.41, -40.5, 6)], { escala: 0.3, maiorCidade: 80, somaTotal: 86 });
+    assert.equal(nos.length, 1);
+    assert.equal(nos[0].membros[0].cidade, "Petrolina");
+    assert.equal(nos[0].total, 86);
+  });
+
+  it("fator do zoom: bolhas menores no Brasil inteiro, cheias a partir de 3×", () => {
+    assert.ok(fatorZoom(1) < 0.8);
+    assert.equal(fatorZoom(3), 1);
+    assert.equal(fatorZoom(12), 1);
+  });
+
+  it("régua mínima: num conjunto pequeno, 1 imóvel não vira a bolha máxima", () => {
+    assert.ok(raioCidade(1, 1) < 10, raioCidade(1, 1).toFixed(1));
+    assert.equal(raioCidade(50, 50), RAIO_CIDADE_MAX);
+  });
 
   it("aproximar diminui o número de grupos; sem agrupar, uma bolha por cidade", () => {
     const longe = agrupar(PONTOS, { escala: S0, maiorCidade, somaTotal }).length;

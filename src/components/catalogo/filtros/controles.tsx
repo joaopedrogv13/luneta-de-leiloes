@@ -97,7 +97,7 @@ export function opcoesBairro(facetas: Facetas, f: Filtros): OpcaoSelecao[] {
     }));
 }
 
-export function ControleEstados({ f, facetas, aplicar, focarBusca, alturaLista }: PropsControle & { focarBusca?: boolean; alturaLista?: string }) {
+export function ControleEstados({ f, facetas, aplicar, focarBusca, alturaLista, lote }: PropsControle & { focarBusca?: boolean; alturaLista?: string; lote?: number }) {
   return (
     <SelecaoMultipla
       rotulo="Estados"
@@ -108,6 +108,7 @@ export function ControleEstados({ f, facetas, aplicar, focarBusca, alturaLista }
       unidade={["estado", "estados"]}
       focarBusca={focarBusca}
       alturaLista={alturaLista}
+      loteInicial={lote}
     />
   );
 }
@@ -120,7 +121,8 @@ export function ControleCidades({
   alturaLista,
   ufsSemCidades,
   vazio,
-}: PropsControle & { focarBusca?: boolean; alturaLista?: string; ufsSemCidades?: string[]; vazio?: string }) {
+  lote,
+}: PropsControle & { focarBusca?: boolean; alturaLista?: string; ufsSemCidades?: string[]; vazio?: string; lote?: number }) {
   const opcoes = opcoesCidade(facetas, f);
   const ufs = f.uf ?? [];
   return (
@@ -134,6 +136,7 @@ export function ControleCidades({
       feminino
       focarBusca={focarBusca}
       alturaLista={alturaLista}
+      loteInicial={lote}
       vazio={vazio}
       aviso={
         ufsSemCidades?.length ? (
@@ -157,7 +160,8 @@ export function ControleBairros({
   alturaLista,
   focarBusca,
   semBairros = "Os bairros das cidades escolhidas aparecem depois de aplicar os filtros.",
-}: PropsControle & { alturaLista?: string; focarBusca?: boolean; semBairros?: string }) {
+  lote,
+}: PropsControle & { alturaLista?: string; focarBusca?: boolean; semBairros?: string; lote?: number }) {
   const cidades = f.cidade ?? [];
   if (!cidades.length && !(f.bairro ?? []).length) {
     return (
@@ -178,6 +182,7 @@ export function ControleBairros({
       unidade={["bairro", "bairros"]}
       focarBusca={focarBusca}
       alturaLista={alturaLista}
+      loteInicial={lote}
       vazio={semNenhum ? semBairros : undefined}
     />
   );
@@ -283,7 +288,7 @@ const FAIXA: Record<GrupoFaixa, { rotulo: string; formato: FormatoFaixa; min: ke
   },
   desagio: {
     rotulo: "Deságio",
-    formato: "pct",
+    formato: "desagio",
     min: "desagioMin",
     max: "desagioMax",
     atalhos: [

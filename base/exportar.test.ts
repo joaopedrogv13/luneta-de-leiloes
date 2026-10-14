@@ -225,7 +225,7 @@ test("exportarSite: amostra sem anúncios do mesmo imóvel e estatísticas por U
     assert.deepEqual(amostra.imoveis.map((i) => i.id), ["caixa-200", "caixa-202"], "201 é o mesmo imóvel do 200; 203 é rural");
     const rj = amostra.imoveis[1]!;
     assert.deepEqual([rj.praca, rj.desagio], [null, -25], "Leilão SFI sem ficha: praça não informada; preço acima da avaliação");
-    assert.ok(rj.tagsEmRevisao.some((t) => t.label === "Preço acima do mercado"));
+    assert.ok(rj.tagsEmRevisao.some((t) => t.label === "Lance acima da avaliação"));
     assert.deepEqual(amostra.fontes.map((f) => [f.id, f.gerado_na_fonte_em]), [["caixa_csv", null], ["leiloesjudiciais_api", null]], "sem coleta registrada");
 
     assert.equal(estat.brasil.uf, "BR");

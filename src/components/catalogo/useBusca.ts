@@ -245,6 +245,11 @@ export function useBusca({ conjunto, servidor, pedidoInicial, selosDesligados, m
     setPedido((p) => (p.pagina === pagina ? p : { ...p, pagina }));
   }, []);
   const mudarPlano = useCallback((plano: Plano) => setPedido((p) => (p.plano === plano ? p : { ...p, plano })), []);
+  /** Voltar/avançar do navegador: o pedido da URL, como está (sem voltar à página 1). */
+  const restaurar = useCallback(
+    (novo: PedidoLista) => setPedido((p) => (consultaLista(conjunto, p) === consultaLista(conjunto, novo) ? p : novo)),
+    [conjunto],
+  );
   const tentarDeNovo = useCallback(() => {
     setErro(null);
     setErroMapa(null);
@@ -271,6 +276,7 @@ export function useBusca({ conjunto, servidor, pedidoInicial, selosDesligados, m
     mudarOrdem,
     irParaPagina,
     mudarPlano,
+    restaurar,
     tentarDeNovo,
     tentarMapaDeNovo,
     contar,

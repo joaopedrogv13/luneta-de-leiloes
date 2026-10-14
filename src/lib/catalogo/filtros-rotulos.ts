@@ -181,8 +181,12 @@ export function contarGrupos(f: Filtros, grupos: readonly GrupoFiltro[]) {
 // Valores numéricos: formato, texto curto e o que a pessoa digita
 // ---------------------------------------------------------------------------
 
-/** Como mostrar e ler cada faixa: reais, reais por m², porcentagem, área. */
-export type FormatoFaixa = "moeda" | "moedaM2" | "pct" | "m2";
+/**
+ * Como mostrar e ler cada faixa: reais, reais por m², porcentagem, área e deságio. O deságio tem formato
+ * próprio: o mesmo "−10%" queria dizer desconto num lugar (cartão) e ágio no outro (filtro); aqui ele vira
+ * texto ("30% abaixo", "10% acima", "na avaliação").
+ */
+export type FormatoFaixa = "moeda" | "moedaM2" | "pct" | "m2" | "desagio";
 
 const NUM = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 
@@ -191,7 +195,14 @@ function pct(n: number) {
   return n < 0 ? `−${NUM.format(Math.abs(n))}%` : `${NUM.format(n)}%`;
 }
 
-/** Valor curto para rótulos: "R$ 300 mil", "R$ 2,5 mil/m²", "30%", "120 m²". */
+/** Deságio em palavras: 30 → "30% abaixo", −10 → "10% acima", 0 → "na avaliação". */
+function desagioCurto(v: number) {
+  if (v > 0) return `${NUM.format(v)}% abaixo`;
+  if (v < 0) return `${NUM.format(Math.abs(v))}% acima`;
+  return "na avaliação";
+}
+
+/** Valor curto para rótulos: "R$ 300 mil", "R$ 2,5 mil/m²", "30%", "120 m²", "30% abaixo". */
 export function valorCurto(v: number, formato: FormatoFaixa) {
   switch (formato) {
     case "moeda":
@@ -202,7 +213,31 @@ export function valorCurto(v: number, formato: FormatoFaixa) {
       return pct(v);
     case "m2":
       return area(v);
+    case "desagio":
+      return desagioCurto(v);
   }
+}
+
+/**
+ * Faixa de deságio em frase inteira (pílula, botão rápido, título do controle): "Deságio ≥ 30%", "Deságio de
+ * 30% a 60%", "Lance até 10% acima da avaliação", "Lance 5% ou mais acima da avaliação". `null` sem faixa.
+ */
+export function textoDesagio(min: number | undefined, max: number | undefined): string | null {
+  const temMin = min !== undefined;
+  const temMax = max !== undefined;
+  if (!temMin && !temMax) return null;
+  const n = (v: number) => NUM.format(Math.abs(v));
+  if (temMin && temMax) {
+    if (min >= 0) return `Deságio de ${n(min)}% a ${n(max)}%`;
+    if (max <= 0) return max === 0 ? `Lance na avaliação ou até ${n(min)}% acima` : `Lance de ${n(max)}% a ${n(min)}% acima da avaliação`;
+    return `De ${n(min)}% acima a ${n(max)}% abaixo da avaliação`;
+  }
+  if (temMin) {
+    if (min > 0) return `Deságio ≥ ${n(min)}%`;
+    return min === 0 ? "Lance até a avaliação" : `Lance até ${n(min)}% acima da avaliação`;
+  }
+  if (max! > 0) return `Deságio ≤ ${n(max!)}%`;
+  return max === 0 ? "Lance na avaliação ou acima" : `Lance ${n(max!)}% ou mais acima da avaliação`;
 }
 
 /**
@@ -213,6 +248,7 @@ export function textoFaixa(min: number | undefined, max: number | undefined, for
   const temMin = min !== undefined;
   const temMax = max !== undefined;
   if (!temMin && !temMax) return null;
+  if (formato === "desagio") return textoDesagio(min, max);
   if (formato === "pct") {
     if (temMin && temMax) return `de ${pct(min)} a ${pct(max)}`;
     return temMin ? `≥ ${pct(min)}` : `≤ ${pct(max!)}`;
@@ -283,7 +319,7 @@ export function mascararDigitando(texto: string, aceitaNegativo = false) {
 export function arredondarBonito(v: number, formato: FormatoFaixa) {
   const a = Math.abs(v);
   let passo: number;
-  if (formato === "pct") passo = 1;
+  if (formato === "pct" || formato === "desagio") passo = 1;
   else if (formato === "m2") passo = a < 100 ? 1 : a < 1000 ? 5 : a < 10_000 ? 50 : 500;
   else if (formato === "moedaM2") passo = a < 1000 ? 10 : a < 10_000 ? 50 : 500;
   else passo = a < 10_000 ? 500 : a < 100_000 ? 1000 : a < 1_000_000 ? 5000 : a < 10_000_000 ? 50_000 : 500_000;
@@ -313,7 +349,7 @@ export const TAG_ROTULO_PADRAO: Record<string, string> = {
   "ocupacao-nao-informada": "Ocupação não informada",
   "desagio-alto": "Deságio alto",
   "desagio-baixo": "Deságio baixo",
-  "preco-acima-mercado": "Preço acima do mercado",
+  "preco-acima-mercado": "Lance acima da avaliação",
   "custos-extras-altos": "Custos extras altos",
   "condominio-em-atraso": "Condomínio em atraso",
   "iptu-em-atraso": "IPTU em atraso",
@@ -429,7 +465,7 @@ export function pilulas(f: Filtros, nomes?: NomesDasFacetas): Pilula[] {
   };
   faixa("lance", "Lance", f.lanceMin, f.lanceMax, "moeda");
   faixa("avaliacao", "Avaliação", f.avaliacaoMin, f.avaliacaoMax, "moeda");
-  faixa("desagio", "Deságio", f.desagioMin, f.desagioMax, "pct");
+  add("desagio", textoDesagio(f.desagioMin, f.desagioMax));
   faixa("lanceM2", "Lance por m²", f.lanceM2Min, f.lanceM2Max, "moeda");
   faixa("area", "Área", f.areaMin, f.areaMax, "m2");
   if (f.quartosMin !== undefined) add("quartos", textoMinimo(f.quartosMin, "quarto", "quartos"));
@@ -500,10 +536,8 @@ export function resumoBotao(f: Filtros, botao: BotaoRapido): string | null {
       const t = textoFaixa(f.lanceMin, f.lanceMax, "moeda");
       return t ? maiusc(t) : null;
     }
-    case "desagio": {
-      const t = textoFaixa(f.desagioMin, f.desagioMax, "pct");
-      return t ? `Deságio ${t}` : null;
-    }
+    case "desagio":
+      return textoDesagio(f.desagioMin, f.desagioMax);
     case "quartos": {
       const partes: string[] = [];
       if (f.quartosMin !== undefined) partes.push(textoMinimo(f.quartosMin, "quarto", "quartos"));

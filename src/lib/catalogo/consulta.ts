@@ -81,6 +81,12 @@ const B_SELO = 1 << 22;
 const B_VENCIDO = 1 << 23;
 
 const UM_DIA = 24 * 3600 * 1000;
+
+/** Facetas vazias (pedido sem facetas). */
+const FACETAS_VAZIAS: Facetas = {
+  uf: [], cidade: [], bairro: [], tipo: [], modalidade: [], praca: [], ocupacao: [], natureza: [], fonte: [], tags: [], selo: [],
+  lance: null, avaliacao: null, desagio: null, lanceM2: null, area: null, financiamento: 0, fgts: 0, parcelamento: 0, comFoto: 0,
+};
 const TRES_HORAS = 3 * 3600 * 1000;
 
 /** Dia em Brasília (UTC−3, sem horário de verão) de uma data ISO ou "AAAA-MM-DD". */
@@ -146,6 +152,12 @@ export interface IndiceCatalogo {
   readonly tagsConfirmadas: Uint32Array;
   readonly tagsTodas: Uint32Array;
   readonly alertas: Uint8Array;
+  /**
+   * Valor fora do padrão: lance acima de 5× a avaliação (erro de digitação da fonte, como um apartamento de
+   * R$ 69,7 milhões avaliado em R$ 401 mil). Vai para o fim de todas as ordens e fica fora dos histogramas
+   * de lance, deságio e R$/m² (senão abre "Maior lance" e estica a régua do filtro).
+   */
+  readonly suspeito: Uint8Array;
   /** Busca por texto: vocabulário ordenado e, por imóvel, os ids das palavras (CSR). */
   readonly vocabulario: string[];
   readonly tokInicio: Int32Array;
@@ -218,6 +230,7 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
   const tagsConfirmadas = new Uint32Array(n * palavrasTag);
   const tagsTodas = new Uint32Array(n * palavrasTag);
   const alertas = new Uint8Array(n);
+  const suspeito = new Uint8Array(n);
 
   // Cidades cuja posição já é a da sede do município (precisão "cidade").
   const cidadeNaSede = new Set<number>();
@@ -274,6 +287,7 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
       }
     }
     alertas[k] = Math.min(255, nAlertas);
+    suspeito[k] = i.avaliacao !== null && i.avaliacao > 0 && i.lance > 5 * i.avaliacao ? 1 : 0;
     const extra = opcoes.textoExtra?.(i, k) ?? "";
     const idSemZeros = i.id.replace(/^[a-z]+-0+/, "");
     const tokens = new Set(palavras(`${i.titulo} ${i.bairro ?? ""} ${i.cidade} ${extra} ${i.id} ${idSemZeros} ${TIPO_ROTULO[i.tipo] ?? ""} ${i.fonte.nome}`));
@@ -300,7 +314,7 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
   return {
     itens, n, ufs, ufDe, cidades, cidadeDe, bairros, bairroDe, tipoDe, modalidadeDe, pracaDe, ocupacaoDe, naturezaDe,
     fontes, fonteDe, dia, instante, numeros, financiamento, fgts, parcelamento, temFoto, selo, slugs, palavrasTag,
-    tagsConfirmadas, tagsTodas, alertas, vocabulario, tokInicio, tokIds, rankId, ordens: new Map(), ordenadosPor: new Map(),
+    tagsConfirmadas, tagsTodas, alertas, suspeito, vocabulario, tokInicio, tokIds, rankId, ordens: new Map(), ordenadosPor: new Map(),
   };
 }
 
@@ -373,7 +387,9 @@ function ordemDe(ix: IndiceCatalogo, ordem: Ordem, hoje: string): Int32Array {
     default:
       cmp = porDesagio;
   }
-  const lista = Array.from({ length: ix.n }, (_, k) => k).sort((a, b) => cmp(a, b) || rankId[a]! - rankId[b]!);
+  // valor fora do padrão (lance > 5× a avaliação) no fim de qualquer ordem
+  const s = ix.suspeito;
+  const lista = Array.from({ length: ix.n }, (_, k) => k).sort((a, b) => s[a]! - s[b]! || cmp(a, b) || rankId[a]! - rankId[b]!);
   const pronto = Int32Array.from(lista);
   if (ordem === "data") for (const k of [...ix.ordens.keys()]) if (k.startsWith("data:")) ix.ordens.delete(k);
   ix.ordens.set(chave, pronto);
@@ -453,12 +469,16 @@ function histogramaLog(valores: Float64Array, m: number): Histograma | null {
   return { min: valores[0]!, max: valores[m - 1]!, limites, totais: contar(valores, m, limites) };
 }
 
-/** Deságio: barras de 5 pontos, de max(−50, mínimo) até 100. */
+/**
+ * Deságio: barras de 5 pontos, de max(−50, mínimo) até o maior deságio que existe (no máximo 100): uma régua
+ * que termina em barras vazias ("95–100%: 0 imóveis") só ocupa espaço.
+ */
 function histogramaDesagio(valores: Float64Array, m: number): Histograma | null {
   if (m === 0) return null;
   const inicio = Math.min(95, Math.max(-50, Math.floor(valores[0]! / 5) * 5));
+  const fim = Math.min(100, Math.max(inicio + 5, Math.ceil(valores[m - 1]! / 5) * 5));
   const limites: number[] = [];
-  for (let x = inicio; x <= 100; x += 5) limites.push(x);
+  for (let x = inicio; x <= fim; x += 5) limites.push(x);
   return { min: valores[0]!, max: valores[m - 1]!, limites, totais: contar(valores, m, limites) };
 }
 
@@ -478,6 +498,8 @@ export interface OpcoesBusca {
   indice?: OpcoesIndice;
   /** false = não agrega o mapa (`mapa: []`): o mapa do Brasil inteiro passa de 600 KB de JSON. Padrão true. */
   mapa?: boolean;
+  /** false = facetas vazias (o pedido do mapa não as usa: ~80 KB a menos). Padrão true. */
+  facetas?: boolean;
 }
 
 /** Tira o que o plano não vê: no Lente, tags e selo (o conteúdo bloqueado nunca chega ao navegador). */
@@ -520,7 +542,44 @@ function marcarVocabulario(vocab: string[], termo: string, exato: boolean, marca
   }
 }
 
-/** Quais imóveis casam com o texto (null = sem filtro de texto). */
+/** Apelidos de cidade que as pessoas digitam ("bh", "poa", "floripa"). */
+const APELIDOS_CIDADE: Record<string, string> = {
+  bh: "belo horizonte",
+  poa: "porto alegre",
+  bsb: "brasilia",
+  floripa: "florianopolis",
+  sampa: "sao paulo",
+};
+
+/** Nomes de cidades e bairros do índice (sem acento, minúsculas), para a busca que é só um nome de lugar. */
+const lugaresPorNome = new WeakMap<IndiceCatalogo, { cidades: Map<string, number[]>; bairros: Map<string, number[]> }>();
+function lugares(ix: IndiceCatalogo) {
+  let l = lugaresPorNome.get(ix);
+  if (!l) {
+    const cidades = new Map<string, number[]>();
+    const bairros = new Map<string, number[]>();
+    const por = (m: Map<string, number[]>, nome: string, k: number) => {
+      const chave = palavras(nome).join(" ");
+      const lista = m.get(chave);
+      if (lista) lista.push(k);
+      else m.set(chave, [k]);
+    };
+    ix.cidades.forEach((c, k) => por(cidades, c.nome, k));
+    ix.bairros.forEach((b, k) => por(bairros, b.nome, k));
+    l = { cidades, bairros };
+    lugaresPorNome.set(ix, l);
+  }
+  return l;
+}
+
+/**
+ * Quais imóveis casam com o texto (null = sem filtro de texto).
+ * - O texto inteiro é o nome de uma cidade ou de um bairro ("belo horizonte", "copacabana"): só os imóveis
+ *   dessa cidade ou bairro, não os que têm o nome no endereço (a "Rua Belo Horizonte" em Belford Roxo).
+ *   Nome de estado ("são paulo", "rio de janeiro") continua valendo o estado inteiro.
+ * - Senão, todas as cláusulas precisam casar: estado/sigla pela UF, tipo e quartos pelos campos do imóvel,
+ *   os termos pelas palavras do título, bairro, cidade, endereço e id.
+ */
 function casarTexto(ix: IndiceCatalogo, q: string | undefined): Uint8Array | null {
   if (!q) return null;
   // cláusula repetida ("casa casa casa") não muda o resultado: conta uma vez só
@@ -532,14 +591,45 @@ function casarTexto(ix: IndiceCatalogo, q: string | undefined): Uint8Array | nul
     return true;
   });
   if (clausulas.length === 0) return null;
-  type Teste = { uf: number; grupos: Uint8Array[] };
+
+  const bruta = palavras(q).join(" ");
+  const frase = APELIDOS_CIDADE[bruta] ?? bruta;
+  const ehEstado =clausulas.length === 1 && (clausulas[0]!.tipo === "estado" || clausulas[0]!.tipo === "uf");
+  if (!ehEstado && frase.length >= 3) {
+    const { cidades, bairros } = lugares(ix);
+    const nasCidades = cidades.get(frase);
+    const nosBairros = bairros.get(frase);
+    if (nasCidades || nosBairros) {
+      const cidadeOk = new Uint8Array(ix.cidades.length);
+      for (const c of nasCidades ?? []) cidadeOk[c] = 1;
+      const bairroOk = new Uint8Array(ix.bairros.length);
+      for (const b of nosBairros ?? []) bairroOk[b] = 1;
+      const ok = new Uint8Array(ix.n);
+      for (let k = 0; k < ix.n; k++) {
+        const b = ix.bairroDe[k]!;
+        ok[k] = cidadeOk[ix.cidadeDe[k]!] || (b >= 0 && bairroOk[b]) ? 1 : 0;
+      }
+      return ok;
+    }
+  }
+
+  type Teste = { uf: number; grupos: Uint8Array[]; campo?: (k: number) => boolean };
   const ufIndice = (uf: string) => ix.ufs.indexOf(uf);
   const testes: Teste[] = clausulas.map((c) => {
     if (c.tipo === "uf") return { uf: ufIndice(c.uf), grupos: [] };
+    if (c.tipo === "imovel") {
+      const t = TIPOS.indexOf(c.imovel);
+      return { uf: -2, grupos: [], campo: (k) => ix.tipoDe[k] === t };
+    }
+    if (c.tipo === "quartos") {
+      const v = ix.numeros.quartos;
+      return { uf: -2, grupos: [], campo: c.minimo ? (k) => v[k]! >= c.n : (k) => v[k] === c.n };
+    }
     const termos = c.tipo === "termo" ? [c.termo] : c.palavras;
+    const exato = c.tipo === "termo" ? !!c.exato : !c.parcial;
     const grupos = termos.map((t) => {
       const marcas = new Uint8Array(ix.vocabulario.length);
-      marcarVocabulario(ix.vocabulario, t, c.tipo === "estado" && !c.parcial, marcas);
+      marcarVocabulario(ix.vocabulario, t, exato, marcas);
       return marcas;
     });
     return { uf: c.tipo === "estado" ? ufIndice(c.uf) : -2, grupos };
@@ -549,6 +639,13 @@ function casarTexto(ix: IndiceCatalogo, q: string | undefined): Uint8Array | nul
   for (let k = 0; k < ix.n; k++) {
     let passa = true;
     for (const t of testes) {
+      if (t.campo) {
+        if (!t.campo(k)) {
+          passa = false;
+          break;
+        }
+        continue;
+      }
       if (t.uf >= 0 && ufDe[k] === t.uf) continue; // estado ou sigla: a UF do imóvel basta
       if (t.grupos.length === 0) {
         passa = false; // sigla de UF de outro estado
@@ -719,6 +816,10 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
   let cFgts = 0;
   let cParc = 0;
   let cFoto = 0;
+  /** com data da praça; todos coletados no mesmo dia? (as ordens "Praça mais próxima" e "Mais recentes" avisam quando não ajudam) */
+  let cData = 0;
+  let primeiraColeta: string | null = null;
+  let variasColetas = false;
   let total = 0;
   let vencidos = 0;
 
@@ -807,6 +908,10 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
       if (ix.fgts[k] === 1) cFgts++;
       if (ix.parcelamento[k] === 1) cParc++;
       if (ix.temFoto[k]) cFoto++;
+      if (ix.dia[k] !== null) cData++;
+      const coleta = ix.itens[k]!.coletadoEm;
+      if (primeiraColeta === null) primeiraColeta = coleta;
+      else if (coleta !== primeiraColeta) variasColetas = true;
       cSelo[ix.selo[k]!]!++;
       if (!lente) {
         for (let w = 0; w < W; w++) {
@@ -879,14 +984,18 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
 
   // ---- histogramas (itens que passam nos OUTROS filtros)
   const buffer = new Float64Array(n);
+  const semFacetas = opcoesBusca.facetas === false;
   const coletar = (campo: CampoHistograma, bit: number): number => {
+    if (semFacetas) return 0;
     const ordem = ordenadosPor(ix, campo);
     const valores = v[campo];
+    // valor fora do padrão não estica a régua de lance, deságio e R$/m²
+    const tirarSuspeitos = campo !== "avaliacao" && campo !== "area";
     let m = 0;
     for (let p = 0; p < ordem.length; p++) {
       const k = ordem[p]!;
       const mk = mascaras[k]!;
-      if (mk === 0 || mk === bit) buffer[m++] = valores[k]!;
+      if ((mk === 0 || mk === bit) && !(tirarSuspeitos && ix.suspeito[k])) buffer[m++] = valores[k]!;
     }
     return m;
   };
@@ -1008,9 +1117,12 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
     fgts: cFgts,
     parcelamento: cParc,
     comFoto: cFoto,
+    comData: cData,
+    coletaUnica: total > 0 && !variasColetas,
   };
 
-  return { total, pagina, porPagina, totalPaginas, itens, facetas, mapa, totalConjunto: n - vencidos, selosDesligados };
+  // sem facetas (o pedido do mapa): ~80 KB a menos na resposta
+  return { total, pagina, porPagina, totalPaginas, itens, facetas: semFacetas ? FACETAS_VAZIAS : facetas, mapa, totalConjunto: n - vencidos, selosDesligados };
 }
 
 /** Atalho para a primeira página com a ordem padrão (testes e páginas simples). */

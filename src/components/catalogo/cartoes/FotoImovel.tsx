@@ -16,13 +16,24 @@ const FALHAS = new Set<string>();
  */
 const VIDRO = "bg-[#070b16]/78 text-white ring-1 ring-white/12";
 
-export type DadosFoto = Pick<ImovelResumo, "foto" | "tipo" | "totalFotos" | "desagio">;
+export type DadosFoto = Pick<ImovelResumo, "foto" | "tipo" | "totalFotos" | "desagio"> & { id?: string };
+
+/**
+ * O que dizer quando não há foto, pela causa (nunca afirmar o que não foi conferido): a fonte não publicou,
+ * é um exemplo fictício, ou a foto existe na fonte e só não carregou (rede, bloqueio do site da fonte).
+ */
+function textoSemFoto(imovel: DadosFoto, falhou: boolean): { titulo: string; detalhe?: string } {
+  if (falhou) return { titulo: "A foto não carregou do site da fonte", detalhe: "Veja no anúncio, na página do imóvel." };
+  if (imovel.id?.startsWith("ex-")) return { titulo: "Exemplo fictício: sem foto" };
+  return { titulo: "Sem foto na fonte" };
+}
 
 /**
  * Foto do imóvel em proporção fixa (4:3), direto da fonte: <img> simples (nada de baixar ou re-hospedar),
  * preguiçosa, sem referrer, com fade-in ao carregar. Sem foto, ou se ela falhar, entra a ilustração do tipo
- * com "Foto não disponível na fonte". Enquanto carrega, a ilustração fica esmaecida por baixo (nunca um
- * buraco em branco).
+ * com o motivo ("Sem foto na fonte", "A foto não carregou do site da fonte", "Exemplo fictício: sem foto";
+ * `data-foto` = ausente | falhou | carregando | ok, para medir). Enquanto carrega, a ilustração fica
+ * esmaecida por baixo (nunca um buraco em branco).
  *
  * Selos sobrepostos (`selos`): deságio grande no canto superior esquerdo ("+12% acima da avaliação" quando
  * o lance passa da avaliação), tipo no superior direito e "+N fotos" no inferior direito. O deságio aqui é
@@ -35,10 +46,16 @@ export function FotoImovel({
   selos = true,
   eager = false,
   alt = "",
+  enxutaNoCompacto = false,
   className = "",
 }: {
   imovel: DadosFoto;
   selos?: boolean;
+  /**
+   * dentro de um @container estreito (< 36rem: a linha compacta do celular), a foto é pequena: sem os selos
+   * por cima e sem o texto do aviso (o preço ao lado já diz o deságio)
+   */
+  enxutaNoCompacto?: boolean;
   /** primeira dobra: carrega já (o padrão é preguiçoso) */
   eager?: boolean;
   /** texto alternativo; vazio (padrão) quando o título do imóvel já está ao lado */
@@ -67,12 +84,14 @@ export function FotoImovel({
   );
 
   const semFoto = src === null;
-  // "+N fotos" só sobre a foto: sobre o desenho ("Foto não disponível") seria contraditório
+  const falhouAqui = semFoto && !!imovel.foto;
+  const aviso = semFoto ? textoSemFoto(imovel, falhouAqui) : null;
+  // "+N fotos" só sobre a foto: sobre o desenho ("Sem foto") seria contraditório
   const outras = semFoto ? 0 : Math.max(0, imovel.totalFotos - 1);
 
   return (
     <div
-      data-foto={semFoto ? "ausente" : pronta ? "ok" : "carregando"}
+      data-foto={semFoto ? (falhouAqui ? "falhou" : "ausente") : pronta ? "ok" : "carregando"}
       className={`relative isolate aspect-[4/3] overflow-hidden ${className}`}
       style={{
         background:
@@ -83,8 +102,11 @@ export function FotoImovel({
         tipo={imovel.tipo}
         className={`transition-opacity duration-300 motion-reduce:transition-none ${semFoto ? "opacity-100" : "opacity-45"}`}
       />
-      {semFoto && (
-        <p className="absolute inset-x-0 bottom-[9%] px-4 text-center text-xs leading-snug font-medium text-nevoa">Foto não disponível na fonte</p>
+      {aviso && (
+        <p className={`absolute inset-x-0 bottom-[8%] px-4 text-center text-xs leading-snug font-medium text-nevoa ${enxutaNoCompacto ? "@max-xl:sr-only" : ""}`}>
+          {aviso.titulo}
+          {aviso.detalhe && <span className="mt-0.5 block text-[11px] font-normal max-[380px]:hidden">{aviso.detalhe}</span>}
+        </p>
       )}
       {src && (
         // eslint-disable-next-line @next/next/no-img-element -- a foto fica na fonte: o next/image a baixaria e re-hospedaria
@@ -107,7 +129,7 @@ export function FotoImovel({
       )}
 
       {selos && (
-        <>
+        <div className={enxutaNoCompacto ? "contents @max-xl:hidden" : "contents"}>
           {/* leve sombra no topo e na base: os selos ficam legíveis sobre qualquer foto */}
           {pronta && (
             <div
@@ -125,7 +147,7 @@ export function FotoImovel({
               {outras === 1 ? "+1 foto" : `+${numero(outras)} fotos`}
             </span>
           )}
-        </>
+        </div>
       )}
     </div>
   );
@@ -133,7 +155,8 @@ export function FotoImovel({
 
 /** Deságio grande sobre a foto (visual; o texto acessível fica no bloco de preço). Número em cima, legenda embaixo. */
 function SeloDesagio({ desagio }: { desagio: number | null }) {
-  if (desagio === null) return null;
+  // lance acima de 5× a avaliação (deságio abaixo de −400%): valor fora do padrão, o preço ao lado avisa
+  if (desagio === null || desagio < -400) return null;
   const numero_ = desagio > 0 ? `−${desagio}%` : desagio < 0 ? `+${numero(Math.abs(desagio))}%` : "0%";
   const legenda = desagio > 0 ? "deságio" : desagio < 0 ? "acima da avaliação" : "igual à avaliação";
   return (

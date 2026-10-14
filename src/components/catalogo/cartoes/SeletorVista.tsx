@@ -21,6 +21,7 @@ export function SeletorVista({
   mapa,
   onMapa,
   semMapa = false,
+  semMapaCelular = false,
   rotuloClassName = "",
   className = "",
 }: {
@@ -30,13 +31,29 @@ export function SeletorVista({
   onMapa: (visivel: boolean) => void;
   /** esconde o botão do mapa (ex.: tela onde o mapa não cabe) */
   semMapa?: boolean;
+  /** esconde o botão do mapa só no celular (lá o mapa tem o botão flutuante) */
+  semMapaCelular?: boolean;
   /** classes dos rótulos ("max-lg:sr-only": só os ícones em telas médias; o nome continua para leitores de tela) */
   rotuloClassName?: string;
   className?: string;
 }) {
+  const outra = OPCOES.find((o) => o.valor !== vista)!;
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <div role="group" aria-label="Ver os imóveis em" className="inline-flex rounded-full border border-nevoa/25 bg-tinta p-1">
+      {/* celular (com semMapaCelular): um botão só, que troca para a outra vista (a linha do total e de "Ordenar"
+          não tem lugar para o controle inteiro) */}
+      {semMapaCelular && (
+        <button
+          type="button"
+          onClick={() => onVista(outra.valor)}
+          aria-label={`Ver em ${outra.rotulo.toLowerCase()}`}
+          title={`Ver em ${outra.rotulo.toLowerCase()}`}
+          className="inline-flex size-11 cursor-pointer items-center justify-center rounded-full border border-nevoa/25 bg-tinta text-luar transition-colors duration-150 hover:border-nevoa/55 sm:hidden"
+        >
+          {outra.icone}
+        </button>
+      )}
+      <div role="group" aria-label="Ver os imóveis em" className={`inline-flex rounded-full border border-nevoa/25 bg-tinta p-1 ${semMapaCelular ? "max-sm:hidden" : ""}`}>
         {OPCOES.map((o) => {
           const ativo = vista === o.valor;
           return (
@@ -64,7 +81,7 @@ export function SeletorVista({
           aria-pressed={mapa}
           title="Mapa"
           onClick={() => onMapa(!mapa)}
-          className={`inline-flex ${ALTURA} cursor-pointer items-center gap-2 rounded-full border px-3.5 text-[13px] leading-none font-medium transition-[background-color,border-color,color] duration-150 ease-luneta motion-reduce:transition-none ${
+          className={`inline-flex ${ALTURA} cursor-pointer items-center gap-2 rounded-full border px-3.5 text-[13px] leading-none font-medium transition-[background-color,border-color,color] duration-150 ease-luneta motion-reduce:transition-none ${semMapaCelular ? "max-sm:hidden" : ""} ${
             mapa ? "border-latao/70 bg-latao/15 text-latao-texto" : "border-nevoa/25 bg-tinta text-nevoa hover:border-nevoa/55 hover:text-luar"
           }`}
         >

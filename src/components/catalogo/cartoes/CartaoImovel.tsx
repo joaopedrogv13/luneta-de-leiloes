@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { local } from "@/lib/catalogo/rotulos";
+import { bairroUtil } from "@/lib/catalogo/rotulos";
 import { ListaTags } from "../tags/ListaTags";
 import { FotoImovel } from "./FotoImovel";
 import { IconeLocal } from "./icones";
-import { BlocoPreco, BotaoFavoritar, Fatos, LinhaPraca, SeloImovel, type PropsImovel } from "./partes";
+import { BlocoPreco, BotaoFavoritar, complementoSr, Fatos, LinhaPraca, mostrarSelo, SeloImovel, type PropsImovel } from "./partes";
 
 /**
  * Superfície comum de cartão e linha: borda, fundo, elevação no hover (o <article> não se move, só a
@@ -43,24 +43,36 @@ export function LinkTitulo({
         className="after:absolute after:inset-0 after:z-0 after:rounded-3xl after:content-[''] focus-visible:outline-none"
       >
         <span className="line-clamp-2 transition-colors duration-150 group-hover/cartao:text-latao-texto">{imovel.titulo}</span>
+        {/* 24 "Casa 2 quartos" na página: para leitor de tela e comando de voz, o local e o lance distinguem */}
+        <span className="sr-only">{complementoSr(imovel)}</span>
       </Link>
     </Como>
   );
 }
 
+/**
+ * "Bairro · Cidade/UF" numa linha: quando não cabe, quem encolhe (com reticências) é o bairro; a cidade e a UF,
+ * o que importa, ficam sempre inteiras. Bairro igual à cidade não se repete.
+ */
 export function Local({ imovel, className = "" }: Pick<PropsImovel, "imovel"> & { className?: string }) {
+  const bairro = bairroUtil(imovel);
   return (
     <p className={`flex min-w-0 items-center gap-1.5 text-[13px] leading-snug text-nevoa ${className}`}>
-      <IconeLocal className="text-nevoa" />
-      <span className="truncate">{local(imovel)}</span>
+      <IconeLocal className="shrink-0 text-nevoa" />
+      {bairro && <span className="min-w-0 truncate">{bairro}</span>}
+      <span className="max-w-full shrink-0 truncate">
+        {bairro && <span aria-hidden="true">· </span>}
+        {bairro && <span className="sr-only">, </span>}
+        {imovel.cidade}/{imovel.uf}
+      </span>
     </p>
   );
 }
 
 /**
  * Cartão da grade: foto grande em cima (4:3, com deságio, tipo e "+N fotos"), preço (lance mínimo grande,
- * avaliação, deságio), título, local, fatos (área, quartos, vagas, R$/m²), praça e data, até 3 tags
- * clicáveis + "+N", selo e Favoritar. O cartão inteiro leva à página do imóvel.
+ * avaliação, deságio) com o coração de Favoritar ao lado, título, local, fatos (área, quartos, vagas, R$/m²),
+ * praça e data, até 3 tags clicáveis + "+N" e o selo. O cartão inteiro leva à página do imóvel.
  */
 export function CartaoImovel({
   imovel,
@@ -83,8 +95,11 @@ export function CartaoImovel({
     >
       <div className={`${SUPERFICIE(ativo)} flex h-full flex-col`}>
         <FotoImovel imovel={imovel} eager={eager} className="rounded-t-[23px]" />
-        <div className="flex flex-1 flex-col px-5 pt-4 pb-4">
-          <BlocoPreco imovel={imovel} />
+        <div className="flex flex-1 flex-col px-5 pt-4 pb-5">
+          <div className="flex items-start justify-between gap-3">
+            <BlocoPreco imovel={imovel} />
+            <BotaoFavoritar imovel={imovel} plano={plano} favorito={favorito} onFavoritar={onFavoritar} onUpsell={onUpsell} icone className="-mt-0.5 -mr-1" />
+          </div>
           <div className="mt-4">
             <LinkTitulo imovel={imovel} hrefImovel={hrefImovel} onHover={onHover} como={tituloComo} />
             <Local imovel={imovel} className="mt-1.5" />
@@ -100,12 +115,14 @@ export function CartaoImovel({
             rotulo={`Tags de risco: ${imovel.titulo}`}
             className="mt-4"
           />
-          <div className="mt-auto pt-4">
-            <div className="flex items-center justify-between gap-3 border-t border-nevoa/12 pt-3.5">
-              <SeloImovel imovel={imovel} plano={plano} />
-              <BotaoFavoritar imovel={imovel} plano={plano} favorito={favorito} onFavoritar={onFavoritar} onUpsell={onUpsell} />
+          {/* selo no pé (com os selos em análise, na prévia, não aparece: a faixa do topo e "Ordenar" já avisam) */}
+          {mostrarSelo(imovel, plano) && (
+            <div className="mt-auto pt-4">
+              <div className="border-t border-nevoa/12 pt-3.5">
+                <SeloImovel imovel={imovel} plano={plano} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </article>

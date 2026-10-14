@@ -83,7 +83,7 @@ export function TriEstado({
                 <span className={`text-[11.5px] tabular-nums ${on ? "text-noite-fixa/75" : "text-nevoa"}`}>
                   <span className="sr-only">, </span>
                   {numero(totalSim)}
-                  <span className="sr-only"> imóveis</span>
+                  <span className="sr-only"> {totalSim === 1 ? "imóvel" : "imóveis"}</span>
                 </span>
               )}
             </button>

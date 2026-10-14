@@ -36,6 +36,14 @@ export function escreverPreferencias(p: Preferencias): string {
 export const CONSULTA_CELULAR = "(max-width: 767.98px)";
 /** A partir de lg (1024 px) a lista tem o mapa numa coluna fixa à direita; abaixo, numa faixa em cima. */
 export const CONSULTA_COMPUTADOR = "(min-width: 1024px)";
+/**
+ * A barra de filtros colada vira uma linha só (busca, total, ordenar e filtros) no tablet e em tela baixa: com
+ * os botões rápidos e as pílulas ela passava de 1/4 da tela (76% num celular deitado). No celular em pé ela
+ * já tem duas linhas curtas e recolhe ao rolar.
+ */
+export const CONSULTA_BARRA_COMPACTA = "(min-width: 768px) and (max-width: 1023.98px), (min-width: 768px) and (max-height: 699.98px)";
+/** A barra sai de cena ao rolar para baixo (e volta ao rolar para cima): celular, toque e tela baixa. */
+export const CONSULTA_BARRA_RECOLHE = "(max-width: 767.98px), (max-height: 620px), (pointer: coarse)";
 
 /**
  * Palpite do servidor, pelo navegador que pediu a página: celular? Chromium manda `Sec-CH-UA-Mobile`;

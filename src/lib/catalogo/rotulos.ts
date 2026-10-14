@@ -134,9 +134,19 @@ export function dataCurta(iso: string | null | undefined) {
   return d ? `${d.getUTCDate()} ${MESES[d.getUTCMonth()]}` : "data não informada";
 }
 
-/** "Centro · Uberlândia/MG" ou "Uberlândia/MG" */
+/**
+ * O bairro, quando ele diz algo além da cidade: a fonte às vezes repete a cidade no bairro ("Santa Isabel do
+ * Para · Santa Isabel do Para/PA"), e aí ele não aparece. null sem bairro.
+ */
+export function bairroUtil(i: { bairro: string | null; cidade: string }): string | null {
+  if (!i.bairro) return null;
+  return normalizar(i.bairro).trim() === normalizar(i.cidade).trim() ? null : i.bairro;
+}
+
+/** "Centro · Uberlândia/MG" ou "Uberlândia/MG" (sem repetir a cidade no lugar do bairro) */
 export function local(i: { bairro: string | null; cidade: string; uf: string }) {
-  return i.bairro ? `${i.bairro} · ${i.cidade}/${i.uf}` : `${i.cidade}/${i.uf}`;
+  const bairro = bairroUtil(i);
+  return bairro ? `${bairro} · ${i.cidade}/${i.uf}` : `${i.cidade}/${i.uf}`;
 }
 
 /** Plural simples: plural(3, "imóvel", "imóveis") → "3 imóveis" */

@@ -95,6 +95,21 @@ test("texto: início de palavra em título, bairro, cidade, endereço e id; sem 
   assert.deepEqual(ids({ q: "   " }), ITENS.map((i) => i.id).sort(), "só espaço não filtra");
 });
 
+test("texto: tipo e quartos pelos campos; nome de cidade ou bairro só na cidade ou no bairro, não no endereço", () => {
+  assert.deepEqual(ids({ q: "ap 2 quartos" }), ["caixa-01", "caixa-02", "caixa-04"], "não vira Amapá nem casa com o '2' do endereço");
+  assert.deepEqual(ids({ q: "apartamento 1 quarto" }), ["caixa-12"]);
+  assert.deepEqual(ids({ q: "casa 3 qts" }), ["caixa-03"]);
+  assert.deepEqual(ids({ q: "2+ quartos" }), ["caixa-01", "caixa-02", "caixa-03", "caixa-04", "lj-11"]);
+  assert.deepEqual(ids({ q: "10" }), ["lj-10"], "número é palavra inteira: '10' não casa com o 100 do endereço nem com 160 m²");
+  // a "Rua Uberaba" de um imóvel de Uberlândia não entra na busca pela cidade de Uberaba
+  const ix = criarIndice(ITENS, { textoExtra: (i) => (i.id === "caixa-02" ? "Rua Uberaba, 50" : ENDERECOS.get(i.id)) });
+  const so = (q: string) => buscar(ix, busca({ q }), { agora: AGORA }).itens.map((i) => i.id).sort();
+  assert.deepEqual(so("uberaba"), ["caixa-03"]);
+  assert.deepEqual(so("rua uberaba"), ["caixa-02"], "com mais palavras, o endereço vale");
+  assert.deepEqual(so("vila mariana"), ["caixa-04"], "bairro");
+  assert.deepEqual(so("bh"), [], "apelido de cidade (Belo Horizonte não está nestes dados)");
+});
+
 test("local em árvore: UF, cidade dentro da UF, bairro dentro da cidade", () => {
   assert.deepEqual(ids({ uf: ["MG"] }), ["caixa-01", "caixa-02", "caixa-03"]);
   assert.deepEqual(ids({ cidade: ["MG|Uberlândia"] }), ["caixa-01", "caixa-02"]);
@@ -273,7 +288,7 @@ test("histogramas: sobre os itens dos OUTROS filtros, limites redondos e crescen
   assert.equal(r.facetas.avaliacao!.totais.reduce((a, b) => a + b, 0), 1, "avaliação: só o que passa no filtro de lance");
   const d = buscar(IX, busca(), { agora: AGORA }).facetas.desagio!;
   assert.equal(d.limites[0], -10);
-  assert.equal(d.limites.at(-1), 100);
+  assert.equal(d.limites.at(-1), 55, "a régua termina no maior deságio que existe (55%), não em 100");
   assert.ok(d.limites.every((x, k) => k === 0 || x - d.limites[k - 1]! === 5));
   assert.equal(d.totais.reduce((a, b) => a + b, 0), 7, "sem deságio fica fora");
   assert.equal(buscar(IX, busca({ uf: ["AC"] }), { agora: AGORA }).facetas.lance, null);
@@ -298,6 +313,31 @@ test("mapa: resultados por cidade, posição da sede, até 3 destaques de maior 
   assert.deepEqual(p.destaques.map((d) => d.id), ["caixa-95", "caixa-94", "caixa-93"]);
   assert.deepEqual(Object.keys(p.destaques[0]!).sort(), ["bairro", "desagio", "foto", "id", "lance", "tipo", "titulo"]);
   assert.deepEqual(buscar(IX, busca(), { agora: AGORA, mapa: false }).mapa, []);
+});
+
+test("valor fora do padrão (lance > 5× a avaliação): no fim de toda ordem e fora das réguas de lance e deságio", () => {
+  const itens = [...ITENS, imovel("caixa-99", { lance: 69_703_640, avaliacao: 401_534, desagio: -17259, lanceM2: 531_197 })];
+  const ix = criarIndice(itens);
+  for (const ordem of ["lance-desc", "desagio", "lance-asc"] as const) {
+    const r = buscar(ix, busca({}, { ordem }), { agora: AGORA });
+    assert.equal(r.itens.at(-1)!.id, "caixa-99", ordem);
+  }
+  const f = buscar(ix, busca(), { agora: AGORA }).facetas;
+  assert.ok(f.lance!.max < 1_000_000, "a régua do lance não vai a R$ 70 milhões");
+  assert.ok(f.desagio!.min >= -50);
+  // o filtro continua achando o imóvel (só a régua e a ordem o deixam de lado)
+  assert.deepEqual(buscar(ix, busca({ lanceMin: 10_000_000 }), { agora: AGORA }).itens.map((i) => i.id), ["caixa-99"]);
+});
+
+test("facetas para as ordens: com data da praça e coleta num dia só; sem facetas no pedido do mapa", () => {
+  const r = buscar(IX, busca(), { agora: AGORA });
+  assert.equal(r.facetas.comData, 3);
+  assert.equal(r.facetas.coletaUnica, false);
+  assert.equal(buscar(IX, busca({ uf: ["MG"] }), { agora: AGORA }).facetas.coletaUnica, true);
+  const m = buscar(IX, busca({}, { porPagina: 1 }), { agora: AGORA, facetas: false });
+  assert.deepEqual(m.facetas.cidade, []);
+  assert.equal(m.facetas.lance, null);
+  assert.ok(m.mapa.length > 0);
 });
 
 test("praça vencida há mais de 1 dia sai de tudo (o instantâneo fica no ar por dias)", () => {

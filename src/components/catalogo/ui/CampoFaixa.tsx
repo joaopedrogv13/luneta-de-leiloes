@@ -47,7 +47,11 @@ const ADORNO: Record<FormatoFaixa, { antes?: string; depois?: string }> = {
   moedaM2: { antes: "R$", depois: "/m²" },
   pct: { depois: "%" },
   m2: { depois: "m²" },
+  desagio: { depois: "%" },
 };
+
+/** Formatos com número negativo possível (o campo aceita "-10"). */
+const ACEITA_NEGATIVO: ReadonlySet<FormatoFaixa> = new Set(["pct", "desagio"]);
 
 const maiusc = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -117,6 +121,9 @@ export function CampoFaixa({
   const trilho = useRef<HTMLDivElement>(null);
   const barras = useRef<HTMLDivElement>(null);
   const arraste = useRef<Arraste | null>(null);
+  const grupo = useRef<HTMLDivElement>(null);
+  /** a faixa quando o foco entrou nos campos, e quais pontas a pessoa digitou desde então */
+  const sessao = useRef<{ lo: number | undefined; hi: number | undefined; editou: { lo: boolean; hi: boolean } } | null>(null);
 
   // valor novo vindo de fora (pílula removida, "Limpar", URL): o controle acompanha
   if (anterior.min !== min || anterior.max !== max) {
@@ -294,10 +301,16 @@ export function CampoFaixa({
   };
 
   // ---- campos digitáveis ----
+  const entrarNoCampo = (qual: Cursor) => {
+    setFocado(qual);
+    // começa uma "sessão" de digitação ao entrar nos campos vindo de fora deles
+    if (!sessao.current) sessao.current = { lo, hi, editou: { lo: false, hi: false } };
+  };
   const digitar = (qual: Cursor, texto: string) => {
-    const mascarado = mascararDigitando(texto, formato === "pct");
+    const mascarado = mascararDigitando(texto, ACEITA_NEGATIVO.has(formato));
     if (qual === "lo") setTextoMin(mascarado);
     else setTextoMax(mascarado);
+    if (sessao.current) sessao.current.editou[qual] = true;
     // "300 m" está a caminho de "300 mil": não aplica 300 milhões no meio da digitação (ao sair do
     // campo, "300 m" vale milhões)
     if (/\dm$/i.test(mascarado.replace(/\s/g, ""))) return;
@@ -306,19 +319,36 @@ export function CampoFaixa({
     const a = qual === "lo" ? v : lo;
     const b = qual === "hi" ? v : hi;
     if (a !== undefined && b !== undefined && a > b) {
-      // espera terminar de digitar ("3" a caminho de "300.000")
+      // A meio caminho ("3" a caminho de "300.000", ou um mínimo acima do máximo antigo): nada vale ainda. A
+      // faixa aplicada volta à de antes da digitação (um valor intermediário, como 30.000, não fica valendo).
       if (qual === "lo") setLo(v);
       else setHi(v);
+      if (sessao.current) onChange(sessao.current.lo, sessao.current.hi);
       return;
     }
     emitir(a, b, { manterTexto: qual });
   };
-  const confirmar = () => {
+  /**
+   * Sai de um campo. Indo para o outro campo da mesma faixa, uma faixa ao contrário espera (a pessoa ainda
+   * está digitando a outra ponta). Saindo da faixa: se as duas pontas foram digitadas agora, vale a faixa
+   * certa (as pontas trocam); se só uma, a ponta antiga que conflita com ela sai ("de 500 mil" com o máximo
+   * antigo de 300 mil vira "a partir de 500 mil", nunca "de 300 mil a 500 mil").
+   */
+  const confirmar = (qual: Cursor, para: EventTarget | null) => {
     setFocado(null);
     const a = textoMin.trim() === "" ? undefined : (lerNumeroDigitado(textoMin) ?? lo);
     const b = textoMax.trim() === "" ? undefined : (lerNumeroDigitado(textoMax) ?? hi);
-    if (a !== undefined && b !== undefined && a > b) emitir(b, a);
-    else if (a !== lo || b !== hi || textoMin !== formatarDigitado(a) || textoMax !== formatarDigitado(b)) emitir(a, b);
+    const continuaNaFaixa = para instanceof HTMLInputElement && !!grupo.current?.contains(para);
+    const editou = sessao.current?.editou ?? { lo: qual === "lo", hi: qual === "hi" };
+    if (!continuaNaFaixa) sessao.current = null;
+    if (a !== undefined && b !== undefined && a > b) {
+      if (continuaNaFaixa) return;
+      if (editou.lo && editou.hi) emitir(b, a);
+      else if (qual === "lo") emitir(a, undefined);
+      else emitir(undefined, b);
+      return;
+    }
+    if (a !== lo || b !== hi || textoMin !== formatarDigitado(a) || textoMax !== formatarDigitado(b)) emitir(a, b);
   };
 
   // ---- textos ----
@@ -328,7 +358,7 @@ export function CampoFaixa({
       ? `${valorCurto(L[sobre], formato)} a ${valorCurto(L[sobre + 1], formato)} · ${numero(totais[sobre] ?? 0)} ${totais[sobre] === 1 ? unidadeContagem[0] : unidadeContagem[1]}`
       : resumo
         ? maiusc(resumo)
-        : formato === "pct"
+        : formato === "pct" || formato === "desagio"
           ? "Qualquer deságio"
           : "Qualquer valor";
   const textoCursor = (qual: Cursor) => {
@@ -339,7 +369,7 @@ export function CampoFaixa({
   const ativo = lo !== undefined || hi !== undefined;
 
   return (
-    <div role="group" aria-labelledby={`${id}-rotulo`} className="flex min-w-0 flex-col gap-3">
+    <div ref={grupo} role="group" aria-labelledby={`${id}-rotulo`} className="flex min-w-0 flex-col gap-3">
       <div className="flex items-baseline justify-between gap-3">
         <span id={`${id}-rotulo`} className={rotuloVisivel ? "text-[13px] leading-tight font-semibold text-luar" : "sr-only"}>
           {rotulo}
@@ -427,8 +457,9 @@ export function CampoFaixa({
                   style={{ left: `${pct(p)}%`, zIndex: qual === "lo" && posLo > n - 0.5 ? 2 : 1 }}
                   className="group/c absolute top-1/2 flex size-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:outline-none pointer-fine:size-8"
                 >
+                  {/* foco: contorno de 2 px na cor de texto do latão (6:1 no claro), afastado do cursor */}
                   <span
-                    className={`block size-[22px] rounded-full border-2 border-latao bg-tinta shadow-[0_2px_8px_rgba(7,11,22,.35)] transition-[scale,box-shadow] duration-150 group-hover/c:scale-110 group-focus-visible/c:shadow-[0_0_0_4px_rgba(201,162,77,.35)] motion-reduce:transition-none ${
+                    className={`block size-[22px] rounded-full border-2 border-latao bg-tinta shadow-[0_2px_8px_rgba(7,11,22,.35)] transition-[scale,box-shadow] duration-150 group-hover/c:scale-110 group-focus-visible/c:scale-110 group-focus-visible/c:outline-2 group-focus-visible/c:outline-offset-2 group-focus-visible/c:outline-latao-texto group-focus-visible/c:outline-solid motion-reduce:transition-none ${
                       arrastando === qual ? "scale-110 shadow-[0_0_0_6px_rgba(201,162,77,.25)]" : ""
                     }`}
                   />
@@ -436,9 +467,16 @@ export function CampoFaixa({
               );
             })}
           </div>
-          <div className="flex justify-between text-[11.5px] text-nevoa tabular-nums" aria-hidden="true">
-            <span>{valorCurto(L[0], formato)}</span>
-            <span>{valorCurto(L[n], formato)}</span>
+          {/* pontas abertas: a da direita é "sem máximo" ("R$ 1 mi+"); no deságio, o 0 marca a avaliação */}
+          <div className="relative flex justify-between text-[11.5px] text-nevoa tabular-nums" aria-hidden="true">
+            <span>{formato === "desagio" && L[0] < 0 ? `${valorCurto(L[0], formato)} ou mais` : valorCurto(L[0], formato)}</span>
+            {formato === "desagio" && L[0] < 0 && L[n] > 0 && (
+              <span className="absolute top-0 -translate-x-1/2 whitespace-nowrap text-luar/80" style={{ left: `${pct(posicao(0))}%` }}>
+                <span className="mx-auto mb-0.5 block h-1.5 w-px bg-nevoa/60" />
+                avaliação
+              </span>
+            )}
+            <span>{formato === "desagio" ? valorCurto(L[n], formato) : `${valorCurto(L[n], formato)}+`}</span>
           </div>
         </div>
       ) : (
@@ -455,26 +493,27 @@ export function CampoFaixa({
             )}
             <label className="flex min-w-0 flex-1 flex-col gap-1.5">
               <span className="text-xs font-medium text-nevoa">{qual === "lo" ? "De" : "Até"}</span>
-              <span className="group/campo relative flex h-11 items-center rounded-xl border border-nevoa/30 bg-noite/40 transition-[border-color,box-shadow] duration-150 focus-within:border-latao focus-within:shadow-[0_0_0_3px_rgba(201,162,77,.22)] hover:border-nevoa/55 pointer-fine:h-10">
+              <span className="group/campo relative flex h-11 items-center rounded-xl border border-nevoa/30 bg-noite/40 transition-[border-color,box-shadow] duration-150 focus-within:border-latao-texto focus-within:ring-2 focus-within:ring-latao-texto/60 hover:border-nevoa/55 pointer-fine:h-10">
                 {adorno.antes && <span className="pl-3 text-sm text-nevoa">{adorno.antes}</span>}
                 <input
                   type="text"
-                  inputMode={formato === "pct" ? "text" : "numeric"}
+                  inputMode={ACEITA_NEGATIVO.has(formato) ? "text" : "numeric"}
                   autoComplete="off"
                   enterKeyHint="done"
                   aria-label={`${rotulo}, ${qual === "lo" ? "de" : "até"}`}
                   placeholder="Qualquer"
                   value={qual === "lo" ? textoMin : textoMax}
-                  onFocus={() => setFocado(qual)}
-                  onBlur={confirmar}
+                  onFocus={() => entrarNoCampo(qual)}
+                  onBlur={(e) => confirmar(qual, e.relatedTarget)}
                   onChange={(e) => digitar(qual, e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      confirmar();
+                      confirmar(qual, null);
                     }
                   }}
-                  className="h-full w-full min-w-0 bg-transparent px-2 text-[15px] text-luar tabular-nums outline-none placeholder:text-nevoa/75 focus-visible:outline-none pointer-fine:text-sm"
+                  // 16 px no toque (o Safari do iPhone não dá zoom ao focar), 14 px no mouse
+                  className="h-full w-full min-w-0 bg-transparent px-2 text-base text-luar tabular-nums outline-none placeholder:text-nevoa focus-visible:outline-none pointer-fine:text-sm"
                 />
                 {adorno.depois && <span className="pr-3 text-sm whitespace-nowrap text-nevoa">{adorno.depois}</span>}
               </span>

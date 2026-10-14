@@ -50,10 +50,11 @@ export function chaveMapa(conjunto: Conjunto, filtros: Filtros, plano: Plano, se
   return comoTexto(escreverBusca({ conjunto, filtros: valendo }));
 }
 
-/** Consulta do mapa: a mesma busca com uma página de 1 item (o que importa é `mapa`). */
+/** Consulta do mapa: a mesma busca com uma página de 1 item e sem facetas (o que importa é `mapa`). */
 export function consultaMapa(conjunto: Conjunto, filtros: Filtros, plano: Plano): string {
   const q = escreverBusca({ conjunto, filtros: canonico(filtros), plano });
   q.set("porPagina", "1");
+  q.set("facetas", "0");
   return comoTexto(q);
 }
 

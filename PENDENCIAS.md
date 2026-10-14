@@ -1,7 +1,7 @@
 # Luneta de Leilões · onde estamos e pendências
 
 Este é o arquivo central do projeto: **onde estamos, que dados temos, o que falta e o próximo passo**. Atualizado a cada
-entrega (última atualização: 13/10/2026).
+entrega (última atualização: 14/10/2026, correções da revisão do catálogo).
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
@@ -56,6 +56,44 @@ a busca, os filtros, a ordem e a paginação no servidor; "Estado: Minas Gerais"
   sem mudança não volta à página 1; com erro, a lista antiga fica esmaecida; o aviso da troca para a Luneta na prévia não
   promete selos (estão em análise); botões de toque com 44 px.
 
+**Correções da revisão do catálogo (14/10/2026): lista, filtros, mapa, cartões, cabeçalho e rodapé.**
+- **Mapa no lugar certo:** cidades só se juntam com cidades do mesmo estado (SP e RJ nunca viram uma bolha só; antes, os
+  490 imóveis da capital paulista apareciam numa bolha sobre o RJ). A bolha do grupo fica sobre a maior cidade dele, e o
+  grupo tem um anel por dentro (◉), explicado na legenda ("Uma cidade" · "Cidades próximas"). Só uma bolha pequena cujo
+  centro a vizinha cobriria entra no grupo do outro estado (Juazeiro/BA com Petrolina/PE). No Brasil inteiro as bolhas
+  ficam ~25% menores; siglas cobertas por bolhas somem; com poucas bolhas (a /assinante) todas ganham nome e 1 imóvel não
+  vira a bolha máxima; um resultado fora da curva não joga o grupo principal para o canto; Esc fecha o cartão aberto pelo
+  mouse; "Pular o mapa" para quem usa teclado.
+- **Barra de filtros:** no computador, as pílulas só mostram o que não tem botão rápido (os botões já dizem "SP, MG",
+  "Até R$ 300 mil", com um × para limpar); o total fica à esquerda. Colada no tablet ou em tela baixa, vira uma linha só
+  (busca, total, ordenar, filtros); some ao rolar para baixo no celular, no toque e em tela baixa (num celular deitado a
+  barra ia a 76% da tela; agora 73 px). O cabeçalho só fica fixo com altura de sobra (≥ 801 px).
+- **Busca:** "ap 2 quartos", "apartamento 1 quarto", "casa 3 qts", "2+ dormitórios", "sobrado", "lote" viram tipo e quartos
+  de verdade ("ap" sozinho continua sendo o Amapá); número casa a palavra inteira ("1" não acha 101). O nome exato de uma
+  cidade + Enter aplica a cidade ("belo horizonte" dava 22 imóveis de Belford Roxo; agora os 37 de BH); a busca que é só um
+  nome de cidade ou bairro não casa com endereço; "bh", "poa", "floripa". As sugestões de lugar não ficam presas à busca
+  ou ao estado atuais ("Campinas (adiciona SP)").
+- **Lista e cards:** linha do notebook com a altura da foto (foto de 328 px, tags e selo na coluna, coração no canto: 2 a
+  3 imóveis por tela); no celular dá para escolher lista (linha compacta, 4 a 5 por tela) ou cards. Cidade e UF nunca
+  somem do local (o bairro é que encolhe; bairro igual à cidade não se repete). "Selo em análise" não se repete em cada
+  cartão. Vista Cards: mapa em faixa baixa com "Cidades com mais imóveis" ao lado e "Recolher mapa" (começa recolhido em
+  tela baixa).
+- **Textos:** a tag "Preço acima do mercado" virou **"Lance acima da avaliação"** (a regra só compara com a avaliação;
+  slug igual, base e instantâneo atualizados). Deságio em palavras nos filtros ("Lance até 10% acima da avaliação", régua
+  de "50% acima" a "90% abaixo" com a marca da avaliação), nunca "−10%" com sentido trocado. Foto: "Sem foto na fonte",
+  "A foto não carregou do site da fonte" ou "Exemplo fictício: sem foto", conforme o caso. Lance acima de 5× a avaliação
+  (erro da fonte, como o apartamento de R$ 69,7 mi) aparece como "valor fora do padrão: confira no anúncio", vai para o fim
+  das ordens e sai das réguas. "Mais recentes" e "Praça mais próxima" aparecem desligadas com o porquê quando não mudam a
+  lista.
+- **Navegação:** trocar de página, aplicar o painel, buscar um texto e escolher a cidade no mapa entram no histórico (o
+  "voltar" não sai mais do catálogo); o "voltar" do Android fecha a folha de filtros. "Ver no mapa" (celular) devolve ao
+  mesmo imóvel ao fechar e sai da frente da paginação e dos pop-ups. Painel "Todos os filtros" com as 9 seções sempre à
+  vista numa coluna à esquerda (720 px); no celular, listas sem rolagem dentro da folha ("Mostrar todos os 27 estados").
+  Faixa digitada não troca mais o mínimo pelo máximo antigo.
+- **Acessibilidade:** campos com 16 px no toque (sem zoom no iPhone), foco com anel de contraste, placeholders e siglas
+  do mapa com 4,5:1, listas fora do Tab, "Pular para os resultados" vai direto à lista (2 Tabs, eram 38), links dos
+  cartões com local e lance no nome acessível, "1 imóvel" no singular.
+
 ### Próximos passos (em ordem)
 
 1. **Rede ou rotina de coleta** (você): liberar a rede do ambiente, ou aprovar a coleta agendada (ver "Atualização" abaixo).
@@ -97,7 +135,7 @@ Com o que temos hoje (só a lista da Caixa), **em parte**:
 | --- | --- | --- |
 | **Alta** (dado direto da fonte) | Aceita financiamento · Devedor com direito de preferência (Leilão SFI, Lei 9.514) · Deságio alto/baixo · Ocupação não informada | campo da Caixa ou conta exata sobre preço e avaliação; o limiar de deságio (40% / 20%) é provisório e a avaliação da Caixa pode estar desatualizada |
 | **Média** (inferência) | Praça única (pela modalidade) · Imóvel inteiro (venda do próprio banco, sem sinal de fração) | regra razoável, mas não está escrita no dado |
-| **Em revisão** | Preço acima do mercado (2.039 imóveis) | é "acima da avaliação", não do mercado: não temos preço de mercado |
+| **Em revisão** | Lance acima da avaliação (2.039 imóveis; antes "Preço acima do mercado") | compara só com a avaliação: não temos preço de mercado |
 | **Sem dado ainda** | Ocupado/Desocupado · Condomínio e IPTU em atraso · Dívida passa ao arrematante · Ação judicial · Penhora · Recurso · Matrícula · Construção irregular · Área divergente · Cota-parte · Sem vistoria · Sem fotos (fotos não conferidas) | a lista da Caixa não traz isso; vem da página do imóvel, do edital e da matrícula |
 
 As regras foram escritas com textos reais e a base tem 425 testes, mas o corpus é pequeno (10 lotes, 2 páginas da Caixa,
@@ -369,18 +407,26 @@ pelo valor real no arquivo de conteúdo.
 - [ ] Opção 2 (raspagem): plataformas white-label primeiro (Superbid, V-Lance, Suporte Leilões, SOLEON, Leilão PRO), depois
   leiloeiros e bancos, sempre respeitando robots.txt e termos; DataJud e Suporte Leilões só com termo/parceria.
 - [x] Prévia com o banco inteiro: busca, filtros, ordem, mapa e paginação no servidor (app do catálogo, 14/10/2026).
-- [ ] Limpar o que sobrou da área do assinante antiga (`src/components/assinante/*` menos `UpgradeModal`, `useDialog`,
-  `parts` e `shared`): fica para depois de juntar o app do catálogo e a página do imóvel. Junto, levar `LUNETA_PRICE` e
-  `BACK_TO_SITE` para um módulo pequeno (hoje `shared.ts` puxa o `site.ts` inteiro para o navegador, ~11 KB).
-- [ ] Catálogo, técnico: a resposta do mapa do Brasil inteiro (`/api/catalogo`, ~720 KB de JSON) sai sem compressão no
-  `next start` (a Vercel comprime na borda, então no ar é ~120 KB); se um dia rodar fora da Vercel, comprimir ou enxugar os
-  `destaques` de cada cidade. A API responde `no-store`: cada visita baixa o mapa de novo (dá para cachear por URL).
+- [x] Limpar o que sobrou da área do assinante antiga: saíram `AssinanteApp`, `AppHeader`, `DetailDrawer`, `FilterBar`,
+  `ListingRow`, `MapPanel` e `parts` (14/10/2026); `shared.ts` ficou só com `BACK_TO_SITE` e `LUNETA_PRICE`.
+- [ ] `LUNETA_PRICE` ainda lê `PLANS` de `src/content/site.ts` (o arquivo inteiro vai ao navegador, ~11 KB): levar o preço
+  para um módulo pequeno quando o preço for decidido.
+- [ ] Catálogo, técnico: o pedido do mapa já não traz facetas (`facetas=0`, ~80 KB a menos), mas o mapa do Brasil inteiro
+  ainda tem ~640 KB de JSON (465 KB são os 3 `destaques` de cada cidade, com a URL da foto). Enxugar os destaques (ou
+  buscá-los ao passar o mouse na cidade) e não reenviar as facetas ao trocar de página ou de ordem. Sem compressão no
+  `next start` (a Vercel comprime na borda). A API responde `no-store` (dá para cachear por URL).
 - [ ] Catálogo, técnico: cada cartão pesa ~15 KB de HTML (classes e o desenho SVG do "sem foto"); 24 por página dão ~400 KB de
   HTML (41 KB comprimido). Vale enxugar o desenho repetido (um `<symbol>` só) se o celular sentir.
-- [ ] Catálogo, visual: com 6 ou mais filtros a barra fixa passa de 220 px em 1280 px (pílulas em duas linhas). Avaliar
-  pílulas numa linha só com rolagem lateral no computador também.
+- [x] Catálogo, visual: barra fixa alta com muitos filtros (pílulas só do que não tem botão rápido; linha única colada em
+  tela baixa; 14/10/2026).
+- [ ] Catálogo, mapa: o cartão do mapa ainda pode cobrir a própria bolha quando não cabe ao lado (mapa estreito), e bolhas de
+  estados vizinhos podem se sobrepor (alvo livre menor que 24 px em ~6 bolhas). Avaliar prender o cartão no pé do mapa
+  nesses casos.
+- [ ] Base: marcar como suspeito na importação o lance acima de 5× a avaliação (hoje o site trata na tela e nas ordens) e
+  gravar o nome do IBGE nas 13 cidades com a grafia crua da Caixa (Santa Isabel do Para, Ceilandia, Assu...).
 - [ ] `base/saida/amostra-site.json` e `estatisticas-uf.json` não são mais lidos pelo site (a /previa usa `base/saida/site/`).
-  Decidir se a exportação (`base/exportar.ts`, com teste) continua a gerá-los ou se saem.
+  Decidir se a exportação (`base/exportar.ts`, com teste) continua a gerá-los ou se saem (ficaram: a exportação e o
+  `base/README.md` ainda os descrevem).
 - [ ] Medir o radar ao vivo (quando a rede abrir): 2 semanas de PNCP, DJEN, DOU e Querido Diário; quantos editais de imóvel
   por semana e por UF, quantos com `site_leilao`, e uma amostra de 50 conferida à mão nos portais para saber quantos são
   "só nossos".

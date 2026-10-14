@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { BOTAO_ROTULO, GRUPOS_DO_BOTAO, filtrosEfetivos, removerGrupos, resumoBotao, type BotaoRapido } from "@/lib/catalogo/filtros-rotulos";
+import { BOTAO_ROTULO, GRUPOS_DO_BOTAO, filtrosEfetivos, removerGrupos, resumoBotao, type BotaoRapido, type GrupoFiltro } from "@/lib/catalogo/filtros-rotulos";
 import { numero } from "@/lib/catalogo/rotulos";
+import type { Facetas, Filtros, Ordem } from "@/lib/catalogo/tipos";
 import { contarFiltros } from "@/lib/catalogo/url";
 import { CHIP, CHIP_OFF, CHIP_ON, EYEBROW } from "../ui/estilos";
-import { Girando, IconeAjustes, IconeSeta } from "../ui/icones";
+import { Girando, IconeAjustes, IconeSeta, IconeX } from "../ui/icones";
 import { Popover } from "../ui/Popover";
 import { semMovimento } from "../ui/useAdiado";
 import { BuscaLocal } from "./BuscaLocal";
@@ -25,7 +26,7 @@ const DICA: Record<BotaoRapido, string> = {
   cidade: "Escolha uma ou várias cidades; depois, se quiser, os bairros.",
   tipo: "Escolha um ou vários tipos.",
   preco: "Lance mínimo pedido na praça atual.",
-  desagio: "Quanto o lance está abaixo da avaliação.",
+  desagio: "Desconto do lance sobre a avaliação. À esquerda da marca “avaliação”, o lance passa dela.",
   quartos: "Pelo menos. Anúncios que não informam ficam de fora.",
 };
 
@@ -52,8 +53,12 @@ function useContagemAnimada(valor: number, ms = 300) {
   return mostrado;
 }
 
-/** Total de resultados: o número anima, o leitor de tela ouve o valor final (aria-live). */
-export function TotalResultados({ total, carregando, className = "" }: { total: number; carregando: boolean; className?: string }) {
+/**
+ * Total de resultados: o número anima, o leitor de tela ouve o valor final (aria-live). `anunciar={false}`
+ * quando quem usa já tem o aviso ao vivo num lugar fixo (a barra troca o total de linha ao compactar, e uma
+ * região ao vivo que remonta perde o anúncio).
+ */
+export function TotalResultados({ total, carregando, className = "", anunciar = true }: { total: number; carregando: boolean; className?: string; anunciar?: boolean }) {
   const mostrado = useContagemAnimada(total);
   return (
     <p className={`flex items-center gap-1.5 text-sm whitespace-nowrap text-nevoa ${className}`}>
@@ -62,27 +67,61 @@ export function TotalResultados({ total, carregando, className = "" }: { total: 
       </span>
       <span aria-hidden="true">{total === 1 ? "imóvel" : "imóveis"}</span>
       {carregando && <Girando tamanho={13} className="text-nevoa" />}
-      <span className="sr-only" aria-live="polite" aria-atomic="true">
-        {carregando ? "" : `${textoImoveis(total)} com os filtros atuais`}
-      </span>
+      {anunciar && <AnuncioTotal total={total} carregando={carregando} />}
     </p>
   );
 }
 
+function AnuncioTotal({ total, carregando }: { total: number; carregando: boolean }) {
+  return (
+    <span className="sr-only" aria-live="polite" aria-atomic="true">
+      {carregando ? "" : `${textoImoveis(total)} com os filtros atuais`}
+    </span>
+  );
+}
+
+/**
+ * Ordens que não mudariam nada nesta busca (na prévia, todos os imóveis da Caixa foram coletados no mesmo dia
+ * e só 5 de 21 mil informam a data da praça: "Mais recentes" e "Praça mais próxima" davam a lista de "Maior
+ * deságio"). Elas aparecem desabilitadas, com o porquê.
+ */
+function ordensSemEfeito(facetas: Facetas, total: number): Partial<Record<Ordem, string>> {
+  const saida: Partial<Record<Ordem, string>> = {};
+  if (total < 2) return saida;
+  if (facetas.coletaUnica) saida.recentes = "Todos os imóveis desta busca foram coletados no mesmo dia";
+  const comData = facetas.comData;
+  if (comData !== undefined && comData < Math.max(2, total * 0.05)) {
+    saida.data = comData === 0 ? "Nenhum imóvel desta busca informa a data da praça" : `Só ${numero(comData)} ${comData === 1 ? "imóvel informa" : "imóveis informam"} a data da praça`;
+  }
+  return saida;
+}
+
+/** Grupos que já têm botão rápido (no computador, a pílula deles repetiria o que o botão já diz). */
+const GRUPOS_COM_BOTAO: ReadonlySet<GrupoFiltro> = new Set(RAPIDOS.flatMap((b) => GRUPOS_DO_BOTAO[b]));
+
 /**
  * Barra de filtros (embaixo do cabeçalho do app):
  * - computador: busca com sugestões, botões rápidos (Estado, Cidade, Tipo, Preço, Deságio, Quartos) que
- *   abrem um pop-up e aplicam na hora (faixas com espera de 300 ms), "Todos os filtros (N)" que abre o
- *   painel; abaixo, as pílulas dos filtros ativos e, à direita, o total e "Ordenar".
- * - celular: busca + "Filtros (N)" + total e ordenar; as pílulas rolam de lado; tudo o mais no painel.
+ *   abrem um pop-up e aplicam na hora (faixas com espera de 300 ms) e mostram o filtro escolhido (com um ×
+ *   para limpar sem abrir), "Todos os filtros (N)" que abre o painel; abaixo, o total à esquerda, as pílulas
+ *   só dos filtros que não têm botão (financiamento, modalidade, tags...) e, à direita, "Ordenar" e a vista.
+ * - celular: busca + "Filtros (N)" + total e ordenar; as pílulas (todas) rolam de lado; o resto no painel.
+ * - `compacta` (barra colada no topo em tela baixa ou de tablet): uma linha só, com a busca, o total,
+ *   "Ordenar" e "Filtros (N)", para a lista ficar com a tela.
  */
 export function BarraFiltros({
   acoes,
+  compacta = false,
+  onAplicarPainel,
   ...props
 }: PropsFiltros & {
+  /** o painel "Todos os filtros" aplicado ("Mostrar N imóveis"); padrão: `onChange` */
+  onAplicarPainel?: (f: Filtros) => void;
   className?: string;
   /** controles do app no fim da linha do total e de "Ordenar" (ex.: o seletor Lista | Cards | Mapa) */
   acoes?: ReactNode;
+  /** uma linha só (barra colada em tela pequena) */
+  compacta?: boolean;
 }) {
   const { filtros, facetas, total, carregando, plano, selosDesligados, ordem, onOrdem, onChange, onUpsell, className = "" } = props;
   const { aplicar, descarregar } = useAplicador(filtros, onChange, 300);
@@ -101,22 +140,38 @@ export function BarraFiltros({
   };
 
   const controle: PropsControle = { f: filtros, facetas, aplicar };
+  const indisponiveis = ordensSemEfeito(facetas, total);
+  const ordenar = (classe: string) => (
+    <OrdenarPor
+      ordem={ordem}
+      onOrdem={onOrdem}
+      plano={plano}
+      selosDesligados={selosDesligados}
+      onUpsell={onUpsell}
+      compacto={compacta}
+      indisponiveis={indisponiveis}
+      className={classe}
+    />
+  );
 
   return (
     <div className={`flex flex-col gap-3 ${className}`}>
-      <div className="flex items-center gap-2 md:flex-wrap">
+      {/* o total ao vivo para leitores de tela fica sempre aqui (o visível muda de linha ao compactar) */}
+      <AnuncioTotal total={total} carregando={carregando} />
+      <div className={`flex items-center gap-2 ${compacta ? "" : "md:flex-wrap"}`}>
         <BuscaLocal
           filtros={filtros}
           facetas={facetas}
           onChange={onChange}
+          consultar={props.consultar}
           campoRef={busca}
-          className="min-w-0 flex-1 md:basis-full xl:w-[340px] xl:flex-none xl:basis-auto"
+          className={`min-w-0 flex-1 ${compacta ? "" : "md:basis-full xl:w-[340px] xl:flex-none xl:basis-auto"}`}
         />
 
         {/* Linha estável: a busca (sozinha na linha até telas largas), os rápidos ocupando o meio e quebrando
             DENTRO do próprio grupo, e "Todos os filtros" sempre no fim da linha. Quando um rápido cresce
             ("Preço" vira "R$ 100 mil a 350 mil"), os outros não pulam de linha nem levam o pop-up aberto junto. */}
-        <div role="group" aria-label="Filtros rápidos" className="hidden min-w-0 flex-1 flex-wrap items-center gap-2 md:flex">
+        <div role="group" aria-label="Filtros rápidos" className={compacta ? "hidden" : "hidden min-w-0 flex-1 flex-wrap items-center gap-2 md:flex"}>
           {RAPIDOS.map((b) => (
             <FiltroRapido
               key={b}
@@ -148,6 +203,13 @@ export function BarraFiltros({
           ))}
         </div>
 
+        {compacta && (
+          <>
+            <TotalResultados total={total} carregando={carregando} anunciar={false} className="max-lg:hidden" />
+            {ordenar("shrink-0")}
+          </>
+        )}
+
         <button
           ref={botaoTodos}
           type="button"
@@ -157,8 +219,8 @@ export function BarraFiltros({
           className={`${CHIP} ${ativos ? CHIP_ON : CHIP_OFF} shrink-0 gap-2 max-md:min-h-12 max-md:px-4`}
         >
           <IconeAjustes tamanho={17} />
-          <span className="md:hidden">Filtros</span>
-          <span className="max-md:hidden">Todos os filtros</span>{" "}
+          <span className={compacta ? "" : "md:hidden"}>Filtros</span>
+          <span className={compacta ? "hidden" : "max-md:hidden"}>Todos os filtros</span>{" "}
           {ativos > 0 && (
             <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-latao px-1.5 text-[11px] font-bold text-noite-fixa tabular-nums">
               {ativos}
@@ -168,30 +230,29 @@ export function BarraFiltros({
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <PilulasFiltros
-          filtros={valendo}
-          facetas={facetas}
-          onChange={onChange}
-          rolavel
-          aoEsvaziar={() => busca.current?.focus()}
-          // com as ações do app (seletor de vista) a linha só cabe as pílulas ao lado a partir de xl
-          className={acoes ? "order-3 w-full xl:order-1 xl:w-auto xl:min-w-0 xl:flex-1" : "order-3 w-full md:order-1 md:w-auto md:min-w-0 md:flex-1"}
-        />
-        <TotalResultados total={total} carregando={carregando} className={acoes ? "order-1 xl:order-2 xl:ml-auto" : "order-1 md:order-2 md:ml-auto"} />
-        <OrdenarPor
-          ordem={ordem}
-          onOrdem={onOrdem}
-          plano={plano}
-          selosDesligados={selosDesligados}
-          onUpsell={onUpsell}
-          className={acoes ? "order-2 ml-auto xl:order-3 xl:ml-0" : "order-2 ml-auto md:order-3 md:ml-0"}
-        />
-        {acoes && <div className="order-2 flex shrink-0 empty:hidden xl:order-4">{acoes}</div>}
-      </div>
+      {!compacta && (
+        // celular: total, "Ordenar" e a vista em cima, as pílulas rolando de lado embaixo; computador: o total
+        // à esquerda (a âncora da busca), as pílulas logo depois e "Ordenar" + vista à direita
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4">
+          <TotalResultados total={total} carregando={carregando} anunciar={false} className="order-1" />
+          <PilulasFiltros
+            filtros={valendo}
+            facetas={facetas}
+            onChange={onChange}
+            rolavel
+            ocultarNoComputador={GRUPOS_COM_BOTAO}
+            aoEsvaziar={() => busca.current?.focus()}
+            className="order-4 w-full md:order-2 md:w-auto md:min-w-0 md:flex-1"
+          />
+          {ordenar("order-2 ml-auto md:order-3")}
+          {acoes && <div className="order-3 flex shrink-0 empty:hidden md:order-4">{acoes}</div>}
+        </div>
+      )}
 
       <PainelFiltros
         {...props}
+        // "Mostrar N imóveis" pode ter tratamento próprio (o app cria uma entrada no histórico)
+        onChange={onAplicarPainel ?? onChange}
         aberto={painel.aberto}
         secaoInicial={painel.secao}
         onFechar={() => setPainel({ aberto: false })}
@@ -226,6 +287,7 @@ function FiltroRapido({
   // listas com busca focam o campo; os demais, o painel
   const focaBusca = botao === "uf" || botao === "cidade";
   return (
+    <span className="relative inline-flex">
     <Popover
       rotulo={nome}
       largura={LARGURA[botao]}
@@ -235,11 +297,12 @@ function FiltroRapido({
       }}
       gatilho={{
         ariaLabel: ativo ? `${nome}: ${resumo}` : undefined,
-        className: (a) => `${CHIP} ${ativo ? CHIP_ON : CHIP_OFF} gap-1.5 pr-3 pointer-fine:pr-2.5 ${a ? "shadow-[0_0_0_3px_rgba(201,162,77,.22)]" : ""}`,
+        // ativo: o × (botão ao lado, por cima do fim do chip) limpa sem abrir o pop-up
+        className: (a) => `${CHIP} ${ativo ? CHIP_ON : CHIP_OFF} gap-1.5 ${ativo ? "pr-11 pointer-fine:pr-9" : "pr-3 pointer-fine:pr-2.5"} ${a ? "shadow-[0_0_0_3px_rgba(201,162,77,.22)]" : ""}`,
         conteudo: (a) => (
           <>
             <span className="max-w-[190px] truncate tabular-nums">{resumo ?? nome}</span>
-            <IconeSeta className={`transition-transform duration-150 motion-reduce:transition-none ${ativo ? "text-latao-texto" : "text-nevoa"} ${a ? "rotate-180" : ""}`} />
+            {!ativo && <IconeSeta className={`text-nevoa transition-transform duration-150 motion-reduce:transition-none ${a ? "rotate-180" : ""}`} />}
           </>
         ),
       }}
@@ -285,6 +348,18 @@ function FiltroRapido({
         </div>
       )}
     </Popover>
+      {ativo && (
+        <button
+          type="button"
+          aria-label={`Limpar ${nome.toLowerCase()}: ${resumo}`}
+          title={`Limpar ${nome.toLowerCase()}`}
+          onClick={onLimpar}
+          className="absolute top-1/2 right-1 inline-flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-latao-texto transition-colors duration-150 hover:bg-latao hover:text-noite-fixa pointer-fine:size-7"
+        >
+          <IconeX tamanho={12} />
+        </button>
+      )}
+    </span>
   );
 }
 

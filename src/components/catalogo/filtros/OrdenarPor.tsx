@@ -36,6 +36,8 @@ export function OrdenarPor({
   plano,
   selosDesligados,
   onUpsell,
+  compacto = false,
+  indisponiveis = {},
   className = "",
 }: {
   ordem: Ordem;
@@ -43,6 +45,13 @@ export function OrdenarPor({
   plano: Plano;
   selosDesligados: boolean;
   onUpsell: (opener: HTMLElement) => void;
+  /**
+   * Ordens que não mudariam nada nesta busca, com o porquê ("Todos os imóveis desta busca foram coletados no
+   * mesmo dia"): aparecem desabilitadas, como "Melhor selo" com os selos em análise.
+   */
+  indisponiveis?: Partial<Record<Ordem, string>>;
+  /** só o ícone e a ordem ("Ordenar:" fica para leitores de tela): a barra compacta */
+  compacto?: boolean;
   className?: string;
 }) {
   const [aberto, setAberto] = useState(false);
@@ -54,6 +63,7 @@ export function OrdenarPor({
   const escolher = (o: Ordem, fechar: () => void) => {
     const travada = lente && ORDENS_LUNETA.includes(o);
     if (o === "selo" && selosDesligados && !travada) return;
+    if (indisponiveis[o] && o !== atual) return;
     fechar();
     const gatilho = caixa.current?.querySelector<HTMLButtonElement>("button");
     if (travada) {
@@ -80,14 +90,16 @@ export function OrdenarPor({
           conteudo: (a) => (
             <>
               <IconeOrdenar className="text-nevoa" />
-              <span className="text-nevoa max-sm:sr-only">Ordenar:</span>{" "}
+              <span className={`text-nevoa ${compacto ? "sr-only" : "max-sm:sr-only"}`}>Ordenar:</span>{" "}
               <span className="font-semibold">{ORDEM_ROTULO[atual]}</span>
               <IconeSeta className={`text-nevoa transition-transform duration-150 motion-reduce:transition-none ${a ? "rotate-180" : ""}`} />
             </>
           ),
         }}
       >
-        {({ fechar }) => <ListaOrdens ordem={atual} lente={lente} selosDesligados={selosDesligados} onEscolher={(o) => escolher(o, fechar)} />}
+        {({ fechar }) => (
+          <ListaOrdens ordem={atual} lente={lente} selosDesligados={selosDesligados} indisponiveis={indisponiveis} onEscolher={(o) => escolher(o, fechar)} />
+        )}
       </Popover>
     </span>
   );
@@ -97,11 +109,13 @@ function ListaOrdens({
   ordem,
   lente,
   selosDesligados,
+  indisponiveis,
   onEscolher,
 }: {
   ordem: Ordem;
   lente: boolean;
   selosDesligados: boolean;
+  indisponiveis: Partial<Record<Ordem, string>>;
   onEscolher: (o: Ordem) => void;
 }) {
   const lista = useRef<HTMLUListElement>(null);
@@ -127,8 +141,9 @@ function ListaOrdens({
     <ul ref={lista} role="listbox" aria-label="Ordenar por" onKeyDown={andar} className="flex flex-col p-1.5">
       {ORDENS.map((o) => {
         const travada = lente && ORDENS_LUNETA.includes(o);
-        const desligada = !travada && o === "selo" && selosDesligados;
         const on = o === ordem;
+        const motivo = !travada && o === "selo" && selosDesligados ? SELOS_EM_ANALISE : !on ? indisponiveis[o] : undefined;
+        const desligada = !!motivo;
         return (
           <li
             key={o}
@@ -143,7 +158,8 @@ function ListaOrdens({
                 onEscolher(o);
               }
             }}
-            className={`group/o flex min-h-11 cursor-pointer items-start gap-3 rounded-xl px-3 py-2.5 outline-none transition-colors duration-100 focus-visible:bg-nevoa/12 focus-visible:ring-1 focus-visible:ring-latao/60 focus-visible:outline-none ${
+            // foco: anel de 2 px na cor de texto do latão (contraste ≥ 3:1 nos dois temas)
+            className={`group/o flex min-h-11 cursor-pointer items-start gap-3 rounded-xl px-3 py-2.5 outline-none transition-colors duration-100 focus-visible:bg-nevoa/12 focus-visible:ring-2 focus-visible:ring-latao-texto focus-visible:outline-none ${
               desligada ? "cursor-not-allowed" : "hover:bg-nevoa/[0.08]"
             } ${on ? "bg-latao/12" : ""}`}
           >
@@ -157,7 +173,7 @@ function ListaOrdens({
                   </span>
                 )}
               </span>
-              <span className="text-xs leading-snug text-nevoa">{desligada ? SELOS_EM_ANALISE : DESCRICAO[o]}</span>
+              <span className="text-xs leading-snug text-nevoa">{motivo ?? DESCRICAO[o]}</span>
             </span>
             <span aria-hidden="true" className="mt-0.5 inline-flex size-4 items-center justify-center text-latao-texto">
               {on && <IconeCheck tamanho={14} />}

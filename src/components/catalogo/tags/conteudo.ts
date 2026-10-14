@@ -16,7 +16,7 @@ export const TAGS_BASE = [
   { slug: "ocupacao-nao-informada", rotulo: "Ocupação não informada", severidade: "info", categoria: "Posse" },
   { slug: "desagio-alto", rotulo: "Deságio alto", severidade: "positivo", categoria: "Preço" },
   { slug: "desagio-baixo", rotulo: "Deságio baixo", severidade: "atencao", categoria: "Preço" },
-  { slug: "preco-acima-mercado", rotulo: "Preço acima do mercado", severidade: "grave", categoria: "Preço" },
+  { slug: "preco-acima-mercado", rotulo: "Lance acima da avaliação", severidade: "grave", categoria: "Preço" },
   { slug: "custos-extras-altos", rotulo: "Custos extras altos", severidade: "atencao", categoria: "Preço" },
   { slug: "condominio-em-atraso", rotulo: "Condomínio em atraso", severidade: "atencao", categoria: "Dívidas" },
   { slug: "iptu-em-atraso", rotulo: "IPTU em atraso", severidade: "atencao", categoria: "Dívidas" },

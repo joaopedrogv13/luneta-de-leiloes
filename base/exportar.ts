@@ -277,7 +277,7 @@ export function exportar(db: Banco, caminho: string = SAIDA_PADRAO, opcoes: Opco
 // `modalidade`, `dataPraca`, `tagsEmRevisao` e `photoFonte`. Diferenças em relação ao tipo:
 // - `praca` é null quando a fonte não diz a praça (Leilão SFI da Caixa sem ficha, lote da
 //   Leilões Judiciais com regra "seg_nulo"); o site precisa mostrar "praça não informada";
-// - `desagio` é negativo quando o preço passa da avaliação (tag "Preço acima do mercado");
+// - `desagio` é negativo quando o preço passa da avaliação (tag "Lance acima da avaliação", slug preco-acima-mercado);
 // - `tags` leva só as tags "sim" que não aguardam leitura humana; as que aguardam vão em
 //   `tagsEmRevisao` e não devem aparecer como fato;
 // - `seal` é sempre 0 (sem selo): os critérios dos selos estão pendentes;

@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type RefObject } from "react";
-import { cidadeDaChave, definirBairros, definirCidades, definirUfs, limparVazios, nomeCidade, nomeCurto, nomeUf } from "@/lib/catalogo/filtros-rotulos";
+import { chaveFiltros, cidadeDaChave, definirBairros, definirCidades, definirUfs, limparVazios, nomeCidade, nomeCurto, nomeUf } from "@/lib/catalogo/filtros-rotulos";
 import { normalizar, numero } from "@/lib/catalogo/rotulos";
 import type { Facetas, Filtros } from "@/lib/catalogo/tipos";
 import { IconeLupa, IconeMapa, IconePino, IconeX } from "../ui/icones";
+import type { Consulta } from "./tipos";
 
 type Sugestao =
   | { tipo: "q"; chave: string; rotulo: string }
-  | { tipo: "uf" | "cidade" | "bairro"; chave: string; rotulo: string; detalhe: string; total: number };
+  | { tipo: "uf" | "cidade" | "bairro"; chave: string; rotulo: string; detalhe: string; total: number; nota?: string };
 
 const POR_GRUPO = { uf: 4, cidade: 6, bairro: 5 } as const;
 
@@ -35,13 +36,19 @@ function peso(texto: string, q: string) {
   return t.includes(q) ? 2 : -1;
 }
 
-function sugerir(texto: string, facetas: Facetas, f: Filtros): Sugestao[] {
+/**
+ * Sugestões de lugar para o texto. `lugares`: facetas de estados e cidades SEM a busca de texto e sem o filtro
+ * de lugar (o texto novo vai substituir a busca atual, e uma cidade de outro estado pode entrar); sem elas
+ * (ainda chegando), as da busca atual. Os bairros vêm das cidades escolhidas.
+ */
+function sugerir(texto: string, facetas: Facetas, lugares: Facetas | null, f: Filtros): Sugestao[] {
   const q = normalizar(texto).trim();
   if (!q) return [];
   const saida: Sugestao[] = [{ tipo: "q", chave: "q", rotulo: texto.trim() }];
   const ja = { uf: new Set(f.uf ?? []), cidade: new Set(f.cidade ?? []), bairro: new Set(f.bairro ?? []) };
+  const fonte = lugares ?? facetas;
 
-  const ufs = facetas.uf
+  const ufs = fonte.uf
     .filter((o) => o.total > 0 && !ja.uf.has(o.valor))
     .map((o) => {
       // sigla exata ("mg") vem antes de qualquer nome
@@ -53,13 +60,18 @@ function sugerir(texto: string, facetas: Facetas, f: Filtros): Sugestao[] {
     .slice(0, POR_GRUPO.uf);
   for (const { o } of ufs) saida.push({ tipo: "uf", chave: `uf:${o.valor}`, rotulo: nomeUf(o.valor), detalhe: o.valor, total: o.total });
 
-  const cidades = facetas.cidade
+  const cidades = fonte.cidade
     .filter((o) => o.total > 0 && !ja.cidade.has(o.valor))
     .map((o) => ({ o, p: peso(nomeCurto(o.valor), q) }))
     .filter((x) => x.p >= 0)
     .sort((a, b) => a.p - b.p || b.o.total - a.o.total)
     .slice(0, POR_GRUPO.cidade);
-  for (const { o } of cidades) saida.push({ tipo: "cidade", chave: `cidade:${o.valor}`, rotulo: nomeCurto(o.valor), detalhe: o.valor.split("|")[0], total: o.total });
+  for (const { o } of cidades) {
+    const uf = o.valor.split("|")[0];
+    // cidade de um estado fora dos escolhidos: escolhê-la acrescenta o estado (definirCidades)
+    const nota = ja.uf.size && !ja.uf.has(uf) ? `adiciona ${uf}` : undefined;
+    saida.push({ tipo: "cidade", chave: `cidade:${o.valor}`, rotulo: nomeCurto(o.valor), detalhe: uf, total: o.total, nota });
+  }
 
   const bairros = facetas.bairro
     .filter((o) => o.total > 0 && !ja.bairro.has(o.valor))
@@ -73,21 +85,36 @@ function sugerir(texto: string, facetas: Facetas, f: Filtros): Sugestao[] {
 }
 
 /**
- * Campo de busca da barra: ao digitar, sugere estados (por nome e sigla), cidades e bairros das facetas,
- * com quantos imóveis cada um tem. Escolher uma sugestão vira filtro de UF/cidade/bairro; Enter (sem
- * sugestão ativa) aplica o texto como busca livre (`q`), que procura em título, endereço, bairro e cidade.
- * "/" foca a busca de qualquer lugar da página.
+ * O lugar que o texto nomeia por inteiro ("belo horizonte" → Belo Horizonte/MG): a cidade com esse nome (a de
+ * mais imóveis, se houver várias), senão o estado, senão o bairro. null se o texto não é só um nome de lugar.
+ */
+function lugarExato(texto: string, sugestoes: Sugestao[]): Sugestao | null {
+  const q = normalizar(texto).trim().replace(/\s+/g, " ");
+  const iguais = sugestoes.filter((s) => s.tipo !== "q" && normalizar(s.rotulo) === q);
+  const por = (tipo: Sugestao["tipo"]) =>
+    iguais.filter((s) => s.tipo === tipo).sort((a, b) => (b.tipo === "q" || a.tipo === "q" ? 0 : b.total - a.total))[0];
+  return por("cidade") ?? por("uf") ?? por("bairro") ?? null;
+}
+
+/**
+ * Campo de busca da barra: ao digitar, sugere estados (por nome e sigla), cidades e bairros, com quantos
+ * imóveis cada um tem. Escolher uma sugestão vira filtro de UF/cidade/bairro. Enter (sem sugestão marcada)
+ * com o nome exato de uma cidade ("belo horizonte") aplica a cidade; com outro texto, a busca livre (`q`),
+ * que procura em título, endereço, bairro e cidade. "/" foca a busca de qualquer lugar da página.
  */
 export function BuscaLocal({
   filtros,
   facetas,
   onChange,
+  consultar,
   campoRef,
   className = "",
 }: {
   filtros: Filtros;
   facetas: Facetas;
   onChange: (f: Filtros) => void;
+  /** total e facetas de outros filtros (as sugestões de lugar não ficam presas à busca e ao estado atuais) */
+  consultar?: (f: Filtros, sinal?: AbortSignal) => Promise<Consulta>;
   /** para outros componentes focarem a busca (ex.: depois de "Limpar tudo") */
   campoRef?: RefObject<HTMLInputElement | null>;
   className?: string;
@@ -108,7 +135,33 @@ export function BuscaLocal({
     setTexto(filtros.q ?? "");
   }
 
-  const sugestoes = useMemo(() => sugerir(texto, facetas, filtros), [texto, facetas, filtros]);
+  // Lugares para sugerir: os mesmos filtros sem o texto e sem o lugar (uma busca de texto antiga, ou o estado
+  // escolhido, não escondem a cidade que a pessoa está digitando). Pedido uma vez por conjunto de filtros.
+  const baseLugares = limparVazios({ ...filtros, q: undefined, uf: undefined, cidade: undefined, bairro: undefined });
+  const chaveLugares = chaveFiltros(baseLugares);
+  const [lugares, setLugares] = useState<{ chave: string; facetas: Facetas } | null>(null);
+  const precisaLugares = !!consultar && focado && texto.trim() !== "" && lugares?.chave !== chaveLugares;
+  const ultimaBase = useRef(baseLugares);
+  useEffect(() => {
+    ultimaBase.current = baseLugares;
+  });
+  useEffect(() => {
+    if (!precisaLugares || !consultar) return;
+    const controle = new AbortController();
+    const espera = window.setTimeout(() => {
+      consultar(ultimaBase.current, controle.signal).then(
+        (r) => setLugares({ chave: chaveLugares, facetas: r.facetas }),
+        () => {},
+      );
+    }, 120);
+    return () => {
+      window.clearTimeout(espera);
+      controle.abort();
+    };
+  }, [precisaLugares, consultar, chaveLugares]);
+  const facetasLugares = lugares?.chave === chaveLugares ? lugares.facetas : null;
+
+  const sugestoes = useMemo(() => sugerir(texto, facetas, facetasLugares, filtros), [texto, facetas, facetasLugares, filtros]);
   const mostrar = aberto && sugestoes.length > 0;
 
   // "/" foca a busca (fora de campos de texto)
@@ -134,8 +187,9 @@ export function BuscaLocal({
 
   const escolher = (s: Sugestao) => {
     if (s.tipo === "q") return aplicarTexto(s.rotulo);
-    // o texto digitado era só o caminho até o lugar: não vira busca livre
-    const base = filtros.q && normalizar(filtros.q) === normalizar(texto) ? limparVazios({ ...filtros, q: undefined }) : filtros;
+    // o texto digitado no campo era o caminho até o lugar (e tomou o lugar da busca de texto anterior):
+    // nenhum dos dois vira busca livre
+    const base = filtros.q ? limparVazios({ ...filtros, q: undefined }) : filtros;
     const valor = s.chave.slice(s.chave.indexOf(":") + 1);
     const novo =
       s.tipo === "uf"
@@ -158,7 +212,10 @@ export function BuscaLocal({
       setAtivo((a) => (e.key === "ArrowDown" ? (a + 1) % n : a <= 0 ? n - 1 : a - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (mostrar && ativo >= 0 && sugestoes[ativo]) escolher(sugestoes[ativo]);
+      if (mostrar && ativo >= 0 && sugestoes[ativo]) return escolher(sugestoes[ativo]);
+      // o texto é o nome exato de uma cidade (ou estado, ou bairro) sugerida: vale o lugar, não a busca livre
+      const lugar = lugarExato(texto, sugestoes);
+      if (lugar) escolher(lugar);
       else aplicarTexto(texto);
     } else if (e.key === "Escape") {
       if (mostrar) {
@@ -210,7 +267,8 @@ export function BuscaLocal({
           setAtivo(-1);
         }}
         onKeyDown={onTecla}
-        className={`h-12 w-full min-w-0 appearance-none rounded-full border border-nevoa/30 bg-tinta pl-11 text-[15px] ${texto ? "pr-12" : "pr-4 pointer-fine:pr-12"} text-luar shadow-[0_1px_0_rgba(255,255,255,.03)_inset] transition-[border-color,box-shadow] duration-150 outline-none placeholder:text-nevoa/85 hover:border-nevoa/55 focus:border-latao focus:shadow-[0_0_0_4px_rgba(201,162,77,.2)] focus-visible:outline-none pointer-fine:h-11 [&::-webkit-search-cancel-button]:hidden`}
+        // 16 px no toque (o Safari do iPhone não dá zoom ao focar); foco com anel de contraste (latão de texto)
+        className={`h-12 w-full min-w-0 appearance-none rounded-full border border-nevoa/30 bg-tinta pl-11 text-base pointer-fine:text-[15px] ${texto ? "pr-12" : "pr-4 pointer-fine:pr-12"} text-luar shadow-[0_1px_0_rgba(255,255,255,.03)_inset] transition-[border-color,box-shadow] duration-150 outline-none placeholder:text-nevoa hover:border-nevoa/55 focus:border-latao-texto focus:ring-2 focus:ring-latao-texto/60 focus-visible:outline-none pointer-fine:h-11 [&::-webkit-search-cancel-button]:hidden`}
       />
       {texto ? (
         <button
@@ -277,11 +335,12 @@ export function BuscaLocal({
                         <span className="font-medium">{s.rotulo}</span>
                         {" "}
                         <span className="ml-1 text-xs text-nevoa">{s.detalhe}</span>
+                        {s.nota && <span className="ml-1.5 text-xs text-latao-texto">({s.nota})</span>}
                       </span>
                       <span className="shrink-0 text-xs text-nevoa tabular-nums">
                         <span className="sr-only">, </span>
                         {numero(s.total)}
-                        <span className="sr-only"> imóveis</span>
+                        <span className="sr-only"> {s.total === 1 ? "imóvel" : "imóveis"}</span>
                       </span>
                     </>
                   )}
@@ -290,7 +349,8 @@ export function BuscaLocal({
             );
           })}
         </ul>
-        <p className="border-t border-nevoa/15 px-4 py-2.5 text-xs text-nevoa">
+        {/* dica de teclado físico: não aparece no toque (e sobra lugar para mais uma sugestão acima do teclado) */}
+        <p className="border-t border-nevoa/15 px-4 py-2.5 text-xs text-nevoa pointer-coarse:hidden">
           <kbd className="font-sans font-semibold text-luar">Enter</kbd> busca o texto · <kbd className="font-sans font-semibold text-luar">↑↓</kbd> escolhe um lugar
         </p>
       </div>
