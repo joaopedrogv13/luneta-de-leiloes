@@ -25,17 +25,10 @@ entrega (última atualização: 14/10/2026, correções da revisão do catálogo
 Resumo: **só a Caixa está de fato no banco.** As outras fontes com API estão ligadas no código, mas esperam a rede. Bancos
 privados, prefeituras e a maior parte dos leiloeiros não têm API: entram na opção 2.
 
-**"Não acho Minas Gerais" (14/10/2026): os dados estão lá, a tela é que não ajudava.** O banco tem **747 imóveis de MG**
-(Uberlândia 109, Uberaba 83, Ribeirão das Neves 82, Juiz de Fora 52, Belo Horizonte 37...), igual às 747 linhas de MG no
-CSV da Caixa. A /previa mostra só uma **amostra de 60** (3 de MG: Almenara e Uberlândia), o único filtro de estado era o
-chip fixo "Estado: SP" e a busca só entendia a sigla ("MG"), não "Minas" nem "Minas Gerais". Corrigido:
-- seletor de estado com as UFs da lista e quantas cada uma tem ("MG · Minas Gerais (3)");
-- a busca entende o nome do estado ("minas", "Minas Gerais", "São Paulo", "pará"), além da sigla;
-- com um estado escolhido, a barra diz "Minas Gerais: 3 imóveis nesta amostra, de 747 no banco inteiro";
-- o resumo do topo abre as 27 UFs, e a busca sem resultado lembra que a prévia é uma amostra.
-
-MG pesa pouco (3,5% do banco) porque reflete o estoque da Caixa em 08/10/2026 (RJ sozinho tem 34%). Leilões judiciais,
-de bancos privados e de leiloeiros de MG ainda não entraram (radar e opção 2).
+**"Não acho Minas Gerais" (14/10/2026):** os dados sempre estiveram no banco (747 imóveis de MG, igual ao CSV da Caixa); a
+/previa antiga mostrava só uma amostra de 60 e não tinha filtro de estado. Resolvido de vez com o app do catálogo abaixo:
+a /previa agora mostra o banco inteiro, e "Minas Gerais" (filtro, busca ou mapa) dá os 747. MG pesa pouco (3,5%) porque
+reflete o estoque da Caixa (RJ tem 34%); judiciais, bancos privados e leiloeiros de MG entram com o radar e a opção 2.
 
 **App do catálogo (14/10/2026): a /previa agora mostra o banco inteiro** (21.231 imóveis, não mais a amostra de 60), com
 a busca, os filtros, a ordem e a paginação no servidor; "Estado: Minas Gerais" dá os 747. O mesmo app serve a
@@ -107,6 +100,14 @@ a busca, os filtros, a ordem e a paginação no servidor; "Estado: Minas Gerais"
 5. **Leilões Judiciais** (você): ler os termos e mandar o pedido de autorização (rascunho em
    `base/contatos/leiloesjudiciais-email.md`).
 6. **Decisões suas** pendentes (lista abaixo) para avançar no site (formulário, advogado, preços, título, página mais curta).
+7. **Catálogo novo (14/10/2026), decisões suas:**
+   - o **simulador** fica aberto no plano Lente ou só na Luneta? (hoje aberto; não está na tabela de planos da landing);
+   - a **meta padrão do simulador** (hoje 20% ao ano: com o lance mínimo só ~1 em 10 apartamentos/casas atinge; opções na
+     seção "Página do imóvel");
+   - **preço de mercado:** autorizar o próximo passo com ITBI (Rio e SP primeiro, dados abertos e grátis) e mandar e-mail
+     à Fipe pedindo autorização do FipeZAP; pedidos pela LAI nas capitais sem ITBI aberto;
+   - **Querido Diário:** escrever à OKBR confirmando uso comercial (dados CC BY 4.0, mas os termos falam em "finalidade");
+   - conferir no seu navegador as **fotos da Caixa** e o **PDF da matrícula** (daqui a rede não chega à Caixa).
 
 ### Atualização: como funciona
 
@@ -296,9 +297,9 @@ Pendências da página:
 - [ ] Preço de mercado na região: hoje a seção compara com outros leilões e os botões dos portais são buscas no Google
   (agora rotuladas assim). Próximo passo: a mediana de R$/m² das transações reais do ITBI (dado aberto) do Rio e de São
   Paulo como uma barra a mais no gráfico ("Transações reais, ITBI, 12 meses"); cobre 3.225 imóveis do Rio e 490 de SP.
-- [ ] Máscara LGPD: o nome logo depois de "Rua", "Av.", "Travessa" deixou de ser mascarado (`base/util/lgpd.ts`), mas os
-  trechos já gravados só mudam ao rodar de novo os riscos e a exportação (`npm run base:exportar -- --site`). Até lá a
-  página mostra as máscaras como um selo "nome omitido", com a nota da LGPD.
+- [x] Máscara LGPD: o nome logo depois de "Rua", "Av.", "Travessa" deixou de ser mascarado (`base/util/lgpd.ts`); riscos
+  recalculados e instantâneo regerado em 14/10/2026 (nenhum "Rua [NOME]" restante; os 14 nomes de pessoas seguem
+  mascarados).
 - [ ] Matrícula da Caixa: a página oferece o PDF no endereço padrão do site da Caixa (`/editais/matricula/{UF}/{id}.pdf`),
   sem conferir se existe (a rede daqui não chega à Caixa). Conferir alguns no navegador.
 - [ ] Ao abrir um imóvel a partir da lista, o esqueleto de carregamento não aparece: a página confere o id antes (para o

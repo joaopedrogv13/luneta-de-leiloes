@@ -2,6 +2,13 @@
 
 Guia para o dono. "Fase 1" = dados reais das fontes com API ou arquivo público (opção 1: Caixa e Leilões Judiciais), já coletados, classificados e exportados por `base/`. Estado em 13/10/2026.
 
+> **Atualização de 14/10/2026:** a prévia deixou de usar a amostra de 60. Agora a `/previa` é o **catálogo completo**
+> (21.231 imóveis) lido de `base/saida/site/` (lista em colunas + detalhes em 32 pedaços, `.json.gz`, gerados por
+> `npm run base:exportar -- --site`), com busca no servidor (`src/lib/catalogo/`, API `GET /api/catalogo`), página de cada
+> imóvel em `/previa/imovel/<id>`, simulador e preço do m² na região. A seção abaixo descreve a primeira versão e fica
+> como histórico; o estado atual está no PENDENCIAS.md (Painel). `amostra-site.json` e `estatisticas-uf.json` continuam
+> sendo gerados, mas o site não os lê mais.
+
 ## 1. O que a prévia mostra
 
 Endereço: **`/previa`** (Luneta) e **`/previa?plano=lente`** (Lente). Página interna: `noindex, nofollow`, fora do sitemap e sem link no menu. Quem tiver o endereço consegue abrir, porque o site é público.
