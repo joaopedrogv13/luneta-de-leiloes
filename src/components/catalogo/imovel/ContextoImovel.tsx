@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { UpgradeModal } from "@/components/assinante/UpgradeModal";
 import { useFavoritos } from "@/components/catalogo/useFavoritos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
 import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
 import { IconeCheck } from "./icones";
+import { guardarAncora, restaurarAncora } from "./rolagem";
 
 interface ValorContexto {
   conjunto: Conjunto;
@@ -70,9 +71,15 @@ export function ProvedorImovel({ conjunto, plano, id, children }: { conjunto: Co
   const assinar = () => {
     // a seção de onde veio o convite (riscos, simulador...): o foco volta para o título dela, já na Luneta
     focarDepois.current = abridor.current?.closest<HTMLElement>("[data-secao-imovel]")?.dataset.secaoImovel ?? null;
+    guardarAncora();
     setConvite(false);
     router.replace(rotaImovel(conjunto, id, "luneta"), { scroll: false });
   };
+
+  // trocou de plano ("Ver como" ou "Assinar Luneta"): a seção que estava à vista volta ao mesmo lugar da tela
+  useLayoutEffect(() => {
+    restaurarAncora();
+  }, [plano]);
 
   useEffect(() => {
     if (plano !== "luneta" || !focarDepois.current) return;

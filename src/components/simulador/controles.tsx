@@ -168,7 +168,7 @@ export function CampoNumero({
   const foraDaFaixa = lido !== null && (lido < min || lido > max);
   const inline = variante === "inline";
   const caixa = inline
-    ? "h-10 pointer-fine:h-9 rounded-full border border-latao/60 bg-latao/10 px-3 text-latao-texto font-semibold hover:bg-latao/15"
+    ? "h-11 pointer-fine:h-9 rounded-full border border-latao/60 bg-latao/10 px-3 text-latao-texto font-semibold hover:bg-latao/15"
     : "h-11 pointer-fine:h-10 rounded-xl border border-nevoa/30 bg-noite px-3 hover:border-nevoa/50";
 
   return (
@@ -315,10 +315,19 @@ export function Segmentado<T extends string>({
           <label
             key={o.valor}
             className={`relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl px-2 text-center transition-colors duration-150 select-none has-checked:bg-latao has-checked:text-noite-fixa has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-latao-texto motion-reduce:transition-none ${
-              tamanho === "sm" ? "min-h-10 py-1.5 pointer-fine:min-h-9" : "min-h-11 py-2"
+              tamanho === "sm" ? "min-h-11 py-1.5 pointer-fine:min-h-9" : "min-h-11 py-2"
             } ${o.valor === valor ? "" : "text-luar hover:bg-nevoa/10"}`}
           >
-            <input type="radio" name={nome} value={o.valor} checked={o.valor === valor} onChange={() => aoMudar(o.valor)} className="sr-only" />
+            {/* invisível mas do tamanho da opção (e não sr-only, de 1 px): ao receber o foco, o navegador rola a
+                opção inteira para a vista, respeitando as barras fixas */}
+            <input
+              type="radio"
+              name={nome}
+              value={o.valor}
+              checked={o.valor === valor}
+              onChange={() => aoMudar(o.valor)}
+              className="absolute inset-0 m-0 size-full cursor-pointer appearance-none rounded-xl opacity-0"
+            />
             <span className={`leading-tight font-semibold ${tamanho === "sm" ? "text-[13px]" : "text-[14px]"}`}>{o.rotulo}</span>
             {o.detalhe && <span className={`mt-0.5 text-[11px] leading-tight ${o.valor === valor ? "text-noite-fixa/75" : "text-nevoa"}`}>{o.detalhe}</span>}
           </label>
@@ -407,7 +416,7 @@ export function SeletorInline<T extends string>({
         value={valor}
         aria-label={ariaLabel}
         onChange={(e) => aoMudar(e.target.value as T)}
-        className="field-sizing-content h-10 cursor-pointer appearance-none rounded-full border border-latao/60 bg-latao/10 pr-8 pl-3 text-[15px] leading-none font-semibold text-latao-texto transition-colors hover:bg-latao/15 focus-visible:border-latao pointer-fine:h-9"
+        className="field-sizing-content h-11 cursor-pointer appearance-none rounded-full border border-latao/60 bg-latao/10 pr-8 pl-3 text-[15px] leading-none font-semibold text-latao-texto transition-colors hover:bg-latao/15 focus-visible:border-latao pointer-fine:h-9"
       >
         {opcoes.map((o) => (
           <option key={o.valor} value={o.valor} className="bg-tinta text-luar">

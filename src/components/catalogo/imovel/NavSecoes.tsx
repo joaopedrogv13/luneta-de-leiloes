@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { linhaDeLeitura } from "./rolagem";
 
 export interface SecaoNav {
   id: string;
   rotulo: string;
 }
-
-/** Linha de leitura (px do topo da janela): a seção que passou dela é a atual. Cabeçalho + esta barra + folga. */
-const LINHA = 150;
 
 /**
  * Navegação interna fixa (Resumo · Riscos · Simulador · Região · Localização · Documentos): âncoras comuns
@@ -24,9 +22,11 @@ export function NavSecoes({ secoes }: { secoes: SecaoNav[] }) {
     const medir = () => {
       quadro = 0;
       let achada = secoes[0]?.id ?? "";
+      // linha de leitura: logo abaixo do cabeçalho e desta barra (a seção que passou dela é a atual)
+      const linha = linhaDeLeitura();
       for (const s of secoes) {
         const el = document.getElementById(s.id);
-        if (el && el.getBoundingClientRect().top <= LINHA) achada = s.id;
+        if (el && el.getBoundingClientRect().top <= linha) achada = s.id;
       }
       // no fim da página, a última seção (curta) também conta
       if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) achada = secoes[secoes.length - 1]?.id ?? achada;

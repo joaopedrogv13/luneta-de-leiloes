@@ -109,6 +109,17 @@ export interface Premissas {
   prazoFinanciamento: number;
   /** seguros obrigatórios e tarifa do banco, por mês, enquanto o financiamento corre */
   segurosMensal: number;
+  /**
+   * simular com o parcelamento oferecido pela fonte (leilão judicial: entrada e parcelas mensais corrigidas por
+   * um índice, como o IPCA; só quando a fonte diz que aceita). Exclui o financiamento.
+   */
+  parcelar: boolean;
+  /** entrada do parcelamento, fração do lance */
+  parcelasEntradaPct: number;
+  /** número de parcelas mensais */
+  parcelasN: number;
+  /** correção das parcelas ao ano (estimativa do índice) */
+  parcelasCorrecaoAA: number;
 }
 
 /** O que a pessoa trocou (o resto vem do padrão). */
@@ -146,6 +157,13 @@ export interface PerfilTipo {
   areaTipica: number;
   /** "área privativa", "área do terreno"... */
   rotuloArea: string;
+  /**
+   * galpão, prédio inteiro ou área grande (comercial e outros): reforma por m² bem menor, sem condomínio por
+   * padrão
+   */
+  grande?: boolean;
+  /** frase extra na ajuda da reforma (por que estes valores) */
+  notaReforma?: string;
 }
 
 /** Uma simulação: um lance, um cenário, um prazo. */
@@ -184,6 +202,8 @@ export interface Simulacao {
 }
 
 export interface ResultadoFinanciamento {
+  /** "banco": financiamento SAC com juros; "fonte": parcelamento da própria fonte, corrigido por índice */
+  tipo: "banco" | "fonte";
   entrada: number;
   financiado: number;
   taxaMensal: number;
@@ -192,9 +212,10 @@ export interface ResultadoFinanciamento {
   parcelasPagas: number;
   primeiraParcela: number;
   totalParcelas: number;
+  /** juros (banco) ou correção (fonte) pagos até a venda, contando a correção do saldo quitado */
   jurosPagos: number;
   amortizado: number;
-  /** saldo devedor quitado com o dinheiro da venda */
+  /** saldo devedor quitado com o dinheiro da venda (no parcelamento da fonte, já corrigido) */
   saldoDevedor: number;
 }
 

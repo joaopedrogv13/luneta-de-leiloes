@@ -8,6 +8,7 @@ import { ehExemplo, faltaParaPraca } from "./formato";
 import { Galeria } from "./Galeria";
 import { NavSecoes, type SecaoNav } from "./NavSecoes";
 import { BarraInferior, ResumoLateral, type DadosResumo } from "./ResumoLateral";
+import { RolagemSegura } from "./RolagemSegura";
 import { SecaoDocumentos } from "./SecaoDocumentos";
 import { SecaoLocalizacao } from "./SecaoLocalizacao";
 import { SecaoRegiao } from "./SecaoRegiao";
@@ -115,7 +116,11 @@ export function PaginaImovel({ conjunto, plano, pagina, agora }: { conjunto: Con
           </aside>
 
           <div className="min-w-0 lg:col-start-1 lg:row-start-2">
-            <div className="sticky top-14 z-30 -mx-4 border-b border-nevoa/15 bg-noite px-4 py-1.5 sm:top-16 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+            {/* celular deitado (pouca altura): o cabeçalho deixa de ser fixo e a navegação cola no topo */}
+            <div
+              data-topo-fixo=""
+              className="sticky top-14 z-30 -mx-4 border-b border-nevoa/15 bg-noite px-4 py-1.5 sm:top-16 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 [@media(max-height:500px)]:top-0"
+            >
               <NavSecoes secoes={SECOES} />
             </div>
 
@@ -143,13 +148,14 @@ export function PaginaImovel({ conjunto, plano, pagina, agora }: { conjunto: Con
                 : "Fotos e anúncios pertencem às fontes; a foto aparece direto do site de origem e, se não carregar, fica o desenho no lugar."}
             </p>
           </div>
-          <Link href={BACK_TO_SITE} className="inline-flex min-h-11 items-center font-medium text-latao-texto underline-offset-4 hover:text-luar hover:underline">
+          <Link href={BACK_TO_SITE} prefetch={false} className="inline-flex min-h-11 items-center font-medium text-latao-texto underline-offset-4 hover:text-luar hover:underline">
             <span aria-hidden="true">←&nbsp;</span>Voltar ao site
           </Link>
         </div>
       </footer>
 
       <BarraInferior d={resumo} />
+      <RolagemSegura />
     </ProvedorImovel>
   );
 }

@@ -5,7 +5,7 @@ import { atingeMeta, type CelulaMatriz } from "@/lib/simulador/calculo";
 import { multiplicador, type Modelo } from "@/lib/simulador/premissas";
 import { CENARIOS, type Celula, type Meta } from "@/lib/simulador/tipos";
 import { baseDaVenda, CENARIO_ROTULO, metaPorExtenso } from "./CartaoResposta";
-import { CampoNumero, Deslizante, IconeNao, IconeOk, IconeVoltar, Segmentado } from "./controles";
+import { Aviso, CampoNumero, Deslizante, IconeNao, IconeOk, IconeVoltar, Segmentado } from "./controles";
 import type { Visao } from "./estado";
 import { curto, meses, moeda, moedaSinal, pct } from "./formato";
 
@@ -144,6 +144,12 @@ export function Matriz({
           <p id="sim-meu-lance-ajuda" className="mt-1 text-[12.5px] leading-relaxed text-nevoa">
             Lance mínimo atual: {moeda(lance)}. O lance que você digitar vale para toda a matriz.
           </p>
+          {meuLance < lance && (
+            <Aviso className="mt-2">
+              Abaixo do lance mínimo atual ({moeda(lance)}): a fonte não aceita este lance. Serve só para comparar (numa praça seguinte, o mínimo pode
+              cair).
+            </Aviso>
+          )}
         </div>
       )}
 
@@ -162,8 +168,14 @@ export function Matriz({
                 <span className="hidden sm:inline">Venda em →</span>
               </th>
               {p.prazos.map((m, i) => (
-                <th key={i} scope="col" className="pb-1 text-center align-bottom text-[12px] leading-tight font-semibold sm:text-[13px]">
-                  {m} <span className="font-normal text-nevoa">{m === 1 ? "mês" : "meses"}</span>
+                // no celular, número e "meses" em duas linhas em todas as colunas (antes "6 meses" cabia numa linha e
+                // "12 meses" quebrava, desalinhando o cabeçalho)
+                <th key={i} scope="col" className="pb-1 text-center align-bottom text-[12px] leading-tight font-semibold whitespace-nowrap sm:text-[13px]">
+                  <span className="block sm:inline">{m}</span>
+                  <span className="block text-[11px] font-normal text-nevoa sm:inline sm:text-[13px]">
+                    <span className="hidden sm:inline"> </span>
+                    {m === 1 ? "mês" : "meses"}
+                  </span>
                 </th>
               ))}
             </tr>
@@ -175,7 +187,15 @@ export function Matriz({
               return (
                 <tr key={cenario}>
                   <th scope="row" className="px-1 text-left align-middle">
-                    <span className="block text-[12px] leading-tight font-semibold sm:text-[14px]">{CENARIO_ROTULO[cenario]}</span>
+                    {/* abaixo de 360 px, "Conservador" não cabe na coluna: "Conserv." à vista, o nome inteiro para o leitor de tela */}
+                    <span className="block text-[12px] leading-tight font-semibold sm:text-[14px]">
+                      <span className={cenario === "conservador" ? "max-[359px]:sr-only" : ""}>{CENARIO_ROTULO[cenario]}</span>
+                      {cenario === "conservador" && (
+                        <span aria-hidden="true" className="hidden max-[359px]:inline">
+                          Conserv.
+                        </span>
+                      )}
+                    </span>
                     <span className="mt-0.5 block text-[11px] leading-tight text-nevoa tabular-nums sm:text-[12px]">
                       venda {pct(mult, 0)}
                       <span className="hidden sm:inline"> · {curto((p.valorVenda ?? 0) * mult)}</span>
@@ -207,10 +227,10 @@ export function Matriz({
         {visao === "teto" ? (
           <>
             <span className="inline-flex items-center gap-1.5">
-              <IconeOk className="text-pos" /> teto acima do lance mínimo (com a folga)
+              <IconeOk className="text-pos" /> lance máximo acima do lance mínimo (com a folga)
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <IconeNao className="text-grave-texto" /> teto abaixo do lance mínimo
+              <IconeNao className="text-grave-texto" /> lance máximo abaixo do lance mínimo
             </span>
             <span>— nenhum lance atinge a meta</span>
           </>
@@ -253,33 +273,37 @@ function BotaoCelula({
   aoSelecionar: () => void;
   aoTeclar: (e: KeyboardEvent<HTMLButtonElement>) => void;
 }) {
-  const quando = `${CENARIO_ROTULO[cel.cenario]}, venda em ${meses(cel.meses)}`;
-  let principal: { curto: string; longo: string; grave?: boolean };
+  const quando = `${CENARIO_ROTULO[cel.cenario].toLowerCase()}, venda em ${meses(cel.meses)}`;
+  // O nome acessível é o próprio texto visível (o que um comando de voz enxerga: "clicar R$ 96 mil"), seguido do
+  // contexto só para o leitor de tela. Sem aria-label, que trocava o texto visível por outra frase (WCAG 2.5.3).
+  let principal: { curto: string; longo: string; grave?: boolean; moeda: boolean };
   let secundario: { curto: string; longo: string } | null;
   let ok: boolean | null;
-  let rotulo: string;
+  let contexto: string;
 
   if (visao === "teto") {
     if (cel.teto === null) {
-      principal = { curto: "—", longo: "—" };
+      principal = { curto: "—", longo: "—", moeda: false };
       secundario = { curto: "sem teto", longo: "nenhum lance" };
       ok = null;
-      rotulo = `${quando}: nenhum lance atinge a meta.`;
+      contexto = `: nenhum lance atinge a meta no cenário ${quando}`;
     } else {
       const folga = lance > 0 ? cel.teto / lance - 1 : 0;
       ok = cel.teto >= lance;
-      principal = { curto: curto(cel.teto), longo: moeda(cel.teto) };
-      const f = `${folga >= 0 ? "+" : ""}${pct(folga, 0)}`;
-      secundario = { curto: f, longo: `${f} vs. lance` };
-      rotulo = `${quando}: lance máximo ${moeda(cel.teto)}, ${ok ? `${pct(folga, 0)} acima` : `${pct(-folga, 0)} abaixo`} do lance mínimo.`;
+      principal = { curto: curto(cel.teto), longo: moeda(cel.teto), moeda: true };
+      // perto de zero, "−0%" não diz nada (e vinha com ×): uma casa decimal, ou "≈" quando é praticamente igual
+      const igual = Math.abs(folga) < 0.0005;
+      const f = igual ? "≈" : `${folga > 0 ? "+" : ""}${pct(folga, Math.abs(folga) < 0.01 ? 1 : 0)}`;
+      secundario = igual ? { curto: "≈ mín.", longo: "≈ lance mínimo" } : { curto: f, longo: `${f} vs. mínimo` };
+      contexto = `: lance máximo no cenário ${quando}, ${igual ? "praticamente igual ao" : ok ? "acima do" : "abaixo do"} lance mínimo`;
     }
   } else {
     const s = cel.comMeuLance;
     ok = atingeMeta(s, meta);
-    principal = { curto: curto(s.lucro), longo: moedaSinal(s.lucro), grave: s.lucro < 0 };
+    principal = { curto: curto(s.lucro), longo: moedaSinal(s.lucro), grave: s.lucro < 0, moeda: true };
     // no celular a célula tem ~60 px: só o %, e o cabeçalho da tabela diz "lucro em R$ e % ao ano"
     secundario = { curto: pct(s.roiAA, 0), longo: `${pct(s.roiAA)} ao ano` };
-    rotulo = `${quando}: ${s.lucro >= 0 ? "lucro" : "prejuízo"} de ${moeda(Math.abs(s.lucro))}, ${pct(s.roiAA)} ao ano; ${ok ? "atinge" : "não atinge"} a meta.`;
+    contexto = `: ${s.lucro >= 0 ? "lucro" : "prejuízo"} e retorno ao ano no cenário ${quando}; ${ok ? "atinge" : "não atinge"} a meta`;
   }
 
   return (
@@ -287,7 +311,6 @@ function BotaoCelula({
       type="button"
       data-celula={`${r}-${c}`}
       aria-pressed={selecionada}
-      aria-label={rotulo}
       tabIndex={selecionada ? 0 : -1}
       onClick={aoSelecionar}
       onKeyDown={aoTeclar}
@@ -306,8 +329,11 @@ function BotaoCelula({
           principal.longo.length > 11 ? "sm:text-[15px]" : "sm:text-[17px]"
         } ${principal.grave ? "text-grave-texto" : ""}`}
       >
-        <span className="sm:hidden">{principal.curto}</span>
-        <span className="hidden sm:inline">{principal.longo}</span>
+        <span className="sm:hidden">
+          {principal.moeda && <span className="sr-only">R$ </span>}
+          {principal.curto === "—" ? <span aria-hidden="true">—</span> : principal.curto}
+        </span>
+        <span className="hidden sm:inline">{principal.longo === "—" ? <span aria-hidden="true">—</span> : principal.longo}</span>
       </span>
       {secundario && (
         <span className="mt-1.5 inline-flex items-center gap-1 text-[10.5px] leading-none whitespace-nowrap text-nevoa tabular-nums sm:text-[12px]">
@@ -317,6 +343,7 @@ function BotaoCelula({
           <span className="hidden sm:inline">{secundario.longo}</span>
         </span>
       )}
+      <span className="sr-only">{contexto}</span>
     </button>
   );
 }

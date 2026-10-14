@@ -37,6 +37,15 @@ function Compartilhar({ titulo, className = "" }: { titulo: string; className?: 
   const { avisar } = useImovel();
   const compartilhar = async () => {
     const url = window.location.href.split("#")[0]!;
+    // no toque (celular, tablet), a folha de compartilhar do sistema (WhatsApp, mensagens...) vem primeiro
+    if (typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches) {
+      try {
+        await navigator.share({ title: titulo, url });
+      } catch {
+        // a pessoa fechou a folha: nada a fazer
+      }
+      return;
+    }
     try {
       await navigator.clipboard.writeText(url);
       avisar("Link copiado.");
@@ -58,7 +67,7 @@ function Compartilhar({ titulo, className = "" }: { titulo: string; className?: 
     <button type="button" onClick={compartilhar} className={`${BOTAO_SECUNDARIO} ${className}`}>
       <IconeCompartilhar tamanho={15} />
       Compartilhar
-      <span className="sr-only"> (copia o link)</span>
+      <span className="sr-only"> (link desta página)</span>
     </button>
   );
 }
@@ -242,9 +251,10 @@ export function BarraInferior({ d }: { d: DadosResumo }) {
   return (
     <aside
       aria-label="Lance e anúncio"
+      data-barra-fixa=""
       inert={!visivel}
       aria-hidden={!visivel}
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-nevoa/20 bg-noite/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-md transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden [[data-theme=light]_&]:shadow-[0_-8px_24px_rgba(15,24,48,.08)] ${
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-nevoa/20 bg-noite/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-md [@media(max-height:500px)]:pt-1.5 [@media(max-height:500px)]:pb-[max(6px,env(safe-area-inset-bottom))] transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden [[data-theme=light]_&]:shadow-[0_-8px_24px_rgba(15,24,48,.08)] ${
         visivel ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
       }`}
     >

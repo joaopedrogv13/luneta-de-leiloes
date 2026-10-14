@@ -297,7 +297,8 @@ export function Galeria({ fotos, tipo, titulo, semFotoTexto }: { fotos: string[]
         )}
         <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex items-end justify-between gap-2">
           {varias ? (
-            <p className={`rounded-full px-2.5 py-1.5 text-xs leading-none font-semibold tabular-nums ${VIDRO} hover:bg-[#070b16]/72`}>
+            // região viva: ao passar a foto (setas, deslize), o leitor de tela diz qual está à vista
+            <p aria-live="polite" aria-atomic="true" className={`rounded-full px-2.5 py-1.5 text-xs leading-none font-semibold tabular-nums ${VIDRO} hover:bg-[#070b16]/72`}>
               <span className="sr-only">Foto </span>
               {indice + 1}
               <span aria-hidden="true"> / </span>

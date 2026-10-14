@@ -69,6 +69,24 @@ for (const cat of TAG_CATEGORIES) {
 
 const BASE_POR_SLUG = new Map<string, (typeof TAGS_BASE)[number]>(TAGS_BASE.map((t) => [t.slug, t]));
 
+/**
+ * Tags que só aparecem nos exemplos fictícios da demonstração (src/content/examples.ts; slugs de EXTRAS_TAG em
+ * src/lib/catalogo/exemplos.ts): a base não as gera, mas quem clica na demonstração precisa ver o que cada uma
+ * quer dizer, como nas reais.
+ */
+const TEXTOS_EXEMPLO: Record<string, { what: string; practice: string; categoria: string }> = {
+  "sem-dividas-identificadas": {
+    what: "O edital não aponta dívidas de condomínio, IPTU ou outras que passem a quem arremata.",
+    practice: "Não quer dizer que não existam: peça as certidões de débito (prefeitura e condomínio) antes do lance.",
+    categoria: "Dívidas",
+  },
+  "documentacao-regular": {
+    what: "A matrícula não mostra pendências que travem a transferência, como penhoras de outros credores ou construção não averbada.",
+    practice: "Confira a matrícula atualizada no cartório antes do lance: ela pode mudar até o dia do leilão.",
+    categoria: "Documentação",
+  },
+};
+
 /** Texto genérico por gravidade, para tag sem explicação própria no site. */
 const GENERICO: Record<Severidade, { oQueE: string; naPratica: string }> = {
   grave: {
@@ -92,7 +110,7 @@ const GENERICO: Record<Severidade, { oQueE: string; naPratica: string }> = {
 /** Explicação de uma tag: casa pelo slug (rótulo oficial da base) e, se preciso, pelo rótulo recebido. */
 export function conteudoTag(tag: Pick<TagResumo, "slug" | "rotulo" | "severidade">): ConteudoTag {
   const base = BASE_POR_SLUG.get(tag.slug);
-  const site = (base && TEXTOS_SITE.get(chave(base.rotulo))) ?? TEXTOS_SITE.get(chave(tag.rotulo));
+  const site = (base && TEXTOS_SITE.get(chave(base.rotulo))) ?? TEXTOS_SITE.get(chave(tag.rotulo)) ?? TEXTOS_EXEMPLO[tag.slug];
   const rotulo = tag.rotulo || base?.rotulo || tag.slug;
   if (site) {
     return { slug: tag.slug, rotulo, severidade: tag.severidade, categoria: base?.categoria ?? site.categoria, oQueE: site.what, naPratica: site.practice, generico: false };
@@ -145,6 +163,8 @@ export function origemTag(origem: string): { rotulo: string; detalhe: string | n
       return { rotulo: "a fonte não informa", detalhe: null };
     case "manual":
       return { rotulo: "leitura humana", detalhe: null };
+    case "exemplo":
+      return { rotulo: "exemplo fictício", detalhe: null };
     default:
       return { rotulo: "dados da fonte", detalhe: null };
   }

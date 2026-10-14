@@ -13,7 +13,7 @@ import { area, juntar, meses, moeda, moedaCurta, moedaMes, pct, porArea } from "
 type Chave = keyof Ajustes;
 type ChaveNumero = { [K in Chave]: Ajustes[K] extends number | null | undefined ? K : never }[Chave];
 
-type Unidade = "moeda" | "moedaMes" | "moedaM2" | "pct" | "pctAA" | "m2" | "meses";
+type Unidade = "moeda" | "moedaMes" | "moedaM2" | "pct" | "pctAA" | "m2" | "meses" | "parcelas";
 
 const ehPct = (u: Unidade) => u === "pct" || u === "pctAA";
 const igual = (a: unknown, b: unknown) =>
@@ -36,6 +36,8 @@ function textoValor(v: number | null, u: Unidade): string {
       return area(v);
     case "meses":
       return meses(v);
+    case "parcelas":
+      return `${v} ${v === 1 ? "parcela" : "parcelas"}`;
   }
 }
 
@@ -47,6 +49,7 @@ const ADORNO: Record<Unidade, { prefixo?: string; sufixo?: string }> = {
   pctAA: { sufixo: "% a.a." },
   m2: { sufixo: "m²" },
   meses: { sufixo: "meses" },
+  parcelas: { sufixo: "parcelas" },
 };
 
 /**
@@ -143,7 +146,7 @@ export function Premissas({
             casas={extra.casas ?? (pc ? 1 : 0)}
             min={para(lim[0])}
             max={para(lim[1])}
-            passo={extra.passo ?? (pc ? 0.5 : unidade === "meses" ? 1 : 100)}
+            passo={extra.passo ?? (pc ? 0.5 : unidade === "meses" || unidade === "parcelas" ? 1 : 100)}
             {...ADORNO[unidade]}
             descritoPor={`${id}-ajuda`}
             placeholder={extra.placeholder}
@@ -422,8 +425,8 @@ export function Premissas({
           ajuda={
             perfil.modoReforma === "m2" ? (
               <>
-                Custo por m² da {perfil.rotuloArea}. Valores genéricos: peça orçamento depois da visita (muitos imóveis de leilão não podem ser visitados antes
-                da compra).
+                {perfil.notaReforma ? `${perfil.notaReforma} ` : ""}Custo por m² da {perfil.rotuloArea}. Valores genéricos: peça orçamento depois da visita
+                (muitos imóveis de leilão não podem ser visitados antes da compra).
               </>
             ) : perfil.tipo === "terreno" ? (
               <>Valor fixo para deixar o lote pronto para vender: limpeza, cercamento ou muro.</>
@@ -503,7 +506,8 @@ export function Premissas({
                 setDesfazer(null);
                 aoAjustar((x) => {
                   const y = semAjuste(x, "condominio", "emCondominio");
-                  return v ? { ...y, emCondominio: true } : y;
+                  // igual ao de saída (sala comercial já vem ligada): volta a seguir o padrão
+                  return v === d.emCondominio ? y : { ...y, emCondominio: v };
                 });
               }}
             />
@@ -666,22 +670,95 @@ export function Premissas({
       {/* ------------------------------------------------------------ Pagamento */}
       <Grupo
         titulo="Pagamento"
-        resumo={p.financiar ? `Financiado: entrada ${pct(p.entradaPct, 0)}, juros ${pct(p.jurosAA)} a.a., ${p.prazoFinanciamento} meses` : "À vista"}
-        ajustes={nAjustes("financiar", "entradaPct", "jurosAA", "prazoFinanciamento", "segurosMensal")}
+        resumo={
+          p.parcelar
+            ? `Parcelamento da fonte: entrada ${pct(p.parcelasEntradaPct, 0)} e ${p.parcelasN} parcelas corrigidas (${pct(p.parcelasCorrecaoAA)} a.a.)`
+            : p.financiar
+              ? `Financiado: entrada ${pct(p.entradaPct, 0)}, juros ${pct(p.jurosAA)} a.a., ${p.prazoFinanciamento} meses`
+              : modelo.podeParcelar
+                ? "À vista · a fonte oferece parcelamento"
+                : modelo.podeFinanciar
+                  ? "À vista · a fonte aceita financiamento"
+                  : "À vista"
+        }
+        ajustes={nAjustes("financiar", "entradaPct", "jurosAA", "prazoFinanciamento", "segurosMensal", "parcelar", "parcelasEntradaPct", "parcelasN", "parcelasCorrecaoAA")}
       >
-        {modelo.podeFinanciar ? (
+        {modelo.podeFinanciar || modelo.podeParcelar ? (
           <>
-            <div className="py-1">
-              <Interruptor
-                id="sim-financiar"
-                ligado={p.financiar}
-                rotulo="Simular com financiamento (SAC)"
-                descricao={<>A fonte indica que este imóvel aceita financiamento. Ligado, a conta usa entrada + parcelas, e o saldo é quitado com a venda.</>}
-                aoMudar={(v) => definir("financiar", v)}
+            <Campo
+              id="sim-forma"
+              grupo
+              rotulo="Como você paga o lance"
+              alterado={mudou("financiar", "parcelar")}
+              padrao="à vista"
+              aoRestaurar={() => restaurar("financiar", "parcelar")}
+              ajuda={
+                modelo.podeParcelar ? (
+                  <>
+                    A fonte oferece parcelamento: no leilão judicial, em geral pelo menos 25% de entrada e o resto em até 30 parcelas mensais corrigidas por
+                    um índice (art. 895 do CPC), com o próprio imóvel como garantia. O padrão é à vista, o mais conservador.
+                  </>
+                ) : (
+                  <>A fonte indica que este imóvel aceita financiamento. A prazo, a conta usa entrada + parcelas, e o saldo é quitado com a venda.</>
+                )
+              }
+            >
+              <Segmentado<"vista" | "banco" | "fonte">
+                nome="sim-forma-pagamento"
+                legenda="Como você paga o lance"
+                valor={p.parcelar ? "fonte" : p.financiar ? "banco" : "vista"}
+                aoMudar={(v) => {
+                  setDesfazer(null);
+                  aoAjustar((x) => {
+                    const y = semAjuste(x, "financiar", "parcelar");
+                    return v === "fonte" ? { ...y, parcelar: true } : v === "banco" ? { ...y, financiar: true } : y;
+                  });
+                }}
+                opcoes={[
+                  { valor: "vista", rotulo: "À vista" },
+                  ...(modelo.podeParcelar ? [{ valor: "fonte" as const, rotulo: "Parcelamento", detalhe: "da fonte" }] : []),
+                  ...(modelo.podeFinanciar ? [{ valor: "banco" as const, rotulo: "Financiamento", detalhe: "banco (SAC)" }] : []),
+                ]}
               />
-            </div>
+            </Campo>
+            {p.parcelar && (
+              <div>
+                {campo(
+                  "parcelasEntradaPct",
+                  "Entrada",
+                  "pct",
+                  <>
+                    Parte do lance paga à vista.{" "}
+                    {e.condicoesPagamento ? "O padrão vem das condições informadas pela fonte." : "O mínimo da lei é 25%; o edital pode pedir mais."}
+                  </>,
+                  { deslizante: [5, 100, 5], casas: 0, passo: 5 },
+                )}
+                {campo(
+                  "parcelasN",
+                  "Número de parcelas",
+                  "parcelas",
+                  <>Parcelas mensais do restante. {e.condicoesPagamento ? "O padrão vem das condições da fonte." : "A lei permite até 30."}</>,
+                  { passo: 1, largura: "w-36" },
+                )}
+                {campo(
+                  "parcelasCorrecaoAA",
+                  "Correção das parcelas ao ano",
+                  "pctAA",
+                  <>Estimativa do índice que corrige as parcelas (o edital diz qual: em geral o IPCA, perto de 4,5% ao ano). Juros, se houver, entram aqui.</>,
+                  { deslizante: [0, 15, 0.5], casas: 2, passo: 0.5, largura: "w-32 sm:w-36" },
+                )}
+                {sim?.financiamento?.tipo === "fonte" && (
+                  <Subtotal>
+                    Com o lance mínimo: entrada de <strong className="font-semibold text-luar">{moeda(sim.financiamento.entrada)}</strong> e primeira parcela de{" "}
+                    <strong className="font-semibold text-luar">{moeda(sim.financiamento.primeiraParcela)}</strong>; em {meses(sim.meses)},{" "}
+                    {sim.financiamento.parcelasPagas} parcelas pagas e {moeda(sim.financiamento.saldoDevedor)} quitados na venda (
+                    {moeda(sim.financiamento.jurosPagos)} de correção).
+                  </Subtotal>
+                )}
+              </div>
+            )}
             {p.financiar && (
-              <div className="mt-2">
+              <div>
                 {campo("entradaPct", "Entrada", "pct", <>Parte do lance paga com dinheiro próprio. O banco define o mínimo.</>, {
                   deslizante: [5, 100, 5],
                   casas: 0,
@@ -709,7 +786,7 @@ export function Premissas({
                   <>Seguros obrigatórios (morte e invalidez, danos ao imóvel) e tarifa mensal: estimativa. Variam com a idade e o banco.</>,
                   { passo: 10 },
                 )}
-                {sim?.financiamento && (
+                {sim?.financiamento?.tipo === "banco" && (
                   <Subtotal>
                     Com o lance mínimo: primeira parcela de <strong className="font-semibold text-luar">{moeda(sim.financiamento.primeiraParcela)}</strong>; em{" "}
                     {meses(sim.meses)}, {moeda(sim.financiamento.jurosPagos)} de juros e saldo de {moeda(sim.financiamento.saldoDevedor)} quitado na venda.
@@ -727,12 +804,8 @@ export function Premissas({
         )}
         {e.condicoesPagamento ? (
           <Aviso tom="info" className="mt-3">
-            <span className="font-semibold">Condições informadas pela fonte</span> (não entram na conta): “{e.condicoesPagamento.trim().replace(/[.;\s]+$/, "")}
-            ”. Confira no edital.
-          </Aviso>
-        ) : e.parcelamento ? (
-          <Aviso tom="info" className="mt-3">
-            A fonte indica parcelamento; as condições estão no edital (não entram na conta).
+            <span className="font-semibold">Condições informadas pela fonte:</span> “{e.condicoesPagamento.trim().replace(/[.;\s]+$/, "")}”.{" "}
+            {p.parcelar ? "A simulação usa essas condições; confira no edital." : modelo.podeParcelar ? "Escolha “Parcelamento” acima para simular com elas." : "Confira no edital."}
           </Aviso>
         ) : null}
       </Grupo>

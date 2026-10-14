@@ -75,7 +75,10 @@ export function SecaoDocumentos({ imovel: i }: { imovel: ImovelDetalhe }) {
           </div>
           <div>
             <dt className="text-[12.5px] text-nevoa">Coletado em</dt>
-            <dd className="mt-1 text-[15px] font-semibold text-luar tabular-nums">{data(i.coletadoEm)}</dd>
+            {/* exemplo fictício: a data seria a do dia (gerada na hora), não uma coleta */}
+            <dd className={`mt-1 text-[15px] ${exemplo ? "text-nevoa" : "font-semibold text-luar tabular-nums"}`}>
+              {exemplo ? "não se aplica (exemplo fictício)" : data(i.coletadoEm)}
+            </dd>
           </div>
           <div>
             <dt className="text-[12.5px] text-nevoa">Gerado na fonte em</dt>

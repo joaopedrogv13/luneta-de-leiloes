@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { CATEGORIAS, TAGS } from "../../../../base/riscos/tags";
+import { join } from "node:path";
+import { createJiti } from "jiti";
+import type { Listing } from "../../../content/examples";
+import { converterExemplos } from "../../../lib/catalogo/exemplos";
 import { TAGS_BASE, conteudoTag, ordenarTags, origemTag, partesEvidencia } from "./conteudo";
 
 test("as 26 tags espelham base/riscos/tags.ts (slug, rótulo, gravidade e categoria)", () => {
@@ -21,6 +25,20 @@ test("toda tag da base tem explicação própria vinda do site", () => {
     assert.ok(c.oQueE.length > 20 && c.naPratica.length > 20, t.slug);
     assert.equal(c.categoria, t.categoria);
   }
+});
+
+test("nenhuma tag dos exemplos da demonstração cai no texto genérico", async () => {
+  // src/content/examples.ts usa o alias "@/" do Next: aqui ele aponta para src/
+  const jiti = createJiti(__filename, { alias: { "@/": `${join(process.cwd(), "src")}/` } });
+  const { LISTINGS } = await jiti.import<{ LISTINGS: Listing[] }>(join(process.cwd(), "src", "content", "examples.ts"));
+  for (const d of converterExemplos(LISTINGS)) {
+    for (const t of d.tags) {
+      const c = conteudoTag(t);
+      assert.equal(c.generico, false, `${d.id}: ${t.rotulo} caiu no texto genérico`);
+      assert.ok(c.categoria, `${d.id}: ${t.rotulo} sem categoria`);
+    }
+  }
+  assert.equal(origemTag("exemplo").rotulo, "exemplo fictício");
 });
 
 test("slug desconhecido ganha texto genérico pela gravidade, e o rótulo recebido vale", () => {

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { MODALIDADE_ROTULO, TIPO_PLURAL, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
+import { TIPO_NA_FRASE } from "@/components/catalogo/imovel/formato";
+import { MODALIDADE_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
 import type { Plano, ReferenciaM2 } from "@/lib/catalogo/tipos";
 import { matriz, simular } from "@/lib/simulador/calculo";
 import { LIMITES, montarModelo, type Modelo } from "@/lib/simulador/premissas";
@@ -10,7 +11,7 @@ import { CartaoResposta } from "./CartaoResposta";
 import { Aviso, CampoPedido, FOCO_RESULTADO, IconeAtencao, IconeInfo } from "./controles";
 import { Detalhe, type BaseDetalhe } from "./Detalhe";
 import { ESTADO_INICIAL, useEstadoSimulador } from "./estado";
-import { area, juntar, moeda, porArea } from "./formato";
+import { area, moeda, porArea } from "./formato";
 import { Matriz } from "./Matriz";
 import { Premissas } from "./Premissas";
 
@@ -45,9 +46,10 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta }: Simulad
   const teto = cel?.teto ?? null;
   const comLanceMinimo = useMemo(() => simular(modelo, imovel.lance, celula.cenario, prazo), [modelo, imovel.lance, celula.cenario, prazo]);
 
-  // Detalhe: segue a visão da matriz (teto ou meu lance) até a pessoa escolher outra base.
+  // Detalhe: abre com o lance da pessoa (o lance mínimo, se ela não escolheu outro), como o rodapé do cartão;
+  // o lance máximo, por definição, sempre dá a meta exata, então detalhá-lo de saída mostraria outro lucro
   const [baseEscolhida, setBaseEscolhida] = useState<BaseDetalhe | null>(null);
-  const base: BaseDetalhe = (baseEscolhida ?? (estado.visao === "teto" ? "teto" : "meu")) === "teto" && teto !== null ? "teto" : "meu";
+  const base: BaseDetalhe = baseEscolhida === "teto" && teto !== null ? "teto" : "meu";
   const simDetalhe = cel ? (base === "teto" ? simular(modelo, teto!, celula.cenario, prazo) : cel.comMeuLance) : null;
 
   const ajustar = (mudar: (a: Ajustes) => Ajustes) => atualizar((e) => ({ ...e, ajustes: mudar(e.ajustes) }));
@@ -62,6 +64,13 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta }: Simulad
         <p className="mt-2 text-[14px] leading-relaxed text-nevoa">{resumoImovel(modelo)}</p>
       </header>
 
+      {lanceForaDoNormal(modelo) && (
+        <Aviso>
+          <strong className="font-semibold">O lance mínimo passa de 3 vezes a avaliação.</strong> Quase sempre é erro no anúncio (no preço, na área ou um
+          lote com vários imóveis): confira no site da fonte antes de usar a simulação.
+        </Aviso>
+      )}
+
       {tabela && cel && comLanceMinimo && simDetalhe ? (
         <>
           <CartaoResposta
@@ -72,6 +81,7 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta }: Simulad
             comLanceMinimo={comLanceMinimo}
             aoMudarMeta={(meta) => atualizar((e) => ({ ...e, meta }))}
             aoMudarCelula={(c) => atualizar((e) => ({ ...e, celula: c }))}
+            aoInformarDividas={(n) => ajustar((a) => ({ ...a, dividas: n }))}
           />
           <AvisoFixo />
           <Conferir modelo={modelo} ajustar={ajustar} />
@@ -121,21 +131,31 @@ function AvisoFixo() {
   );
 }
 
+/** Lance mínimo acima de 3 vezes a avaliação: quase sempre erro na fonte (a mesma régua da seção da região). */
+function lanceForaDoNormal({ entrada: e }: Modelo) {
+  return e.avaliacao !== null && e.avaliacao > 0 && e.lance > 3 * e.avaliacao;
+}
+
 function resumoImovel({ entrada: e, premissas: p, perfil }: Modelo) {
   const partes = [
-    TIPO_ROTULO[e.tipo],
+    perfil.grande && e.tipo === "comercial" ? "Comercial (galpão ou prédio)" : TIPO_ROTULO[e.tipo],
     p.areaEstimada ? `${perfil.rotuloArea} não informada` : area(p.area),
     e.avaliacao ? `avaliação ${moeda(e.avaliacao)}` : "avaliação não informada pela fonte",
     `lance mínimo ${moeda(e.lance)}`,
-    e.modalidadeFonte ?? MODALIDADE_ROTULO[e.modalidade],
+    // o nome padronizado do site; o nome como a fonte chama fica no resumo da página
+    MODALIDADE_ROTULO[e.modalidade],
   ];
   return partes.join(" · ");
 }
 
-/** "Confira antes de decidir": o que falta ou pesa e pode ser resolvido ali mesmo (área, dívidas). */
+/**
+ * "Confira antes de decidir": o que falta ou pesa e pode ser resolvido ali mesmo (a área). As dívidas apontadas
+ * são pedidas no próprio cartão-resposta, junto do número que elas mudam.
+ */
 function Conferir({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajustes) => Ajustes) => void }) {
   const { premissas: p, padrao: d, perfil, entrada: e } = modelo;
   const usaArea = perfil.modoReforma === "m2" || p.condominio > 0;
+  const paraQue = [perfil.modoReforma === "m2" ? perfil.rotuloReforma.toLowerCase() : null, p.condominio > 0 ? "condomínio" : null].filter(Boolean).join(" e ");
   const itens: { chave: string; tom: "atencao" | "info"; texto: ReactNode; campo?: ReactNode }[] = [];
 
   if (p.areaEstimada && usaArea) {
@@ -144,7 +164,7 @@ function Conferir({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajuste
       tom: "atencao",
       texto: (
         <>
-          A fonte não informa a {perfil.rotuloArea}. Usamos {area(perfil.areaTipica)} (típico de {TIPO_PLURAL[e.tipo].toLowerCase()}) para reforma e condomínio.
+          A fonte não informa a {perfil.rotuloArea}. Usamos {area(perfil.areaTipica)}, um tamanho típico de {TIPO_NA_FRASE[e.tipo]}, para {paraQue}.
         </>
       ),
       campo: (
@@ -157,29 +177,6 @@ function Conferir({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajuste
           ariaLabel={`Informar a ${perfil.rotuloArea} em m²`}
           aoConfirmar={(n) => ajustar((a) => ({ ...a, area: n }))}
           larguraCampo="w-full sm:w-32"
-        />
-      ),
-    });
-  }
-  if (modelo.dividasApontadas.length > 0 && modelo.ajustes.dividas === undefined) {
-    itens.push({
-      chave: "dividas",
-      tom: "atencao",
-      texto: (
-        <>
-          A análise aponta <strong className="font-semibold">{juntar(modelo.dividasApontadas)}</strong>. Informe quanto passa a você (está no edital); se
-          não houver, informe 0.
-        </>
-      ),
-      campo: (
-        <CampoPedido
-          placeholder="valor"
-          prefixo="R$"
-          min={0}
-          max={LIMITES.dividas[1]}
-          ariaLabel="Informar o valor das dívidas que passam ao comprador"
-          aoConfirmar={(n) => ajustar((a) => ({ ...a, dividas: n }))}
-          larguraCampo="w-full sm:w-36"
         />
       ),
     });
@@ -239,7 +236,7 @@ function FaltaVenda({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajus
               {perfil.rotuloArea.charAt(0).toUpperCase() + perfil.rotuloArea.slice(1)}
             </label>
             <p id="sim-falta-area-ajuda" className="mt-0.5 text-[12.5px] text-nevoa">
-              Com a área, usamos a avaliação mediana de {TIPO_PLURAL[e.tipo].toLowerCase()} em {ref.nome} ({porArea(ref.avaliacaoM2!.mediana, e.tipo)}).
+              Com a área, usamos a avaliação mediana de {TIPO_NA_FRASE[e.tipo]} em {ref.nome} ({porArea(ref.avaliacaoM2!.mediana, e.tipo)}).
             </p>
             <CampoPedido
               id="sim-falta-area"

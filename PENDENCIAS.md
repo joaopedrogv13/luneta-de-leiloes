@@ -286,8 +286,21 @@ Pendências da página:
   da cidade" na Caixa).
 - [ ] Fotos da Caixa: não carregam deste ambiente (rede bloqueada); a página mostra o desenho no lugar. Conferir no navegador
   (celular e computador). Se todas as fotos falharem, a galeria vira um desenho só, sem setas nem tela cheia.
-- [ ] Simulador, matriz "Cenários e prazos": o nome que o leitor de tela ouve em cada célula não contém o número que aparece
-  (WCAG 2.5.3, comando de voz). Ajustar no componente do simulador.
+- [x] Simulador, matriz "Cenários e prazos": o nome que o leitor de tela ouve em cada célula agora começa pelo número que
+  aparece (WCAG 2.5.3, comando de voz).
+- [ ] **Decisão sua: a meta padrão do simulador.** Com 20% ao ano, 12 meses e cenário base, só ~1 em cada 10 apartamentos e
+  casas atinge a meta com o lance mínimo (7% dos apartamentos, 9% das casas, 27% dos comerciais, 42% dos terrenos): a página
+  quase sempre abre com "não atinge sua meta". Opções: (a) meta de 15% ao ano; (b) meta "render mais que a aplicação"
+  (10% a.a. + margem); (c) o cartão abre pelo retorno com o lance mínimo ("com o lance mínimo: 5,8% ao ano") e a meta vira
+  pergunta logo abaixo. Por ora, o aviso de "não atinge" já diz o retorno com o lance mínimo e a meta lado a lado.
+- [ ] Preço de mercado na região: hoje a seção compara com outros leilões e os botões dos portais são buscas no Google
+  (agora rotuladas assim). Próximo passo: a mediana de R$/m² das transações reais do ITBI (dado aberto) do Rio e de São
+  Paulo como uma barra a mais no gráfico ("Transações reais, ITBI, 12 meses"); cobre 3.225 imóveis do Rio e 490 de SP.
+- [ ] Máscara LGPD: o nome logo depois de "Rua", "Av.", "Travessa" deixou de ser mascarado (`base/util/lgpd.ts`), mas os
+  trechos já gravados só mudam ao rodar de novo os riscos e a exportação (`npm run base:exportar -- --site`). Até lá a
+  página mostra as máscaras como um selo "nome omitido", com a nota da LGPD.
+- [ ] Matrícula da Caixa: a página oferece o PDF no endereço padrão do site da Caixa (`/editais/matricula/{UF}/{id}.pdf`),
+  sem conferir se existe (a rede daqui não chega à Caixa). Conferir alguns no navegador.
 - [ ] Ao abrir um imóvel a partir da lista, o esqueleto de carregamento não aparece: a página confere o id antes (para o
   id inexistente dar 404 de verdade) e o navegador espera a resposta (~0,2 s aqui; mais no 4G). Se ficar lento no
   celular, dar um sinal no clique do cartão ou aceitar um 404 "suave".
@@ -299,6 +312,17 @@ absurdo da fonte (ex.: lance de R$ 69 mi num apartamento) não esmaga mais o gr�
 "menor que o de 0%/100%" virou frase que se lê; o resumo lateral mostra "1 possível risco grave" entre as em revisão;
 contador da galeria sem pular fotos ao deslizar; tela cheia sem parada muda no Tab; título da aba sem repetir a cidade;
 descrição longa já vem fechada do servidor (a página não encolhe ao carregar); 404 do imóvel no tema claro.
+
+Revisão 2 (14/10/2026), corrigido: nada que recebe o foco fica sob o cabeçalho, a navegação ou a barra do pé (e focar o
+"Ver como" não rola mais a página); celular deitado com o cabeçalho rolando junto; "Ver como Lente/Luneta" mantém a
+seção à vista; "Compartilhar" abre a folha do sistema no celular; simulador com o pedido das dívidas apontadas no próprio
+cartão (o número sai marcado "sem as dívidas" até a pessoa informar), galpão e prédio inteiro com reforma por m² menor e
+sem condomínio (sala e loja com condomínio ligado), parcelamento da fonte (judicial: entrada e parcelas corrigidas) como
+forma de pagamento, detalhe abrindo no lance mínimo, "≈"/"−0,3%" no lugar de "−0%", aviso de lance abaixo do mínimo e de
+lance acima de 3 vezes a avaliação, alvos de toque de 44 px, matriz legível em 320 e 360 px; "das casas" (concordância);
+R$/ha calculado do valor e da área; resumo com as várias matrículas, o site do leiloeiro e sem área privativa/vagas no
+rural; explicação própria das tags da demonstração; 404 com título e sem canonical da home; landing não é mais
+pré-carregada.
 
 ### Ler cada leilão com IA: é viável?
 

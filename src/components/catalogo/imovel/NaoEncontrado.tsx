@@ -13,6 +13,7 @@ export function TopoSimples() {
       <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
         <Link
           href={BACK_TO_SITE}
+          prefetch={false}
           aria-label="Luneta de Leilões, voltar ao site"
           className="inline-flex min-h-11 items-center gap-2.5 rounded-md font-display text-base leading-none font-bold text-luar no-underline"
         >
@@ -62,7 +63,7 @@ export function NaoEncontrado({ conjunto }: { conjunto: Conjunto }) {
             <Link href={ROTA_LISTA[conjunto]} className="btn-primary">
               Ver os imóveis
             </Link>
-            <Link href={BACK_TO_SITE} className="btn-ghost">
+            <Link href={BACK_TO_SITE} prefetch={false} className="btn-ghost">
               Voltar ao site
             </Link>
           </div>

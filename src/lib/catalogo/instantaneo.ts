@@ -276,8 +276,25 @@ export async function lerParte(pasta: string, parte: string, geradoEm: string): 
 }
 
 /**
- * Junta a linha da lista e o pedaço do detalhe num ImovelDetalhe completo (sem plano aplicado), com o
- * link "Ver endereço no Google Maps" no fim.
+ * Matrícula da Caixa no endereço padrão do site dela (/editais/matricula/{UF}/{id13}.pdf, ver base/FONTES.md):
+ * a ficha quase nunca é lida, então o link raramente vem da coleta. Só o link, como nas fotos: nada é baixado.
+ * null quando não é da Caixa ou o id não tem os 13 dígitos.
+ */
+export function linkMatriculaCaixa(resumo: Pick<ImovelResumo, "id" | "uf" | "fonte">): LinkImovel | null {
+  const m = /^caixa-(\d{13})$/.exec(resumo.id);
+  if (resumo.fonte.id !== "caixa_csv" || !m || !/^[A-Z]{2}$/.test(resumo.uf)) return null;
+  return {
+    tipo: "matricula",
+    rotulo: "Matrícula do imóvel",
+    url: `https://venda-imoveis.caixa.gov.br/editais/matricula/${resumo.uf}/${m[1]}.pdf`,
+    descricao: "PDF no site da Caixa, no endereço padrão (se não abrir, a Caixa ainda não publicou)",
+  };
+}
+
+/**
+ * Junta a linha da lista e o pedaço do detalhe num ImovelDetalhe completo (sem plano aplicado), com a
+ * matrícula da Caixa no endereço padrão (quando a coleta não trouxe uma) e o link "Ver endereço no Google
+ * Maps" no fim.
  */
 export function montarDetalhe(resumo: ImovelResumo, endereco: string | null, parcial: DetalheParcial): ImovelDetalhe {
   const extras = new Map(parcial.tags.map((t) => [t.slug, t]));
@@ -291,5 +308,6 @@ export function montarDetalhe(resumo: ImovelResumo, endereco: string | null, par
     url: linkGoogleMaps({ endereco, bairro: resumo.bairro, cidade: resumo.cidade, uf: resumo.uf }),
     descricao: endereco ? "Busca o endereço publicado pela fonte" : "A fonte não publica o endereço: busca bairro e cidade",
   };
-  return { ...resumo, ...parcial, tags, endereco, links: [...parcial.links, mapa] };
+  const matricula = parcial.links.some((l) => l.tipo === "matricula") ? null : linkMatriculaCaixa(resumo);
+  return { ...resumo, ...parcial, tags, endereco, links: [...parcial.links, ...(matricula ? [matricula] : []), mapa] };
 }

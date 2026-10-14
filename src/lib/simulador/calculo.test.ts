@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { ReferenciaM2 } from "../catalogo/tipos";
-import { atingeMeta, cascata, lanceMaximo, matriz, posicoesCascata, roiAoAno, sac, simular, taxaMensal } from "./calculo";
-import { areaDaFonte, limparAjustes, limparMeta, montarModelo, META_PADRAO } from "./premissas";
+import { atingeMeta, cascata, lanceMaximo, matriz, parcelamentoFonte, posicoesCascata, roiAoAno, sac, simular, taxaMensal } from "./calculo";
+import { areaDaFonte, lerCondicoesParcelamento, limparAjustes, limparMeta, montarModelo, META_PADRAO, perfilDoImovel } from "./premissas";
 import type { EntradaSimulador, Meta } from "./tipos";
 
 const perto = (real: number, esperado: number, tol = 0.01, msg?: string) =>
@@ -146,8 +146,8 @@ test("ajustes trocam só o que a pessoa mudou e o padrão segue o que veio antes
 test("ROI cai (ou fica igual) quando o lance sobe", () => {
   for (const entrada of [imovel(), terreno(), imovel({ avaliacao: null })]) {
     const refs: ReferenciaM2[] = [ref("cidade", 5000)];
-    for (const financiar of [false, true]) {
-      const m = montarModelo({ ...entrada, financiamento: true }, { financiar }, refs);
+    for (const pagamento of [{}, { financiar: true }, { parcelar: true }]) {
+      const m = montarModelo({ ...entrada, financiamento: true, parcelamento: true }, pagamento, refs);
       for (const cenario of ["conservador", "base", "otimista"] as const) {
         let anterior = Infinity;
         let lucroAnterior = Infinity;
@@ -360,4 +360,97 @@ test("cascata usa o nome da reforma do tipo (limpeza do terreno)", () => {
   const s = simular(m, 60_000, "base", 12)!;
   assert.equal(cascata(s, m.perfil.rotuloReforma).find((e) => e.chave === "reforma")!.rotulo, "Limpeza e cercamento");
   assert.equal(cascata(s).find((e) => e.chave === "reforma")!.rotulo, "Reforma");
+});
+
+test("comercial: galpão e prédio inteiro com reforma por m² menor e sem condomínio; sala e loja com condomínio", () => {
+  const comercial = (titulo: string, area: number, extra: Partial<EntradaSimulador> = {}) =>
+    imovel({ tipo: "comercial", titulo, area, areaPrivativa: null, areaTerreno: null, avaliacao: 1_000_000, lance: 500_000, ...extra });
+
+  // galpão de 10.480 m²: antes, R$ 125.762/mês de condomínio e R$ 3,1 milhões de reforma leve
+  const galpao = montarModelo(comercial("Galpão 10.480 m²", 10_480));
+  assert.equal(galpao.perfil.grande, true);
+  assert.equal(galpao.premissas.condominio, 0);
+  assert.equal(galpao.premissas.emCondominio, false);
+  assert.equal(galpao.premissas.reformaUnitario, 60);
+  perto(simular(galpao, 500_000, "base", 12)!.reforma, 60 * 10_480);
+
+  // prédio pequeno também é "inteiro" pelo título; área grande sem título que diga também
+  assert.equal(perfilDoImovel(comercial("Prédio 328,94 m²", 328.94)).grande, true);
+  assert.equal(perfilDoImovel(comercial("Imóvel comercial 681 m²", 681)).grande, true);
+  assert.equal(perfilDoImovel(comercial("Imóvel comercial 261 m²", 261)).grande, undefined);
+
+  // sala comercial: condomínio ligado de saída (12 × 40), reforma de imóvel construído
+  const sala = montarModelo(comercial("Sala comercial 40 m²", 40));
+  assert.equal(sala.premissas.emCondominio, true);
+  assert.equal(sala.padrao.emCondominio, true);
+  assert.equal(sala.premissas.condominio, 480);
+  assert.equal(sala.premissas.reformaUnitario, 300);
+  // a pessoa desliga
+  assert.equal(montarModelo(comercial("Sala comercial 40 m²", 40), { emCondominio: false }).premissas.condominio, 0);
+  // loja grande vira "grande": sem condomínio de saída
+  assert.equal(montarModelo(comercial("Loja 850,26 m²", 850.26)).premissas.condominio, 0);
+  // imóvel comercial genérico: condomínio desligado, mas dá para ligar
+  const generico = montarModelo(comercial("Imóvel comercial 329 m²", 329));
+  assert.equal(generico.premissas.condominio, 0);
+  assert.equal(montarModelo(comercial("Imóvel comercial 329 m²", 329), { emCondominio: true }).premissas.condominio, Math.round(12 * 329));
+
+  // "outro": nunca condomínio de saída
+  const outro = montarModelo(imovel({ tipo: "outro", titulo: "Imóveis - Iracemápolis - Itanhaém - São Paulo/SP", area: null, areaPrivativa: null }));
+  assert.equal(outro.premissas.condominio, 0);
+});
+
+test("parcelamento da fonte (judicial): parcelas corrigidas pelo índice, saldo corrigido quitado na venda", () => {
+  // sem correção: 30 parcelas iguais; em 12 meses, 12 pagas e 18 quitadas na venda
+  const zero = parcelamentoFonte(300_000, 0, 30, 12);
+  perto(zero.totalParcelas, 120_000, 1e-6);
+  perto(zero.saldoDevedor, 180_000, 1e-6);
+  perto(zero.jurosPagos, 0, 1e-6);
+
+  // com correção: confere com a soma mês a mês
+  const i = taxaMensal(0.045);
+  const r = parcelamentoFonte(300_000, 0.045, 30, 12);
+  let total = 0;
+  for (let k = 1; k <= 12; k++) total += 10_000 * Math.pow(1 + i, k);
+  perto(r.totalParcelas, total, 1e-6);
+  perto(r.saldoDevedor, 180_000 * Math.pow(1 + i, 12), 1e-6);
+  perto(r.jurosPagos, r.totalParcelas + r.saldoDevedor - 300_000, 1e-6);
+  perto(r.primeiraParcela, 10_000 * (1 + i), 1e-6);
+  // venda depois da última parcela: tudo pago
+  const fim = parcelamentoFonte(300_000, 0.045, 30, 36);
+  assert.equal(fim.parcelasPagas, 30);
+  perto(fim.saldoDevedor, 0, 1e-6);
+
+  // condições escritas pela fonte viram os padrões
+  assert.deepEqual(lerCondicoesParcelamento("Entrada de 25% e o restante em até 30 parcelas (IPCA)"), { entradaPct: 0.25, parcelas: 30 });
+  assert.deepEqual(lerCondicoesParcelamento("30% de entrada, saldo em 12 vezes"), { entradaPct: 0.3, parcelas: 12 });
+  assert.deepEqual(lerCondicoesParcelamento(null), {});
+
+  const e = imovel({ judicial: true, parcelamento: true, financiamento: true, condicoesPagamento: "Entrada de 30% e o restante em até 24 parcelas (IPCA)" });
+  const m = montarModelo(e, { parcelar: true, financiar: true });
+  assert.equal(m.podeParcelar, true);
+  assert.equal(m.premissas.parcelar, true);
+  assert.equal(m.premissas.financiar, false); // não soma as duas formas a prazo
+  assert.equal(m.premissas.parcelasEntradaPct, 0.3);
+  assert.equal(m.premissas.parcelasN, 24);
+
+  const vista = simular(montarModelo(e), 200_000, "base", 12)!;
+  const s = simular(m, 200_000, "base", 12)!;
+  const f = s.financiamento!;
+  assert.equal(f.tipo, "fonte");
+  perto(f.entrada, 60_000);
+  perto(f.financiado, 140_000);
+  perto(s.mensal.seguros, 0); // sem seguro de banco
+  perto(s.lucro, vista.lucro - f.jurosPagos, 1e-6);
+  perto(s.capital, 60_000 + f.totalParcelas + (vista.capital - 200_000), 1e-6);
+  perto(
+    cascata(s).reduce((t, x) => (x.total ? t : t + x.valor), 0),
+    s.lucro,
+    1e-6,
+  );
+  assert.equal(cascata(s).find((x) => x.chave === "juros")!.rotulo, "Correção das parcelas");
+  // capital próprio menor: o teto sobe
+  assert.ok(lanceMaximo(m, "base", 12, META_PADRAO)! > lanceMaximo(montarModelo(e), "base", 12, META_PADRAO)!);
+  // sem parcelamento na fonte, o ajuste não vale
+  assert.equal(montarModelo(imovel(), { parcelar: true }).premissas.parcelar, false);
+  assert.deepEqual(limparAjustes({ parcelar: true, parcelasN: 30, parcelasEntradaPct: 0.25, parcelasCorrecaoAA: 2 }), { parcelar: true, parcelasN: 30, parcelasEntradaPct: 0.25 });
 });

@@ -56,8 +56,9 @@ export const PERFIS: Record<TipoImovel, PerfilTipo> = {
     rotuloArea: "área construída",
   }),
   comercial: construido("comercial", [0, 300, 800, 1600], {
-    condominioPadrao: true,
-    opcaoCondominio: null,
+    // só sala e loja em prédio têm condomínio; galpão, prédio inteiro e casa comercial, não
+    condominioPadrao: false,
+    opcaoCondominio: "Sala ou loja em condomínio",
     condominioM2: 12,
     condominioMin: 0,
     contasPadrao: 200,
@@ -65,8 +66,8 @@ export const PERFIS: Record<TipoImovel, PerfilTipo> = {
     rotuloArea: "área",
   }),
   outro: construido("outro", [0, 300, 800, 1600], {
-    condominioPadrao: true,
-    opcaoCondominio: null,
+    condominioPadrao: false,
+    opcaoCondominio: "Em condomínio",
     condominioM2: 12,
     condominioMin: 0,
     contasPadrao: 200,
@@ -107,6 +108,50 @@ export const PERFIS: Record<TipoImovel, PerfilTipo> = {
   },
 };
 
+/** A partir desta área (m²), um comercial ou "outro" é tratado como galpão ou prédio inteiro. */
+export const AREA_GRANDE = 500;
+
+const RE_GALPAO = /^(galp[aã]o|pr[eé]dio|barrac[aã]o|armaz[eé]m|dep[oó]sito|edif[ií]cio)\b/i;
+const RE_SALA_LOJA = /^(sala|loja|conjunto|ed\.)/i;
+
+/**
+ * Galpão, prédio inteiro ou área grande: a reforma é por m² de área grande e acabamento simples (pintura e
+ * reparos num galpão de 10 mil m² não custam R$ 300/m²), sem condomínio por padrão.
+ */
+function grande(base: PerfilTipo): PerfilTipo {
+  return {
+    ...base,
+    grande: true,
+    reforma: { nenhuma: 0, leve: 60, media: 150, pesada: 300 },
+    descricaoNivel: {
+      nenhuma: "pronto para usar",
+      leve: "limpeza, pintura e pequenos reparos",
+      media: "telhado, piso e instalações",
+      pesada: "estrutura, cobertura e instalações",
+    },
+    areaTipica: AREA_GRANDE,
+    notaReforma: "Galpão, prédio inteiro ou área grande: valores por m² menores, de área ampla e acabamento simples.",
+  };
+}
+
+const PERFIS_GRANDES = { comercial: grande(PERFIS.comercial), outro: grande(PERFIS.outro) } as const;
+
+/**
+ * O perfil do imóvel: o do tipo, ou, para comercial e "outro", o de galpão/prédio inteiro quando o título diz
+ * ("Galpão 973 m²", "Prédio 663 m²") ou a área passa de 500 m².
+ */
+export function perfilDoImovel(e: Pick<EntradaSimulador, "tipo" | "titulo" | "area" | "areaTerreno" | "areaPrivativa">): PerfilTipo {
+  const base = PERFIS[e.tipo] ?? PERFIS.outro;
+  if (e.tipo !== "comercial" && e.tipo !== "outro") return base;
+  const area = areaDaFonte(e) ?? 0;
+  return RE_GALPAO.test(e.titulo.trim()) || area >= AREA_GRANDE ? PERFIS_GRANDES[e.tipo] : base;
+}
+
+/** Condomínio ligado já de saída: só sala ou loja comercial (o título começa assim) que não seja grande. */
+export function condominioPorPadrao(e: Pick<EntradaSimulador, "titulo">, perfil: PerfilTipo): boolean {
+  return perfil.tipo === "comercial" && !perfil.grande && RE_SALA_LOJA.test(e.titulo.trim());
+}
+
 export const ROTULO_NIVEL: Record<NivelReforma, string> = { nenhuma: "Nenhuma", leve: "Leve", media: "Média", pesada: "Pesada" };
 
 // ---------------------------------------------------------------------------
@@ -132,6 +177,11 @@ export const PADRAO = {
   jurosAA: 0.115,
   prazoFinanciamento: 360,
   segurosMensal: 100,
+  // parcelamento do leilão judicial (CPC, art. 895): pelo menos 25% de entrada e até 30 parcelas mensais,
+  // corrigidas por um índice (o edital diz qual; o IPCA anda perto de 4,5% ao ano)
+  parcelasEntradaPct: 0.25,
+  parcelasN: 30,
+  parcelasCorrecaoAA: 0.045,
 } as const;
 
 export const META_PADRAO: Meta = { tipo: "roi_aa", valor: 0.2 };
@@ -162,6 +212,9 @@ export const LIMITES = {
   jurosAA: [0, 0.5],
   prazoFinanciamento: [12, 420],
   segurosMensal: [0, 100_000],
+  parcelasEntradaPct: [0.05, 1],
+  parcelasN: [1, 120],
+  parcelasCorrecaoAA: [0, 0.5],
   metaPct: [0, 10],
   metaLucro: [0, 10_000_000_000],
 } as const satisfies Record<string, readonly [number, number]>;
@@ -202,6 +255,26 @@ export function referenciaLocal(refs: readonly ReferenciaM2[] | undefined, tipo:
   return uteis[0] ?? null;
 }
 
+/**
+ * Entrada e número de parcelas escritos nas condições da fonte ("Entrada de 25% e o restante em até 30
+ * parcelas (IPCA)"). O que não der para ler fica de fora (vale o padrão).
+ */
+export function lerCondicoesParcelamento(texto: string | null | undefined): { entradaPct?: number; parcelas?: number } {
+  if (!texto) return {};
+  const saida: { entradaPct?: number; parcelas?: number } = {};
+  const entrada = /(\d{1,3}(?:[.,]\d+)?)\s*%/.exec(texto);
+  if (entrada) {
+    const v = Number(entrada[1]!.replace(",", ".")) / 100;
+    if (v >= LIMITES.parcelasEntradaPct[0] && v <= LIMITES.parcelasEntradaPct[1]) saida.entradaPct = v;
+  }
+  const parcelas = /(\d{1,3})\s*(?:parcelas|presta[cç][oõ]es|vezes|meses)/i.exec(texto);
+  if (parcelas) {
+    const n = Number(parcelas[1]);
+    if (n >= LIMITES.parcelasN[0] && n <= LIMITES.parcelasN[1]) saida.parcelas = n;
+  }
+  return saida;
+}
+
 /** Comissão do leiloeiro: 5% quando há leiloeiro (leilão, judicial ou modalidade desconhecida). */
 export function comissaoPadrao(e: Pick<EntradaSimulador, "modalidade" | "judicial">): number {
   if (e.judicial === true) return PADRAO.comissaoLeilao;
@@ -227,6 +300,8 @@ export interface Modelo {
   dividasApontadas: string[];
   /** a fonte aceita financiamento */
   podeFinanciar: boolean;
+  /** a fonte oferece parcelamento (leilão judicial) */
+  podeParcelar: boolean;
 }
 
 /**
@@ -234,7 +309,7 @@ export interface Modelo {
  * Ajustes inválidos já devem ter sido limpos por `limparAjustes`.
  */
 export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, referencias?: readonly ReferenciaM2[]): Modelo {
-  const perfil = PERFIS[entrada.tipo] ?? PERFIS.outro;
+  const perfil = perfilDoImovel(entrada);
   const a = ajustes;
 
   const areaFonte = areaDaFonte(entrada);
@@ -243,8 +318,12 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
   const areaReal = a.area !== undefined || areaFonte !== null;
 
   const reformaNivel = a.reformaNivel ?? PADRAO.reformaNivel;
-  const emCondominio = perfil.opcaoCondominio ? (a.emCondominio ?? false) : false;
+  const condominioDeSaida = condominioPorPadrao(entrada, perfil);
+  const emCondominio = perfil.opcaoCondominio ? (a.emCondominio ?? condominioDeSaida) : false;
   const podeFinanciar = entrada.financiamento === true;
+  const podeParcelar = entrada.parcelamento === true;
+  const parcelar = podeParcelar && (a.parcelar ?? false);
+  const condicoes = lerCondicoesParcelamento(entrada.condicoesPagamento);
 
   const referencia = referenciaLocal(referencias, entrada.tipo);
   let origemVenda: OrigemVenda;
@@ -276,7 +355,7 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
     dividas: 0,
     reformaNivel: PADRAO.reformaNivel,
     reformaUnitario: perfil.reforma[reformaNivel],
-    emCondominio: false,
+    emCondominio: condominioDeSaida,
     condominio: condominioPadrao(perfil, area, emCondominio),
     iptuPct: perfil.iptuPadrao,
     contas: perfil.contasPadrao,
@@ -293,6 +372,10 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
     jurosAA: PADRAO.jurosAA,
     prazoFinanciamento: PADRAO.prazoFinanciamento,
     segurosMensal: PADRAO.segurosMensal,
+    parcelar: false,
+    parcelasEntradaPct: condicoes.entradaPct ?? PADRAO.parcelasEntradaPct,
+    parcelasN: condicoes.parcelas ?? PADRAO.parcelasN,
+    parcelasCorrecaoAA: PADRAO.parcelasCorrecaoAA,
   };
 
   const premissas: Premissas = {
@@ -302,7 +385,9 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
     areaEstimada: !areaReal,
     reformaNivel,
     emCondominio,
-    financiar: podeFinanciar && (a.financiar ?? false),
+    // as duas formas de pagar a prazo não se somam: o parcelamento da fonte vale sobre o financiamento
+    financiar: podeFinanciar && !parcelar && (a.financiar ?? false),
+    parcelar,
     prazos: a.prazos ?? padrao.prazos,
     valorVenda: a.valorVenda ?? vendaPadrao,
   };
@@ -313,7 +398,7 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
     return [tags.every((t) => t.emRevisao === true) ? `${ROTULO_DIVIDA[slug]} (em revisão)` : ROTULO_DIVIDA[slug]];
   });
 
-  return { entrada, perfil, premissas, padrao, ajustes: a, origemVenda, referencia, dividasApontadas, podeFinanciar };
+  return { entrada, perfil, premissas, padrao, ajustes: a, origemVenda, referencia, dividasApontadas, podeFinanciar, podeParcelar };
 }
 
 /** Multiplicador do valor de referência em cada cenário. */
@@ -349,6 +434,9 @@ const NUMERICOS = [
   "jurosAA",
   "prazoFinanciamento",
   "segurosMensal",
+  "parcelasEntradaPct",
+  "parcelasN",
+  "parcelasCorrecaoAA",
 ] as const satisfies readonly (keyof Ajustes & keyof typeof LIMITES)[];
 
 const dentro = (v: unknown, [min, max]: readonly [number, number]): v is number => typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
@@ -366,6 +454,7 @@ export function limparAjustes(bruto: unknown): Ajustes {
   }
   if (typeof o.emCondominio === "boolean") a.emCondominio = o.emCondominio;
   if (typeof o.financiar === "boolean") a.financiar = o.financiar;
+  if (typeof o.parcelar === "boolean") a.parcelar = o.parcelar;
   if (Array.isArray(o.prazos) && o.prazos.length === 4 && o.prazos.every((m) => Number.isInteger(m) && dentro(m, LIMITES.prazo))) {
     a.prazos = [...(o.prazos as number[])];
   }

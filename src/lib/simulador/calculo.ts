@@ -9,7 +9,9 @@
  *   IR                  = alíquota × (venda − corretagem − lance − comissão − ITBI − registro − reforma), só se > 0
  *   lucro               = venda − corretagem − IR − lance − aquisição − regularização − reforma − custos mensais
  *                         (financiado: − juros pagos − seguros; o saldo devedor é quitado com a venda)
- *   capital             = dinheiro próprio até a venda (à vista: lance + custos; financiado: entrada + parcelas + custos)
+ *   capital             = dinheiro próprio até a venda (à vista: lance + custos; a prazo: entrada + parcelas + custos)
+ *   parcelamento da fonte (judicial): entrada + parcelas mensais de (saldo ÷ n) corrigidas pelo índice; o que
+ *                         falta pagar na venda (já corrigido) sai do dinheiro da venda
  *   ROI no período      = lucro ÷ capital;  ROI ao ano = (1 + ROI)^(12/meses) − 1
  *
  * O lucro cai e o capital sobe quando o lance sobe; por isso o ROI cai com o lance enquanto o lucro é ≥ 0, e o
@@ -27,7 +29,7 @@ export function taxaMensal(aa: number): number {
  * Financiamento pela tabela SAC (amortização constante), quitado na venda.
  * Parcela do mês k = amortização + juros sobre o saldo do mês anterior.
  */
-export function sac(financiado: number, jurosAA: number, prazo: number, meses: number): Omit<ResultadoFinanciamento, "entrada"> {
+export function sac(financiado: number, jurosAA: number, prazo: number, meses: number): Omit<ResultadoFinanciamento, "entrada" | "tipo"> {
   const i = taxaMensal(jurosAA);
   const n = Math.max(1, Math.round(prazo));
   const m = Math.min(Math.max(0, Math.round(meses)), n);
@@ -45,6 +47,33 @@ export function sac(financiado: number, jurosAA: number, prazo: number, meses: n
     jurosPagos,
     amortizado,
     saldoDevedor: Math.max(0, financiado - amortizado),
+  };
+}
+
+/**
+ * Parcelamento da própria fonte (leilão judicial, CPC art. 895): o saldo em n parcelas mensais iguais, cada
+ * uma corrigida pelo índice até o mês em que vence (parcela k = saldo ÷ n × (1 + i)^k). Na venda, o que falta
+ * pagar é quitado já corrigido. A "correção" (jurosPagos) é tudo o que se paga além do saldo nominal.
+ */
+export function parcelamentoFonte(saldo: number, correcaoAA: number, parcelas: number, meses: number): Omit<ResultadoFinanciamento, "entrada" | "tipo"> {
+  const i = taxaMensal(correcaoAA);
+  const n = Math.max(1, Math.round(parcelas));
+  const m = Math.min(Math.max(0, Math.round(meses)), n);
+  const base = saldo / n;
+  // Σ_{k=1..m} (1 + i)^k
+  const fator = i === 0 ? m : ((1 + i) * (Math.pow(1 + i, m) - 1)) / i;
+  const totalParcelas = base * fator;
+  const saldoDevedor = base * (n - m) * Math.pow(1 + i, m);
+  return {
+    financiado: saldo,
+    taxaMensal: i,
+    prazo: n,
+    parcelasPagas: m,
+    primeiraParcela: saldo > 0 ? base * (1 + i) : 0,
+    totalParcelas,
+    jurosPagos: totalParcelas + saldoDevedor - saldo,
+    amortizado: base * m,
+    saldoDevedor,
   };
 }
 
@@ -84,13 +113,18 @@ export function simular(modelo: Modelo, lance: number, cenario: Cenario, meses: 
   const dividas = p.dividas;
   const reforma = custoReforma(modelo, p);
 
-  const fin = p.financiar && modelo.podeFinanciar ? { entrada: p.entradaPct * L, ...sac(L - p.entradaPct * L, p.jurosAA, p.prazoFinanciamento, meses) } : null;
+  const fin: ResultadoFinanciamento | null =
+    p.parcelar && modelo.podeParcelar
+      ? { tipo: "fonte", entrada: p.parcelasEntradaPct * L, ...parcelamentoFonte(L - p.parcelasEntradaPct * L, p.parcelasCorrecaoAA, p.parcelasN, meses) }
+      : p.financiar && modelo.podeFinanciar
+        ? { tipo: "banco", entrada: p.entradaPct * L, ...sac(L - p.entradaPct * L, p.jurosAA, p.prazoFinanciamento, meses) }
+        : null;
 
   const mensal = {
     condominio: p.condominio,
     iptu: iptuMensal(modelo, p, L),
     contas: p.contas,
-    seguros: fin && fin.financiado > 0 ? p.segurosMensal : 0,
+    seguros: fin?.tipo === "banco" && fin.financiado > 0 ? p.segurosMensal : 0,
     total: 0,
   };
   mensal.total = mensal.condominio + mensal.iptu + mensal.contas + mensal.seguros;
@@ -217,7 +251,7 @@ export function cascata(s: Simulacao, rotuloReforma = "Reforma"): Etapa[] {
     { chave: "corretagem", rotulo: "Corretagem", valor: -s.corretagem },
     { chave: "ir", rotulo: "Imposto de renda", valor: -s.ir },
     { chave: "lance", rotulo: "Lance", valor: -s.lance },
-    { chave: "juros", rotulo: "Juros do financiamento", valor: fin ? -fin.jurosPagos : 0 },
+    { chave: "juros", rotulo: fin?.tipo === "fonte" ? "Correção das parcelas" : "Juros do financiamento", valor: fin ? -fin.jurosPagos : 0 },
     { chave: "aquisicao", rotulo: "Custos da compra", valor: -s.aquisicao },
     { chave: "regularizacao", rotulo: "Desocupação e dívidas", valor: -(s.desocupacao + s.dividas) },
     { chave: "reforma", rotulo: rotuloReforma, valor: -s.reforma },

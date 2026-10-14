@@ -32,18 +32,24 @@ export function Detalhe({
 }) {
   const p = modelo.premissas;
   const etapas = cascata(sim, modelo.perfil.rotuloReforma);
-  const diferenca = sim.lucro - sim.rendimentoAplicacao;
+  // a diferença sai dos dois números já arredondados que a frase mostra (senão "R$ 277.638 − R$ 138.819" dava
+  // "R$ 138.820 a mais")
+  const diferenca = Math.round(sim.lucro) - Math.round(sim.rendimentoAplicacao);
   const fin = sim.financiamento;
   const ehLanceMinimo = Math.round(sim.lance) === Math.round(modelo.entrada.lance);
+  const ehTeto = teto !== null && Math.round(sim.lance) === Math.round(teto);
+  const qualLance = ehLanceMinimo ? "lance mínimo atual" : ehTeto ? "lance máximo para a meta" : "seu lance";
 
   return (
     <section
       aria-labelledby="sim-detalhe-titulo"
       className="rounded-3xl border border-nevoa/20 bg-tinta p-4 sm:p-6 in-data-[theme=light]:shadow-[0_1px_2px_rgba(15,24,48,.05)]"
     >
-      <p className="text-[12px] font-semibold tracking-[0.12em] text-nevoa uppercase">Detalhe da célula</p>
+      <p className="text-[12px] font-semibold tracking-[0.12em] text-nevoa uppercase">
+        Detalhe · cenário {CENARIO_ROTULO[sim.cenario].toLowerCase()}, venda em {meses(sim.meses)}
+      </p>
       <h3 id="sim-detalhe-titulo" className="mt-1.5 font-display text-[19px] leading-tight font-bold tracking-[-0.01em] sm:text-[21px]">
-        Cenário {CENARIO_ROTULO[sim.cenario].toLowerCase()}, venda em {meses(sim.meses)}
+        Com o lance de {moeda(sim.lance)} <span className="font-sans text-[14px] font-medium tracking-normal text-nevoa sm:text-[15px]">({qualLance})</span>
       </h3>
 
       {teto !== null && Math.round(teto) !== Math.round(meuLance) ? (
@@ -55,17 +61,13 @@ export function Detalhe({
           aoMudar={aoMudarBase}
           tamanho="sm"
           opcoes={[
-            { valor: "meu", rotulo: "Meu lance", detalhe: moeda(meuLance) },
+            { valor: "meu", rotulo: Math.round(meuLance) === Math.round(modelo.entrada.lance) ? "Lance mínimo" : "Meu lance", detalhe: moeda(meuLance) },
             { valor: "teto", rotulo: "Lance máximo", detalhe: moeda(teto) },
           ]}
         />
-      ) : (
-        <p className="mt-1.5 text-[13px] text-nevoa">
-          Com o lance de {moeda(sim.lance)}
-          {ehLanceMinimo ? " (lance mínimo atual)" : ""}
-          {teto !== null && Math.round(teto) === Math.round(meuLance) ? ", que é também o seu teto" : ""}.
-        </p>
-      )}
+      ) : teto !== null && Math.round(teto) === Math.round(meuLance) ? (
+        <p className="mt-1.5 text-[13px] text-nevoa">Este lance é também o lance máximo para a meta.</p>
+      ) : null}
 
       <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Destaque rotulo={sim.lucro >= 0 ? "Lucro líquido" : "Prejuízo"} valor={moedaSinal(sim.lucro)} tom={sim.lucro < 0 ? "grave" : "forte"} />
@@ -100,7 +102,7 @@ export function Detalhe({
       <p className="mt-0.5 text-[12.5px] text-nevoa">Cada barra parte de onde a anterior terminou; o percentual é sobre o valor da venda.</p>
       <Cascata etapas={etapas} venda={sim.venda} />
 
-      {fin && (
+      {fin?.tipo === "banco" && (
         <div className="mt-4 rounded-xl border border-nevoa/15 px-3 py-2.5 text-[13px] leading-relaxed">
           <p className="font-semibold">Financiamento (tabela SAC)</p>
           <p className="mt-1 text-nevoa">
@@ -108,6 +110,16 @@ export function Detalhe({
             {(fin.taxaMensal * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% ao mês). Primeira parcela: {moeda(fin.primeiraParcela)}. Até a
             venda: {fin.parcelasPagas} parcelas, {moeda(fin.totalParcelas)} pagos ({moeda(fin.jurosPagos)} de juros). Saldo quitado com a venda:{" "}
             {moeda(fin.saldoDevedor)}.
+          </p>
+        </div>
+      )}
+      {fin?.tipo === "fonte" && (
+        <div className="mt-4 rounded-xl border border-nevoa/15 px-3 py-2.5 text-[13px] leading-relaxed">
+          <p className="font-semibold">Parcelamento da fonte</p>
+          <p className="mt-1 text-nevoa">
+            Entrada de {moeda(fin.entrada)} e {moeda(fin.financiado)} em {fin.prazo} parcelas mensais corrigidas a {pct(p.parcelasCorrecaoAA)} ao ano
+            (estimativa do índice). Primeira parcela: {moeda(fin.primeiraParcela)}. Até a venda: {fin.parcelasPagas} parcelas, {moeda(fin.totalParcelas)}{" "}
+            pagos. Saldo quitado com a venda, já corrigido: {moeda(fin.saldoDevedor)}. Correção total: {moeda(fin.jurosPagos)}.
           </p>
         </div>
       )}
@@ -209,8 +221,22 @@ function ContaCompleta({ modelo, sim }: { modelo: Modelo; sim: Simulacao }) {
         sim.ganhoCapital > 0 ? `${pct(p.irPct)} do ganho de capital (${moeda(sim.ganhoCapital)})` : `sem ganho de capital (${moedaSinal(sim.ganhoCapital)})`,
       valor: -sim.ir,
     },
-    { rotulo: "Lance", formula: fin ? `entrada ${moeda(fin.entrada)} + financiado ${moeda(fin.financiado)}` : "pago à vista", valor: -sim.lance },
-    ...(fin ? [{ rotulo: "Juros do financiamento", formula: `${fin.parcelasPagas} parcelas SAC a ${pct(p.jurosAA)} ao ano`, valor: -fin.jurosPagos }] : []),
+    {
+      rotulo: "Lance",
+      formula: fin ? `entrada ${moeda(fin.entrada)} + ${fin.tipo === "fonte" ? "parcelado" : "financiado"} ${moeda(fin.financiado)}` : "pago à vista",
+      valor: -sim.lance,
+    },
+    ...(fin?.tipo === "banco"
+      ? [{ rotulo: "Juros do financiamento", formula: `${fin.parcelasPagas} parcelas SAC a ${pct(p.jurosAA)} ao ano`, valor: -fin.jurosPagos }]
+      : fin?.tipo === "fonte"
+        ? [
+            {
+              rotulo: "Correção das parcelas",
+              formula: `${fin.parcelasPagas} de ${fin.prazo} parcelas e o saldo, corrigidos a ${pct(p.parcelasCorrecaoAA)} ao ano`,
+              valor: -fin.jurosPagos,
+            },
+          ]
+        : []),
     { rotulo: "Comissão do leiloeiro", formula: `${pct(p.comissaoPct)} do lance`, valor: -sim.comissao },
     { rotulo: "ITBI", formula: `${pct(p.itbiPct)} do lance`, valor: -sim.itbi },
     { rotulo: "Escritura e registro", formula: `maior entre ${pct(p.registroPct)} do lance e ${moeda(p.registroMin)}`, valor: -sim.registro },

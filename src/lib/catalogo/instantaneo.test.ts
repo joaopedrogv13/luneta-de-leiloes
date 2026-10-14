@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { buscar, criarIndice } from "./consulta";
-import { ARQUIVO_LISTA, ErroInstantaneo, lerLista, lerParte, montarDetalhe, parteDoId, pastaPadrao, VERSAO_CATALOGO } from "./instantaneo";
+import { ARQUIVO_LISTA, ErroInstantaneo, lerLista, lerParte, linkMatriculaCaixa, montarDetalhe, parteDoId, pastaPadrao, VERSAO_CATALOGO } from "./instantaneo";
 import type { Busca } from "./tipos";
 import { vizinhanca } from "./vizinhanca";
 
@@ -70,6 +70,27 @@ test("instantâneo real: lista conferida, cada id no pedaço do hash, detalhe co
   assert.equal(d.links.at(-1)!.tipo, "mapa");
   assert.match(d.links.at(-1)!.url, /^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=/);
   assert.equal(d.links[0]!.tipo, "anuncio");
+
+  // Caixa sem matrícula na coleta: o PDF no endereço padrão, antes do mapa
+  const kc = lista.itens.findIndex((i) => i.id.startsWith("caixa-"));
+  const rc = lista.itens[kc]!;
+  const pc = (await lerParte(PASTA, parteDoId(rc.id, lista.partes), lista.geradoEm)).get(rc.id)!;
+  const dc = montarDetalhe(rc, lista.enderecos[kc] ?? null, { ...pc, links: pc.links.filter((l) => l.tipo !== "matricula") });
+  const mat = dc.links.filter((l) => l.tipo === "matricula");
+  assert.equal(mat.length, 1);
+  assert.equal(mat[0]!.url, `https://venda-imoveis.caixa.gov.br/editais/matricula/${rc.uf}/${rc.id.slice(6)}.pdf`);
+  assert.equal(dc.links.at(-1)!.tipo, "mapa");
+  // com matrícula da coleta, não duplica
+  const comMat = montarDetalhe(rc, null, { ...pc, links: [{ tipo: "matricula", rotulo: "Matrícula 123", url: "https://exemplo/m.pdf" }] });
+  assert.equal(comMat.links.filter((l) => l.tipo === "matricula").length, 1);
+  assert.equal(comMat.links.find((l) => l.tipo === "matricula")!.url, "https://exemplo/m.pdf");
+});
+
+test("matrícula da Caixa: só Caixa e só id de 13 dígitos", () => {
+  const f = { id: "caixa_csv", nome: "Caixa" };
+  assert.equal(linkMatriculaCaixa({ id: "caixa-8444402395965", uf: "SP", fonte: f })!.url, "https://venda-imoveis.caixa.gov.br/editais/matricula/SP/8444402395965.pdf");
+  assert.equal(linkMatriculaCaixa({ id: "caixa-123", uf: "SP", fonte: f }), null);
+  assert.equal(linkMatriculaCaixa({ id: "lj-222141", uf: "SP", fonte: { id: "leiloesjudiciais_api", nome: "Leilões Judiciais" } }), null);
 });
 
 test("instantâneo real: MG, Lente, estado por nome, e a busca abaixo de 60 ms", { skip: !TEM }, async () => {

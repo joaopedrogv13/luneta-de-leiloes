@@ -1,7 +1,7 @@
 import { dataHora, moeda, MODALIDADE_ROTULO, normalizar, OCUPACAO_ROTULO, PRACA_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
 import type { ImovelDetalhe } from "@/lib/catalogo/tipos";
 import { Descricao } from "./Descricao";
-import { AREA_HECTARE, areaDetalhada, ehExemplo, faltaParaPraca, fraseDesagio, naoInformado, numeroDaPraca, precoPorArea, rotuloNumeroPraca } from "./formato";
+import { AREA_HECTARE, areaDetalhada, dominio, ehExemplo, faltaParaPraca, fraseDesagio, naoInformado, numeroDaPraca, precoPorArea, rotuloNumeroPraca } from "./formato";
 import {
   IconeArea,
   IconeAreaTotal,
@@ -14,6 +14,7 @@ import {
   IconeChave,
   IconeDocumento,
   IconeEtiqueta,
+  IconeExterno,
   IconeLeiloeiro,
   IconeMartelo,
   IconeParcelas,
@@ -25,18 +26,23 @@ import {
   IconeTerreno,
   IconeVaga,
 } from "./icones";
-import { Fato, GradeFatos, Secao, Subtitulo } from "./partes";
+import { Fato, GradeFatos, NovaAba, Secao, Subtitulo } from "./partes";
 
 const I = 16;
 
-function simNao(v: boolean | null, sim: string, nao: string) {
-  return v === null ? { valor: naoInformado(), vazio: true } : { valor: v ? sim : nao, vazio: false };
-}
-
-/** Quartos e vagas não se aplicam a terreno (e quartos, nem a rural/comercial quando a fonte não diz). */
+/** Quartos, vagas e área privativa não se aplicam a terreno nem a rural (e quartos, nem a comercial quando a fonte não diz). */
 const comQuartos = (i: ImovelDetalhe) => i.tipo === "apartamento" || i.tipo === "casa" || i.quartos !== null;
-const comVagas = (i: ImovelDetalhe) => i.tipo !== "terreno" || i.vagas !== null;
-const comPrivativa = (i: ImovelDetalhe) => i.tipo !== "terreno" || i.areaPrivativa !== null;
+const semUnidade = (i: ImovelDetalhe) => i.tipo === "terreno" || i.tipo === "rural";
+const comVagas = (i: ImovelDetalhe) => !semUnidade(i) || i.vagas !== null;
+const comPrivativa = (i: ImovelDetalhe) => !semUnidade(i) || i.areaPrivativa !== null;
+
+/** "Matrícula 13.941" → "13.941" (rótulo dos links de matrícula da Leilões Judiciais). */
+const numeroMatricula = (rotulo: string) => /matr[ií]cula\s+(?:n[ºo°.]*\s*)?([\d.\-/]+)/i.exec(rotulo)?.[1] ?? null;
+
+/** "a, b e c" */
+const lista = (itens: string[]) => (itens.length <= 1 ? itens.join("") : `${itens.slice(0, -1).join(", ")} e ${itens.at(-1)}`);
+
+const LINK_INTERNO = "font-medium text-latao-texto underline underline-offset-4 hover:text-luar";
 
 /**
  * Seção 1, "Resumo": a grade de fatos (o imóvel, preço, venda e pagamento, documentação e processo), todas
@@ -45,7 +51,10 @@ const comPrivativa = (i: ImovelDetalhe) => i.tipo !== "terreno" || i.areaPrivati
  */
 export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora: number }) {
   const exemplo = ehExemplo(i);
-  const area = (v: number | null, genero: "m" | "f" = "f") => (v !== null && v > 0 ? { valor: areaDetalhada(v), vazio: false } : { valor: naoInformado(genero), vazio: true });
+  // num exemplo fictício não há fonte que deixou de informar: o campo simplesmente não se aplica
+  const semDado = (genero: "m" | "f" = "m") => (exemplo ? "não se aplica (exemplo fictício)" : naoInformado(genero));
+  const simNao = (v: boolean | null, sim: string, nao: string) => (v === null ? { valor: semDado(), vazio: true } : { valor: v ? sim : nao, vazio: false });
+  const area = (v: number | null, genero: "m" | "f" = "f") => (v !== null && v > 0 ? { valor: areaDetalhada(v), vazio: false } : { valor: semDado(genero), vazio: true });
   const privativa = area(i.areaPrivativa);
   const total = area(i.areaTotal);
   const terreno = area(i.areaTerreno);
@@ -55,8 +64,19 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
   const desagio = fraseDesagio(i.desagio);
   const pracaAtual = numeroDaPraca(i.praca);
   const pracas = [...i.pracas].sort((a, b) => a.numero - b.numero);
-  // a partir de 10 ha, o preço por área sai por hectare (precoPorArea): o rótulo acompanha
-  const porArea = i.area !== null && i.area >= AREA_HECTARE ? "por hectare" : "por m²";
+  // a partir de 10 ha, o preço por área sai por hectare (precoPorArea): o rótulo acompanha. Por hectare, a conta
+  // parte do valor e da área (o R$/m² da base vem arredondado: 13,33 virava 13 e R$ 133.333/ha virava 130.000)
+  const hectare = i.area !== null && i.area >= AREA_HECTARE;
+  const porArea = hectare ? "por hectare" : "por m²";
+  const precoArea = (total: number | null, m2: number) => precoPorArea(hectare && total !== null && i.area ? total / i.area : m2, i.area);
+
+  // documentação: várias matrículas (lote com mais de uma), o PDF quando o número não vem, o site do leiloeiro
+  const linksMatricula = i.links.filter((l) => l.tipo === "matricula");
+  const numerosMatricula = [...new Set(linksMatricula.map((l) => numeroMatricula(l.rotulo)).filter((n): n is string => !!n))];
+  if (i.matricula && !numerosMatricula.includes(i.matricula)) numerosMatricula.unshift(i.matricula);
+  const textoMatricula =
+    numerosMatricula.length > 1 ? `${numerosMatricula.length} matrículas: ${lista(numerosMatricula)}` : i.matricula ? `Matrícula ${i.matricula}` : null;
+  const siteLeiloeiro = i.leiloeiro ? null : i.links.find((l) => l.tipo === "leiloeiro");
 
   return (
     <Secao id="resumo" titulo="Resumo do imóvel" sobretitulo="Tudo o que a fonte informa">
@@ -72,7 +92,7 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
               <Fato
                 icone={<IconeQuarto tamanho={I} />}
                 rotulo="Quartos"
-                valor={i.quartos !== null ? String(i.quartos) : naoInformado()}
+                valor={i.quartos !== null ? String(i.quartos) : semDado()}
                 vazio={i.quartos === null}
               />
             )}
@@ -80,7 +100,7 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
               <Fato
                 icone={<IconeVaga tamanho={I} />}
                 rotulo="Vagas de garagem"
-                valor={i.vagas !== null ? String(i.vagas) : naoInformado("f")}
+                valor={i.vagas !== null ? String(i.vagas) : semDado("f")}
                 vazio={i.vagas === null}
               />
             )}
@@ -94,7 +114,7 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
             <Fato
               icone={<IconeAvaliacao tamanho={I} />}
               rotulo="Avaliação"
-              valor={i.avaliacao !== null ? moeda(i.avaliacao) : naoInformado("f")}
+              valor={i.avaliacao !== null ? moeda(i.avaliacao) : semDado("f")}
               vazio={i.avaliacao === null}
             />
             <Fato
@@ -106,13 +126,13 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
             <Fato
               icone={<IconeRegua tamanho={I} />}
               rotulo={`Lance ${porArea}`}
-              valor={i.lanceM2 !== null ? precoPorArea(i.lanceM2, i.area) : "sem a área, não dá para calcular"}
+              valor={i.lanceM2 !== null ? precoArea(i.lance, i.lanceM2) : "sem a área, não dá para calcular"}
               vazio={i.lanceM2 === null}
             />
             <Fato
               icone={<IconeRegua tamanho={I} />}
               rotulo={`Avaliação ${porArea}`}
-              valor={i.avaliacaoM2 !== null ? precoPorArea(i.avaliacaoM2, i.area) : "sem a área ou a avaliação, não dá para calcular"}
+              valor={i.avaliacaoM2 !== null ? precoArea(i.avaliacao, i.avaliacaoM2) : "sem a área ou a avaliação, não dá para calcular"}
               vazio={i.avaliacaoM2 === null}
             />
           </GradeFatos>
@@ -136,7 +156,7 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
             <Fato
               icone={<IconeCalendario tamanho={I} />}
               rotulo="Praça atual"
-              valor={i.praca ? PRACA_ROTULO[i.praca] : naoInformado("f")}
+              valor={i.praca ? PRACA_ROTULO[i.praca] : semDado("f")}
               vazio={!i.praca}
               nota={i.dataPraca ? dataHora(i.dataPraca) : i.praca ? "data não informada pela fonte" : undefined}
             />
@@ -146,14 +166,14 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
             <Fato
               icone={<IconeChave tamanho={I} />}
               rotulo="Ocupação"
-              valor={i.ocupacao ? OCUPACAO_ROTULO[i.ocupacao] : naoInformado("f")}
+              valor={i.ocupacao ? OCUPACAO_ROTULO[i.ocupacao] : semDado("f")}
               vazio={!i.ocupacao}
               nota={i.ocupacao ? undefined : "Na dúvida, considere que pode estar ocupado"}
             />
             <Fato
               icone={<IconeBalanca tamanho={I} />}
               rotulo="Natureza"
-              valor={i.judicial === null ? naoInformado("f") : i.judicial ? "Judicial" : "Extrajudicial"}
+              valor={i.judicial === null ? semDado("f") : i.judicial ? "Judicial" : "Extrajudicial"}
               vazio={i.judicial === null}
               nota={i.judicial === null ? undefined : i.judicial ? "Venda determinada pela Justiça" : "Venda direta do credor ou do dono"}
             />
@@ -219,19 +239,40 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
           <GradeFatos rotulo="Documentação e processo">
             <Fato
               icone={<IconeDocumento tamanho={I} />}
-              rotulo="Matrícula e cartório"
-              valor={i.matricula || i.cartorio ? [i.matricula ? `Matrícula ${i.matricula}` : null, i.cartorio].filter(Boolean).join(" · ") : naoInformado("f")}
-              vazio={!i.matricula && !i.cartorio}
+              rotulo={numerosMatricula.length > 1 ? "Matrículas e cartório" : "Matrícula e cartório"}
+              valor={textoMatricula || i.cartorio ? [textoMatricula, i.cartorio].filter(Boolean).join(" · ") : linksMatricula.length > 0 ? "Número não informado pela fonte" : semDado("f")}
+              vazio={!textoMatricula && !i.cartorio}
+              nota={
+                linksMatricula.length > 0 ? (
+                  <a href="#documentos" className={LINK_INTERNO}>
+                    {linksMatricula.length > 1 ? `PDFs das ${linksMatricula.length} matrículas` : "PDF da matrícula"} em Documentos
+                  </a>
+                ) : undefined
+              }
             />
-            <Fato icone={<IconePasta tamanho={I} />} rotulo="Processo" valor={i.numeroProcesso ?? naoInformado()} vazio={!i.numeroProcesso} />
-            <Fato icone={<IconeLeiloeiro tamanho={I} />} rotulo="Leiloeiro" valor={i.leiloeiro ?? naoInformado()} vazio={!i.leiloeiro} />
-            <Fato icone={<IconePredio tamanho={I} />} rotulo="Comitente (quem vende)" valor={i.comitente ?? naoInformado()} vazio={!i.comitente} />
+            <Fato icone={<IconePasta tamanho={I} />} rotulo="Processo" valor={i.numeroProcesso ?? semDado()} vazio={!i.numeroProcesso} />
+            <Fato
+              icone={<IconeLeiloeiro tamanho={I} />}
+              rotulo="Leiloeiro"
+              valor={i.leiloeiro ?? (siteLeiloeiro ? "Nome não informado pela fonte" : semDado())}
+              vazio={!i.leiloeiro}
+              nota={
+                siteLeiloeiro ? (
+                  <a href={siteLeiloeiro.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 ${LINK_INTERNO}`}>
+                    Site: {dominio(siteLeiloeiro.url)}
+                    <IconeExterno tamanho={13} />
+                    <NovaAba />
+                  </a>
+                ) : undefined
+              }
+            />
+            <Fato icone={<IconePredio tamanho={I} />} rotulo="Comitente (quem vende)" valor={i.comitente ?? semDado()} vazio={!i.comitente} />
           </GradeFatos>
         </div>
 
         <div>
           <Subtitulo className="mb-3">Descrição do anúncio</Subtitulo>
-          {i.descricao ? <Descricao texto={i.descricao} /> : <p className="text-[15px] text-nevoa">Descrição {naoInformado("f")}.</p>}
+          {i.descricao ? <Descricao texto={i.descricao} /> : <p className="text-[15px] text-nevoa">Descrição {semDado("f")}.</p>}
         </div>
       </div>
     </Secao>

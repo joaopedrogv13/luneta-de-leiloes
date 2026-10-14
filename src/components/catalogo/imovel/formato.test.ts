@@ -166,3 +166,17 @@ test("legenda do mapa mini conforme a precisão", () => {
   assert.equal(legendaPosicao(null), "Posição aproximada (centro da cidade)");
   assert.equal(legendaPosicao("rua"), "Posição aproximada (pela rua)");
 });
+
+test("concordância com o tipo: casas no feminino (\"das casas\", \"todas as\", \"nenhuma das\")", () => {
+  const casa = (extra: Partial<ReferenciaM2> = {}) => ref({ tipo: "casa", ...extra });
+  assert.match(fraseComparacao(casa())!, / das casas em leilão /);
+  assert.doesNotMatch(fraseComparacao(casa())!, /dos casas/);
+  assert.match(frasePercentil(casa())!, /de 78% das casas em leilão/);
+  assert.match(frasePercentil(casa({ amostra: 7, percentilLance: 100 }))!, /de todas as 7 casas em leilão/);
+  assert.match(frasePercentil(casa({ amostra: 7, percentilLance: 0 }))!, /^Por m², nenhuma das 7 casas em leilão/);
+  assert.match(frasePercentil(casa({ amostra: 476, percentilLance: 0 }))!, /praticamente nenhuma das casas/);
+  assert.match(frasePercentil(casa({ amostra: 476, percentilLance: 100 }))!, /praticamente todas as casas/);
+  // os outros tipos seguem no masculino
+  assert.match(frasePercentil(ref({ tipo: "terreno", amostra: 7, percentilLance: 100 }))!, /todos os 7 terrenos/);
+  assert.match(fraseComparacao(ref({ tipo: "comercial" }))!, / dos imóveis comerciais /);
+});

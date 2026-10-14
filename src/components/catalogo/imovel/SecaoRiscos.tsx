@@ -53,7 +53,7 @@ export function SecaoRiscos({ imovel: i, plano, selosDesligados }: { imovel: Imo
   if (plano === "lente") {
     return (
       <Secao id="riscos" titulo="Riscos e alertas" sobretitulo="Análise automática">
-        <div id="tags" className="scroll-mt-[76px] overflow-hidden rounded-3xl border border-latao/40 bg-tinta">
+        <div id="tags" className="scroll-mt-3 overflow-hidden rounded-3xl border border-latao/40 bg-tinta">
           <div
             aria-hidden="true"
             className="flex h-[92px] flex-wrap content-start gap-2 overflow-hidden px-6 pt-6 blur-[3px] select-none [mask-image:linear-gradient(180deg,#000_40%,transparent)] sm:px-8"
@@ -93,7 +93,7 @@ export function SecaoRiscos({ imovel: i, plano, selosDesligados }: { imovel: Imo
       sobretitulo="Análise automática"
       descricao="Toque ou clique numa tag para ver o que ela quer dizer, o trecho que a originou e a confiança da leitura."
     >
-      <div id="tags" className="scroll-mt-[76px] space-y-6">
+      <div id="tags" className="scroll-mt-3 space-y-6">
         {grupos.length === 0 ? (
           <p className="rounded-2xl border border-nevoa/15 bg-tinta px-4 py-3.5 text-[14px] leading-relaxed text-nevoa">
             Nenhuma tag confirmada nos dados da fonte{revisao.length ? "; veja as em revisão abaixo" : ""}. Isso não quer dizer que não haja riscos: confira o edital.

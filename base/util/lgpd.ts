@@ -446,6 +446,15 @@ const PALAVRAS_COMUNS = new Set(
   ).split(" "),
 );
 
+/** Tipos de logradouro: a sequência de nomes logo depois é nome de rua ("Rua Antonio Castelucci, 100"), não de pessoa. */
+const LOGRADOUROS = new Set("RUA R AV AVENIDA ALAMEDA AL TRAVESSA TV TRAV ESTRADA ESTR RODOVIA ROD PRACA LARGO VIA VIELA BECO PASSAGEM LADEIRA".split(" "));
+/** Títulos que aparecem entre o logradouro e o nome ("Rua Dr. Arnaldo", "Av. Pres. Vargas"): mantêm o logradouro valendo. */
+const TITULOS_DE_RUA = new Set(
+  "DR DRA PROF PROFA ENG ENGENHEIRO CEL CORONEL GAL GENERAL PE PADRE DOM SAO SANTA SANTO STA STO PRES PRESIDENTE GOV GOVERNADOR MAL MARECHAL ALM ALMIRANTE BRIG CAP CAPITAO TEN TENENTE SGT SARGENTO DEP DEPUTADO SEN SENADOR VER VEREADOR".split(
+    " ",
+  ),
+);
+
 function palavraDeNomeSolto(palavra: string): ClassePalavra {
   if (PARTICULAS.has(palavra.toLowerCase())) return "particula";
   // Inicial maiúscula e o resto com minúscula ("Maria", "D'Ávila"): caixa alta fica com os gatilhos.
@@ -469,23 +478,37 @@ export function mascararNomesSoltos(texto: string): string {
   let fim = -1;
   let palavras = 0;
   let fimAnterior = -1;
+  // depois de "Rua", "Av.", "Travessa"... (e de títulos como "Dr."), o nome que vem é de logradouro
+  let aposLogradouro = false;
+  let nomeDeRua = false;
   const fechar = (): void => {
-    if (palavras >= 2) intervalos.push([inicio, fim]);
+    if (palavras >= 2 && !nomeDeRua) intervalos.push([inicio, fim]);
     inicio = -1;
     fim = -1;
     palavras = 0;
+    nomeDeRua = false;
   };
   for (const achado of texto.matchAll(/\p{L}[\p{L}\p{M}'’-]*/gu)) {
     const comeco = achado.index;
+    const entre = fimAnterior < 0 ? "" : texto.slice(fimAnterior, comeco);
     // Só espaço entre uma palavra e a seguinte: vírgula, ponto ou parêntese encerram o nome.
-    if (fimAnterior < 0 || !/^[ \t]+$/.test(texto.slice(fimAnterior, comeco))) fechar();
+    if (fimAnterior < 0 || !/^[ \t]+$/.test(entre)) fechar();
+    // vírgula, ponto e vírgula, parêntese ou quebra de linha encerram o logradouro ("Rua X, Maria Silva")
+    if (/[,;()\n]/.test(entre)) aposLogradouro = false;
     fimAnterior = comeco + achado[0].length;
+    const chave = semAcento(achado[0]).toUpperCase();
     const classe = palavraDeNomeSolto(achado[0]);
     if (classe === "nome") {
-      if (inicio < 0) inicio = comeco;
+      if (inicio < 0) {
+        inicio = comeco;
+        nomeDeRua = aposLogradouro;
+      }
       fim = fimAnterior;
       palavras++;
     } else if (classe === "outra" || palavras === 0) fechar();
+    if (LOGRADOUROS.has(chave)) aposLogradouro = true;
+    else if (classe === "nome" && nomeDeRua) aposLogradouro = true;
+    else if (!TITULOS_DE_RUA.has(chave) && classe !== "particula") aposLogradouro = false;
   }
   fechar();
   return aplicarMascara(texto, intervalos, MASCARA.nome);

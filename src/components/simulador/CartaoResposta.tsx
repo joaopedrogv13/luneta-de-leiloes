@@ -1,9 +1,9 @@
 "use client";
 
-import { multiplicador, type Modelo } from "@/lib/simulador/premissas";
+import { LIMITES, multiplicador, type Modelo } from "@/lib/simulador/premissas";
 import { CENARIOS, type Celula, type Meta, type Simulacao, type TipoMeta } from "@/lib/simulador/tipos";
-import { CampoNumero, FOCO_RESULTADO, IconeAtencao, IconeOk, SeletorInline } from "./controles";
-import { meses, moeda, moedaCurta, moedaCurtaSinal, pct, porArea } from "./formato";
+import { CampoNumero, CampoPedido, FOCO_RESULTADO, IconeAtencao, IconeInfo, IconeOk, SeletorInline } from "./controles";
+import { juntar, meses, moeda, moedaCurta, moedaCurtaSinal, pct, porArea } from "./formato";
 
 export const CENARIO_ROTULO = { conservador: "Conservador", base: "Base", otimista: "Otimista" } as const;
 
@@ -29,7 +29,9 @@ export function baseDaVenda(modelo: Modelo) {
 
 /**
  * O cartão-resposta do topo: "Seu lance máximo: R$ X", com a meta, o prazo e o cenário editáveis na própria
- * frase, a régua lance mínimo × teto e o resultado com o lance mínimo atual.
+ * frase, a régua lance mínimo × lance máximo e o resultado com o lance mínimo atual. Quando a análise aponta
+ * dívidas que passam ao comprador e a pessoa ainda não disse quanto são, o número sai marcado "sem as dívidas"
+ * e o pedido do valor fica ali mesmo, no lugar do ✓ (um ✓ verde ignorando uma dívida apontada enganaria).
  */
 export function CartaoResposta({
   modelo,
@@ -39,6 +41,7 @@ export function CartaoResposta({
   comLanceMinimo,
   aoMudarMeta,
   aoMudarCelula,
+  aoInformarDividas,
 }: {
   modelo: Modelo;
   meta: Meta;
@@ -47,12 +50,16 @@ export function CartaoResposta({
   comLanceMinimo: Simulacao;
   aoMudarMeta: (m: Meta) => void;
   aoMudarCelula: (c: Celula) => void;
+  /** a pessoa informou o valor das dívidas apontadas (0 = conferiu e não há) */
+  aoInformarDividas: (valor: number) => void;
 }) {
   const p = modelo.premissas;
   const lance = modelo.entrada.lance;
   const prazo = p.prazos[celula.prazo];
   const venda = (p.valorVenda ?? 0) * multiplicador(p, celula.cenario);
   const folga = teto !== null ? teto - lance : null;
+  // dívidas apontadas pela análise e ainda sem valor: a conta não as inclui
+  const semDividas = modelo.dividasApontadas.length > 0 && modelo.ajustes.dividas === undefined;
 
   const trocarTipo = (tipo: TipoMeta) => {
     if (tipo === meta.tipo) return;
@@ -65,8 +72,9 @@ export function CartaoResposta({
       ? `Nenhum lance atinge ${metaPorExtenso(meta)} vendendo em ${meses(prazo)} no cenário ${CENARIO_ROTULO[celula.cenario].toLowerCase()}.`
       : `Lance máximo: ${moeda(teto)}, para ${metaPorExtenso(meta)} vendendo em ${meses(prazo)} no cenário ${CENARIO_ROTULO[celula.cenario].toLowerCase()}. ` +
         (folga! >= 0
-          ? `O lance mínimo está ${moeda(folga!)} abaixo do seu teto.`
-          : `O lance mínimo está ${moeda(-folga!)} acima do seu teto: não atinge sua meta.`);
+          ? `O lance mínimo está ${moeda(folga!)} abaixo do lance máximo.`
+          : `O lance mínimo está ${moeda(-folga!)} acima do lance máximo: não atinge sua meta.`) +
+        (semDividas ? ` A conta ainda não inclui as dívidas apontadas: ${juntar(modelo.dividasApontadas)}.` : "");
 
   return (
     <div className="@container relative overflow-hidden rounded-3xl border border-latao/45 bg-tinta p-5 sm:p-7 in-data-[theme=light]:shadow-[0_1px_2px_rgba(15,24,48,.05),0_12px_32px_rgba(15,24,48,.07)]">
@@ -78,8 +86,14 @@ export function CartaoResposta({
         {resumo}
       </p>
 
-      <p id={FOCO_RESULTADO} tabIndex={-1} className="text-[13px] font-semibold tracking-[0.12em] text-nevoa uppercase">
-        Seu lance máximo
+      <p id={FOCO_RESULTADO} tabIndex={-1} className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+        <span className="text-[13px] font-semibold tracking-[0.12em] text-nevoa uppercase">Seu lance máximo</span>
+        {semDividas && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-aten/55 bg-aten/12 px-2 py-0.5 text-[11.5px] leading-tight font-semibold text-luar">
+            <IconeAtencao className="size-3 text-aten" />
+            sem as dívidas
+          </span>
+        )}
       </p>
       <p
         className="mt-2 font-display leading-none font-bold tracking-[-0.035em] [--max:44px] sm:[--max:60px]"
@@ -131,7 +145,7 @@ export function CartaoResposta({
         depois da compra.
       </p>
 
-      <Regua lance={lance} teto={teto} />
+      <Regua lance={lance} teto={teto} pendente={semDividas} />
 
       <div className="flex gap-2.5 text-[14px] leading-relaxed">
         {teto === null ? (
@@ -142,11 +156,20 @@ export function CartaoResposta({
               <span className="text-nevoa">Tente uma meta menor, outro prazo ou outro cenário, ou revise as premissas abaixo.</span>
             </p>
           </>
+        ) : folga! >= 0 && semDividas ? (
+          <>
+            <IconeInfo className="mt-0.5 text-nevoa" />
+            <p>
+              <span className="text-nevoa">Sem contar as dívidas, o lance mínimo atual ({moeda(lance)}) fica </span>
+              <strong className="font-semibold">{moeda(folga!)} abaixo do lance máximo</strong>
+              <span className="text-nevoa">. Informe as dívidas abaixo para saber se ainda dá.</span>
+            </p>
+          </>
         ) : folga! >= 0 ? (
           <>
             <IconeOk className="mt-1 size-3.5 text-pos" />
             <p>
-              O lance mínimo atual ({moeda(lance)}) está <strong className="font-semibold">{moeda(folga!)} abaixo do seu teto</strong>
+              O lance mínimo atual ({moeda(lance)}) está <strong className="font-semibold">{moeda(folga!)} abaixo do lance máximo</strong>
               <span className="text-nevoa">{lance > 0 ? `: dá para subir até ${pct(teto! / lance - 1, 0)} na disputa e ainda atingir a meta.` : "."}</span>
             </p>
           </>
@@ -154,32 +177,58 @@ export function CartaoResposta({
           <>
             <IconeAtencao className="mt-0.5 text-aten" />
             <p>
-              O lance mínimo atual ({moeda(lance)}) está <strong className="font-semibold">{moeda(-folga!)} acima do seu teto</strong>
-              <span className="text-nevoa">: não atinge sua meta neste cenário.</span>
+              O lance mínimo atual ({moeda(lance)}) está <strong className="font-semibold">{moeda(-folga!)} acima do lance máximo</strong>
+              <span className="text-nevoa">
+                : não atinge sua meta neste cenário. Com ele, o retorno fica em {pct(comLanceMinimo.roiAA)} ao ano
+                {meta.tipo === "roi_aa" ? ` (meta: ${pct(meta.valor)})` : ""}.
+              </span>
             </p>
           </>
         )}
       </div>
 
+      {semDividas && (
+        <div className="mt-4 rounded-2xl border border-aten/45 bg-aten/10 p-3.5 sm:p-4">
+          <p className="flex gap-2.5 text-[13.5px] leading-relaxed">
+            <IconeAtencao className="mt-0.5 text-aten" />
+            <span>
+              <strong className="font-semibold">Falta o valor das dívidas.</strong> A análise aponta {juntar(modelo.dividasApontadas)}, e este lance máximo
+              ainda não as desconta. Informe quanto passa a você (está no edital); se não houver, informe 0.
+            </span>
+          </p>
+          <CampoPedido
+            placeholder="valor das dívidas"
+            prefixo="R$"
+            min={0}
+            max={LIMITES.dividas[1]}
+            ariaLabel="Valor das dívidas que passam ao comprador"
+            aoConfirmar={aoInformarDividas}
+            className="mt-3 pl-[26px]"
+            larguraCampo="w-full sm:w-52"
+          />
+        </div>
+      )}
+
       <div className="mt-5 border-t border-nevoa/15 pt-4">
         <p className="text-[12px] font-medium text-nevoa">Com o lance mínimo atual ({moedaCurta(lance)}), neste cenário e prazo:</p>
-        <dl className="mt-2 grid grid-cols-3 gap-2">
+        {/* abaixo de 360 px, três números de "−R$ 1,5 mi" não cabem lado a lado: o investimento desce */}
+        <dl className="mt-2 grid grid-cols-3 gap-2 max-[359px]:grid-cols-2">
           <Numero
             rotulo={comLanceMinimo.lucro >= 0 ? "Lucro" : "Prejuízo"}
             valor={moedaCurtaSinal(comLanceMinimo.lucro)}
             tom={comLanceMinimo.lucro < 0 ? "grave" : undefined}
           />
           <Numero rotulo="Retorno ao ano" valor={pct(comLanceMinimo.roiAA)} tom={comLanceMinimo.roiAA < 0 ? "grave" : undefined} />
-          <Numero rotulo="Investimento" valor={moedaCurta(comLanceMinimo.capital)} />
+          <Numero rotulo="Investimento" valor={moedaCurta(comLanceMinimo.capital)} className="max-[359px]:col-span-2" />
         </dl>
       </div>
     </div>
   );
 }
 
-function Numero({ rotulo, valor, tom }: { rotulo: string; valor: string; tom?: "grave" }) {
+function Numero({ rotulo, valor, tom, className = "" }: { rotulo: string; valor: string; tom?: "grave"; className?: string }) {
   return (
-    <div className="min-w-0">
+    <div className={`min-w-0 ${className}`}>
       <dt className="text-[12px] leading-tight text-nevoa">{rotulo}</dt>
       <dd className={`mt-1 font-display text-[18px] leading-tight font-bold tracking-[-0.01em] sm:text-[20px] ${tom === "grave" ? "text-grave-texto" : ""}`}>
         {valor}
@@ -188,8 +237,8 @@ function Numero({ rotulo, valor, tom }: { rotulo: string; valor: string; tom?: "
   );
 }
 
-/** Régua 0 → teto, com o lance mínimo marcado: a folga (ou o excesso) aparece entre os dois. Só visual (o texto ao lado diz o mesmo). */
-function Regua({ lance, teto }: { lance: number; teto: number | null }) {
+/** Régua 0 → lance máximo, com o lance mínimo marcado: a folga (ou o excesso) aparece entre os dois. Só visual (o texto ao lado diz o mesmo). */
+function Regua({ lance, teto, pendente }: { lance: number; teto: number | null; pendente: boolean }) {
   const max = Math.max(lance, teto ?? 0) * 1.15 || 1;
   const pos = (v: number) => Math.min(100, Math.max(0, (v / max) * 100));
   const alinhar = (p: number) => (p > 72 ? "-translate-x-full text-right" : p < 18 ? "" : "-translate-x-1/2 text-center");
@@ -199,12 +248,15 @@ function Regua({ lance, teto }: { lance: number; teto: number | null }) {
     <div aria-hidden="true" className="relative mt-7 mb-6 select-none">
       {pt !== null && (
         <div className={`absolute bottom-full mb-2 text-[11.5px] leading-tight whitespace-nowrap ${alinhar(pt)}`} style={{ left: `${pt}%` }}>
-          <span className="font-semibold text-latao-texto">Seu teto</span> <span className="tabular-nums">{moedaCurta(teto!)}</span>
+          <span className="font-semibold text-latao-texto">Lance máximo</span> <span className="tabular-nums">{moedaCurta(teto!)}</span>
         </div>
       )}
       <div className="relative h-2.5 rounded-full bg-nevoa/20">
         {pt !== null && <div className="absolute inset-y-0 left-0 rounded-full bg-latao/30" style={{ width: `${pt}%` }} />}
-        {pt !== null && lance <= teto! && <div className="absolute inset-y-0 rounded-r-full bg-pos/60" style={{ left: `${pl}%`, width: `${pt - pl}%` }} />}
+        {/* a folga só fica verde quando a conta está completa (com dívidas apontadas sem valor, fica neutra) */}
+        {pt !== null && lance <= teto! && (
+          <div className={`absolute inset-y-0 rounded-r-full ${pendente ? "bg-nevoa/45" : "bg-pos/60"}`} style={{ left: `${pl}%`, width: `${pt - pl}%` }} />
+        )}
         {pt !== null && lance > teto! && (
           <div
             className="absolute inset-y-0 rounded-r-full bg-[repeating-linear-gradient(135deg,var(--grave)_0_3px,transparent_3px_6px)] opacity-80"

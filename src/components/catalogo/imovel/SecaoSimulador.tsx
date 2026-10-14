@@ -11,7 +11,7 @@ import { useImovel } from "./ContextoImovel";
 export function SecaoSimulador({ imovel, referencias }: { imovel: EntradaSimulador; referencias: ReferenciaM2[] }) {
   const { plano, pedirLuneta } = useImovel();
   return (
-    <div id="simulador" data-secao-imovel="simulador" className="scroll-mt-[76px]">
+    <div id="simulador" data-secao-imovel="simulador" className="scroll-mt-3">
       <Simulador
         imovel={imovel}
         referencias={referencias}

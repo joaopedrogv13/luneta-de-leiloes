@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useLayoutEffect, useRef, useState } from "react";
+import { NOTA_LGPD, temMascara, TextoMascarado } from "@/components/catalogo/tags/TextoMascarado";
 
 /** Altura da descrição fechada (~7 linhas de 15px × 1,65). */
 const FECHADA = 172;
@@ -43,7 +44,7 @@ export function Descricao({ texto }: { texto: string }) {
           cortada ? "[mask-image:linear-gradient(180deg,#000_62%,transparent)]" : ""
         }`}
       >
-        {texto}
+        <TextoMascarado texto={texto} />
       </div>
       {longa && (
         <button
@@ -57,6 +58,7 @@ export function Descricao({ texto }: { texto: string }) {
           <span className="sr-only"> da descrição</span>
         </button>
       )}
+      {temMascara(texto) && <p className="mt-2 max-w-[68ch] text-[12.5px] leading-relaxed text-nevoa">{NOTA_LGPD}</p>}
     </div>
   );
 }

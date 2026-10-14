@@ -187,3 +187,16 @@ test("máscara reforçada: sequência de nomes sem gatilho, palavras de edital f
   assert.equal(uma, "[NOME] moram no local.");
   assert.equal(mascararNomesSoltos(uma), uma, "idempotente");
 });
+
+test("nomes soltos: nome de rua depois de Rua, Av., Travessa (e de títulos como Dr.) não é nome de pessoa", () => {
+  assert.equal(mascararNomesSoltos("prédio residencial - Rua Antonio Castelucci, 100"), "prédio residencial - Rua Antonio Castelucci, 100");
+  assert.equal(mascararNomesSoltos("casa na Av. Presidente Getúlio Vargas, 50, ocupada"), "casa na Av. Presidente Getúlio Vargas, 50, ocupada");
+  assert.equal(mascararNomesSoltos("Travessa Dr. Arnaldo Sampaio, 12"), "Travessa Dr. Arnaldo Sampaio, 12");
+  assert.equal(mascararNomesSoltos("Rua das Flores, 10"), "Rua das Flores, 10");
+  // o logradouro acaba na vírgula: o nome de pessoa depois dela segue mascarado
+  assert.equal(
+    mascararNomesSoltos("Rua Antonio Castelucci, 100, ocupado por Lúcia Ferreira Prado."),
+    "Rua Antonio Castelucci, 100, ocupado por [NOME].",
+  );
+  assert.equal(mascararNomesSoltos("Maria Silva reside na Rua Ana Costa."), "[NOME] reside na Rua Ana Costa.");
+});

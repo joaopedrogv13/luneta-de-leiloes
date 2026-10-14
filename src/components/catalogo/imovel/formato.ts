@@ -93,6 +93,24 @@ export const TIPO_NA_FRASE: Record<TipoImovel, string> = {
   outro: "imóveis do mesmo tipo",
 };
 
+/** Só "casas" é feminino entre os tipos ("das casas", "todas as 7 casas", "nenhuma das casas"). */
+const TIPO_FEMININO: ReadonlySet<TipoImovel> = new Set(["casa"]);
+
+/**
+ * Artigos e pronomes que concordam com o tipo: `dos`/`das`, `todos`/`todas`, `nenhum`/`nenhuma`, `outros`/`outras`.
+ * `concorda("casa").dos` → "das".
+ */
+export function concorda(tipo: TipoImovel) {
+  const f = TIPO_FEMININO.has(tipo);
+  return {
+    dos: f ? "das" : "dos",
+    os: f ? "as" : "os",
+    todos: f ? "todas" : "todos",
+    nenhum: f ? "nenhuma" : "nenhum",
+    outros: f ? "outras" : "outros",
+  };
+}
+
 /** Estados que pedem "do"/"da" ("no estado do Paraná", "da Bahia"); os outros, "de" ("de São Paulo"). */
 const ESTADO_DO = new Set(["AC", "AP", "AM", "CE", "DF", "ES", "MA", "PA", "PR", "PI", "RJ", "RN", "RS", "TO"]);
 const ESTADO_DA = new Set(["BA", "PB"]);
@@ -135,7 +153,7 @@ export function fraseComparacao(r: ReferenciaM2): string | null {
   const faixa = r.avaliacaoM2 ?? r.lanceM2;
   if (!faixa || faixa.mediana <= 0) return null;
   const doQue = r.avaliacaoM2 ? "a mediana de avaliação" : "a mediana dos lances";
-  const quem = `dos ${TIPO_NA_FRASE[r.tipo]} em leilão ${ondeRecorte(r)} (n = ${numero(r.amostra)})`;
+  const quem = `${concorda(r.tipo).dos} ${TIPO_NA_FRASE[r.tipo]} em leilão ${ondeRecorte(r)} (n = ${numero(r.amostra)})`;
   const dif = lance / faixa.mediana - 1;
   const pct = Math.round(Math.abs(dif) * 100);
   if (pct < 2) return `O lance por m² deste imóvel é praticamente igual ${doQue.replace(/^a /, "à ")} ${quem}.`;
@@ -151,19 +169,20 @@ export function frasePercentil(r: ReferenciaM2): string | null {
   const p = r.percentilLance;
   if (p === null) return null;
   const tipos = TIPO_NA_FRASE[r.tipo];
+  const g = concorda(r.tipo);
   const onde = ondeRecorte(r);
   const exato = r.amostra < 200;
   if (p >= 100) {
     return exato
-      ? `Por m², o lance deste imóvel é menor que o de todos os ${numero(r.amostra)} ${tipos} em leilão ${onde}.`
-      : `Por m², o lance deste imóvel é menor que o de praticamente todos os ${tipos} em leilão ${onde}.`;
+      ? `Por m², o lance deste imóvel é menor que o de ${g.todos} ${g.os} ${numero(r.amostra)} ${tipos} em leilão ${onde}.`
+      : `Por m², o lance deste imóvel é menor que o de praticamente ${g.todos} ${g.os} ${tipos} em leilão ${onde}.`;
   }
   if (p <= 0) {
     return exato
-      ? `Por m², nenhum dos ${numero(r.amostra)} ${tipos} em leilão ${onde} tem lance maior que o deste imóvel.`
-      : `Por m², praticamente nenhum dos ${tipos} em leilão ${onde} tem lance maior que o deste imóvel.`;
+      ? `Por m², ${g.nenhum} ${g.dos} ${numero(r.amostra)} ${tipos} em leilão ${onde} tem lance maior que o deste imóvel.`
+      : `Por m², praticamente ${g.nenhum} ${g.dos} ${tipos} em leilão ${onde} tem lance maior que o deste imóvel.`;
   }
-  return `Por m², o lance deste imóvel é menor que o de ${numero(p)}% dos ${tipos} em leilão ${onde}.`;
+  return `Por m², o lance deste imóvel é menor que o de ${numero(p)}% ${g.dos} ${tipos} em leilão ${onde}.`;
 }
 
 /** Quantas vezes fora da faixa do meio (p25–p75) um valor precisa estar para ser "muito fora" da região. */

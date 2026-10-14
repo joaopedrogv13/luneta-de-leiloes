@@ -4,6 +4,7 @@ import { SEVERIDADE_ROTULO } from "@/lib/catalogo/rotulos";
 import type { TagDetalhe, TagResumo } from "@/lib/catalogo/tipos";
 import { IconeFechar, IconeSeta } from "../cartoes/icones";
 import { CONFIANCA_NIVEL, CONFIANCA_ROTULO, conteudoTag, origemTag, partesEvidencia } from "./conteudo";
+import { temMascara, TextoMascarado } from "./TextoMascarado";
 
 /** Cor do texto e do selo redondo por gravidade (os mesmos papéis da Tag). */
 export const TOM_SEVERIDADE = {
@@ -96,13 +97,20 @@ export function InfoTag({
           <p className="text-[11px] leading-none font-semibold tracking-[0.12em] text-nevoa uppercase">Por que este imóvel tem esta tag</p>
           {evidencia.nota || evidencia.trecho ? (
             <>
-              {evidencia.nota && <p className="mt-2.5 text-[13px] leading-relaxed break-words text-luar">{evidencia.nota}</p>}
+              {evidencia.nota && (
+                <p className="mt-2.5 text-[13px] leading-relaxed break-words text-luar">
+                  <TextoMascarado texto={evidencia.nota} />
+                </p>
+              )}
               {evidencia.trecho && (
                 <blockquote className="mt-2.5 border-l-2 border-latao/70 pl-3 text-[13px] leading-relaxed break-words text-luar">
                   <span aria-hidden="true">“</span>
-                  {evidencia.trecho}
+                  <TextoMascarado texto={evidencia.trecho} />
                   <span aria-hidden="true">”</span>
                 </blockquote>
+              )}
+              {temMascara(`${evidencia.nota ?? ""} ${evidencia.trecho ?? ""}`) && (
+                <p className="mt-2 text-[12px] leading-snug text-nevoa">Nomes e documentos de pessoas foram omitidos pela Luneta (LGPD).</p>
               )}
             </>
           ) : (

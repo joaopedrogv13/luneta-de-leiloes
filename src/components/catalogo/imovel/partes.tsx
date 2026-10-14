@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 /**
  * Peças de layout da página do imóvel (sem estado: servem ao servidor e ao navegador).
  * Cada seção é um <section> com h2 (id `<id>-titulo`, focável por programa: o foco volta para ele depois de
- * "Assinar Luneta") e margem de rolagem para não ficar sob o cabeçalho e a navegação fixos.
+ * "Assinar Luneta"). Uma âncora para o título 12 px abaixo da navegação fixa (o resto vem do scroll-padding
+ * que RolagemSegura mede).
  */
 export function Secao({
   id,
@@ -21,7 +22,7 @@ export function Secao({
   className?: string;
 }) {
   return (
-    <section id={id} data-secao-imovel={id} aria-labelledby={`${id}-titulo`} className={`scroll-mt-[76px] ${className}`}>
+    <section id={id} data-secao-imovel={id} aria-labelledby={`${id}-titulo`} className={`scroll-mt-3 ${className}`}>
       {sobretitulo && <p className="eyebrow mb-2.5 leading-[1.4]!">{sobretitulo}</p>}
       <h2
         id={`${id}-titulo`}

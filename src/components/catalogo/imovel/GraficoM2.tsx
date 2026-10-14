@@ -1,6 +1,6 @@
 import { moedaCurta, numero } from "@/lib/catalogo/rotulos";
 import type { ReferenciaM2 } from "@/lib/catalogo/tipos";
-import { AREA_HECTARE, escalaRegiao, nomeRecorte, posicaoNaEscala, precoPorArea, ROTULO_ESCOPO, TIPO_NA_FRASE } from "./formato";
+import { AREA_HECTARE, concorda, escalaRegiao, nomeRecorte, posicaoNaEscala, precoPorArea, ROTULO_ESCOPO, TIPO_NA_FRASE } from "./formato";
 
 /** Posição (0–100%) de um valor na escala, presa às bordas. */
 const pos = (v: number, min: number, max: number) => `${posicaoNaEscala(v, min, max).pct.toFixed(2)}%`;
@@ -26,9 +26,22 @@ function SetaFora({ lado }: { lado: -1 | 1 }) {
  * longe da região (erro na fonte, quase sempre) não esmaga as faixas: fica preso na borda, com uma seta.
  * Imóvel de 10 ha ou mais: tudo por hectare, como no resto da página.
  */
-export function GraficoM2({ referencias, area }: { referencias: ReferenciaM2[]; area: number | null }) {
-  const lance = referencias[0]?.imovel.lanceM2 ?? null;
-  const avaliacao = referencias[0]?.imovel.avaliacaoM2 ?? null;
+export function GraficoM2({
+  referencias,
+  area,
+  lanceTotal,
+  avaliacaoTotal,
+}: {
+  referencias: ReferenciaM2[];
+  area: number | null;
+  /** lance e avaliação do imóvel (R$): por hectare, os marcadores saem deles e não do R$/m² arredondado da base */
+  lanceTotal: number;
+  avaliacaoTotal: number | null;
+}) {
+  const hectare = area !== null && area >= AREA_HECTARE;
+  const doImovel = referencias[0]?.imovel;
+  const lance = doImovel?.lanceM2 == null ? null : hectare && area ? lanceTotal / area : doImovel.lanceM2;
+  const avaliacao = doImovel?.avaliacaoM2 == null ? null : hectare && area && avaliacaoTotal !== null ? avaliacaoTotal / area : doImovel.avaliacaoM2;
   const faixas = referencias.map((r) => ({ r, faixa: r.avaliacaoM2 ?? r.lanceM2, deAvaliacao: r.avaliacaoM2 !== null }));
   const escala = escalaRegiao(
     faixas.flatMap(({ faixa }) => (faixa ? [faixa.p25, faixa.p75, faixa.mediana] : [])),
@@ -37,7 +50,6 @@ export function GraficoM2({ referencias, area }: { referencias: ReferenciaM2[]; 
   if (!escala) return null;
   const { min, max, marcas } = escala;
   const m2 = (v: number) => precoPorArea(v, area);
-  const hectare = area !== null && area >= AREA_HECTARE;
   const foraLance = lance !== null ? posicaoNaEscala(lance, min, max).fora : 0;
   const foraAvaliacao = avaliacao !== null ? posicaoNaEscala(avaliacao, min, max).fora : 0;
   const foraDaEscala = <span className="font-normal text-nevoa"> (fora da escala)</span>;
@@ -45,7 +57,8 @@ export function GraficoM2({ referencias, area }: { referencias: ReferenciaM2[]; 
   return (
     <figure className="rounded-3xl border border-nevoa/15 bg-tinta p-4 sm:p-6">
       <figcaption className="sr-only">
-        Avaliação {hectare ? "por hectare" : "por m²"} dos outros {TIPO_NA_FRASE[referencias[0]!.tipo]} em leilão em cada recorte, comparada ao lance e à
+        Avaliação {hectare ? "por hectare" : "por m²"} {concorda(referencias[0]!.tipo).dos} {concorda(referencias[0]!.tipo).outros}{" "}
+        {TIPO_NA_FRASE[referencias[0]!.tipo]} em leilão em cada recorte, comparada ao lance e à
         avaliação {hectare ? "por hectare" : "por m²"} deste imóvel.
       </figcaption>
 
