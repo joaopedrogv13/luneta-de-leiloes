@@ -73,16 +73,17 @@ const NUM1 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 
 /** "R$ 1.234.567" (sem centavos). Use `centavos` só onde o centavo importa. */
 export function moeda(v: number, centavos = false) {
-  return (centavos ? BRL_CENTAVOS : BRL).format(v).replace(/ /g, " ");
+  // espaço que não quebra entre "R$" e o número: o "R$" nunca fica sozinho no fim da linha
+  return (centavos ? BRL_CENTAVOS : BRL).format(v).replace(/\s/g, "\u00a0");
 }
 
 /** "R$ 1,2 mi", "R$ 350 mil", "R$ 900": para rótulos curtos (mapa, histogramas, pílulas). */
 export function moedaCurta(v: number) {
   const a = Math.abs(v);
-  if (a >= 1_000_000) return `R$ ${NUM1.format(v / 1_000_000)} mi`;
-  if (a >= 10_000) return `R$ ${NUM.format(v / 1000)} mil`;
-  if (a >= 1000) return `R$ ${NUM1.format(v / 1000)} mil`;
-  return `R$ ${NUM.format(v)}`;
+  if (a >= 1_000_000) return `R$\u00a0${NUM1.format(v / 1_000_000)} mi`;
+  if (a >= 10_000) return `R$\u00a0${NUM.format(v / 1000)} mil`;
+  if (a >= 1000) return `R$\u00a0${NUM1.format(v / 1000)} mil`;
+  return `R$\u00a0${NUM.format(v)}`;
 }
 
 export function numero(v: number) {
