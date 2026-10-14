@@ -77,21 +77,39 @@ export function Popover({
     ],
   });
 
-  const fechar = useCallback(() => setAberto(false), [setAberto]);
+  // Fechar por dentro ("Pronto", escolher uma opção): se o foco estava no painel, volta ao gatilho
+  // (senão ele cairia no <body> quando o painel some e o teclado recomeçaria do topo da página).
+  // (pelo id, não pelas refs: `fechar` vai para o render-prop dos filhos e o React Compiler não aceita ref ali)
+  const fechar = useCallback(() => {
+    const focoDentro = !!document.getElementById(id)?.contains(document.activeElement);
+    const gatilho = document.querySelector<HTMLButtonElement>(`[aria-controls="${CSS.escape(id)}"]`);
+    setAberto(false);
+    if (focoDentro) gatilho?.focus({ preventScroll: true });
+  }, [id, setAberto]);
+
+  // `setAberto` muda quando quem usa passa `onAbertoChange` novo a cada render (função inline): o efeito
+  // abaixo lê a versão mais recente por ref e roda SÓ ao abrir/fechar. Se dependesse dela, cada render do
+  // pai (os filtros aplicados enquanto o pop-up está aberto) devolveria o foco ao painel, tirando-o do
+  // campo onde a pessoa digita ou do cursor que ela move pelo teclado.
+  const ultimo = useRef({ setAberto, focarAoAbrir });
+  useEffect(() => {
+    ultimo.current = { setAberto, focarAoAbrir };
+  });
 
   useEffect(() => {
     if (!aberto) return;
-    if (focarAoAbrir) requestAnimationFrame(() => painel.current?.focus({ preventScroll: true }));
+    if (ultimo.current.focarAoAbrir) requestAnimationFrame(() => painel.current?.focus({ preventScroll: true }));
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      // Esc já tratado por dentro (ex.: limpar a busca de uma lista) não fecha o pop-up
+      if (e.key !== "Escape" || e.defaultPrevented) return;
       e.stopPropagation();
-      setAberto(false);
+      ultimo.current.setAberto(false);
       botao.current?.focus({ preventScroll: true });
     };
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node;
       if (painel.current?.contains(t) || botao.current?.contains(t)) return;
-      setAberto(false);
+      ultimo.current.setAberto(false);
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown);
@@ -99,7 +117,7 @@ export function Popover({
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onDown);
     };
-  }, [aberto, focarAoAbrir, setAberto]);
+  }, [aberto]);
 
   const classeBotao = typeof gatilho.className === "function" ? gatilho.className(aberto) : (gatilho.className ?? "");
 
@@ -132,6 +150,13 @@ export function Popover({
           role={papel === "dialog" ? "dialog" : "note"}
           aria-label={rotulo}
           tabIndex={-1}
+          // o foco saiu do pop-up (Tab além do último controle): fecha, como um menu do sistema; foco que
+          // vai para o próprio gatilho ou some (clique em área sem foco) não fecha
+          onBlur={(e) => {
+            const para = e.relatedTarget as Node | null;
+            if (!para || e.currentTarget.contains(para) || botao.current?.contains(para)) return;
+            ultimo.current.setAberto(false);
+          }}
           style={{ ...floatingStyles, width: largura }}
           className={`z-[60] max-w-[92vw] overflow-auto overscroll-contain rounded-2xl border border-nevoa/25 bg-tinta text-luar shadow-[0_18px_60px_rgba(0,0,0,.35)] outline-none transition-[opacity,scale] duration-150 ease-out starting:scale-[0.98] starting:opacity-0 motion-reduce:transition-none ${className}`}
         >
