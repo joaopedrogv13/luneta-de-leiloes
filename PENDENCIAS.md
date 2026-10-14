@@ -228,6 +228,40 @@ o extrajudicial dos bancos. Ordem proposta:
 - **FipeZAP** (56 cidades, mensal): consulta grátis, mas sem termos de uso comercial encontrados. **Pedir autorização à
   Fipe** antes de exibir; até lá, no máximo um link para o informe.
 
+### Página do imóvel (14/10/2026)
+
+`/previa/imovel/<id>` (dados reais, interna, noindex) e `/assinante/imovel/<id>` (exemplos fictícios), com `?plano=lente`
+para ver como no plano Lente. Tudo o que a base tem do imóvel numa página só:
+- galeria grande (setas, miniaturas, deslizar no celular, tela cheia com ← → Esc); sem foto, o desenho do tipo;
+- resumo fixo à direita (no celular, barra no pé da tela): lance, avaliação, deságio, praça e data, "Ver anúncio na fonte",
+  "Simular lance", favoritar e compartilhar;
+- seções com navegação fixa: resumo (todos os campos; o que falta diz "não informado pela fonte"), riscos (tags por
+  gravidade com a evidência ao clicar, as "em revisão" à parte, selo), simulador, preço do m² na região (faixas de
+  bairro, cidade e estado, com a frase "o lance por m² é X% menor que a mediana…"), imóveis parecidos, buscas nos portais,
+  localização, documentos e links, dados da fonte;
+- "Voltar à busca" volta para a última busca da lista (mesma aba), no plano da página;
+- id que não existe responde 404 com o caminho de volta à lista.
+
+Pendências da página:
+- [ ] **Decisão sua:** o simulador fica aberto no plano Lente por enquanto. Travar, deixar aberto ou abrir só uma parte?
+- [x] Legenda do mapa pequeno: agora segue a precisão de verdade ("pela rua" nos imóveis da Leilões Judiciais, "centro
+  da cidade" na Caixa).
+- [ ] Fotos da Caixa: não carregam deste ambiente (rede bloqueada); a página mostra o desenho no lugar. Conferir no navegador
+  (celular e computador). Se todas as fotos falharem, a galeria vira um desenho só, sem setas nem tela cheia.
+- [ ] Simulador, matriz "Cenários e prazos": o nome que o leitor de tela ouve em cada célula não contém o número que aparece
+  (WCAG 2.5.3, comando de voz). Ajustar no componente do simulador.
+- [ ] Ao abrir um imóvel a partir da lista, o esqueleto de carregamento não aparece: a página confere o id antes (para o
+  id inexistente dar 404 de verdade) e o navegador espera a resposta (~0,2 s aqui; mais no 4G). Se ficar lento no
+  celular, dar um sinal no clique do cartão ou aceitar um 404 "suave".
+- [ ] O 404 do imóvel é desenhado no navegador (limitação do Next com notFound() fora de um Suspense): sem JavaScript,
+  fica em branco. O tema salvo é reaplicado.
+
+Revisão (14/10/2026), corrigido: preço por hectare com o rótulo "por hectare" (e o gráfico da região em R$/ha); valor
+absurdo da fonte (ex.: lance de R$ 69 mi num apartamento) não esmaga mais o gráfico e ganha o aviso "confira na fonte";
+"menor que o de 0%/100%" virou frase que se lê; o resumo lateral mostra "1 possível risco grave" entre as em revisão;
+contador da galeria sem pular fotos ao deslizar; tela cheia sem parada muda no Tab; título da aba sem repetir a cidade;
+descrição longa já vem fechada do servidor (a página não encolhe ao carregar); 404 do imóvel no tema claro.
+
 ### Ler cada leilão com IA: é viável?
 
 Sim: em vez de preencher à mão, um robô baixa a página e os documentos de cada leilão (página da Caixa, edital,

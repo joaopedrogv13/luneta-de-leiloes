@@ -77,6 +77,11 @@ export interface MapaBrasilProps {
   className?: string;
   /** nome acessível da região */
   rotulo?: string;
+  /**
+   * "mini": a precisão da posição, na legenda e no nome acessível ("Posição aproximada (centro da cidade)" se
+   * omitida, o caso da Caixa). A página do imóvel passa a precisão de verdade (rua, CEP, bairro...).
+   */
+  notaPosicao?: string;
 }
 
 const UFS = Object.entries(UFS_MAPA);
@@ -176,6 +181,7 @@ export function MapaBrasil({
   variante = "painel",
   className = "",
   rotulo,
+  notaPosicao = "Posição aproximada (centro da cidade)",
 }: MapaBrasilProps) {
   const mini = variante === "mini";
   const modoRolagem = rolagem ?? (variante === "painel" ? "direta" : "ctrl");
@@ -651,7 +657,7 @@ export function MapaBrasil({
   const nomeRegiao =
     rotulo ??
     (mini && pontoMini
-      ? `Mapa: ${pontoMini.cidade}/${pontoMini.uf}, posição aproximada (centro da cidade)`
+      ? `Mapa: ${pontoMini.cidade}/${pontoMini.uf}, ${notaPosicao.charAt(0).toLowerCase()}${notaPosicao.slice(1)}`
       : "Mapa dos imóveis por cidade");
   const resumo = mini
     ? ""
@@ -860,7 +866,7 @@ export function MapaBrasil({
           <circle cx="15" cy="6" r="5.4" className="fill-latao" />
         </svg>
         <span>
-          {mini ? "Posição aproximada (centro da cidade)" : "Cada círculo reúne os imóveis de uma cidade · posição aproximada (centro da cidade)"}
+          {mini ? notaPosicao : "Cada círculo reúne os imóveis de uma cidade · posição aproximada (centro da cidade)"}
         </span>
       </p>
 

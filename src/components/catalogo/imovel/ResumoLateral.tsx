@@ -1,0 +1,278 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { BotaoFavoritar } from "@/components/catalogo/cartoes/partes";
+import { SeverityIcon } from "@/components/niveis/severity";
+import { data, dataHora, moeda, MODALIDADE_ROTULO, PRACA_ROTULO } from "@/lib/catalogo/rotulos";
+import type { ImovelResumo, Severidade } from "@/lib/catalogo/tipos";
+import { useImovel } from "./ContextoImovel";
+import { fraseDesagio } from "./formato";
+import { IconeCadeado, IconeCalculadora, IconeCalendario, IconeCompartilhar, IconeExterno, IconeSetaDireita } from "./icones";
+
+export interface DadosResumo extends Pick<ImovelResumo, "id" | "titulo" | "lance" | "avaliacao" | "desagio" | "modalidade" | "praca" | "dataPraca" | "coletadoEm"> {
+  fonteNome: string;
+  /** anúncio na fonte (null nos exemplos fictícios) */
+  anuncio: string | null;
+  exemplo: boolean;
+  /** "em 5 dias", "já passou" (calculado no servidor) */
+  falta: { texto: string; passou: boolean } | null;
+  /** quantas tags por gravidade (confirmadas) e em revisão (e, delas, as graves); null no plano Lente */
+  riscos: { grave: number; atencao: number; positivo: number; info: number; revisao: number; revisaoGrave: number } | null;
+}
+
+/** Id do bloco de ações: a barra do celular aparece quando ele sai da tela. */
+const ID_ACOES = "resumo-acoes";
+
+const BOTAO_SECUNDARIO =
+  "relative inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-nevoa/35 px-3.5 text-[13px] leading-none font-medium whitespace-nowrap text-nevoa transition-[background-color,border-color,color,scale] duration-150 ease-luneta hover:border-latao hover:text-luar active:scale-[0.96] motion-reduce:transition-none pointer-fine:min-h-9";
+
+const PLURAL: Record<Severidade, [string, string]> = {
+  grave: ["grave", "graves"],
+  atencao: ["atenção", "atenção"],
+  positivo: ["positivo", "positivos"],
+  info: ["informativo", "informativos"],
+};
+
+function Compartilhar({ titulo, className = "" }: { titulo: string; className?: string }) {
+  const { avisar } = useImovel();
+  const compartilhar = async () => {
+    const url = window.location.href.split("#")[0]!;
+    try {
+      await navigator.clipboard.writeText(url);
+      avisar("Link copiado.");
+      return;
+    } catch {
+      // sem acesso à área de transferência: tenta o compartilhar do sistema
+    }
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: titulo, url });
+        return;
+      }
+    } catch {
+      return; // a pessoa cancelou
+    }
+    avisar("Não deu para copiar: copie o endereço na barra do navegador.");
+  };
+  return (
+    <button type="button" onClick={compartilhar} className={`${BOTAO_SECUNDARIO} ${className}`}>
+      <IconeCompartilhar tamanho={15} />
+      Compartilhar
+      <span className="sr-only"> (copia o link)</span>
+    </button>
+  );
+}
+
+/**
+ * Resumo fixo da coluna direita (no celular, logo abaixo do título): lance mínimo, avaliação e deságio,
+ * praça e data, "Ver anúncio na fonte", "Simular lance", Favoritar (Luneta) e Compartilhar, e o resumo dos
+ * riscos com link para a seção.
+ */
+export function ResumoLateral({ d }: { d: DadosResumo }) {
+  const { plano, ehFavorito, alternarFavorito, pedirLuneta } = useImovel();
+  const desagio = fraseDesagio(d.desagio);
+  const abaixo = d.desagio !== null && d.desagio > 0;
+  const partesPraca = [MODALIDADE_ROTULO[d.modalidade], d.praca ? PRACA_ROTULO[d.praca] : null].filter(Boolean).join(" · ");
+
+  return (
+    <section
+      aria-labelledby="resumo-preco-titulo"
+      className="rounded-3xl border border-nevoa/20 bg-tinta p-5 sm:p-6 [[data-theme=light]_&]:shadow-[0_1px_2px_rgba(15,24,48,.05),0_12px_32px_-14px_rgba(15,24,48,.18)]"
+    >
+      <h2 id="resumo-preco-titulo" className="sr-only">
+        Preço, praça e ações
+      </h2>
+      <p className="text-[11px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">Lance mínimo</p>
+      <p className="mt-2 font-display text-[34px] leading-none font-bold tracking-[-0.03em] whitespace-nowrap text-luar sm:text-[38px]">{moeda(d.lance)}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-nevoa">
+        {d.avaliacao !== null ? (
+          <span>
+            Avaliação <span className="font-medium text-luar/90 tabular-nums">{moeda(d.avaliacao)}</span>
+          </span>
+        ) : (
+          <span>Avaliação não informada pela fonte</span>
+        )}
+        {desagio && (
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12.5px] leading-none font-semibold ${
+              abaixo ? "bg-latao/15 text-latao-texto ring-1 ring-latao/40" : "bg-nevoa/12 text-luar ring-1 ring-nevoa/30"
+            }`}
+          >
+            {abaixo ? `−${d.desagio}%` : desagio.charAt(0).toUpperCase() + desagio.slice(1)}
+            {abaixo && <span className="sr-only">, {desagio}</span>}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-5 flex items-start gap-3 border-t border-nevoa/15 pt-4">
+        <IconeCalendario tamanho={18} className="mt-0.5 text-nevoa" />
+        <div className="min-w-0 text-sm leading-snug">
+          <p className="font-medium text-luar">{partesPraca}</p>
+          {d.dataPraca ? (
+            <p className="mt-1 text-nevoa">
+              <span className="text-luar/90 tabular-nums">{dataHora(d.dataPraca)}</span>
+              {d.falta && (
+                <span className={d.falta.passou ? "text-aten" : ""}>
+                  {" "}
+                  · {d.falta.texto}
+                </span>
+              )}
+            </p>
+          ) : (
+            <p className="mt-1 text-nevoa">Data não informada pela fonte</p>
+          )}
+        </div>
+      </div>
+
+      <div id={ID_ACOES} className="mt-5 flex flex-col gap-2.5">
+        {d.anuncio ? (
+          <a href={d.anuncio} target="_blank" rel="noopener noreferrer" className="btn-primary w-full">
+            Ver anúncio na fonte
+            <IconeExterno tamanho={17} />
+            <span className="sr-only"> (abre em nova aba)</span>
+          </a>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-nevoa/35 px-4 py-3 text-center text-[13px] leading-snug text-nevoa">
+            Exemplo fictício: não há anúncio real para abrir.
+          </p>
+        )}
+        <a href="#simulador" className={d.anuncio ? "btn-outline w-full gap-2" : "btn-primary w-full"}>
+          <IconeCalculadora tamanho={18} />
+          Simular lance
+        </a>
+        <div className="grid grid-cols-2 gap-2">
+          <BotaoFavoritar
+            imovel={d}
+            plano={plano}
+            favorito={ehFavorito(d.id)}
+            onFavoritar={alternarFavorito}
+            onUpsell={pedirLuneta}
+            className="w-full"
+          />
+          <Compartilhar titulo={d.titulo} className="w-full" />
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-nevoa/15 pt-4">
+        {d.riscos ? (
+          <a
+            href="#riscos"
+            className="group/riscos -mx-2 flex min-h-11 items-center justify-between gap-3 rounded-xl px-2 py-1 text-sm no-underline transition-colors hover:bg-nevoa/[0.07]"
+          >
+            <span className="min-w-0">
+              <span className="block font-medium text-luar">Riscos e alertas</span>
+              <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-nevoa">
+                {(["grave", "atencao", "positivo"] as const).map((s) =>
+                  d.riscos![s] > 0 ? (
+                    <span key={s} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                      <SeverityIcon severity={s} size={12} />
+                      {d.riscos![s]} {PLURAL[s][d.riscos![s] === 1 ? 0 : 1]}
+                    </span>
+                  ) : null,
+                )}
+                {d.riscos.revisao > 0 && (
+                  <span>
+                    <span className="whitespace-nowrap">{d.riscos.revisao} em revisão</span>
+                    {/* um risco grave ainda sem leitura humana não pode sumir no "em revisão" */}
+                    {d.riscos.revisaoGrave > 0 && (
+                      <span className="font-medium whitespace-nowrap text-grave-texto">
+                        {" "}
+                        ({d.riscos.revisaoGrave} {d.riscos.revisaoGrave === 1 ? "possível risco grave" : "possíveis riscos graves"})
+                      </span>
+                    )}
+                  </span>
+                )}
+                {d.riscos.grave + d.riscos.atencao + d.riscos.positivo + d.riscos.revisao === 0 && <span>nenhum alerta nos dados da fonte</span>}
+              </span>
+            </span>
+            <IconeSetaDireita tamanho={16} className="text-nevoa transition-transform duration-150 group-hover/riscos:translate-x-0.5 motion-reduce:transition-none" />
+          </a>
+        ) : (
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={(e) => pedirLuneta(e.currentTarget)}
+            className="-mx-2 flex min-h-11 w-[calc(100%+1rem)] cursor-pointer items-center justify-between gap-3 rounded-xl px-2 py-1 text-left text-sm transition-colors hover:bg-nevoa/[0.07]"
+          >
+            <span>
+              <span className="block font-medium text-luar">Riscos e alertas</span>
+              <span className="mt-1 block text-[13px] text-nevoa">Tags de risco e selo são do plano Luneta</span>
+            </span>
+            <IconeCadeado tamanho={16} className="text-latao-texto" />
+          </button>
+        )}
+        <p className="mt-3 text-xs leading-snug text-nevoa">
+          {d.exemplo ? "Exemplo fictício, para mostrar a página." : `Fonte: ${d.fonteNome} · coletado em ${data(d.coletadoEm)}.`} Preços e datas mudam: confira o
+          edital.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Celular: barra fixa no pé da tela com o lance e "Ver anúncio" (ou "Simular", nos exemplos). Aparece
+ * quando os botões do resumo saem da tela por cima; some de novo quando eles voltam.
+ */
+export function BarraInferior({ d }: { d: DadosResumo }) {
+  const [visivel, setVisivel] = useState(false);
+  useEffect(() => {
+    const alvo = document.getElementById(ID_ACOES);
+    if (!alvo) return;
+    // pela rolagem (e não por IntersectionObserver): um salto de âncora que passa direto pelos botões, sem
+    // cruzar a tela, não dispararia o observador
+    let quadro = 0;
+    const medir = () => {
+      quadro = 0;
+      setVisivel(alvo.getBoundingClientRect().bottom < 0);
+    };
+    const agendar = () => {
+      if (!quadro) quadro = requestAnimationFrame(medir);
+    };
+    agendar();
+    window.addEventListener("scroll", agendar, { passive: true });
+    window.addEventListener("resize", agendar);
+    return () => {
+      cancelAnimationFrame(quadro);
+      window.removeEventListener("scroll", agendar);
+      window.removeEventListener("resize", agendar);
+    };
+  }, []);
+  const desagio = d.desagio !== null && d.desagio > 0 ? `−${d.desagio}%` : null;
+  return (
+    <aside
+      aria-label="Lance e anúncio"
+      inert={!visivel}
+      aria-hidden={!visivel}
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-nevoa/20 bg-noite/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-md transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden [[data-theme=light]_&]:shadow-[0_-8px_24px_rgba(15,24,48,.08)] ${
+        visivel ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
+      }`}
+    >
+      <div className="mx-auto flex max-w-[640px] items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">Lance mínimo</p>
+          <p className="mt-1 flex items-baseline gap-2 whitespace-nowrap">
+            <span className="font-display text-[22px] leading-none font-bold tracking-[-0.02em] text-luar">{moeda(d.lance)}</span>
+            {desagio && (
+              <span className="text-[13px] font-semibold text-latao-texto">
+                {desagio}
+                <span className="sr-only"> de deságio</span>
+              </span>
+            )}
+          </p>
+        </div>
+        {d.anuncio ? (
+          <a href={d.anuncio} target="_blank" rel="noopener noreferrer" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]!">
+            Ver anúncio
+            <IconeExterno tamanho={16} />
+            <span className="sr-only"> na fonte (abre em nova aba)</span>
+          </a>
+        ) : (
+          <a href="#simulador" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]!">
+            Simular lance
+          </a>
+        )}
+      </div>
+    </aside>
+  );
+}
