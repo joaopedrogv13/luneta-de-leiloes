@@ -403,6 +403,12 @@ export interface Vizinhanca {
 export interface CoberturaPrecos {
   /** a cidade deste imóvel tem ITBI na base? */
   cidadeTemItbi: boolean;
+  /**
+   * A cidade tem ITBI, mas este imóvel fica sem a comparação por um motivo do arquivo, e não por falta de compras:
+   * a frase pronta para mostrar (ex.: em São Paulo, a área publicada para apartamentos inclui a parte comum do
+   * prédio). null/ausente quando não é o caso.
+   */
+  semComparacao?: string | null;
   fontes: FontePreco[];
 }
 

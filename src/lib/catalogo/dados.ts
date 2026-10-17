@@ -15,6 +15,7 @@ import { criarIndice, diaBrasilia, type IndiceCatalogo } from "./consulta";
 import { converterExemplos, resumoDe } from "./exemplos";
 import { lerLista, lerParte, montarDetalhe, parteDoId, pastaPadrao, type DetalheParcial } from "./instantaneo";
 import type { Conjunto, ImovelDetalhe, ImovelResumo, SobreConjunto } from "./tipos";
+import { indiceDeRuas, type ContextoVizinhanca, type RuaDoImovel } from "./vizinhanca";
 
 export interface DadosConjunto {
   conjunto: Conjunto;
@@ -25,6 +26,10 @@ export interface DadosConjunto {
   selosDesligados: boolean;
   /** Posição de cada id na lista. */
   posicao: ReadonlyMap<string, number>;
+  /** Rua de cada item (mesma posição), tirada do endereço; null sem endereço ou sem nome que identifique a rua. */
+  ruas: readonly (RuaDoImovel | null)[];
+  /** Rua e imóveis da mesma rua (mesma cidade) do item na posição k, para a vizinhança. */
+  contexto(k: number): ContextoVizinhanca;
   /** Detalhe completo (sem plano aplicado), ou null se o id não existe. */
   detalhe(id: string): Promise<ImovelDetalhe | null>;
 }
@@ -36,6 +41,7 @@ async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
   const enderecos = lista.enderecos;
   const indice = criarIndice(lista.itens, { textoExtra: (_, k) => enderecos[k] });
   const posicao = new Map(lista.itens.map((i, k) => [i.id, k]));
+  const { ruas, contexto } = indiceDeRuas(lista.itens, enderecos);
   const partes = new Map<string, Promise<Map<string, DetalheParcial>>>();
   const parte = (p: string) => {
     let pronta = partes.get(p);
@@ -54,6 +60,8 @@ async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
     sobre: lista.sobre,
     selosDesligados: true,
     posicao,
+    ruas,
+    contexto,
     async detalhe(id) {
       const k = posicao.get(id);
       if (k === undefined) return null;
@@ -76,6 +84,9 @@ function carregarExemplos(): DadosConjunto {
     sobre: { geradoEm: agora.toISOString(), fontes: [{ id: "exemplo", nome: "Exemplo fictício", geradoNaFonteEm: null, total: itens.length }] },
     selosDesligados: false,
     posicao: new Map(itens.map((i, k) => [i.id, k])),
+    // os exemplos não têm endereço: sem rua
+    ruas: itens.map(() => null),
+    contexto: () => ({}),
     async detalhe(id) {
       return porId.get(id) ?? null;
     },

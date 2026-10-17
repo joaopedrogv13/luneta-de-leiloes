@@ -6,6 +6,8 @@ import type { NextConfig } from "next";
  * catálogo recebe a pasta explicitamente. Chaves: rotas (picomatch); valores: globs a partir da raiz.
  */
 const CATALOGO = ["./base/saida/site/**/*"];
+/** ITBI das prefeituras (src/lib/catalogo/itbi.ts): a página dos exemplos também mostra o preço pago da cidade. */
+const ITBI = ["./base/saida/site/itbi/*"];
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -14,6 +16,7 @@ const nextConfig: NextConfig = {
     "/api/catalogo": CATALOGO,
     "/previa": CATALOGO,
     "/previa/**": CATALOGO,
+    "/assinante/imovel/**": ITBI,
   },
   images: {
     // Fotos reais dos imóveis (quando houver) saem em AVIF/WebP, nos tamanhos da moldura de lente.

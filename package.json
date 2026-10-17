@@ -13,6 +13,7 @@
     "base:riscos": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/cli.ts riscos",
     "base:exportar": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/cli.ts exportar",
     "base:status": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/cli.ts status",
+    "base:fichas": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/fontes/caixa/aplicar-fichas.ts",
     "base:testar": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"base/**/*.test.ts\"",
     "test:site": "node --import jiti/register --test \"src/**/*.test.ts\""
   },

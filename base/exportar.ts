@@ -17,11 +17,13 @@
  * (base/saida/estatisticas-uf.json). Ver "Instantâneo para o site" abaixo.
  */
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { carregarImoveis } from "./consultas.ts";
 import { lerBool, lerTexto, type Banco } from "./db.ts";
+import { CACHE_PADRAO } from "./fontes/caixa/cache.ts";
 import { geocodificar } from "./geo/geocodificar.ts";
 import { posicaoNoMapa } from "./geo/mapa.ts";
 import { tabelaPadrao } from "./geo/municipios.ts";
@@ -396,6 +398,11 @@ export interface OpcoesExportarSite {
   agora?: Date;
   /** Quantos imóveis na amostra (padrão 60). */
   amostra?: number;
+  /**
+   * Cache das fichas da Caixa (base/fontes/caixa/cache.ts), só para a data da leitura de cada ficha (o registro
+   * "lido em" do site). Padrão: LUNETA_CAIXA_CACHE, senão base/dados/caixa/detalhes.db, se existir; null desliga.
+   */
+  cacheCaixa?: string | null;
 }
 
 const PRACA_SITE: Readonly<Record<number, PracaSite>> = { 0: "Praça única", 1: "1ª praça", 2: "2ª praça" };
@@ -671,7 +678,7 @@ export function exportarSite(
   // Indentado: são arquivos pequenos, versionados, e o diff precisa ser legível.
   gravarAtomico(arquivos[0]!, JSON.stringify(amostra, null, 2) + "\n");
   gravarAtomico(arquivos[1]!, JSON.stringify(estatisticas, null, 2) + "\n");
-  const catalogo = gravarCatalogo(join(pasta, PASTA_CATALOGO), montarCatalogoDe(db, exportaveis, agora));
+  const catalogo = gravarCatalogo(join(pasta, PASTA_CATALOGO), montarCatalogoDe(db, exportaveis, agora, datasDasFichas(opcoes.cacheCaixa)));
   // `arquivos`: os dois JSON de sempre; os do catálogo estão em `catalogo.arquivos`.
   return { amostra, estatisticas, catalogo, arquivos };
 }
@@ -802,10 +809,27 @@ export interface LinhaCatalogo extends ImovelResumo {
   endereco: string | null;
 }
 
+/**
+ * Dados de registro lidos da página do imóvel na fonte (na Caixa, a ficha): o site mostra o registro como "lido",
+ * com a data. Só vem quando há o que mostrar (imóvel da Caixa com ficha lida); sem ele, o site decide pela
+ * matrícula e pelo cartório do detalhe (src/lib/catalogo/instantaneo.ts, registroDe).
+ */
+export interface RegistroCatalogo {
+  matriculas: string[];
+  comarca: string | null;
+  oficio: string | null;
+  inscricaoImobiliaria: string | null;
+  /** "Averbado", "Não averbado"... como a fonte escreve */
+  averbacaoLeiloesNegativos: string | null;
+  /** dia da leitura da ficha (AAAA-MM-DD), quando se sabe */
+  lidoEm: string | null;
+}
+
 /** O que o detalhe tem além da linha da lista. */
 export interface DetalheCatalogo extends Omit<ImovelDetalhe, keyof ImovelResumo | "endereco"> {
   /** Mesma ordem e mesmos slugs das tags da linha. */
   tags: Array<Pick<TagDetalhe, "slug" | "confianca" | "origem" | "evidencia">>;
+  registro?: RegistroCatalogo;
 }
 
 export interface FonteCatalogo extends FonteExportada {
@@ -1015,8 +1039,54 @@ function linksDoCatalogo(i: ImovelExportado, extras: Readonly<Record<string, unk
   return links;
 }
 
+/**
+ * Registro lido da ficha da Caixa: matrículas, comarca, ofício, inscrição imobiliária, averbação dos leilões
+ * negativos (extras gravados pelo conector com --detalhes ou por `npm run base:fichas`) e o dia da leitura
+ * (`extras.ficha_lida_em`, senão a data guardada no cache das fichas). undefined fora da Caixa ou sem ficha.
+ */
+export function registroDaFicha(i: Pick<ImovelExportado, "fonte" | "matricula">, extras: Readonly<Record<string, unknown>>, fichaLidaEm: string | null = null): RegistroCatalogo | undefined {
+  if (i.fonte !== "caixa_csv") return undefined;
+  const texto = (campo: string): string | null => {
+    const v = extras[campo];
+    return typeof v === "string" && v.trim() ? v.trim() : null;
+  };
+  const lidoEm = texto("ficha_lida_em") ?? fichaLidaEm;
+  const comarca = texto("comarca");
+  const oficio = texto("oficio");
+  const inscricaoImobiliaria = texto("inscricao_imobiliaria");
+  const averbacaoLeiloesNegativos = texto("averbacao_leiloes_negativos");
+  const matriculas = texto("matriculas")?.split(/\s*[,;]\s*/).filter(Boolean) ?? (i.matricula ? [i.matricula] : []);
+  if (!lidoEm && !comarca && !oficio && !inscricaoImobiliaria && !averbacaoLeiloesNegativos && matriculas.length === 0) return undefined;
+  // o site recusa o pedaço inteiro com uma data fora de AAAA-MM-DD (instantaneo.ts): melhor sem a data
+  const dia = lidoEm && /^\d{4}-\d{2}-\d{2}/.test(lidoEm) ? lidoEm.slice(0, 10) : null;
+  return { matriculas, comarca, oficio, inscricaoImobiliaria, averbacaoLeiloesNegativos, lidoEm: dia };
+}
+
+/** id13 → dia em que a ficha foi lida, do cache das fichas da Caixa (só leitura; sem cache, vazio). */
+export function datasDasFichas(caminho?: string | null): Map<string, string> {
+  const alvo = caminho === undefined ? (process.env.LUNETA_CAIXA_CACHE ?? CACHE_PADRAO) : caminho;
+  const datas = new Map<string, string>();
+  if (!alvo || alvo === "off" || alvo === "0" || !existsSync(alvo)) return datas;
+  let cache: DatabaseSync | null = null;
+  try {
+    cache = new DatabaseSync(alvo, { readOnly: true });
+    for (const l of cache.prepare("SELECT id13, ficha_em FROM detalhe WHERE ficha IS NOT NULL AND ficha_em IS NOT NULL").all()) {
+      datas.set(String(l.id13), String(l.ficha_em).slice(0, 10));
+    }
+  } catch (e) {
+    console.error(`Aviso: não li as datas das fichas em ${alvo} (${(e as Error).message}); o site mostra o registro sem a data da leitura.`);
+  } finally {
+    cache?.close();
+  }
+  return datas;
+}
+
 /** Converte um imóvel exportável em linha da lista e detalhe do catálogo; null se o site não consegue mostrá-lo. */
-export function paraCatalogo(i: ImovelExportado, extras: Readonly<Record<string, unknown>> = {}): { linha: LinhaCatalogo; detalhe: DetalheCatalogo } | null {
+export function paraCatalogo(
+  i: ImovelExportado,
+  extras: Readonly<Record<string, unknown>> = {},
+  fichaLidaEm: string | null = null,
+): { linha: LinhaCatalogo; detalhe: DetalheCatalogo } | null {
   const lance = positivo(i.preco);
   if (lance === null) return null;
   const tags = [...i.tags]
@@ -1080,13 +1150,15 @@ export function paraCatalogo(i: ImovelExportado, extras: Readonly<Record<string,
     porQueSelo: POR_QUE_SEM_SELO,
     tags: tags.map((t) => ({ slug: t.slug, confianca: t.confianca, origem: t.origem, evidencia: t.trecho })),
   };
+  const registro = registroDaFicha(i, extras, fichaLidaEm);
+  if (registro) detalhe.registro = registro;
   return { linha, detalhe };
 }
 
 /** Monta a lista e os pedaços do catálogo (sem gravar). */
-export function montarCatalogo(db: Banco, opcoes: { agora?: Date } = {}): Catalogo {
+export function montarCatalogo(db: Banco, opcoes: { agora?: Date; cacheCaixa?: string | null } = {}): Catalogo {
   const agora = opcoes.agora ?? new Date();
-  return montarCatalogoDe(db, montarExportaveis(db, { agora }), agora);
+  return montarCatalogoDe(db, montarExportaveis(db, { agora }), agora, datasDasFichas(opcoes.cacheCaixa));
 }
 
 /** "São Jorge", "Sao Jorge" e "SAO JORGE" → "sao jorge"; "Gebara (Itambi)" e "Gebara Itambi" → "gebara itambi". */
@@ -1123,10 +1195,17 @@ export function unificarBairros(linhas: LinhaCatalogo[]): void {
   for (const l of linhas) if (l.bairro) l.bairro = escolhida.get(chave(l)) ?? l.bairro;
 }
 
-function montarCatalogoDe(db: Banco, exportaveis: readonly Exportavel[], agora: Date): Catalogo {
+function montarCatalogoDe(db: Banco, exportaveis: readonly Exportavel[], agora: Date, fichasLidas: ReadonlyMap<string, string> = new Map()): Catalogo {
   const gerado_em = agora.toISOString();
   const convertidos = exportaveis
-    .flatMap((p) => paraCatalogo({ ...p.exportado, descricao: p.gravado.descricao ? truncar(p.gravado.descricao, 4000) : null }, p.gravado.extras) ?? [])
+    .flatMap(
+      (p) =>
+        paraCatalogo(
+          { ...p.exportado, descricao: p.gravado.descricao ? truncar(p.gravado.descricao, 4000) : null },
+          p.gravado.extras,
+          p.exportado.fonte === "caixa_csv" ? (fichasLidas.get(p.exportado.id_na_fonte) ?? null) : null,
+        ) ?? [],
+    )
     .sort((a, b) => (a.linha.id < b.linha.id ? -1 : a.linha.id > b.linha.id ? 1 : 0));
   unificarBairros(convertidos.map((c) => c.linha));
   const porFonte = new Map<string, number>();

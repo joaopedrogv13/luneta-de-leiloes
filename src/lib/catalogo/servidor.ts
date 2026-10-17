@@ -10,7 +10,8 @@
 import "server-only";
 import { buscar as buscarNoIndice, paraPlano, POR_PAGINA_MAXIMO } from "./consulta";
 import { dadosDoConjunto } from "./dados";
-import type { Busca, Conjunto, PaginaImovel, Plano, ResultadoBusca, SobreConjunto } from "./tipos";
+import { coberturaPrecos, contarPorCidade, itbiDaCidade, lerItbi, referenciasItbi, type DadosItbi } from "./itbi";
+import type { Busca, Conjunto, ImovelResumo, PaginaImovel, Plano, ResultadoBusca, SobreConjunto } from "./tipos";
 import { lerBusca } from "./url";
 import { vizinhanca } from "./vizinhanca";
 
@@ -53,17 +54,49 @@ export async function buscar(busca: Busca, opcoes: { mapa?: boolean; facetas?: b
   return { ...r, sobre: d.sobre };
 }
 
-/** Página do imóvel (detalhe, preço do m² na região, parecidos e buscas externas), ou null se o id não existe. */
+/** ITBI (base/saida/site/itbi), lido uma vez por instância; um erro não fica guardado. */
+let itbiCarregado: Promise<DadosItbi> | null = null;
+function dadosItbi(): Promise<DadosItbi> {
+  if (!itbiCarregado) {
+    itbiCarregado = lerItbi();
+    itbiCarregado.catch(() => (itbiCarregado = null));
+  }
+  return itbiCarregado;
+}
+
+/** Imóveis da base por cidade (para a tabela de cobertura), contados uma vez por lista. */
+const contagens = new WeakMap<readonly ImovelResumo[], Map<string, number>>();
+function contagemPorCidade(itens: readonly ImovelResumo[]): Map<string, number> {
+  let c = contagens.get(itens);
+  if (!c) contagens.set(itens, (c = contarPorCidade(itens)));
+  return c;
+}
+
+/**
+ * Página do imóvel (detalhe, preço do m² na região, parecidos, buscas externas e cobertura de preços), ou null
+ * se o id não existe. Referências: primeiro as da base (rua, bairro, cidade, UF; fonte "leiloes"), depois as do
+ * ITBI da cidade (rua, bairro, cidade; fonte "itbi"). Nos exemplos, a cobertura sai sem a contagem da base.
+ */
 export async function paginaImovel(conjunto: Conjunto, id: string, plano: Plano): Promise<PaginaImovel | null> {
   const d = await dadosDoConjunto(conjunto);
   const k = d.posicao.get(id);
   if (k === undefined) return null;
-  const detalhe = await d.detalhe(id);
+  const [detalhe, itbi] = await Promise.all([d.detalhe(id), dadosItbi()]);
   if (!detalhe) return null;
-  const viz = vizinhanca(d.itens[k]!, d.itens);
+  const item = d.itens[k]!;
+  const contexto = d.contexto(k);
+  const viz = vizinhanca(item, d.itens, new Date(), contexto);
+  const previa = conjunto === "previa";
+  // ITBI também nos exemplos: o imóvel é fictício, mas o bairro e a cidade são reais (e a tela diz "Exemplo fictício")
+  const precos = referenciasItbi(itbiDaCidade(itbi, item), item, contexto.rua ?? null);
   return {
     imovel: plano === "lente" ? { ...detalhe, tags: [], selo: 0, porQueSelo: "" } : detalhe,
-    vizinhanca: { ...viz, parecidos: viz.parecidos.map((p) => paraPlano(p, plano)) },
+    vizinhanca: {
+      ...viz,
+      referencias: [...viz.referencias, ...precos],
+      parecidos: viz.parecidos.map((p) => paraPlano(p, plano)),
+      cobertura: coberturaPrecos(itbi, item, previa ? contagemPorCidade(d.itens) : null),
+    },
     selosDesligados: d.selosDesligados,
     sobre: d.sobre,
   };

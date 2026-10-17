@@ -1,0 +1,299 @@
+{
+ "descricao": "Casos da normalização de rua e bairro: base/fontes/itbi/normalizar.py e src/lib/catalogo/lugar.ts têm de dar o mesmo resultado (testar_normalizacao.py e lugar.test.ts leem este arquivo). Para mudar a regra, mude os dois e regenere o esperado com o .py.",
+ "rua": [
+  [
+   "R. Dr. José Benedetti, nº 18",
+   "doutor jose benedetti"
+  ],
+  [
+   "Rua do Purus, N. S/N, Quarteirão 272, Lote 10",
+   "do purus"
+  ],
+  [
+   "RUA DO PURUS",
+   "do purus"
+  ],
+  [
+   "R DO PURUS",
+   "do purus"
+  ],
+  [
+   "AV PAULISTA",
+   "paulista"
+  ],
+  [
+   "Avenida Paulista, 1000",
+   "paulista"
+  ],
+  [
+   "AVENIDA 17 DE NOVEMBRO, N. SN, QD 27 LT 18",
+   ""
+  ],
+  [
+   "Rua Vila Rica",
+   "vila rica"
+  ],
+  [
+   "Vila Rica",
+   "rica"
+  ],
+  [
+   "TRAV. XV DE NOVEMBRO, 10 FUNDOS",
+   "xv de novembro"
+  ],
+  [
+   "Estrada Marechal Miguel Salazar Mendes D",
+   "marechal miguel salazar mendes dom"
+  ],
+  [
+   "R. Pres. Vargas s/n",
+   "presidente vargas"
+  ],
+  [
+   "Praça N. Sra. da Paz",
+   "nossa senhora da paz"
+  ],
+  [
+   "Rua Nsa. Sra. de Fátima, 12",
+   "nossa senhora de fatima"
+  ],
+  [
+   "Al. Santos, 200 apto 32",
+   "santos"
+  ],
+  [
+   "",
+   ""
+  ],
+  [
+   "Rua Expedicionario Benoni Falcao Gouveia, N. 338, Lt 28, Qd 08 casa",
+   "expedicionario benoni falcao gouveia"
+  ],
+  [
+   "Ladeira da Glória",
+   "da gloria"
+  ],
+  [
+   "Rua 2 de Julho",
+   ""
+  ],
+  [
+   "Rodovia SP-55 km 10",
+   "sp"
+  ],
+  [
+   "Rua Dona Ana Néri",
+   "dona ana neri"
+  ],
+  [
+   "R. D. Pedro II",
+   "dom pedro ii"
+  ],
+  [
+   "Rua Cel. Moreira César",
+   "coronel moreira cesar"
+  ],
+  [
+   "R S JOAO",
+   "sao joao"
+  ],
+  [
+   "Rua São João, Bloco B",
+   "sao joao"
+  ],
+  [
+   "RUA JOÃO  PESSOA   ESQUINA COM X",
+   "joao pessoa"
+  ],
+  [
+   "Travessa   Ângelo\tGomes",
+   "angelo gomes"
+  ],
+  [
+   "R ABAGIBA",
+   "abagiba"
+  ],
+  [
+   "Rua Gal. Osório (antiga Rua 5)",
+   "general osorio"
+  ],
+  [
+   "Quadra 114, N. Sn, Lt 02A Rua 45",
+   ""
+  ],
+  [
+   "Rua Ápio Ñandú, nº 7",
+   "apio nandu"
+  ],
+  [
+   "Av. Jesus de Nazaré (Antiga R. Projetada), N. 20B, Qd 10 Lt 46B",
+   "jesus de nazare"
+  ],
+  [
+   "Praça N. S. de Fátima",
+   "nossa senhora de fatima"
+  ],
+  [
+   "Rua X, N. S/N",
+   "x"
+  ],
+  [
+   "Rua Nossa Senhora de Fátima, 10",
+   "nossa senhora de fatima"
+  ],
+  [
+   "Av. Gal. Osório",
+   "general osorio"
+  ],
+  [
+   "RUA SETE DE SETEMBRO, N. 10",
+   "sete de setembro"
+  ],
+  [
+   "Rua Quinze de Novembro s/n",
+   "quinze de novembro"
+  ],
+  [
+   "ESTRADA DO GUERENGUE, N. 1520",
+   "do guerengue"
+  ],
+  [
+   "Rua Coronel Azevedo, N. 830, CASA03,",
+   "coronel azevedo"
+  ],
+  [
+   "AVN CARLOS PEIXOTO",
+   "carlos peixoto"
+  ],
+  [
+   "ETR CABUCU DE BAIXO",
+   "cabucu de baixo"
+  ],
+  [
+   "PRA DE BOTAFOGO",
+   "de botafogo"
+  ],
+  [
+   "Praia de Botafogo, N. 300",
+   "de botafogo"
+  ],
+  [
+   "TRV DO OUVIDOR",
+   "do ouvidor"
+  ],
+  [
+   "RUA DOUTOR JULIO OTONI",
+   "doutor julio otoni"
+  ],
+  [
+   "R ALM BARROSO",
+   "almirante barroso"
+  ]
+ ],
+ "bairro": [
+  [
+   "Jd. Paulista",
+   "jardim paulista"
+  ],
+  [
+   "JD PAULISTA",
+   "jardim paulista"
+  ],
+  [
+   "Vl. Madalena",
+   "vila madalena"
+  ],
+  [
+   "Pq. São Lucas",
+   "parque sao lucas"
+  ],
+  [
+   "Res. Eldorado",
+   "residencial eldorado"
+  ],
+  [
+   "Cidade Nova",
+   "cidade nova"
+  ],
+  [
+   "S. Cristóvão",
+   "sao cristovao"
+  ],
+  [
+   "Sta. Cecília",
+   "santa cecilia"
+  ],
+  [
+   "Tribobó",
+   "tribobo"
+  ],
+  [
+   "Gebara (Itambi)",
+   "gebara"
+  ],
+  [
+   "Conj. Hab. Padre Manoel",
+   "conjunto hab padre manoel"
+  ],
+  [
+   "",
+   ""
+  ],
+  [
+   "Centro",
+   "centro"
+  ],
+  [
+   "Jardim  América",
+   "jardim america"
+  ],
+  [
+   "Vila Isabel",
+   "vila isabel"
+  ],
+  [
+   "Chác. Sto. Antônio",
+   "chacara santo antonio"
+  ],
+  [
+   "Lot. Bal. Sto. Antônio",
+   "loteamento balneario santo antonio"
+  ],
+  [
+   "N. Sra. das Graças",
+   "nossa senhora das gracas"
+  ],
+  [
+   "Nsa Sra Aparecida",
+   "nossa senhora aparecida"
+  ],
+  [
+   "Setor Sul",
+   "setor sul"
+  ],
+  [
+   "St. Bueno",
+   "setor bueno"
+  ],
+  [
+   "Bela-Vista",
+   "bela vista"
+  ],
+  [
+   "Vila N. S. Aparecida",
+   "vila nossa senhora aparecida"
+  ],
+  [
+   "Santa Cruz",
+   "santa cruz"
+  ],
+  [
+   "Recreio dos Bandeirantes",
+   "recreio dos bandeirantes"
+  ],
+  [
+   "Jardim Ângela",
+   "jardim angela"
+  ]
+ ]
+}

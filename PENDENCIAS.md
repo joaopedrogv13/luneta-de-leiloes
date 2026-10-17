@@ -258,11 +258,30 @@ o extrajudicial dos bancos. Ordem proposta:
   O legal e sem custo é **link de busca** já filtrado, abrindo o portal em nova aba. No site, usamos busca no Google com
   "site:" para cada portal (funciona sem depender do formato de URL de cada um). Cards de anúncios dentro do site
   exigiriam contrato (DataZAP, QuintoAndar, Loft: pagos, sem preço público).
-- **Próximo passo grátis: ITBI** (imposto da compra; transações reais com valor e área). Dado aberto em **Rio** (3.225
-  imóveis da base), **São Paulo** (490), **Porto Alegre** (233), **Fortaleza** (94, CC-BY, com coordenadas), **BH** (37,
-  CC-BY) e **Recife** (26, ODbL): 19,3% da base. Mostrar a mediana do m² por bairro e tipo nos últimos 12 meses, com
-  n e as ressalvas (valor declarado, área do IPTU). Salvador, Goiânia, Brasília, Curitiba e Florianópolis: sem base
-  aberta encontrada; pedir pela LAI.
+- **ITBI (transações reais) — feito em 17/10/2026 (rodada 3, dados):** coletado no GitHub Actions (`base-itbi.yml`) e
+  versionado em `base/saida/site/itbi/` (418 KB): **São Paulo** 95.084 transações (set/25 a set/26), **Rio** 47.173
+  (out/25 a set/26, planilha de transações da Fazenda), **Porto Alegre** 20.396, **Fortaleza** 23.635 (o arquivo do
+  portal vai até fev/2026) e **Recife** 16.952. A página recebe as referências por rua, bairro e cidade
+  (`fonte: "itbi"`, com período) e a tabela "temos / não temos" (`vizinhanca.cobertura`).
+  **Área (revisão de 17/10/2026):** SP e Fortaleza publicam a área dos apartamentos e salas COM a parte comum do
+  prédio; comparada com a área privativa da base, a avaliação parecia o dobro do preço pago na mesma rua (SP 2,0;
+  Fortaleza 1,6). Esses tipos ficam sem o ITBI, com o motivo na página (`cobertura.semComparacao`); casas e terrenos
+  comparam. Imóveis da base que comparam e casam (rua / bairro / cidade): Rio 1.717 / 3.087 / 3.224 de 3.224; POA
+  178 / 191 / 227 de 227; Recife 22 / 25 / 26 de 26; SP 7 / 14 / 32 de 32 (dos 490); Fortaleza 0 / 18 / 22 de 22
+  (dos 94). Valor: declarado em SP e no Rio; base de cálculo da prefeitura em POA e Fortaleza; avaliação da prefeitura
+  no Recife (a tabela de cobertura diz qual). **BH (37 imóveis): o portal da PBH devolve HTTP 403 ao GitHub Actions** (API, páginas e
+  download direto); o conector está pronto e precisa rodar de uma rede no Brasil. Licenças de SP, Rio e POA: a
+  confirmar. Detalhes em `base/fontes/itbi/README.md`. Salvador, Goiânia, Brasília, Curitiba, Florianópolis, Campinas e
+  Niterói: sem base aberta; pedir pela LAI.
+- **Preço do m² na base por RUA, BAIRRO, CIDADE e ESTADO:** a mesma rua (n ≥ 3, mesma cidade; 8.883 imóveis têm),
+  bairro (n ≥ 5), cidade (n ≥ 5) e UF, com média sem as pontas, mediana e quartis. Buscas nos portais por nível (mesma
+  rua, mesmo bairro, cidade). Revisão: "Rua Três", "Rua Nova", "Rua Principal" (repetem em cada loteamento) só juntam
+  imóveis do mesmo bairro; endereço que começa por lote, chácara ou quadra de Brasília não vira rua.
+- **Matrícula da Caixa ("não informada" com matrícula no site):** a ficha só abre de rede no Brasil (o GitHub Actions
+  recebeu o desafio anti-robô nas 5 fichas de teste; não contornamos). A página mostra "na página da Caixa" com o link.
+  Caminho pronto: baixar as fichas de uma rede no Brasil (`base/fontes/caixa/baixar-fichas.ts`) e aplicar com
+  `npm run base:fichas -- --arquivo fichas.json`; a exportação leva matrícula, comarca, ofício, inscrição, averbação e a
+  data ao site. **Decisão do dono:** de onde rodar as fichas (o PC dele, uma VPS no Brasil).
 - **Tendência:** série IVG-R do Banco Central (SGS 21340, JSON), só nacional.
 - **FipeZAP** (56 cidades, mensal): consulta grátis, mas sem termos de uso comercial encontrados. **Pedir autorização à
   Fipe** antes de exibir; até lá, no máximo um link para o informe.
@@ -457,6 +476,13 @@ pelo valor real no arquivo de conteúdo.
   "só nossos".
 - [ ] Querido Diário: quando o trecho não trouxer o site do leiloeiro, ler o texto completo do diário (`txt_url`, já vem na
   resposta da API).
+- [ ] Integração da rodada 3 (dados × tela da região): quando a cidade tem ITBI mas o imóvel fica sem a referência por
+  causa da área (apartamentos e imóveis comerciais de SP e Fortaleza), a tela deve mostrar `cobertura.semComparacao`, e
+  não "a prefeitura não registra compras suficientes". As referências de ITBI repetem o `escopo` das da base (rua,
+  bairro, cidade): a `key` de lista na tela precisa levar a `fonte`.
+- [ ] ITBI: rua de nome próprio repetido em bairros diferentes da mesma cidade (duas "Rua São José" em SP) soma as duas;
+  levar o bairro de cada rua no `agregar.py` e casar rua + bairro quando a rua aparecer em bairros distantes. BH (403
+  fora do Brasil) e as licenças de SP, Rio e POA continuam pendentes.
 
 ## Antes de publicar: checagem e buscadores
 

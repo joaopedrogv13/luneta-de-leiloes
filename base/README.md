@@ -35,7 +35,20 @@ npm run base:riscos                                        # regras das 26 tags
 npm run base:status                                        # contagens, fotos, geo, tags e última coleta
 npm run base:exportar                                      # JSON completo em base/dados/exportacao/imoveis.json
 npm run base:exportar -- --site                            # instantâneo do site em base/saida/ (amostra, estatísticas e catálogo em site/)
+npm run base:fichas -- --arquivo fichas.json               # aplica fichas da Caixa lidas em outro lugar (ver abaixo)
 ```
+
+**Fichas da Caixa lidas fora daqui.** A ficha (`detalhe-imovel.asp`) tem matrícula, comarca, ofício, inscrição imobiliária
+e averbação dos leilões negativos, que o CSV não traz. A rede deste ambiente não chega à Caixa, e servidores fora do
+Brasil recebem o desafio anti-robô (o workflow `base-fichas-caixa.yml` recebeu "perfdrive" nas 5 fichas de teste em
+17/10/2026; o coletor não contorna). Quem tiver acesso roda `node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts
+--ids <id13,...>` (ou `--uf RJ --quantidade 200`) e aplica o `fichas.json` com `npm run base:fichas -- --arquivo fichas.json
+[--banco ...] [--cache base/dados/caixa/detalhes.db | off]` (`base/fontes/caixa/aplicar-fichas.ts`): grava no imóvel a
+matrícula, o cartório, os extras da ficha (`comarca`, `oficio`, `inscricao_imobiliaria`, `averbacao_leiloes_negativos`,
+`matriculas`, `ficha_lida_em`), o PDF da matrícula, o FGTS e os editais quando a ficha descreve a oferta atual, refaz a
+chave de deduplicação, e guarda a ficha no cache do conector (a próxima coleta do CSV mantém o que veio dela). Depois,
+`npm run base:exportar -- --site` leva ao site o registro "lido", com a data (do imóvel ou, depois de uma coleta, do
+cache das fichas).
 
 Checagens e ferramentas:
 
@@ -109,7 +122,7 @@ Leitura: o CSV da Caixa não traz texto sobre posse, dívidas, processo nem docu
 Todos os imóveis exportáveis (mesma regra do JSON completo: ativos, sem praça vencida há mais de 1 dia, com lance), no formato de `src/lib/catalogo/tipos.ts` (`ImovelResumo` e `ImovelDetalhe`). Tudo em `.json.gz` (gzip nível 9; mesma base, mesmos bytes, fora `gerado_em`) e versionado no Git: **2,3 MB** com os 21.231 imóveis gerados em 14/10/2026 (meta: até 4 MB; o teste da base confere). O site aplica de novo, a cada busca, o corte de praça vencida há mais de 1 dia: o instantâneo fica no ar por dias e um leilão que já passou sai da lista sem precisar gerar de novo.
 
 - **`imoveis.json.gz`** (≈ 1,0 MB): a lista. `formato: "luneta-catalogo"`, `versao` (hoje 1), `gerado_em`, `criterio`, `fontes` (`id`, `nome`, `gerado_na_fonte_em`, `coletado_em`, `total`), `total`, `partes` (32) e `colunas`: um array por campo do `ImovelResumo` (mais `endereco`, só para a busca por texto do servidor), todos do mesmo tamanho; `colunas.titulo[k]` é o título do k-ésimo imóvel. Em colunas o arquivo fica 40% menor que uma lista de objetos. Vai **com** tags e selo: quem tira tags e selo no plano Lente é o servidor do site, antes de responder.
-- **`detalhes/00.json.gz` … `1f.json.gz`** (≈ 1,3 MB juntos): o resto do `ImovelDetalhe` (áreas, descrição, todas as fotos, praças, matrícula, cartório, processo, comitente, links, condições de pagamento, data na fonte, por que tem ou não selo e, nas tags, `confianca`, `origem` e `evidencia`), num mapa `{id: detalhe}`. O pedaço de cada id é o FNV-1a de 32 bits do id, módulo 32, em hexadecimal (`parteDoId`); a página do imóvel carrega só um pedaço. Cada pedaço leva o `gerado_em` da lista: pedaço de outra geração é recusado.
+- **`detalhes/00.json.gz` … `1f.json.gz`** (≈ 1,3 MB juntos): o resto do `ImovelDetalhe` (áreas, descrição, todas as fotos, praças, matrícula, cartório, processo, comitente, links, condições de pagamento, data na fonte, por que tem ou não selo e, nas tags, `confianca`, `origem` e `evidencia`; e, nos imóveis da Caixa com ficha lida, `registro`: `matriculas`, `comarca`, `oficio`, `inscricaoImobiliaria`, `averbacaoLeiloesNegativos` e `lidoEm`), num mapa `{id: detalhe}`. O pedaço de cada id é o FNV-1a de 32 bits do id, módulo 32, em hexadecimal (`parteDoId`); a página do imóvel carrega só um pedaço. Cada pedaço leva o `gerado_em` da lista: pedaço de outra geração é recusado.
 
 Regras dos campos:
 - `id` do site: `caixa-<id na fonte>` e `lj-<id na fonte>` (como na amostra). Os 6 tipos entram (rural e outro também).
@@ -124,7 +137,9 @@ Regras dos campos:
 - `condicoesPagamento`: da LJ (`nu_parcelas`, `vl_percentualentrada`, `indice_correcao`): "Entrada de 25% e o restante em até 30 parcelas (IPCA)". O padrão da fonte (1 parcela, 100% de entrada) não vira "à vista": não dá para distinguir de "não informado".
 - `leiloeiro`: os nomes da fixture da LJ são sintéticos ("Leiloeiro Exemplo Dois") e ficam de fora. Nenhum campo traz nome de devedor ou parte (LGPD).
 
-O site lê com `src/lib/catalogo/instantaneo.ts` (confere cada campo; versão errada ou arquivo faltando dá erro com o comando para gerar de novo) e guarda em memória por instância (`src/lib/catalogo/dados.ts`). Na Vercel, `outputFileTracingIncludes` em `next.config.ts` leva a pasta para `/api/catalogo` e `/previa/**`. Formato mudou de forma incompatível: suba `VERSAO_CATALOGO` em `base/exportar.ts` e em `src/lib/catalogo/instantaneo.ts`.
+- **`itbi/<uf>-<cidade>.json.gz`**: preço de transações reais (ITBI das prefeituras), agregado por cidade, bairro e rua; gerado por `base/fontes/itbi/para_site.py` a partir do workflow `base-itbi.yml`. Formato, cidades e licenças em `base/fontes/itbi/README.md`. Fica fora da meta de 4 MB do catálogo (o teste confere à parte: até 3 MB).
+
+O site lê com `src/lib/catalogo/instantaneo.ts` (confere cada campo; versão errada ou arquivo faltando dá erro com o comando para gerar de novo) e guarda em memória por instância (`src/lib/catalogo/dados.ts`). Na Vercel, `outputFileTracingIncludes` em `next.config.ts` leva a pasta para `/api/catalogo` e `/previa/**` (e a do ITBI para `/assinante/imovel/**`). Leitura de arquivo com caminho montado em tempo de execução faz o build rastrear o projeto inteiro (aviso "Dynamic filesystem access" do Turbopack): escreva o caminho por extenso ou marque `/* turbopackIgnore: true */` (ver `lerItbi` em `src/lib/catalogo/itbi.ts`). Formato mudou de forma incompatível: suba `VERSAO_CATALOGO` em `base/exportar.ts` e em `src/lib/catalogo/instantaneo.ts`.
 
 ### Amostra e estatísticas (`base/saida/*.json`)
 

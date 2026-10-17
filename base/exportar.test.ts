@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
@@ -556,4 +556,36 @@ test("catálogo versionado em base/saida/site: formato, até 4 MB e sem document
     for (const t of l.tags) assert.ok(TAGS.some((d) => d.slug === t.slug && d.rotulo === t.rotulo), `${l.id}: ${t.slug}`);
     for (const texto of [l.titulo, l.bairro ?? "", l.endereco ?? ""]) assert.equal(mascararDocumentos(texto), texto, `${l.id}: ${texto}`);
   }
+});
+
+test("ITBI versionado em base/saida/site/itbi: formato do site, só agregados e até 3 MB", () => {
+  const pasta = join(PASTA_SITE_PADRAO, PASTA_CATALOGO, "itbi");
+  if (!existsSync(pasta)) return;
+  let bytes = 0;
+  for (const nome of readdirSync(pasta).filter((n) => n.endsWith(".json.gz"))) {
+    const bruto = readFileSync(join(pasta, nome));
+    bytes += bruto.length;
+    const a = JSON.parse(gunzipSync(bruto).toString("utf8")) as {
+      formato: string;
+      versao: number;
+      uf: string;
+      fonte: { url: string; periodo: string[]; transacoes: number };
+      bairros: Record<string, { nome: string; tipos: Record<string, unknown> }>;
+      ruas: Record<string, { nome: string; tipos: Record<string, unknown> }>;
+    };
+    assert.equal(a.formato, "luneta-itbi", nome);
+    assert.equal(a.versao, 1, nome);
+    assert.match(nome, new RegExp(`^${a.uf.toLowerCase()}-[a-z0-9-]+\\.json\\.gz$`), "nome <uf>-<cidade>");
+    assert.match(a.fonte.url, /^https:\/\//);
+    assert.ok(a.fonte.transacoes > 0 && a.fonte.periodo.length === 2, nome);
+    for (const grupo of [a.bairros, a.ruas]) {
+      for (const [chave, v] of Object.entries(grupo)) {
+        // só o nome e as estatísticas: nenhuma transação, número, matrícula ou contribuinte
+        assert.deepEqual(Object.keys(v).sort(), ["nome", "tipos"], `${nome} ${chave}`);
+        for (const e of Object.values(v.tipos)) assert.deepEqual(Object.keys(e as object).sort(), ["media", "mediana", "n", "p25", "p75"], `${nome} ${chave}`);
+        assert.equal(mascararDocumentos(v.nome), v.nome, `${nome}: documento em ${v.nome}`);
+      }
+    }
+  }
+  assert.ok(bytes <= 3 * 1024 * 1024, `ITBI com ${bytes} bytes passa de 3 MB`);
 });

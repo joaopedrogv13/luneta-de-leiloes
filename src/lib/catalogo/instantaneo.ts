@@ -28,9 +28,16 @@ export function pastaPadrao(): string {
   return join(process.cwd(), "base", "saida", "site");
 }
 
+/**
+ * Registro lido da ficha (RegistroCatalogo em base/exportar.ts): só vem nos imóveis da Caixa com ficha lida
+ * (pelo conector com --detalhes ou por `npm run base:fichas`).
+ */
+export type RegistroLido = Pick<RegistroImovel, "matriculas" | "comarca" | "oficio" | "inscricaoImobiliaria" | "averbacaoLeiloesNegativos" | "lidoEm">;
+
 /** O que o detalhe tem além da linha da lista (DetalheCatalogo em base/exportar.ts). */
 export interface DetalheParcial extends Omit<ImovelDetalhe, keyof ImovelResumo | "endereco" | "registro"> {
   tags: Array<Pick<TagDetalhe, "slug" | "confianca" | "origem" | "evidencia">>;
+  registro?: RegistroLido;
 }
 
 export interface ListaLida {
@@ -241,6 +248,15 @@ const CAMPOS_DETALHE: Record<keyof DetalheParcial, Conferir> = {
   condicoesPagamento: textoOuNulo,
   geradoNaFonteEm: textoOuNulo,
   porQueSelo: texto,
+  registro: (v) => {
+    if (v === undefined) return true;
+    const r = v as RegistroLido;
+    return (
+      typeof r === "object" && r !== null && Array.isArray(r.matriculas) && r.matriculas.every((m) => typeof m === "string") &&
+      textoOuNulo(r.comarca) && textoOuNulo(r.oficio) && textoOuNulo(r.inscricaoImobiliaria) && textoOuNulo(r.averbacaoLeiloesNegativos) &&
+      (r.lidoEm === null || (typeof r.lidoEm === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.lidoEm)))
+    );
+  },
   tags: (v) =>
     Array.isArray(v) &&
     v.every((t) => typeof t === "object" && t !== null && texto(t.slug) && CONFIANCAS(t.confianca) && texto(t.origem) && textoOuNulo(t.evidencia)),
@@ -315,12 +331,31 @@ export function montarDetalhe(resumo: ImovelResumo, endereco: string | null, par
 /**
  * Dados de registro do imóvel. Na Caixa, matrícula, comarca, ofício e inscrição imobiliária estão na ficha
  * (página do imóvel no site dela), que o CSV não traz: sem a ficha lida, a situação é "pendente" (a fonte
- * publica, a Luneta ainda não leu) e a tela aponta para a página, em vez de dizer "não informado".
+ * publica, a Luneta ainda não leu) e a tela aponta para a página, em vez de dizer "não informado". Com a ficha
+ * lida (`parcial.registro`, ou a matrícula que só a ficha dá), é "lido", com comarca, ofício, inscrição,
+ * averbação e o dia da leitura quando a exportação os trouxe.
  */
-export function registroDe(resumo: Pick<ImovelResumo, "fonte">, parcial: Pick<DetalheParcial, "matricula" | "cartorio" | "links">): RegistroImovel {
-  const matriculas = (parcial.matricula ?? "").split(/\s*[;,]\s*/).filter(Boolean);
+export function registroDe(resumo: Pick<ImovelResumo, "fonte">, parcial: Pick<DetalheParcial, "matricula" | "cartorio" | "links" | "registro">): RegistroImovel {
+  const lido = parcial.registro;
+  const matriculas = lido?.matriculas.length ? lido.matriculas : (parcial.matricula ?? "").split(/\s*[;,]\s*/).filter(Boolean);
   const paginaFonte = parcial.links.find((l) => l.tipo === "anuncio")?.url ?? null;
   const caixa = resumo.fonte.id === "caixa_csv";
-  const situacao: RegistroImovel["situacao"] = caixa ? (matriculas.length ? "lido" : "pendente") : matriculas.length || parcial.cartorio ? "na_fonte" : "nao_publica";
-  return { situacao, matriculas, cartorio: parcial.cartorio, comarca: null, oficio: null, inscricaoImobiliaria: null, averbacaoLeiloesNegativos: null, paginaFonte, lidoEm: null };
+  const situacao: RegistroImovel["situacao"] = caixa
+    ? lido || matriculas.length
+      ? "lido"
+      : "pendente"
+    : matriculas.length || parcial.cartorio
+      ? "na_fonte"
+      : "nao_publica";
+  return {
+    situacao,
+    matriculas,
+    cartorio: parcial.cartorio,
+    comarca: lido?.comarca ?? null,
+    oficio: lido?.oficio ?? null,
+    inscricaoImobiliaria: lido?.inscricaoImobiliaria ?? null,
+    averbacaoLeiloesNegativos: lido?.averbacaoLeiloesNegativos ?? null,
+    paginaFonte,
+    lidoEm: lido?.lidoEm ?? null,
+  };
 }
