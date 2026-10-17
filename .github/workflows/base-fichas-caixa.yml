@@ -2,8 +2,8 @@
 #
 # SÓ RODA QUANDO ACIONADO. Baixa as páginas com o cliente educado da base (User-Agent identificado,
 # robots.txt, 2 s entre páginas) e NÃO contorna anti-robô: 5 bloqueios seguidos param tudo. Os runners do
-# GitHub ficam fora do Brasil e a Caixa pode recusar. O HTML fica como artefato por 7 dias; para aplicar no
-# banco local: LUNETA_CAIXA_FICHAS=<pasta> (ver base/fontes/caixa/README.md).
+# GitHub ficam fora do Brasil e a Caixa pode recusar. Publica no branch `coletas-dados` só os campos lidos
+# (fichas.json, já com a máscara LGPD), o resumo e o log: o HTML da Caixa não é republicado.
 name: Base - fichas da Caixa
 
 on:
@@ -31,7 +31,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: base-fichas-caixa
@@ -55,14 +55,26 @@ jobs:
           QTD: ${{ inputs.quantidade }}
           INICIO: ${{ inputs.inicio }}
         run: |
+          mkdir -p fichas
           if [ -n "$IDS" ]; then
-            node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts --ids "$IDS" --saida fichas
+            node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts --ids "$IDS" --saida fichas 2>&1 | tee fichas/log.txt
           else
-            node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts --uf "$UF" --quantidade "$QTD" --inicio "$INICIO" --saida fichas
+            node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts --uf "$UF" --quantidade "$QTD" --inicio "$INICIO" --saida fichas 2>&1 | tee fichas/log.txt
           fi
-      - uses: actions/upload-artifact@v4
+      - name: Publicar o resultado no branch coletas-dados
         if: always()
-        with:
-          name: fichas-caixa
-          path: fichas/
-          retention-days: 7
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          PASTA="$RUNNER_TEMP/publicar"
+          rm -rf "$PASTA" && mkdir -p "$PASTA"
+          cd "$PASTA"
+          git init -q && git checkout -q -b coletas-dados
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if git fetch -q --depth 1 origin coletas-dados 2>/dev/null; then git checkout -q -B coletas-dados FETCH_HEAD; fi
+          mkdir -p fichas/${{ github.run_id }}
+          cp "$GITHUB_WORKSPACE"/fichas/*.json "$GITHUB_WORKSPACE"/fichas/log.txt fichas/${{ github.run_id }}/ 2>/dev/null || true
+          git add -A
+          git -c user.name="luneta-coleta" -c user.email="actions@users.noreply.github.com" commit -q -m "Fichas da Caixa (execução ${{ github.run_id }})" || echo "nada novo"
+          for i in 1 2 3; do git push -q origin coletas-dados && break; git fetch -q origin coletas-dados && git rebase -q FETCH_HEAD; done

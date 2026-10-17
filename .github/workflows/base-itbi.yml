@@ -2,8 +2,8 @@
 #
 # SÓ RODA QUANDO ACIONADO (workflow_dispatch: botão "Run workflow" ou `gh workflow run base-itbi.yml`).
 # Lê só dados abertos publicados pelas prefeituras; não faz commit nem usa segredo. O resultado (agregados
-# por cidade, bairro e rua, sem nenhum dado pessoal) fica como artefato por 7 dias; quem integra baixa o
-# artefato e grava em base/saida/site/.
+# por cidade, bairro e rua, sem nenhum dado pessoal) é publicado no branch `coletas-dados` (pasta itbi/);
+# quem integra copia para base/saida/site/.
 name: Base - ITBI
 
 on:
@@ -16,7 +16,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   itbi:
@@ -36,13 +36,25 @@ jobs:
       - name: Explorar os portais
         if: inputs.etapa != 'sp'
         continue-on-error: true
-        run: python explorar.py saida/explorar.json
+        run: python explorar.py saida/explorar.json 2>&1 | tee saida/log-explorar.txt
       - name: São Paulo (dadosimob)
         if: inputs.etapa != 'explorar'
         continue-on-error: true
-        run: python sp.py saida/itbi-sp.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: itbi
-          path: base/fontes/itbi/saida/
-          retention-days: 7
+        run: python sp.py saida/itbi-sp.json 2>&1 | tee saida/log-sp.txt
+      - name: Publicar o resultado no branch coletas-dados
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          PASTA="$RUNNER_TEMP/publicar"
+          rm -rf "$PASTA" && mkdir -p "$PASTA"
+          cd "$PASTA"
+          git init -q && git checkout -q -b coletas-dados
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if git fetch -q --depth 1 origin coletas-dados 2>/dev/null; then git checkout -q -B coletas-dados FETCH_HEAD; fi
+          mkdir -p itbi
+          cp "$GITHUB_WORKSPACE"/base/fontes/itbi/saida/* itbi/
+          git add -A
+          git -c user.name="luneta-coleta" -c user.email="actions@users.noreply.github.com" commit -q -m "ITBI (execução ${{ github.run_id }})" || echo "nada novo"
+          for i in 1 2 3; do git push -q origin coletas-dados && break; git fetch -q origin coletas-dados && git rebase -q FETCH_HEAD; done

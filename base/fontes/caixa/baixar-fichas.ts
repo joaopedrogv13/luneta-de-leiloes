@@ -12,7 +12,8 @@
  *   node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts --uf RJ --quantidade 200 --saida fichas
  *
  * Com --uf, os ids vêm do instantâneo do site (base/saida/site/imoveis.json.gz), na ordem dele.
- * Saída: <saida>/<id13>.html e <saida>/resumo.json ({ ok, bloqueio, falha }).
+ * Saída: <saida>/<id13>.html, <saida>/resumo.json ({ ok, bloqueio, falha }) e <saida>/fichas.json (os campos
+ * lidos de cada ficha, já com a máscara LGPD do parser: é o que pode ser publicado, sem o HTML da Caixa).
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -59,6 +60,7 @@ const saida = v.saida ?? "fichas";
 await mkdir(saida, { recursive: true });
 const http = criarClienteHttp({ intervaloMinimoMs: 2000, log: (m) => console.log(m) });
 const resumo = { ok: [] as string[], bloqueio: [] as { id: string; motivo: string }[], falha: [] as { id: string; motivo: string }[] };
+const lidas: Record<string, ReturnType<typeof interpretarFicha>> = {};
 let bloqueiosSeguidos = 0;
 
 for (const [i, id] of ids.entries()) {
@@ -72,6 +74,7 @@ for (const [i, id] of ids.entries()) {
     const ficha = interpretarFicha(html);
     await writeFile(join(saida, `${id}.html`), resposta.bytes);
     resumo.ok.push(id);
+    lidas[id] = ficha;
     bloqueiosSeguidos = 0;
     console.log(`[${i + 1}/${ids.length}] ${id}: ok · matrícula ${ficha.matriculas.join(", ") || "—"} · ${ficha.comarca ?? "sem comarca"}`);
   } catch (erro) {
@@ -88,4 +91,5 @@ for (const [i, id] of ids.entries()) {
 }
 
 await writeFile(join(saida, "resumo.json"), JSON.stringify(resumo, null, 1));
+await writeFile(join(saida, "fichas.json"), JSON.stringify({ lidas_em: new Date().toISOString(), fichas: lidas }));
 console.log(`Fim: ${resumo.ok.length} ok, ${resumo.bloqueio.length} bloqueio(s), ${resumo.falha.length} falha(s).`);
