@@ -1,16 +1,19 @@
 # ITBI (transações reais) das prefeituras para a referência de preço do m² no site (base/fontes/itbi/README.md).
 #
 # SÓ RODA QUANDO ACIONADO (workflow_dispatch: botão "Run workflow" ou `gh workflow run base-itbi.yml`).
-# Lê só dados abertos publicados pelas prefeituras; não faz commit nem usa segredo. O resultado (agregados
-# por cidade, bairro e rua, sem nenhum dado pessoal) é publicado no branch `coletas-dados` (pasta itbi/);
-# quem integra copia para base/saida/site/.
+# Lê só dados abertos publicados pelas prefeituras; não faz commit no código nem usa segredo. O resultado (agregados
+# por cidade, bairro e rua, sem nenhum dado pessoal) e os logs são publicados no branch `coletas-dados` (pasta
+# itbi/); quem integra converte para base/saida/site/itbi/ com `python3 base/fontes/itbi/para_site.py`.
+#
+# `etapa`: "tudo", ou uma lista separada por vírgula entre explorar, sp, rio, recife, fortaleza, poa, bh
+# (ex.: "rio,bh" roda só as duas). Cada cidade é uma etapa à parte: uma falha não derruba as outras.
 name: Base - ITBI
 
 on:
   workflow_dispatch:
     inputs:
       etapa:
-        description: "explorar (descobrir os arquivos), sp, ou tudo"
+        description: "tudo, ou lista: explorar,sp,rio,recife,fortaleza,poa,bh"
         required: false
         default: "tudo"
         type: string
@@ -21,7 +24,9 @@ permissions:
 jobs:
   itbi:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
+    env:
+      ETAPAS: ",${{ inputs.etapa }},"
     defaults:
       run:
         working-directory: base/fontes/itbi
@@ -31,16 +36,39 @@ jobs:
         with:
           python-version: "3.12"
       - name: Dependências
-        run: pip install --quiet dadosimob pandas numpy requests openpyxl odfpy
+        run: pip install --quiet dadosimob pandas numpy requests openpyxl odfpy xlrd
       - run: mkdir -p saida
+      - name: Normalização igual à do site
+        continue-on-error: true
+        run: python testar_normalizacao.py 2>&1 | tee saida/log-normalizacao.txt
       - name: Explorar os portais
-        if: inputs.etapa != 'sp'
+        if: inputs.etapa == 'tudo' || contains(env.ETAPAS, ',explorar,')
         continue-on-error: true
         run: python explorar.py saida/explorar.json 2>&1 | tee saida/log-explorar.txt
       - name: São Paulo (dadosimob)
-        if: inputs.etapa != 'explorar'
+        if: inputs.etapa == 'tudo' || contains(env.ETAPAS, ',sp,')
         continue-on-error: true
-        run: python sp.py saida/itbi-sp.json 2>&1 | tee saida/log-sp.txt
+        run: set -o pipefail; python sp.py saida/itbi-sp.json 2>&1 | tee saida/log-sp.txt
+      - name: Rio de Janeiro (MapServer da Fazenda)
+        if: inputs.etapa == 'tudo' || contains(env.ETAPAS, ',rio,')
+        continue-on-error: true
+        run: set -o pipefail; python rio.py saida/itbi-rio-de-janeiro.json 2>&1 | tee saida/log-rio.txt
+      - name: Recife (CKAN)
+        if: inputs.etapa == 'tudo' || contains(env.ETAPAS, ',recife,')
+        continue-on-error: true
+        run: set -o pipefail; python recife.py saida/itbi-recife.json 2>&1 | tee saida/log-recife.txt
+      - name: Fortaleza (CKAN)
+        if: inputs.etapa == 'tudo' || contains(env.ETAPAS, ',fortaleza,')
+        continue-on-error: true
+        run: set -o pipefail; python fortaleza.py saida/itbi-fortaleza.json 2>&1 | tee saida/log-fortaleza.txt
+      - name: Porto Alegre (CKAN)
+        if: inputs.etapa == 'tudo' || contains(env.ETAPAS, ',poa,')
+        continue-on-error: true
+        run: set -o pipefail; python poa.py saida/itbi-porto-alegre.json 2>&1 | tee saida/log-porto-alegre.txt
+      - name: Belo Horizonte (CKAN ou páginas do portal)
+        if: inputs.etapa == 'tudo' || contains(env.ETAPAS, ',bh,')
+        continue-on-error: true
+        run: set -o pipefail; python bh.py saida/itbi-belo-horizonte.json 2>&1 | tee saida/log-belo-horizonte.txt
       - name: Publicar o resultado no branch coletas-dados
         if: always()
         env:
@@ -55,6 +83,7 @@ jobs:
           if git fetch -q --depth 1 origin coletas-dados 2>/dev/null; then git checkout -q -B coletas-dados FETCH_HEAD; fi
           mkdir -p itbi
           cp "$GITHUB_WORKSPACE"/base/fontes/itbi/saida/* itbi/
+          echo "execução ${{ github.run_id }} · ref ${{ github.ref_name }} · etapa ${{ inputs.etapa }} · $(date -u +%FT%TZ)" > itbi/ultima-execucao.txt
           git add -A
-          git -c user.name="luneta-coleta" -c user.email="actions@users.noreply.github.com" commit -q -m "ITBI (execução ${{ github.run_id }})" || echo "nada novo"
+          git -c user.name="luneta-coleta" -c user.email="actions@users.noreply.github.com" commit -q -m "ITBI (execução ${{ github.run_id }}, ${{ inputs.etapa }})" || echo "nada novo"
           for i in 1 2 3; do git push -q origin coletas-dados && break; git fetch -q origin coletas-dados && git rebase -q FETCH_HEAD; done
