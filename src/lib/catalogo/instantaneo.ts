@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { gunzip } from "node:zlib";
 import { linkGoogleMaps } from "./texto";
-import type { Confianca, ImovelDetalhe, ImovelResumo, LinkImovel, PracaDetalhe, SobreConjunto, TagDetalhe, TagResumo } from "./tipos";
+import type { Confianca, ImovelDetalhe, ImovelResumo, LinkImovel, PracaDetalhe, SobreConjunto, TagDetalhe, TagResumo, RegistroImovel } from "./tipos";
 
 const descompactar = promisify(gunzip);
 
@@ -29,7 +29,7 @@ export function pastaPadrao(): string {
 }
 
 /** O que o detalhe tem além da linha da lista (DetalheCatalogo em base/exportar.ts). */
-export interface DetalheParcial extends Omit<ImovelDetalhe, keyof ImovelResumo | "endereco"> {
+export interface DetalheParcial extends Omit<ImovelDetalhe, keyof ImovelResumo | "endereco" | "registro"> {
   tags: Array<Pick<TagDetalhe, "slug" | "confianca" | "origem" | "evidencia">>;
 }
 
@@ -309,5 +309,18 @@ export function montarDetalhe(resumo: ImovelResumo, endereco: string | null, par
     descricao: endereco ? "Busca o endereço publicado pela fonte" : "A fonte não publica o endereço: busca bairro e cidade",
   };
   const matricula = parcial.links.some((l) => l.tipo === "matricula") ? null : linkMatriculaCaixa(resumo);
-  return { ...resumo, ...parcial, tags, endereco, links: [...parcial.links, ...(matricula ? [matricula] : []), mapa] };
+  return { ...resumo, ...parcial, tags, endereco, links: [...parcial.links, ...(matricula ? [matricula] : []), mapa], registro: registroDe(resumo, parcial) };
+}
+
+/**
+ * Dados de registro do imóvel. Na Caixa, matrícula, comarca, ofício e inscrição imobiliária estão na ficha
+ * (página do imóvel no site dela), que o CSV não traz: sem a ficha lida, a situação é "pendente" (a fonte
+ * publica, a Luneta ainda não leu) e a tela aponta para a página, em vez de dizer "não informado".
+ */
+export function registroDe(resumo: Pick<ImovelResumo, "fonte">, parcial: Pick<DetalheParcial, "matricula" | "cartorio" | "links">): RegistroImovel {
+  const matriculas = (parcial.matricula ?? "").split(/\s*[;,]\s*/).filter(Boolean);
+  const paginaFonte = parcial.links.find((l) => l.tipo === "anuncio")?.url ?? null;
+  const caixa = resumo.fonte.id === "caixa_csv";
+  const situacao: RegistroImovel["situacao"] = caixa ? (matriculas.length ? "lido" : "pendente") : matriculas.length || parcial.cartorio ? "na_fonte" : "nao_publica";
+  return { situacao, matriculas, cartorio: parcial.cartorio, comarca: null, oficio: null, inscricaoImobiliaria: null, averbacaoLeiloesNegativos: null, paginaFonte, lidoEm: null };
 }

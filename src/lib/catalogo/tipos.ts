@@ -149,6 +149,32 @@ export interface ImovelDetalhe extends Omit<ImovelResumo, "tags"> {
   geradoNaFonteEm: string | null;
   /** por que tem (ou não) selo */
   porQueSelo: string;
+  /**
+   * Dados de registro da página do imóvel na fonte (na Caixa, a "ficha"): matrícula(s), comarca, ofício,
+   * inscrição imobiliária, averbação dos leilões negativos. `situacao`:
+   * - "lido": a Luneta leu a página e os campos vazios estão vazios lá também;
+   * - "pendente": a fonte publica esses dados numa página que a Luneta ainda não leu (mostre o link
+   *   `paginaFonte`, nunca "não informado pela fonte");
+   * - "na_fonte": vieram do próprio anúncio/API (ex.: Leilões Judiciais);
+   * - "nao_publica": a fonte não publica esses dados.
+   */
+  registro: RegistroImovel;
+}
+
+export interface RegistroImovel {
+  situacao: "lido" | "pendente" | "na_fonte" | "nao_publica";
+  matriculas: string[];
+  /** "2º Ofício de Registro de Imóveis de São Gonçalo/RJ" */
+  cartorio: string | null;
+  comarca: string | null;
+  oficio: string | null;
+  inscricaoImobiliaria: string | null;
+  /** "Averbado", "Não averbado"... como a fonte escreve */
+  averbacaoLeiloesNegativos: string | null;
+  /** página do imóvel na fonte, onde os dados estão (para "pendente") */
+  paginaFonte: string | null;
+  /** quando a ficha foi lida (AAAA-MM-DD), se "lido" */
+  lidoEm: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -338,7 +364,17 @@ export interface FaixaM2 {
  * bairro (n ≥ 5), senão cidade (n ≥ 5), senão UF.
  */
 export interface ReferenciaM2 {
-  escopo: "bairro" | "cidade" | "uf";
+  /** recorte, do mais perto ao mais longe */
+  escopo: "rua" | "bairro" | "cidade" | "uf";
+  /**
+   * De onde vêm os números: "leiloes" = avaliação e lance de outros imóveis em leilão na base; "itbi" =
+   * transações reais registradas na prefeitura (ITBI pago), últimos 12 meses.
+   */
+  fonte?: "leiloes" | "itbi";
+  /** ITBI: período coberto [de, até] (AAAA-MM-DD) */
+  periodo?: [string, string] | null;
+  /** média do recorte (sem os 10% mais baixos e os 10% mais altos), R$/m²: avaliação (leilões) ou preço pago (ITBI) */
+  media?: number | null;
   /** "Centro, Uberlândia/MG", "Uberlândia/MG", "MG" */
   nome: string;
   tipo: TipoImovel;
@@ -355,8 +391,32 @@ export interface Vizinhanca {
   referencias: ReferenciaM2[];
   /** até 6 imóveis parecidos (mesmo tipo, mesma cidade, área parecida), do mais parecido ao menos */
   parecidos: ImovelResumo[];
-  /** buscas prontas em portais de anúncios (sem API: só links para o usuário abrir) */
-  buscasExternas: LinkImovel[];
+  /**
+   * buscas prontas em portais de anúncios (sem API: só links para o usuário abrir); `nivel` diz se a busca é
+   * na mesma rua, no mesmo bairro ou na cidade
+   */
+  buscasExternas: (LinkImovel & { nivel?: "rua" | "bairro" | "cidade" })[];
+  /** de quais cidades a Luneta tem preço de transação real (ITBI) e índices, e de quais ainda não */
+  cobertura?: CoberturaPrecos;
+}
+
+export interface CoberturaPrecos {
+  /** a cidade deste imóvel tem ITBI na base? */
+  cidadeTemItbi: boolean;
+  fontes: FontePreco[];
+}
+
+export interface FontePreco {
+  /** "São Paulo/SP", "FipeZAP" */
+  nome: string;
+  tipo: "itbi" | "indice";
+  situacao: "temos" | "coleta_pendente" | "sem_dado_aberto" | "precisa_autorizacao";
+  /** frase curta: "transações de out/2025 a set/2026 (48.210)", "coleta pronta, aguardando rodar" */
+  detalhe: string;
+  url: string | null;
+  licenca: string | null;
+  /** imóveis da base nesta cidade */
+  imoveisNaBase: number | null;
 }
 
 export interface PaginaImovel {

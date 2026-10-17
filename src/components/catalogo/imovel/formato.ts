@@ -139,7 +139,7 @@ export function nomeRecorte(r: Pick<ReferenciaM2, "escopo" | "nome">) {
   return r.escopo === "uf" ? (UF_NOME[r.nome] ?? r.nome) : r.nome;
 }
 
-export const ROTULO_ESCOPO: Record<ReferenciaM2["escopo"], string> = { bairro: "Bairro", cidade: "Cidade", uf: "Estado" };
+export const ROTULO_ESCOPO: Record<ReferenciaM2["escopo"], string> = { rua: "Rua", bairro: "Bairro", cidade: "Cidade", uf: "Estado" };
 
 /**
  * Frase direta da comparação, com a referência mais local que tem avaliação:

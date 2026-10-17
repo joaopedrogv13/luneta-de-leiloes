@@ -197,6 +197,17 @@ export function converterExemplos(listings: readonly Listing[], agora: Date = ne
       condicoesPagamento: x.parcelamento ? "Entrada de 25% e o restante em até 30 parcelas (IPCA)" : null,
       geradoNaFonteEm: null,
       porQueSelo: l.why,
+      registro: {
+        situacao: "na_fonte",
+        matriculas: ["00.000 (fictícia)"],
+        cartorio: `1º Ofício de Registro de Imóveis de ${x.cidade}/${l.uf} (exemplo)`,
+        comarca: `${x.cidade}/${l.uf}`,
+        oficio: "1",
+        inscricaoImobiliaria: null,
+        averbacaoLeiloesNegativos: null,
+        paginaFonte: null,
+        lidoEm: null,
+      },
     };
   });
 }

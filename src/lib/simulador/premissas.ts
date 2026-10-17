@@ -248,7 +248,7 @@ export function areaDaFonte(e: Pick<EntradaSimulador, "tipo" | "area" | "areaTer
 /** Referência de R$/m² mais local com mediana de avaliação: bairro, senão cidade, senão UF. */
 export function referenciaLocal(refs: readonly ReferenciaM2[] | undefined, tipo: TipoImovel): ReferenciaM2 | null {
   if (!refs?.length) return null;
-  const ordem = { bairro: 0, cidade: 1, uf: 2 } as const;
+  const ordem = { rua: 0, bairro: 1, cidade: 2, uf: 3 } as const;
   const uteis = refs
     .filter((r) => r.tipo === tipo && r.amostra > 0 && r.avaliacaoM2 && positivo(r.avaliacaoM2.mediana))
     .sort((a, b) => ordem[a.escopo] - ordem[b.escopo]);
