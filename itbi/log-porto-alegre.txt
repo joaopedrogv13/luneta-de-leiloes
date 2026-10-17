@@ -37,17 +37,9 @@ Porto Alegre: baixando https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3
     - n_matricula_reg_imoveis: 105237 preenchidos (conteúdo omitido)
     - n_zona_reg_imoveis: 105185 preenchidos, 75 valores; ex. ['1', '1', '1']
     - situacao: 105259 preenchidos, 4 valores; mais comuns {'Impressa': 99221, 'Retificada': 3779, 'Reestimada': 1682, 'Lançada': 577}
-  colunas usadas: {'valor': 'base_de_calculo', 'area': 'area_constr_privativa', 'area_terreno': 'area_total_terreno', 'fracao': None, 'data': 'data_pagamento', 'ano': None, 'mes': None, 'natureza': None, 'bairro': 'bairro', 'rua': 'logradouro', 'tipos': []}
-Traceback (most recent call last):
-  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/comum.py", line 219, in principal
-    funcao(sys.argv[1])
-  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/poa.py", line 17, in <lambda>
-    principal(lambda saida: rodar(saida, "Porto Alegre", "RS", ["https://dadosabertos.poa.br"], FONTE))
-                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/ckan.py", line 52, in rodar
-    padrao, usadas = padronizar(df, ano_padrao=max(anos_arquivo) if anos_arquivo else None, forcar=forcar)
-                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/transacoes.py", line 83, in padronizar
-    raise RuntimeError(f"faltam colunas essenciais (valor, área ou tipo): {usadas}")
-RuntimeError: faltam colunas essenciais (valor, área ou tipo): {'valor': 'base_de_calculo', 'area': 'area_constr_privativa', 'area_terreno': 'area_total_terreno', 'fracao': None, 'data': 'data_pagamento', 'ano': None, 'mes': None, 'natureza': None, 'bairro': 'bairro', 'rua': 'logradouro', 'tipos': []}
-FALHOU: RuntimeError: faltam colunas essenciais (valor, área ou tipo): {'valor': 'base_de_calculo', 'area': 'area_constr_privativa', 'area_terreno': 'area_total_terreno', 'fracao': None, 'data': 'data_pagamento', 'ano': None, 'mes': None, 'natureza': None, 'bairro': 'bairro', 'rua': 'logradouro', 'tipos': []}
+  colunas usadas: {'valor': 'base_de_calculo', 'area': 'area_constr_privativa', 'area_terreno': 'area_total_terreno', 'fracao': 'perc_transmitido', 'data': 'data_pagamento', 'ano': None, 'mes': None, 'natureza': None, 'bairro': 'bairro', 'rua': 'logradouro', 'tipos': ['finalidade_construcao', '_tipo_terreno']}
+  fração: 5871 transmissões parciais fora (escala 100)
+  tipos: {'apartamento': 51621, 'fora': 29432, 'casa': 7204, 'comercial': 6555, 'terreno': 3340, nan: 1236}
+  35819 transações com tipo, data e R$/m² (de 105259); data de 2023-07-17 00:00:00 a 2026-10-13 00:00:00
+  R$/m² por tipo (mediana): {'apartamento': 5296.0, 'casa': 3647.0, 'comercial': 5342.0, 'terreno': 765.0}
+OK: 20396 transações de 2025-10-14 a 2026-10-13, 86 bairros, 1107 ruas, tipos ['apartamento', 'casa', 'comercial', 'terreno']

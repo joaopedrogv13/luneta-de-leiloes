@@ -39,7 +39,7 @@ Recife: baixando https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-b
     - longitude: 18887 preenchidos (conteúdo omitido)
     - ano: 30170 preenchidos, 2 valores; mais comuns {'2025': 16318, '2026': 13852}
   colunas usadas: {'valor': 'valor_avaliacao', 'area': 'area_construida', 'area_terreno': 'area_terreno', 'fracao': None, 'data': 'data_transacao', 'ano': 'ano', 'mes': None, 'natureza': None, 'bairro': 'bairro', 'rua': 'logradouro', 'tipos': ['tipo_imovel', 'tipo_construcao', 'tipo_ocupacao', 'padrao_acabamento']}
-  tipos: {'apartamento': 24772, 'comercial': 3386, 'casa': 1990, None: 20, 'terreno': 2}
-  30150 transações com tipo, data e R$/m² (de 30170); data de 2025-01-02 00:00:00 a 2026-10-02 00:00:00
-  R$/m² por tipo (mediana): {'apartamento': 4250.0, 'casa': 3220.0, 'comercial': 4058.0, 'terreno': 8.0}
-OK: 17220 transações de 2025-10-03 a 2026-10-02, 68 bairros, 690 ruas, tipos ['apartamento', 'casa', 'comercial']
+  tipos: {'apartamento': 24772, 'comercial': 2942, 'casa': 1988, 'fora': 459, None: 7, 'terreno': 2}
+  29704 transações com tipo, data e R$/m² (de 30170); data de 2025-01-02 00:00:00 a 2026-10-02 00:00:00
+  R$/m² por tipo (mediana): {'apartamento': 4250.0, 'casa': 3222.0, 'comercial': 4019.0, 'terreno': 8.0}
+OK: 16952 transações de 2025-10-03 a 2026-10-02, 68 bairros, 682 ruas, tipos ['apartamento', 'casa', 'comercial']

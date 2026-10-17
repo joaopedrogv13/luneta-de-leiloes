@@ -34,8 +34,8 @@ Fortaleza: baixando https://dados.fortaleza.ce.gov.br/dataset/32608ed2-e4ad-4cd2
     - VL_VENAL: 94970 preenchidos, 57733 valores; ex. ['33081,92', '76330,21', '207360,08']
     - VL_LANCAMENTO_IPTU: 89348 preenchidos, 36850 valores; ex. ['0', '0', '1308,98']
     - IND_COMPRA_VIA_PROGRAMA_HABITACIONAL: 94970 preenchidos, 3 valores; mais comuns {'Nenhum': 63874, 'Sistema Financeiro de Habitação': 29210, 'Outros': 1886}
-  colunas usadas: {'valor': 'VL_BASE_CALCULO', 'area': 'AREA_EDIFICADA', 'area_terreno': 'AREA_TERRENO', 'fracao': None, 'data': 'DATA_DA_TRANSACAO_ITBI', 'ano': 'ANO_MES_DEBITO', 'mes': 'ANO_MES_DEBITO', 'natureza': None, 'bairro': 'BAIRRO', 'rua': 'LOGRADOURO', 'tipos': ['TIPO_USO_IMOVEL', 'PADRAO_CONSTRUCAO', 'TIPO_TERRENO']}
-  tipos: {None: 78548, 'comercial': 16422}
-  952 transações com tipo, data e R$/m² (de 94970); data de 2000-02-11 00:00:00 a 2025-12-29 00:00:00
-  R$/m² por tipo (mediana): {'comercial': 2524.0}
-OK: 115 transações de 2024-12-19 a 2025-12-18, 5 bairros, 11 ruas, tipos ['comercial']
+  colunas usadas: {'valor': 'VL_BASE_CALCULO', 'area': 'AREA_EDIFICADA', 'area_terreno': 'AREA_TERRENO', 'fracao': None, 'data': 'DATA_CADASTRAMENTO_GI_IMOVEL', 'ano': 'ANO_MES_DEBITO', 'mes': 'ANO_MES_DEBITO', 'natureza': None, 'bairro': 'BAIRRO', 'rua': 'LOGRADOURO', 'tipos': ['_tipo_imovel']}
+  tipos: {'apartamento': 60429, 'comercial': 16940, 'casa': 9756, 'terreno': 7469, nan: 376}
+  87679 transações com tipo, data e R$/m² (de 94970); data de 2022-01-03 09:14:00 a 2026-02-03 07:12:00
+  R$/m² por tipo (mediana): {'apartamento': 3116.0, 'casa': 2344.0, 'comercial': 2910.0, 'terreno': 354.0}
+OK: 23635 transações de 2025-02-04 a 2026-02-03, 114 bairros, 991 ruas, tipos ['apartamento', 'casa', 'comercial', 'terreno']
