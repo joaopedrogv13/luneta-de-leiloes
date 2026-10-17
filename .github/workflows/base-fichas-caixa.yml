@@ -1,0 +1,68 @@
+# Fichas da Caixa (página de cada imóvel: matrícula, comarca, ofício, inscrição imobiliária, regras de despesas).
+#
+# SÓ RODA QUANDO ACIONADO. Baixa as páginas com o cliente educado da base (User-Agent identificado,
+# robots.txt, 2 s entre páginas) e NÃO contorna anti-robô: 5 bloqueios seguidos param tudo. Os runners do
+# GitHub ficam fora do Brasil e a Caixa pode recusar. O HTML fica como artefato por 7 dias; para aplicar no
+# banco local: LUNETA_CAIXA_FICHAS=<pasta> (ver base/fontes/caixa/README.md).
+name: Base - fichas da Caixa
+
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: "Números dos imóveis (13 dígitos), separados por vírgula. Vazio = usar UF e quantidade."
+        required: false
+        default: ""
+        type: string
+      uf:
+        description: "UF (com ids vazio)"
+        required: false
+        default: ""
+        type: string
+      quantidade:
+        description: "Quantas fichas da UF (2 s cada; 5.000 ≈ 2h50)"
+        required: false
+        default: "50"
+        type: string
+      inicio:
+        description: "A partir de qual posição da UF (para dividir em várias execuções)"
+        required: false
+        default: "0"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: base-fichas-caixa
+  cancel-in-progress: false
+
+jobs:
+  fichas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      NODE_OPTIONS: --disable-warning=ExperimentalWarning
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+      - name: Baixar fichas
+        env:
+          IDS: ${{ inputs.ids }}
+          UF: ${{ inputs.uf }}
+          QTD: ${{ inputs.quantidade }}
+          INICIO: ${{ inputs.inicio }}
+        run: |
+          if [ -n "$IDS" ]; then
+            node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts --ids "$IDS" --saida fichas
+          else
+            node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts --uf "$UF" --quantidade "$QTD" --inicio "$INICIO" --saida fichas
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fichas-caixa
+          path: fichas/
+          retention-days: 7

@@ -1,0 +1,48 @@
+# ITBI (transações reais) das prefeituras para a referência de preço do m² no site (base/fontes/itbi/README.md).
+#
+# SÓ RODA QUANDO ACIONADO (workflow_dispatch: botão "Run workflow" ou `gh workflow run base-itbi.yml`).
+# Lê só dados abertos publicados pelas prefeituras; não faz commit nem usa segredo. O resultado (agregados
+# por cidade, bairro e rua, sem nenhum dado pessoal) fica como artefato por 7 dias; quem integra baixa o
+# artefato e grava em base/saida/site/.
+name: Base - ITBI
+
+on:
+  workflow_dispatch:
+    inputs:
+      etapa:
+        description: "explorar (descobrir os arquivos), sp, ou tudo"
+        required: false
+        default: "tudo"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  itbi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: base/fontes/itbi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dependências
+        run: pip install --quiet dadosimob pandas numpy requests openpyxl odfpy
+      - run: mkdir -p saida
+      - name: Explorar os portais
+        if: inputs.etapa != 'sp'
+        continue-on-error: true
+        run: python explorar.py saida/explorar.json
+      - name: São Paulo (dadosimob)
+        if: inputs.etapa != 'explorar'
+        continue-on-error: true
+        run: python sp.py saida/itbi-sp.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: itbi
+          path: base/fontes/itbi/saida/
+          retention-days: 7
