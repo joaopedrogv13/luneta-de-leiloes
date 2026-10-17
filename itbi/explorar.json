@@ -1,0 +1,340 @@
+{
+ "Recife": [
+  {
+   "titulo": "Imposto sobre Transmissão de Bens Imóveis (ITBI)",
+   "licenca": "Licença Aberta para Bases de Dados (ODbL) do Open Data Commons",
+   "modificado": "2026-10-03T02:06:11.594039",
+   "recursos": [
+    {
+     "nome": "Dicionário de dados - ITBI",
+     "formato": "JSON",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/e829c92b-a1b1-47f9-af69-91f584bdc98f/download/dicionario-de-dados-itbi.json",
+     "modificado": "2026-03-02T15:13:26.979595",
+     "tamanho": 5284
+    },
+    {
+     "nome": "ITBI 2026 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/fc95e204-a121-4b7a-94b2-e4420539c0d1/download/itbi_2026.csv",
+     "modificado": "2026-10-03T02:06:11.462192",
+     "tamanho": 2947186
+    },
+    {
+     "nome": "ITBI 2025 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/1d705d4a-f67a-4914-971f-01f9b1685d1b/download/itbi-2025-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:13:47.973430",
+     "tamanho": 4157286
+    },
+    {
+     "nome": "ITBI 2024 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/756d9a7e-33aa-4fdd-a541-0f5dc97c7502/download/itbi-2024-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:13:51.830944",
+     "tamanho": 3941355
+    },
+    {
+     "nome": "ITBI 2023 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/47dfea23-81ec-455e-83a0-3e451e5b5ca6/download/itbi-2023-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:14:12.965386",
+     "tamanho": 3298079
+    },
+    {
+     "nome": "ITBI 2022 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/5226cf6f-ed06-4956-b133-a0c788a5d494/download/itbi-2022-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:14:17.013807",
+     "tamanho": 3855383
+    },
+    {
+     "nome": "ITBI 2021 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/f3a083a1-aa48-416d-b3aa-c022192219e6/download/itbi-2021-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:14:28.589594",
+     "tamanho": 3637852
+    },
+    {
+     "nome": "ITBI 2020 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/6f79d820-b764-4cde-939f-83d80e728c53/download/itbi-2020-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:14:56.073399",
+     "tamanho": 2866332
+    },
+    {
+     "nome": "ITBI 2019 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/6a8a8f7e-8d3d-4729-aaf9-fcc43ae2827a/download/itbi-2019-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:15:11.716439",
+     "tamanho": 3304037
+    },
+    {
+     "nome": "ITBI 2018 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/ae29c630-77b8-4109-8e1b-02292069f4d5/download/itbi-2018-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:15:37.514613",
+     "tamanho": 3035609
+    },
+    {
+     "nome": "ITBI 2017 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/53617998-09e8-420c-9399-75d859c8528e/download/itbi-2017-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:15:53.963001",
+     "tamanho": 2599846
+    },
+    {
+     "nome": "ITBI 2016 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/210db9b0-4ea5-49cb-8084-135ebfca848d/download/itbi-2016-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:16:17.773549",
+     "tamanho": 3108463
+    },
+    {
+     "nome": "ITBI 2015 - Imposto sobre a Transmissão de Bens Imóveis",
+     "formato": "CSV",
+     "url": "https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/87caf0ce-5f05-4952-abe5-83fa46eece4c/download/itbi-2015-imposto-sobre-a-transmissao-de-bens-imoveis.csv",
+     "modificado": "2026-03-02T15:16:34.573192",
+     "tamanho": 3020565
+    }
+   ]
+  }
+ ],
+ "Porto Alegre": [
+  {
+   "titulo": "ITBI",
+   "licenca": "Creative Commons Attribution",
+   "modificado": "2026-10-14T17:44:04.764126",
+   "recursos": [
+    {
+     "nome": "Dicionário de Dados",
+     "formato": "PDF",
+     "url": "https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/b0fe9643-82bb-4b91-be26-b6292b7aeac7/download/dicionario-de-dados.pdf",
+     "modificado": "2026-10-14T17:43:49.087624",
+     "tamanho": 368786
+    },
+    {
+     "nome": "ITBI 2020",
+     "formato": "ZIP",
+     "url": "https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/60256fcf-9ae6-4adf-b0b4-b6b45fb4b34b/download/itbi-2020.zip",
+     "modificado": "2026-10-14T17:43:52.156557",
+     "tamanho": 1837593
+    },
+    {
+     "nome": "ITBI 2021",
+     "formato": "ZIP",
+     "url": "https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/150848b4-0d01-4ffb-96e0-f5f2a276f5ef/download/itbi-2021.zip",
+     "modificado": "2026-10-14T17:43:54.144727",
+     "tamanho": 2303870
+    },
+    {
+     "nome": "ITBI 2022",
+     "formato": "ZIP",
+     "url": "https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/102520c0-3edc-4f85-947f-6a98b96ed160/download/itbi-2022.zip",
+     "modificado": "2026-10-14T17:43:57.047419",
+     "tamanho": 2428022
+    },
+    {
+     "nome": "ITBI 2023",
+     "formato": "ZIP",
+     "url": "https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/2a4b0aee-7126-4323-936d-5f82fd04aeef/download/itbi-2023.zip",
+     "modificado": "2026-10-14T17:43:58.810973",
+     "tamanho": 2358363
+    },
+    {
+     "nome": "ITBI 2024",
+     "formato": "ZIP",
+     "url": "https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/4947bed6-6be6-40e6-a120-42957e745da5/download/itbi-2024.zip",
+     "modificado": "2026-10-14T17:44:00.379569",
+     "tamanho": 2272694
+    },
+    {
+     "nome": "ITBI 2025",
+     "formato": "ZIP",
+     "url": "https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/e46f56f3-ac8a-4513-b155-5d3038a275b2/download/itbi-2025.zip",
+     "modificado": "2026-10-14T17:44:02.174678",
+     "tamanho": 2499258
+    },
+    {
+     "nome": "ITBI 2026",
+     "formato": "ZIP",
+     "url": "https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/b4cf6e78-6cb9-41f7-8ef7-57dc67feda0c/download/itbi-2026.zip",
+     "modificado": "2026-10-14T17:44:04.727291",
+     "tamanho": 1905140
+    }
+   ]
+  },
+  {
+   "titulo": "ITBI - Imunidades e Benefícios Fiscais",
+   "licenca": "Creative Commons Attribution",
+   "modificado": "2026-08-25T18:15:07.076457",
+   "recursos": [
+    {
+     "nome": "Dicionário de dados",
+     "formato": "PDF",
+     "url": "https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/eda316b3-9cf7-46fa-87ed-1561488217ef/download/dicionarios-de-dados.pdf",
+     "modificado": "2026-07-21T18:16:23.366803",
+     "tamanho": 62749
+    },
+    {
+     "nome": "ITBI - Imunidades e Benefícios Fiscais 2025",
+     "formato": "CSV",
+     "url": "https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/85be5cc0-514f-4c39-9757-643ee7c2964a/download/renuncia_fiscal_itbi_dados_abertos_2025.csv",
+     "modificado": "2026-08-20T18:39:35.252659",
+     "tamanho": 1547
+    },
+    {
+     "nome": "ITBI - Imunidades e Benefícios Fiscais 2024",
+     "formato": "CSV",
+     "url": "https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/c30ba665-0930-42ed-995c-d405710d5f4a/download/renuncia_fiscal_itbi_dados_abertos_2024.csv",
+     "modificado": "2026-08-20T18:44:04.412677",
+     "tamanho": 1374
+    },
+    {
+     "nome": "ITBI - Imunidades e Benefícios Fiscais 2023",
+     "formato": "CSV",
+     "url": "https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/b81b3936-5583-4ca7-8b08-35cb6f2bdc7c/download/renuncia_fiscal_itbi_dados_abertos_2023.csv",
+     "modificado": "2026-08-20T18:35:29.628112",
+     "tamanho": 1478
+    },
+    {
+     "nome": "ITBI - Imunidades e Benefícios Fiscais 2022",
+     "formato": "CSV",
+     "url": "https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/aed8e65f-2f7a-42e6-ae3e-a3cd01007e7c/download/renuncia_fiscal_itbi_dados_abertos_2022.csv",
+     "modificado": "2026-08-25T18:15:07.062676",
+     "tamanho": 1311
+    },
+    {
+     "nome": "ITBI - Imunidades e Benefícios Fiscais 2021",
+     "formato": "CSV",
+     "url": "https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/2466a9f8-1257-480d-9a1b-f4ad9c8b952d/download/renuncia_fiscal_itbi_dados_abertos_2021.csv",
+     "modificado": "2026-08-20T18:30:47.420679",
+     "tamanho": 1124
+    },
+    {
+     "nome": "ITBI - Imunidades e Benefícios Fiscais 2020",
+     "formato": "CSV",
+     "url": "https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/950e26c9-c702-4284-ba01-00f036c2aa5d/download/renuncia_fiscal_itbi_dados_abertos_2020.csv",
+     "modificado": "2026-08-20T18:26:28.870933",
+     "tamanho": 1208
+    }
+   ]
+  }
+ ],
+ "Belo Horizonte": {
+  "erro": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+ },
+ "Fortaleza": [
+  {
+   "titulo": "Imposto sobre Transmissão de Bens Imóveis (ITBI)",
+   "licenca": "Creative Commons Attribution",
+   "modificado": "2026-06-17T12:32:45.347334",
+   "recursos": [
+    {
+     "nome": "Imposto sobre Transmissão de Bens Imóveis (ITBI)",
+     "formato": "CSV",
+     "url": "https://dados.fortaleza.ce.gov.br/dataset/32608ed2-e4ad-4cd2-b7bc-deea35dd189f/resource/46324d49-9809-4d32-8e5c-b4b570f067ce/download/dados_abertos_itbi_transacoes_imobiliarias.csv",
+     "modificado": "2026-02-12T16:08:17.420254",
+     "tamanho": 26779235
+    }
+   ]
+  }
+ ],
+ "Rio de Janeiro": {
+  "mapserver": {
+   "camadas": [
+    {
+     "id": 0,
+     "name": "Camada",
+     "parentLayerId": -1,
+     "defaultVisibility": false,
+     "subLayerIds": null,
+     "minScale": 0,
+     "maxScale": 0,
+     "type": "Feature Layer",
+     "geometryType": "esriGeometryPoint",
+     "supportsDynamicLegends": true
+    }
+   ],
+   "tabelas": [
+    {
+     "id": 1,
+     "name": "ITBI - Transações Imobiliárias por Divisão Administrativa e Ano - Imóveis Residenciais e Não Residenciais",
+     "type": "Table"
+    },
+    {
+     "id": 2,
+     "name": "ITBI - Transações Imobiliárias por Divisão Administrativa e Ano - Imóveis Territoriais",
+     "type": "Table"
+    },
+    {
+     "id": 3,
+     "name": "ITBI - Transações por Logradouro e Ano - Imóveis Territoriais",
+     "type": "Table"
+    },
+    {
+     "id": 4,
+     "name": "ITBI - Transações por Logradouro e Ano - Imóveis Residenciais e Não Residenciais",
+     "type": "Table"
+    },
+    {
+     "id": 5,
+     "name": "ITBI - Transações Imobiliárias por Divisão Administrativa e Mês - Imóveis Residenciais e Não Residenciais",
+     "type": "Table"
+    },
+    {
+     "id": 6,
+     "name": "ITBI - Transações Imobiliárias por Divisão Administrativa e Mês - Imóveis Territoriais",
+     "type": "Table"
+    },
+    {
+     "id": 7,
+     "name": "ITBI - Transações por Logradouro e Mês - Imóveis Territoriais",
+     "type": "Table"
+    },
+    {
+     "id": 8,
+     "name": "ITBI - Transações por Logradouro e Mês - Imóveis Residenciais e Não Residenciais",
+     "type": "Table"
+    }
+   ]
+  },
+  "camada_0": {
+   "nome": "Camada",
+   "campos": [
+    [
+     "objectid",
+     "esriFieldTypeOID"
+    ],
+    [
+     "shape",
+     "esriFieldTypeGeometry"
+    ]
+   ],
+   "maxRecordCount": 2000
+  },
+  "amostra_0": [],
+  "contagem_0": {
+   "count": 0
+  },
+  "pagina": [
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2025/06/Quantidade-de-processos-entrados-no-CCM.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2025/11/alvaras_cae-1.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/01/ISS_MES_A_MES_POR_SERVICO-10.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/01/faturamento_por_servico_mes_a_mes_nota_carioca-1.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/03/Arquivo-01-2025-IPTU-–-ARRECADACAO-ANUAL-DO-IPTU-E-TCL-POR-BAIRRO-E-TIPOLOGIA-–-2015-a-2025-PARA-COLOCAR-NO-SITE.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/03/Arquivo-02-2025-RENUNCIAS-FISCAIS-IPTU-individualizado-PARA-COLOCAR-NO-SITE.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/03/Arquivo-04-2025-ARRECADACAO-DO-IPTU-POR-BAIRRO-PARA-COLOCAR-NO-SITE.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/03/publicar-iss-2025-individualizado.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/03/publicar-iss-tipo-1.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/03/publicar-iss-tipo-creche.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/03/publicar-iss-tipo-ensino_medio.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/03/publicar-itbi-tipo.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/04/ISS-Ano-a-Ano-por-Bairros.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/09/ITBI_TRANSACOES_PERIODO_2011_2018.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/09/ITBI_TRANSACOES_PERIODO_2019_2024.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/10/IPTU-arrecadacao-e-inadimplencia.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/10/ITBI_TRANSACOES_2025_diante-6.xlsx",
+   "https://fazenda.prefeitura.rio/wp-content/uploads/sites/12/2026/10/arrecadacao-IPTU-por-logradouro.xlsx"
+  ]
+ }
+}

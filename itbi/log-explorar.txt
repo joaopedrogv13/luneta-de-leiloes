@@ -1,0 +1,6 @@
+Recife ok
+Porto Alegre ok
+Belo Horizonte {'erro': 'JSONDecodeError: Expecting value: line 1 column 1 (char 0)'}
+Fortaleza ok
+Rio mapserver ok
+Rio pagina ok

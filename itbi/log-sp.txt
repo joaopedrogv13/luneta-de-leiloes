@@ -1,0 +1,4 @@
+SP 2025: 202730 vendas
+SP 2026: 140239 vendas
+colunas: ['mes_referencia', 'sql', 'logradouro', 'numero', 'complemento', 'bairro', 'referencia', 'cep', 'natureza_transacao', 'valor_transacao', 'data_transacao', 'valor_venal_referencia_proporcional', 'valor_venal_referencia', 'proporcao_transmitida', 'base_calculo', 'tipo_financiamento', 'valor_financiado', 'cartorio', 'matricula', 'situacao_sql', 'area_terreno_m2', 'testada_m', 'fracao_ideal', 'area_construida_m2', 'uso_iptu', 'descricao_uso', 'padrao_iptu', 'descricao_padrao', 'acc_iptu', 'tipo_imovel', 'preco_m2', 'codigo_ibge']
+SP: 95084 transações, 1654 bairros, 5222 ruas
