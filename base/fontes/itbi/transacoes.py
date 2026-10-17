@@ -13,7 +13,7 @@ Regras:
 """
 import pandas as pd
 
-from comum import casa_nome, coluna, data_br, log, numero_br, sem_acento, tipo_de
+from comum import FORA_TIPO, casa_nome, coluna, data_br, log, numero_br, sem_acento, tipo_de
 
 CANDIDATOS = {
     "valor": [
@@ -26,7 +26,7 @@ CANDIDATOS = {
     ],
     "area_terreno": [("area", "terreno", "adquirida"), ("area", "terreno"), ("area", "lote")],
     # parte do imóvel transmitida (não a fração ideal do terreno, que num apartamento é 0,02)
-    "fracao": [("proporcao", "transmitida"), ("percentual", "transmit"), ("fracao", "transmit"), ("parte", "transmit")],
+    "fracao": [("proporcao", "transmitida"), ("percentual", "transmit"), ("perc", "transmit"), ("fracao", "transmit"), ("parte", "transf"), ("parte", "transmit")],
     "data": [
         ("data", "transacao"), ("data", "quitacao"), ("data", "pagamento"), ("data", "escritura"), ("data", "registro"),
         ("data", "lancamento"), ("data", "guia"), ("data", "emissao"), ("data", "cadastro"), ("data",), ("dt",),
@@ -38,7 +38,7 @@ CANDIDATOS = {
     "rua": [("nome", "logradouro"), ("logradouro",), ("endereco",), ("rua",)],
     # do mais específico ao mais geral: o primeiro que classificar a linha vale
     "tipos": [
-        ("tipo", "imovel"), ("tipo", "construtivo"), ("tipologia",), ("tipo", "unidade"), ("descricao", "uso"),
+        ("tipo", "imovel"), ("tipo", "construtivo"), ("tipologia",), ("finalidade",), ("tipo", "unidade"), ("descricao", "uso"),
         ("tipo", "uso"), ("uso",), ("tipo", "construcao"), ("descricao", "tipo"), ("tipo", "ocupacao"), ("destinacao",),
         ("ocupacao",), ("padrao",), ("tipo",),
     ],
@@ -106,6 +106,7 @@ def padronizar(df, ano_padrao=None, forcar=None):
             break
         tipo[falta] = base.loc[falta, c].map(tipo_de)
     log(f"  tipos: {tipo.value_counts(dropna=False).to_dict()}")
+    tipo = tipo.where(tipo != FORA_TIPO)
 
     valor = numero_br(base[c_valor])
     area = numero_br(base[c_area]) if c_area else pd.Series(float("nan"), index=base.index)

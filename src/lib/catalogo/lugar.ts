@@ -17,6 +17,8 @@ const TIPOS_LOGRADOURO = new Set([
   "r", "rua", "av", "ave", "avenida", "al", "alameda", "tv", "trav", "travessa", "pc", "pca", "praca", "est", "estr",
   "estrada", "rod", "rodovia", "lgo", "largo", "vd", "viaduto", "pq", "parque", "bc", "beco", "via", "vl", "vila",
   "vie", "viela", "ld", "ladeira", "pass", "passagem", "srv", "servidao", "q", "qd", "quadra", "conj", "cj",
+  // abreviações do cadastro do Rio (AVN, ETR, TRV...)
+  "avn", "etr", "trv", "lad", "bco", "rdv", "pra", "praia", "cam", "caminho", "esc", "escadaria",
 ]);
 
 const TITULOS: Readonly<Record<string, string>> = {
@@ -86,6 +88,23 @@ export function ruaDoEndereco(endereco: string | null | undefined): string | nul
   if (!endereco) return null;
   const chave = normalizarRua(endereco.split(",", 1)[0]);
   return chave.split(" ").some((p) => /^[a-z]{3,}/.test(p)) ? chave : null;
+}
+
+/**
+ * Rua do endereço para mostrar e para buscar em portal: o trecho antes da primeira vírgula e do parêntese, com
+ * espaços simples ("Av. Jesus de Nazaré (Antiga R. Projetada), N. 20B" → "Av. Jesus de Nazaré"). Só tem sentido
+ * quando `ruaDoEndereco` deu uma chave.
+ */
+export function nomeDaRua(endereco: string): string {
+  return endereco.split(",", 1)[0]!.split(/[([]/, 1)[0]!.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Nome que se repete em várias ruas da mesma cidade ("Rua Projetada C", "Rua Particular", "Rua A"): sozinho não
+ * identifica a rua. Quem casa por rua junta o bairro (base) ou não casa (ITBI, que não tem o bairro da rua).
+ */
+export function ruaGenerica(chave: string): boolean {
+  return /\b(projetad[ao]s?|sem denominacao|sem nome|particular|interna|servidao|acesso)\b/.test(chave) || !chave.split(" ").some((p) => p.length >= 4);
 }
 
 /** Chave de bairro para comparar (null sem bairro). */

@@ -22,7 +22,8 @@ def escolher(recursos, anos=2):
     return [(None, r) for r in bons]
 
 
-def rodar(saida, cidade, uf, bases, fonte, forcar=None, recursos_extras=None, anos=2):
+def rodar(saida, cidade, uf, bases, fonte, forcar=None, recursos_extras=None, anos=2, preparar=None):
+    """`preparar(df)`: acerto da cidade antes de padronizar (colunas derivadas, como o tipo em Fortaleza)."""
     recursos, erros = [], []
     for base in bases:
         try:
@@ -48,6 +49,8 @@ def rodar(saida, cidade, uf, bases, fonte, forcar=None, recursos_extras=None, an
         frames.append(df)
     df = pd.concat(frames, ignore_index=True)
     resumo_colunas(df.drop(columns=["_ano_arquivo"]))
+    if preparar:
+        df = preparar(df)
     anos_arquivo = [a for a, _ in escolhidos if a]
     padrao, usadas = padronizar(df, ano_padrao=max(anos_arquivo) if anos_arquivo else None, forcar=forcar)
     licenca = escolhidos[0][1]["licenca"]

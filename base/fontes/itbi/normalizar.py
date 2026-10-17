@@ -13,6 +13,8 @@ TIPOS_LOGRADOURO = {
     "r", "rua", "av", "ave", "avenida", "al", "alameda", "tv", "trav", "travessa", "pc", "pca", "praca", "est", "estr",
     "estrada", "rod", "rodovia", "lgo", "largo", "vd", "viaduto", "pq", "parque", "bc", "beco", "via", "vl", "vila",
     "vie", "viela", "ld", "ladeira", "pass", "passagem", "srv", "servidao", "q", "qd", "quadra", "conj", "cj",
+    # abreviações do cadastro do Rio (AVN, ETR, TRV...)
+    "avn", "etr", "trv", "lad", "bco", "rdv", "pra", "praia", "cam", "caminho", "esc", "escadaria",
 }
 # só no começo: "Vila" e "Parque" também são nome de rua ("Rua Vila Rica"); por isso só sai o PRIMEIRO token
 TITULOS = {

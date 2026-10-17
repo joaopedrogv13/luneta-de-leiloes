@@ -101,21 +101,27 @@ def data_br(serie):
 
 
 TIPOS = [
-    ("apartamento", ("apart", "apto", "flat", "cobertura", "kitnet", "quitinete", "conjugado", "studio", "estudio", "duplex", "residencial vertical", "unidade autonoma residencial")),
-    ("casa", ("casa", "sobrado", "residencial horizontal", "residencia unifamiliar", "chale", "bangalo")),
+    ("apartamento", ("apart", "apto", "cobertura", "kitnet", "quitinete", "conjugado", "studio", "estudio", "duplex", "residencial vertical", "unidade autonoma residencial")),
+    ("casa", ("casa", "sobrado", "residencial horizontal", "residencia isolada", "residencia padronizada", "residencia condom", "residencia em", "residencia unifamiliar", "residencia geminada", "chale", "bangalo")),
     ("terreno", ("terreno", "territorial", "lote", "gleba", "chacara", "sitio")),
-    ("comercial", ("sala", "loja", "comerc", "galpao", "galpoes", "industri", "escritorio", "predio", "conjunto comercial", "consultorio", "deposito", "armazem", "hotel", "nao residencial")),
+    ("comercial", ("sala", "loja", "comerc", "galpao", "galpoes", "industri", "escritorio", "predio", "conjunto comercial", "consultorio", "deposito", "armazem", "nao residencial")),
 ]
-FORA = ("garagem", "box", "vaga", "estacionamento", "jazigo", "tumulo", "boxe")
+# fora da comparação: garagem e vaga; hotel, flat, hospital, escola, templo e outros prédios especiais; e o que a
+# prefeitura junta sem distinguir ("PROLETARIO CASA/APTO" no Rio)
+FORA = ("garagem", "box", "vaga", "estacionamento", "jazigo", "tumulo", "boxe", "hotel", "flat", "hospital", "saude",
+        "instituicao financeira", "edificacao especial", "religios", "templo", "igreja", "escola", "instrucao", "ensino",
+        "proletario", "posto", "cinema", "teatro", "clube", "lazer", "transporte")
+FORA_TIPO = "fora"
 
 
 def tipo_de(texto):
-    """Classifica o tipo do imóvel pelo texto da prefeitura. Garagem/box/vaga e o que não reconhecer: None."""
+    """Classifica o tipo do imóvel pelo texto da prefeitura: apartamento | casa | terreno | comercial, "fora" (garagem,
+    hotel, hospital...: não entra, e a coluna seguinte não é consultada) ou None (não reconheceu)."""
     if texto is None or (isinstance(texto, float) and pd.isna(texto)):
         return None
     t = " " + re.sub(r"[^a-z0-9]+", " ", sem_acento(texto)).strip() + " "
     if any(f" {f}" in t for f in FORA):
-        return None
+        return FORA_TIPO
     for tipo, palavras in TIPOS:
         if any(f" {p}" in t for p in palavras):
             return tipo
