@@ -1,6 +1,6 @@
 {
   "versao": 1,
-  "gerado_em": "2026-10-14T17:36:51.845Z",
+  "gerado_em": "2026-10-17T21:38:09.979Z",
   "fontes": [
     {
       "id": "caixa_csv",
@@ -17,13 +17,13 @@
   ],
   "brasil": {
     "uf": "BR",
-    "ativos": 21231,
+    "ativos": 21230,
     "porFonte": {
       "caixa_csv": 21226,
-      "leiloesjudiciais_api": 5
+      "leiloesjudiciais_api": 4
     },
     "porModalidade": {
-      "leilao": 4572,
+      "leilao": 4571,
       "licitacao_aberta": 946,
       "venda_direta": 12143,
       "venda_online": 3570
@@ -31,7 +31,7 @@
     "porTipo": {
       "apartamento": 12346,
       "casa": 7896,
-      "comercial": 194,
+      "comercial": 193,
       "outro": 11,
       "rural": 30,
       "terreno": 754
@@ -67,43 +67,40 @@
     },
     "lanceMediano": 89167,
     "avaliacaoMediana": 154000,
-    "comFoto": 21230,
+    "comFoto": 21229,
     "comFotoVerificada": 0,
-    "geocodificados": 21228,
+    "geocodificados": 21227,
     "porPrecisaoGeo": {
       "cidade": 21226,
-      "rua": 2,
+      "rua": 1,
       "sem": 3
     },
     "porPraca": {
       "1ª praça": 1,
-      "2ª praça": 2,
+      "2ª praça": 1,
       "não informada": 4569,
       "Praça única": 16659
     },
     "tags": {
       "aceita-financiamento": 2468,
-      "desagio-alto": 13922,
+      "desagio-alto": 13921,
       "desagio-baixo": 4110,
       "direito-preferencia": 4567,
       "imovel-inteiro": 21226,
       "ocupacao-nao-informada": 21230,
       "praca-unica": 16659,
       "primeira-praca": 1,
-      "segunda-praca": 2,
+      "segunda-praca": 1,
       "sem-fotos": 1,
       "so-direitos": 1
     },
     "tagsEmRevisao": {
       "condominio-em-atraso": 1,
-      "construcao-irregular": 2,
-      "custos-extras-altos": 1,
+      "construcao-irregular": 1,
       "direito-preferencia": 1,
       "divida-passa-arrematante": 1,
-      "imovel-inteiro": 3,
+      "imovel-inteiro": 2,
       "matricula-pendencia": 1,
-      "ocupacao-nao-informada": 1,
-      "ocupado": 1,
       "praca-unica": 2,
       "preco-acima-mercado": 2039,
       "so-direitos": 1
@@ -1974,13 +1971,13 @@
     },
     {
       "uf": "SP",
-      "ativos": 2843,
+      "ativos": 2842,
       "porFonte": {
         "caixa_csv": 2838,
-        "leiloesjudiciais_api": 5
+        "leiloesjudiciais_api": 4
       },
       "porModalidade": {
-        "leilao": 1266,
+        "leilao": 1265,
         "licitacao_aberta": 211,
         "venda_direta": 780,
         "venda_online": 586
@@ -1988,7 +1985,7 @@
       "porTipo": {
         "apartamento": 1960,
         "casa": 710,
-        "comercial": 27,
+        "comercial": 26,
         "outro": 3,
         "rural": 6,
         "terreno": 137
@@ -2022,44 +2019,41 @@
         "p75": 40.7,
         "acimaDaAvaliacao": 549
       },
-      "lanceMediano": 148796,
+      "lanceMediano": 148793,
       "avaliacaoMediana": 195000,
-      "comFoto": 2842,
+      "comFoto": 2841,
       "comFotoVerificada": 0,
-      "geocodificados": 2843,
+      "geocodificados": 2842,
       "porPrecisaoGeo": {
         "cidade": 2841,
-        "rua": 2
+        "rua": 1
       },
       "porPraca": {
         "1ª praça": 1,
-        "2ª praça": 2,
+        "2ª praça": 1,
         "não informada": 1263,
         "Praça única": 1577
       },
       "tags": {
         "aceita-financiamento": 350,
-        "desagio-alto": 848,
+        "desagio-alto": 847,
         "desagio-baixo": 1137,
         "direito-preferencia": 1261,
         "imovel-inteiro": 2838,
         "ocupacao-nao-informada": 2842,
         "praca-unica": 1577,
         "primeira-praca": 1,
-        "segunda-praca": 2,
+        "segunda-praca": 1,
         "sem-fotos": 1,
         "so-direitos": 1
       },
       "tagsEmRevisao": {
         "condominio-em-atraso": 1,
-        "construcao-irregular": 2,
-        "custos-extras-altos": 1,
+        "construcao-irregular": 1,
         "direito-preferencia": 1,
         "divida-passa-arrematante": 1,
-        "imovel-inteiro": 3,
+        "imovel-inteiro": 2,
         "matricula-pendencia": 1,
-        "ocupacao-nao-informada": 1,
-        "ocupado": 1,
         "praca-unica": 2,
         "preco-acima-mercado": 549,
         "so-direitos": 1

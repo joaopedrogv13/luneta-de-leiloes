@@ -125,3 +125,10 @@ Rode `medir.ts` para refazer. Resultado com o CSV completo (cópia local, não v
 ## Créditos
 
 Nenhum código foi copiado. Os padrões de URL (capa `F{id13}21.jpg`, matrícula, editais e anexos) e as marcas da página de desafio foram confirmados lendo ldmaster/simplified-auction (MIT), arremata/leilao-br e designativa07/leiloes-caixa (estes dois sem licença, só referência). Os rótulos "Valor de venda" e "Valor mínimo de venda à vista" foram inferidos do índice de murilotimo/imoveis-caixa-vue (sem licença, só referência).
+
+## Fichas aplicadas à mão (`fichas-manuais/`)
+
+Fichas transcritas de um print ou conferidas no site da Caixa por uma pessoa, no mesmo formato de `baixar-fichas.ts`
+(`{ lidas_em, fichas: { id13: FichaCaixa } }`) mais o campo `origem`, que diz de onde vieram. Só os campos vistos ficam
+preenchidos; o resto é `null`. Aplicar com `npm run base:fichas -- --arquivo base/fontes/caixa/fichas-manuais/<arquivo>.json`
+e depois `npm run base:exportar -- --site`.

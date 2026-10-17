@@ -282,11 +282,10 @@ o extrajudicial dos bancos. Ordem proposta:
   Caminho pronto: baixar as fichas de uma rede no Brasil (`base/fontes/caixa/baixar-fichas.ts`) e aplicar com
   `npm run base:fichas -- --arquivo fichas.json`; a exportação leva matrícula, comarca, ofício, inscrição, averbação e a
   data ao site. **Decisão do dono:** de onde rodar as fichas (o PC dele, uma VPS no Brasil).
-  Atalho possível (não feito: mexe em `base/` e nos dados, fora da rodada de correções do site): aceitar um
-  `base/fontes/caixa/fichas-manuais.json` no mesmo formato (`{ lidas_em, fichas: { id13: FichaCaixa } }`), aplicado por
-  `aplicar-fichas.ts` com a origem "conferida no site da Caixa em dd/mm", e preencher o 1444419640129 com os valores do
-  ponto 1 (matrícula 868, São Gonçalo-RJ, 6º ofício, inscrição 50334, averbado). Hoje a página mostra "Na ficha da Caixa ·
-  ainda não lida pela Luneta" com o link (nunca "não informado").
+  **Feito para o caso do dono (17/10/2026):** os dados do print dele (matrícula 868, São Gonçalo-RJ, 6º ofício, inscrição
+  50334, averbado) estão em `base/fontes/caixa/fichas-manuais/2026-10-17-print-do-dono.json` (formato de
+  `baixar-fichas.ts`, com o campo `origem`), aplicados com `npm run base:fichas` e exportados: a página mostra "Lidos na
+  ficha da Caixa em 17/10/2026". Para os outros ~21 mil, continua valendo rodar as fichas de uma rede no Brasil.
 - **Tendência:** série IVG-R do Banco Central (SGS 21340, JSON), só nacional.
 - **FipeZAP** (56 cidades, mensal): consulta grátis, mas sem termos de uso comercial encontrados. **Pedir autorização à
   Fipe** antes de exibir; até lá, no máximo um link para o informe.
@@ -482,10 +481,32 @@ Rodada 3, correções integradas (17/10/2026), depois da revisão dos 16 pontos,
 - [ ] **Decisão sua:** a amostra mínima do ITBI para valer como referência (hoje rua e bairro 10 compras, cidade 30).
 - [ ] **Decisão sua:** na venda direta, o texto da margem de segurança ("cabem mais R$ X de custos imprevistos e você
   ainda consegue render 20% ao ano") e se o preço pode ser trocado "para comparar" (hoje pode, com aviso).
-- [ ] Matrícula 868 do caso do dono: depende das fichas da Caixa (ver "Matrícula da Caixa" acima; o atalho com
-  `fichas-manuais.json` mexe em `base/`).
+- [x] Matrícula 868 do caso do dono: aplicada a partir do print (ver "Matrícula da Caixa" acima). As demais dependem de
+  rodar as fichas de uma rede no Brasil.
 - [ ] O JavaScript da página do imóvel subiu ~35 KB sem compressão (venda direta, custos em reais, margem). Dá para
   carregar o simulador com `next/dynamic` perto da seção (ele fica abaixo da dobra).
+
+### Ranking de localização: dá para fazer com precisão? (pergunta 13, 17/10/2026)
+
+Sim, mas em duas etapas, e a primeira é a precisão do ponto:
+1. **Posição exata do imóvel.** Hoje a Caixa só dá a cidade (o ponto é o centro do município). Sem o endereço virar
+   coordenada, qualquer ranking mede a cidade, não o imóvel. Caminhos sem custo: geocodificar o endereço pelo
+   **Nominatim/OpenStreetMap** (limite de 1 pedido por segundo e uso moderado: os 21 mil levam ~6 h, uma vez, depois só os
+   novos; ou uma instância própria do Nominatim para volume) e conferir pelo **CEP** quando a ficha trouxer. Precisão
+   esperada: rua/número na maioria das capitais; bairro no interior.
+2. **Nota de localização (0 a 100) com dados abertos**, por raio de 500 m a 1 km do ponto:
+   - **acesso e serviços** (OpenStreetMap/Overpass): escolas, saúde, mercado, farmácia, parques, transporte (estações,
+     pontos de ônibus); distância ao centro e a polos de emprego;
+   - **renda e perfil do entorno** (IBGE, Censo 2022, por setor censitário): renda média, escolaridade, domicílios;
+   - **preço da região:** ITBI (preço pago por m² na rua/bairro, já na base para 5 capitais) e a média dos leilões;
+   - **riscos:** áreas de inundação e deslizamento (CEMADEN e planos municipais, onde publicados), criminalidade por
+     bairro onde a secretaria publica (ex.: ISP no RJ, SSP em SP), ruído de grandes vias (OSM);
+   - a nota sai por **percentil dentro da cidade** (comparar Copacabana com o Centro do Rio, não com Uberlândia) e mostra
+     os componentes ("acesso 82 · serviços 75 · preço 40 · risco de alagamento: atenção").
+   Custo: só engenharia (≈ 30–50 h) e processamento; todas as fontes são abertas. Cuidados: a nota não pode virar
+   promessa ("não é garantia"), dados de crime por bairro são irregulares e sujeitos a viés, e cada fonte pede atribuição.
+- [ ] **Decisão sua:** fazer o ranking (e se entra na Luneta ou no Telescópio). Ordem sugerida: geocodificação → acesso e
+  serviços (OSM) → renda (IBGE) → preço (ITBI) → riscos.
 
 ### Ler cada leilão com IA: é viável?
 
