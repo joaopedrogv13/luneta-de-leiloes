@@ -1,0 +1,1278 @@
+/* ==========================================================================
+   Relatório em PDF do imóvel (/<previa|assinante>/imovel/<id>/relatorio)
+
+   A folha é sempre papel claro (os dois temas do site só mudam o fundo da tela em volta e a barra). Na tela,
+   cada folha tem 210 mm de largura e as mesmas margens da página impressa (@page em dados.ts/cssPaginas), então
+   as linhas quebram igual no PDF. Tudo dentro do documento é medido em em: um só tamanho de base (9 pt na
+   impressão e no computador; maior no celular, onde a folha vira coluna fluida).
+   Impressão em preto e branco: nada depende só de cor (marcas em texto, bordas e pesos).
+   ========================================================================== */
+
+.tela {
+  min-height: 100vh;
+  background: var(--noite);
+  padding: 20px 0 64px;
+}
+
+.folhas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.documento {
+  --ink: #0f1830;
+  --texto: #222c44;
+  --suave: #4f5a72;
+  --fraco: #5f6982;
+  --linha: #e2e5ec;
+  --linha2: #c4cad6;
+  --fundo: #f6f4ee;
+  --fundo2: #fbfaf7;
+  --latao: #c9a24d;
+  --latao-texto: #7a5c1c;
+  --pos: #0f6e4d;
+  --grave: #b3242a;
+  --aten: #7a5800;
+  color-scheme: light;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: 9pt;
+  line-height: 1.45;
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+.documento * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.folha {
+  position: relative;
+  box-sizing: border-box;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 17mm 15mm;
+  background: #fff;
+  border-radius: 2px;
+  box-shadow:
+    0 1px 2px rgba(7, 11, 22, 0.18),
+    0 18px 48px rgba(7, 11, 22, 0.28);
+}
+:global(html[data-theme="light"]) .folha {
+  box-shadow:
+    0 1px 2px rgba(15, 24, 48, 0.08),
+    0 14px 40px rgba(15, 24, 48, 0.12);
+}
+
+/* Cabeçalho corrido das folhas 2 em diante (só na tela: no PDF ele vem das caixas de margem da @page). */
+.cabecaFolha {
+  position: absolute;
+  top: 9mm;
+  left: 15mm;
+  right: 15mm;
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  font-size: 0.82em;
+  color: var(--fraco);
+}
+.cabecaFolha span:first-child {
+  font-size: 0.92em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+/* ------------------------------------------------------------------ capa */
+
+.topoCapa {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5em;
+  padding-bottom: 0.9em;
+  border-bottom: 1.5pt solid var(--ink);
+}
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.55em;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  line-height: 1;
+}
+.marca svg {
+  width: 1.25em;
+  height: 1.25em;
+}
+.tipoDoc {
+  text-align: right;
+}
+.tipoDoc p:first-child {
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--latao-texto);
+}
+.tipoDoc p + p {
+  margin-top: 0.3em;
+  font-size: 0.92em;
+  color: var(--suave);
+}
+.filete {
+  height: 3px;
+  margin-top: 3px;
+  background: var(--latao);
+}
+
+.faixaExemplo {
+  margin-top: 1.2em;
+  padding: 0.55em 0.9em;
+  border: 1pt dashed var(--latao-texto);
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: var(--latao-texto);
+  font-weight: 600;
+}
+
+.identidade {
+  min-width: 0;
+}
+.sobretitulo {
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--suave);
+}
+.titulo {
+  margin-top: 0.45em;
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  font-size: 2.25em;
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.endereco {
+  margin-top: 0.6em;
+  font-size: 1.08em;
+  color: var(--texto);
+}
+.endereco + .endereco {
+  margin-top: 0.15em;
+  color: var(--suave);
+}
+.linhaFonte {
+  margin-top: 0.7em;
+  font-size: 0.86em;
+  color: var(--fraco);
+}
+
+/* Identidade do imóvel e, ao lado, a foto (some se não carregar) */
+.capaGrade {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.6em;
+  align-items: start;
+  margin-top: 1.5em;
+}
+.capaGrade[data-foto="ok"],
+.capaGrade[data-foto="carregando"] {
+  grid-template-columns: minmax(0, 1fr) 54mm;
+}
+
+.foto {
+  margin: 0;
+}
+.foto img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 3px;
+  background: var(--fundo);
+}
+.foto figcaption {
+  margin-top: 0.35em;
+  font-size: 0.74em;
+  color: var(--fraco);
+}
+.capaGrade[data-foto="falhou"] .foto,
+.capaGrade[data-foto="sem"] .foto {
+  display: none;
+}
+
+/* Características numa linha, os preços em destaque e os detalhes da venda em cinco colunas */
+.caracteristicas {
+  margin-top: 1.1em;
+  padding: 0.55em 0;
+  border-top: 0.75pt solid var(--linha2);
+  border-bottom: 0.5pt solid var(--linha);
+  font-weight: 600;
+  color: var(--ink);
+}
+.precos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-bottom: 0.5pt solid var(--linha);
+}
+.preco {
+  padding: 0.6em 1em 0.55em 0;
+  border-right: 0.5pt solid var(--linha);
+  margin-right: 1em;
+}
+.preco:last-child {
+  border-right: 0;
+  margin-right: 0;
+}
+.preco dt,
+.fato dt {
+  font-size: 0.74em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fraco);
+}
+.preco dd {
+  margin: 0.15em 0 0;
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.45em;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.preco dd.vazio {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1em;
+  font-weight: 400;
+  color: var(--fraco);
+}
+.preco dd.nota {
+  margin-top: 0.1em;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.84em;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--suave);
+}
+.fatos {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  column-gap: 1em;
+  margin: 0;
+}
+.fato {
+  padding: 0.5em 0 0.45em;
+  border-bottom: 0.5pt solid var(--linha);
+  font-size: 0.94em;
+  break-inside: avoid;
+}
+.fato dd {
+  margin: 0.1em 0 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+.fato dd.vazio {
+  font-weight: 400;
+  color: var(--fraco);
+}
+.fato .nota {
+  display: block;
+  margin-top: 0.05em;
+  font-size: 0.86em;
+  font-weight: 400;
+  color: var(--suave);
+}
+
+/* ------------------------------------------------------------------ seções */
+
+.secao {
+  margin-top: 2em;
+}
+.secao:first-child {
+  margin-top: 0;
+}
+.secaoTopo {
+  break-inside: avoid;
+  break-after: avoid;
+}
+.secaoCabeca {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7em;
+  padding-bottom: 0.5em;
+  border-bottom: 0.75pt solid var(--ink);
+  break-after: avoid;
+}
+.secaoNumero {
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1em;
+  color: var(--latao-texto);
+  letter-spacing: 0.02em;
+}
+.secaoTitulo {
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.45em;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.secaoDescricao {
+  margin-top: 0.6em;
+  max-width: 62em;
+  color: var(--suave);
+  break-after: avoid;
+}
+.subtitulo {
+  margin-top: 1.4em;
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  break-after: avoid;
+}
+.p {
+  margin-top: 0.6em;
+}
+.pequeno {
+  margin-top: 0.6em;
+  font-size: 0.86em;
+  color: var(--suave);
+}
+.forte {
+  font-weight: 600;
+  color: var(--ink);
+}
+.iconeLinha {
+  display: inline-block;
+  width: 1.05em;
+  height: 1.05em;
+  vertical-align: -0.17em;
+}
+
+/* ------------------------------------------------------------------ resultado */
+
+.resultado {
+  margin-top: 1em;
+  border: 0.75pt solid var(--linha2);
+  border-left: 3pt solid var(--latao);
+  border-radius: 3px;
+  background: var(--fundo2);
+  break-inside: avoid;
+}
+.resultadoTopo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 1.6em;
+  padding: 1.2em 1.4em 1.1em;
+}
+.rotuloPequeno {
+  font-size: 0.76em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--suave);
+}
+.teto {
+  margin-top: 0.25em;
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  font-size: 3.1em;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.tetoNenhum {
+  margin-top: 0.35em;
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.8em;
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--ink);
+}
+.tetoFrase {
+  margin-top: 0.6em;
+  color: var(--texto);
+}
+.folga {
+  display: flex;
+  gap: 0.5em;
+  align-items: flex-start;
+  margin-top: 0.7em;
+  font-size: 0.95em;
+}
+.folga svg {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  margin-top: 0.12em;
+}
+.escolha {
+  margin: 0;
+  align-self: start;
+  border-top: 0.75pt solid var(--linha2);
+}
+.escolha div {
+  display: grid;
+  grid-template-columns: 9.5em minmax(0, 1fr);
+  gap: 0.6em;
+  padding: 0.42em 0;
+  border-bottom: 0.5pt solid var(--linha);
+}
+.escolha dt {
+  color: var(--suave);
+}
+.escolha dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+.selosResultado {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin-top: 0.8em;
+}
+
+.comLance {
+  padding: 0.8em 1.4em 0.25em;
+  border-top: 0.75pt solid var(--linha2);
+  font-size: 0.92em;
+  color: var(--suave);
+}
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0.5em 1.4em 1.2em;
+}
+.kpi {
+  padding: 0.2em 1em 0.1em 0;
+  border-right: 0.5pt solid var(--linha);
+  margin-right: 1em;
+}
+.kpi:last-child {
+  border-right: 0;
+  margin-right: 0;
+}
+.kpi dt {
+  font-size: 0.76em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--suave);
+}
+.kpi dd {
+  margin: 0.25em 0 0;
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.6em;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.kpi dd small {
+  font-size: 0.55em;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.kpi .kpiNota {
+  margin-top: 0.3em;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.86em;
+  font-weight: 400;
+  color: var(--suave);
+  white-space: normal;
+}
+.negativo {
+  color: var(--grave) !important;
+}
+.aplicacao {
+  margin: 0 1.4em 1em;
+  padding: 0.6em 0.8em;
+  border-radius: 3px;
+  background: var(--fundo);
+  font-size: 0.92em;
+}
+
+.atencao {
+  margin: 0 1.4em 1.1em;
+  padding: 0.6em 0 0;
+  border-top: 0.75pt solid var(--linha2);
+  break-inside: avoid;
+}
+.atencao ul {
+  margin-top: 0.35em;
+  display: grid;
+  gap: 0.25em;
+}
+.atencao li {
+  display: flex;
+  gap: 0.55em;
+}
+.atencao li svg {
+  flex: none;
+  width: 1.05em;
+  height: 1.05em;
+  margin-top: 0.15em;
+}
+
+/* Marcas (ajustado, criado, retirado, sua escolha): texto em caixa, legível em preto e branco */
+.marcaAjuste {
+  display: inline-block;
+  padding: 0.1em 0.45em;
+  border: 0.75pt solid var(--latao-texto);
+  border-radius: 999px;
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--latao-texto);
+  white-space: nowrap;
+  vertical-align: 0.1em;
+}
+.marcaNeutra {
+  border-color: var(--fraco);
+  color: var(--suave);
+}
+.marcaAlerta {
+  border-color: var(--aten);
+  color: var(--aten);
+}
+
+/* ------------------------------------------------------------------ tabelas */
+
+.rolagem {
+  margin-top: 0.5em;
+  overflow-x: auto;
+}
+.tituloTabela {
+  margin-top: 0.9em;
+  font-weight: 600;
+  color: var(--ink);
+}
+.tituloTabela span {
+  font-weight: 400;
+  color: var(--suave);
+}
+.dicaRolagem {
+  display: none;
+}
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+/* tabelas pequenas (cenários, região) não se partem entre páginas; as longas se partem entre os grupos */
+.inteira {
+  break-inside: avoid;
+}
+.tabela caption {
+  caption-side: top;
+  text-align: left;
+  padding-bottom: 0.5em;
+  font-weight: 600;
+  color: var(--ink);
+}
+.tabela caption span {
+  font-weight: 400;
+  color: var(--suave);
+}
+.tabela th,
+.tabela td {
+  padding: 0.5em 0.6em;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 0.5pt solid var(--linha);
+}
+.tabela thead th {
+  padding-top: 0.2em;
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--suave);
+  border-bottom: 0.75pt solid var(--ink);
+  vertical-align: bottom;
+}
+.tabela th:first-child,
+.tabela td:first-child {
+  padding-left: 0;
+}
+.tabela th:last-child,
+.tabela td:last-child {
+  padding-right: 0;
+}
+.tabela .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.tabela tbody th {
+  font-weight: 600;
+  color: var(--ink);
+}
+.tabela .semMedia th,
+.tabela .semMedia td {
+  padding-top: 0.35em;
+  padding-bottom: 0.35em;
+  color: var(--suave);
+  font-weight: 400;
+}
+.tabela .semMedia td {
+  font-size: 0.92em;
+}
+.cabecaCenario small,
+.tabela td small,
+.tabela th small {
+  display: block;
+  margin-top: 0.1em;
+  font-size: 0.86em;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--suave);
+}
+
+/* Matriz: células centradas, a escolhida com moldura */
+.matriz td,
+.matriz thead th:not(:first-child) {
+  text-align: center;
+}
+.matriz td {
+  position: relative;
+  padding: 0.55em 0.4em;
+}
+.matriz td strong {
+  display: block;
+  font-weight: 700;
+  color: var(--ink);
+}
+.matriz td span {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  margin-top: 0.1em;
+  font-size: 0.86em;
+  color: var(--suave);
+}
+.matriz td span svg {
+  width: 0.95em;
+  height: 0.95em;
+}
+.matriz td.naoAtinge strong {
+  color: var(--suave);
+}
+.matriz td.escolhida {
+  outline: 1.5pt solid var(--ink);
+  outline-offset: -1.5pt;
+  background: var(--fundo);
+}
+.matriz td.escolhida::after {
+  content: "sua escolha";
+  position: absolute;
+  top: -0.85em;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 0.4em;
+  background: #fff;
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.matriz thead th.colEscolhida {
+  color: var(--ink);
+}
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em 1.4em;
+  margin-top: 0.7em;
+  font-size: 0.86em;
+  color: var(--suave);
+}
+.legenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+.legenda svg {
+  width: 1em;
+  height: 1em;
+}
+.quadradoEscolhido {
+  display: inline-block;
+  width: 1.4em;
+  height: 0.95em;
+  border: 1.5pt solid var(--ink);
+  background: var(--fundo);
+}
+
+/* Cascata: da venda ao lucro */
+.cascata {
+  margin-top: 0.9em;
+  display: grid;
+  gap: 0.28em;
+  break-inside: avoid;
+}
+.cascataLinha {
+  display: grid;
+  grid-template-columns: 13em minmax(0, 1fr) 10.5em;
+  align-items: center;
+  gap: 0.8em;
+}
+.cascataRotulo {
+  font-size: 0.95em;
+  color: var(--texto);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cascataTrilho {
+  position: relative;
+  height: 1.05em;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 0.5pt), var(--linha) calc(25% - 0.5pt) 25%);
+}
+.cascataBarra {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 1.5pt;
+  background: #9aa3b4;
+}
+.cascataBarra[data-tipo="venda"] {
+  background: var(--ink);
+}
+.cascataBarra[data-tipo="lucro"] {
+  background: var(--latao);
+  box-shadow: inset 0 0 0 0.75pt var(--ink);
+}
+.cascataBarra[data-tipo="prejuizo"] {
+  background: repeating-linear-gradient(135deg, var(--grave) 0 2pt, #fff 2pt 3.5pt);
+  box-shadow: inset 0 0 0 0.75pt var(--grave);
+}
+.cascataValor {
+  text-align: right;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.cascataPct {
+  font-weight: 400;
+  color: var(--suave);
+}
+.cascataLinha[data-total] .cascataRotulo,
+.cascataLinha[data-total] .cascataValor {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Conta linha a linha: item, cálculo, marca e valor numa linha (no celular, o cálculo vai embaixo do item) */
+.conta {
+  margin-top: 0.9em;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+.conta th,
+.conta td {
+  padding: 0.42em 0.6em;
+  text-align: left;
+  vertical-align: baseline;
+  border-bottom: 0.5pt solid var(--linha);
+}
+.conta th:first-child,
+.conta td:first-child {
+  padding-left: 0;
+}
+.conta td:last-child,
+.conta th:last-child {
+  padding-right: 0;
+}
+.conta thead th {
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--suave);
+  border-bottom: 0.75pt solid var(--ink);
+}
+.conta tbody {
+  break-inside: avoid;
+}
+.conta .grupo th {
+  padding-top: 0.9em;
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border-bottom: 0.75pt solid var(--linha2);
+}
+.conta .grupo td {
+  padding-top: 0.9em;
+  font-size: 0.92em;
+  font-weight: 600;
+  color: var(--suave);
+  border-bottom: 0.75pt solid var(--linha2);
+}
+.conta th.item {
+  width: 27%;
+  font-weight: 500;
+  color: var(--ink);
+}
+.conta .calculo {
+  font-size: 0.92em;
+  color: var(--suave);
+}
+.formulaMovel {
+  display: none;
+}
+.conta .valor {
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--ink);
+}
+.conta .marcaCol {
+  width: 7.5em;
+  text-align: right;
+}
+.conta .total th,
+.conta .total td {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+.conta .total:first-child th,
+.conta .total:first-child td {
+  border-top: 1.25pt solid var(--ink);
+}
+.conta .total th.item {
+  font-weight: 700;
+}
+.conta .totalForte th,
+.conta .totalForte td.valor {
+  font-size: 1.15em;
+}
+
+.fora {
+  margin-top: 0.9em;
+  padding: 0.6em 0.8em;
+  border: 0.75pt dashed var(--linha2);
+  border-radius: 3px;
+  font-size: 0.92em;
+  break-inside: avoid;
+}
+.fora li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  padding: 0.25em 0;
+}
+.fora li s {
+  color: var(--suave);
+}
+
+/* Premissas */
+.premissas {
+  margin-top: 0.9em;
+}
+.premissas td:nth-child(2) {
+  color: var(--ink);
+}
+.premissas td.padrao {
+  width: 30%;
+  font-size: 0.92em;
+  color: var(--suave);
+}
+.premissas tbody tr:first-child th {
+  padding-top: 1em;
+}
+.premissas .grupo th {
+  padding-top: 1em;
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border-bottom: 0.75pt solid var(--linha2);
+}
+.premissas tbody {
+  break-inside: avoid;
+}
+
+/* Nível da comparação com a região */
+.nivel {
+  display: inline-block;
+  padding: 0.1em 0.5em;
+  border: 0.75pt solid var(--linha2);
+  border-radius: 3px;
+  font-size: 0.82em;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.fraseRegiao {
+  margin-top: 0.9em;
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.22em;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Alertas */
+.alertas {
+  margin-top: 0.4em;
+}
+.alerta {
+  display: grid;
+  grid-template-columns: 13.5em minmax(0, 1fr);
+  gap: 0.3em 1.2em;
+  padding: 0.55em 0;
+  border-bottom: 0.5pt solid var(--linha);
+  break-inside: avoid;
+}
+.alertaNome {
+  display: flex;
+  gap: 0.45em;
+  font-weight: 600;
+  color: var(--ink);
+}
+.alertaNome svg {
+  flex: none;
+  width: 1.05em;
+  height: 1.05em;
+  margin-top: 0.15em;
+}
+.alertaNome small {
+  display: block;
+  font-size: 0.84em;
+  font-weight: 500;
+  color: var(--suave);
+}
+.alertaTexto {
+  color: var(--texto);
+}
+.alertaTexto q {
+  display: block;
+  margin-top: 0.3em;
+  padding-left: 0.7em;
+  border-left: 1.5pt solid var(--linha2);
+  font-size: 0.9em;
+  color: var(--suave);
+  quotes: "“" "”";
+}
+.revisao {
+  margin-top: 1.1em;
+  padding: 0.3em 0.9em 0.2em;
+  border: 0.75pt dashed var(--fraco);
+  border-radius: 3px;
+}
+.revisao .alerta:last-child {
+  border-bottom: 0;
+}
+.grave {
+  color: var(--grave);
+}
+.aten {
+  color: var(--aten);
+}
+.pos {
+  color: var(--pos);
+}
+.info {
+  color: var(--suave);
+}
+
+/* Avisos e fontes */
+.avisos {
+  margin-top: 0.9em;
+  padding: 0.9em 1.1em;
+  border: 0.75pt solid var(--ink);
+  border-radius: 3px;
+  break-inside: avoid;
+}
+.avisos li {
+  position: relative;
+  padding-left: 1.1em;
+  margin-top: 0.45em;
+}
+.avisos li:first-child {
+  margin-top: 0;
+}
+.avisos li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.4em;
+  height: 0.4em;
+  background: var(--latao);
+}
+.fontes {
+  margin: 0.6em 0 0;
+}
+.fontes div {
+  display: grid;
+  grid-template-columns: 13em minmax(0, 1fr);
+  gap: 1em;
+  padding: 0.42em 0;
+  border-bottom: 0.5pt solid var(--linha);
+  break-inside: avoid;
+}
+.fontes dt {
+  color: var(--suave);
+}
+.fontes dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.fimDocumento {
+  margin-top: 1.4em;
+  padding-top: 0.8em;
+  border-top: 0.75pt solid var(--linha2);
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  font-size: 0.82em;
+  color: var(--fraco);
+}
+
+/* ------------------------------------------------------------------ capa compacta (MedidaCapa: para caber numa página) */
+
+.folha[data-compacta] .titulo {
+  font-size: 1.85em;
+}
+.folha[data-compacta] .capaGrade {
+  margin-top: 1.1em;
+}
+.folha[data-compacta] .capaGrade[data-foto="ok"],
+.folha[data-compacta] .capaGrade[data-foto="carregando"] {
+  grid-template-columns: minmax(0, 1fr) 40mm;
+}
+.folha[data-compacta] .secao {
+  margin-top: 1.3em;
+}
+.folha[data-compacta] .resultado {
+  margin-top: 0.7em;
+}
+.folha[data-compacta] .resultadoTopo {
+  padding: 0.9em 1.2em 0.8em;
+}
+.folha[data-compacta] .teto {
+  font-size: 2.5em;
+}
+.folha[data-compacta] .kpis {
+  padding-bottom: 0.8em;
+}
+
+/* ------------------------------------------------------------------ celular: a folha vira coluna fluida
+   Tudo sob .tela:not([data-a4]): na hora de imprimir, MedidaCapa põe data-a4 na raiz para medir a capa no desenho
+   da folha A4 (as regras do celular deixam de valer por um instante) e tira depois da impressão. */
+
+@media screen and (max-width: 860px) {
+  .tela:not([data-a4]) {
+    padding: 12px 12px 48px;
+  }
+  .tela:not([data-a4]) .folhas {
+    gap: 14px;
+    margin-top: 12px;
+  }
+  .tela:not([data-a4]) .folha {
+    width: 100%;
+    min-height: 0;
+    padding: 22px 16px 26px;
+    border-radius: 12px;
+  }
+  .tela:not([data-a4]) .documento {
+    font-size: 12.5px;
+  }
+  .tela:not([data-a4]) .cabecaFolha {
+    position: static;
+    margin-bottom: 18px;
+  }
+  .tela:not([data-a4]) .cabecaFolha span:last-child {
+    display: none;
+  }
+  .tela:not([data-a4]) .topoCapa {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8em;
+  }
+  .tela:not([data-a4]) .tipoDoc {
+    text-align: left;
+  }
+  .tela:not([data-a4]) .titulo {
+    font-size: 1.9em;
+  }
+  .tela:not([data-a4]) .capaGrade[data-foto="ok"],
+  .tela:not([data-a4]) .capaGrade[data-foto="carregando"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tela:not([data-a4]) .capaGrade .foto {
+    order: -1;
+  }
+  .tela:not([data-a4]) .fatos,
+  .tela:not([data-a4]) .precos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tela:not([data-a4]) .preco:nth-child(2n) {
+    border-right: 0;
+    margin-right: 0;
+  }
+  .tela:not([data-a4]) .resultadoTopo {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 1.1em 1em;
+  }
+  .tela:not([data-a4]) .teto {
+    font-size: 2.6em;
+  }
+  .tela:not([data-a4]) .comLance {
+    padding: 0.8em 1em 0.2em;
+  }
+  .tela:not([data-a4]) .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9em 0;
+    padding: 0.5em 1em 1em;
+  }
+  .tela:not([data-a4]) .kpi:nth-child(2n) {
+    border-right: 0;
+    margin-right: 0;
+  }
+  .tela:not([data-a4]) .aplicacao,
+  .tela:not([data-a4]) .atencao {
+    margin: 0 1em 1em;
+  }
+  .tela:not([data-a4]) .cascataLinha {
+    grid-template-columns: 8.5em minmax(0, 1fr) 6.5em;
+    gap: 0.5em;
+  }
+  /* a conta vira lista: item (com o cálculo embaixo) à esquerda e valor à direita */
+  .tela:not([data-a4]) .conta,
+  .tela:not([data-a4]) .conta tbody {
+    display: block;
+  }
+  .tela:not([data-a4]) .conta thead,
+  .tela:not([data-a4]) .conta .calculo {
+    display: none;
+  }
+  .tela:not([data-a4]) .conta tr {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1em;
+    border-bottom: 0.5pt solid var(--linha);
+  }
+  .tela:not([data-a4]) .conta th,
+  .tela:not([data-a4]) .conta td,
+  .tela:not([data-a4]) .conta .grupo th,
+  .tela:not([data-a4]) .conta .grupo td {
+    border: 0;
+  }
+  .tela:not([data-a4]) .conta .grupo {
+    border-bottom: 0.75pt solid var(--linha2);
+  }
+  .tela:not([data-a4]) .conta th.item {
+    width: auto;
+    flex: 1;
+  }
+  .tela:not([data-a4]) .conta .total:first-child {
+    border-top: 1.25pt solid var(--ink);
+  }
+  .tela:not([data-a4]) .conta .total:first-child th,
+  .tela:not([data-a4]) .conta .total:first-child td {
+    border-top: 0;
+  }
+  .tela:not([data-a4]) .cascataRotulo {
+    white-space: normal;
+  }
+  /* tabelas largas rolam de lado em vez de espremer a primeira coluna (o nome da rua virava uma palavra por linha) */
+  .tela:not([data-a4]) .rolagem > .tabela {
+    min-width: 36em;
+  }
+  .tela:not([data-a4]) .dicaRolagem {
+    display: block;
+    margin-top: 0.3em;
+    font-size: 0.86em;
+    color: var(--suave);
+  }
+  .tela:not([data-a4]) .formulaMovel {
+    display: block;
+    margin-top: 0.1em;
+    font-size: 0.88em;
+    font-weight: 400;
+    color: var(--suave);
+  }
+  .tela:not([data-a4]) .conta .marcaCol,
+  .tela:not([data-a4]) .cascataPct {
+    display: none;
+  }
+  .tela:not([data-a4]) .alerta,
+  .tela:not([data-a4]) .fontes div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.2em;
+  }
+  .tela:not([data-a4]) .escolha div {
+    grid-template-columns: 8em minmax(0, 1fr);
+  }
+  .tela:not([data-a4]) .fimDocumento {
+    flex-direction: column;
+  }
+}
+
+/* ------------------------------------------------------------------ impressão */
+
+@media print {
+  .tela {
+    min-height: 0;
+    padding: 0;
+    background: none;
+  }
+  .folhas {
+    display: block;
+    margin-top: 0;
+  }
+  .folha {
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none !important;
+    break-after: page;
+  }
+  .folha:last-child,
+  .folha[data-transborda] {
+    break-after: auto;
+  }
+  .cabecaFolha {
+    display: none;
+  }
+  .rolagem {
+    overflow: visible;
+  }
+  .documento a {
+    color: inherit;
+    text-decoration: none;
+  }
+}

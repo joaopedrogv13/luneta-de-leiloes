@@ -344,6 +344,65 @@ R$/ha calculado do valor e da área; resumo com as várias matrículas, o site d
 rural; explicação própria das tags da demonstração; 404 com título e sem canonical da home; landing não é mais
 pré-carregada.
 
+### Relatório em PDF (17/10/2026)
+
+`/previa/imovel/<id>/relatorio` e `/assinante/imovel/<id>/relatorio` (botão "Exportar PDF" no fim do simulador; nunca
+indexado). Página A4 "corporativa" para imprimir ou salvar em PDF pelo próprio navegador:
+- barra "Salvar em PDF" (abre a impressão) com "Como salvar o PDF" no computador, no Android e no iPhone; com
+  `?imprimir=1` a impressão abre sozinha quando o relatório fica pronto;
+- **capa:** marca, data e hora do relatório, título, endereço, fonte e código, foto principal (se carregar), características,
+  preços (avaliação, lance mínimo, deságio, praça e data) e venda (modalidade, natureza, pagamento, ocupação, matrícula; com
+  a ficha da Caixa ainda não lida, "na página do imóvel no site da Caixa", nunca "não informada"); e o **resultado**: lance
+  máximo para a meta, meta, cenário, prazo, pagamento, lucro total e anualizado, retorno, dinheiro necessário, comparação
+  com a aplicação e "Antes de decidir" (área estimada, dívidas sem valor, ocupado, linhas tiradas). A capa sempre cabe numa
+  página (fica compacta se precisar);
+- **depois:** cenários e prazos (lance máximo e lucro com o lance, a célula escolhida marcada), da venda ao lucro, a conta
+  linha a linha (o que a pessoa mudou sai "Ajustado", os custos dela "Criado por você", as linhas tiradas "Fora da conta"),
+  premissas usadas (com o padrão da Luneta ao lado do que mudou), preço do m² na região (rua, bairro, cidade, estado e ITBI
+  quando houver, de "muito abaixo" a "muito acima"), principais alertas (confirmados e em revisão, com o trecho; no Lente,
+  nada de tags), avisos e fontes com as datas;
+- **os números são os da tela:** o relatório lê os ajustes guardados neste navegador para o imóvel e faz a conta com a mesma
+  função do simulador (`simulacaoCompleta`); conferido de ponta a ponta (meta trocada na tela = mesmo lance máximo no PDF);
+- cabeçalho e "Página X de Y" no Chrome e no Edge; nos outros navegadores o PDF sai sem eles. Papel sempre claro (mesmo com o
+  site no tema escuro), legível em preto e branco. No celular a folha vira coluna fluida (as tabelas largas rolam de lado).
+  Em geral 5 a 6 páginas.
+
+Pendências do relatório:
+- [ ] Os ajustes ficam só neste navegador: em outro aparelho o relatório sai com a simulação padrão (guardar na conta quando
+  houver login).
+- [ ] Chrome com "Cabeçalhos e rodapés" ligado imprime também a data e o endereço da página, por fora dos do relatório (não
+  se sobrepõem); a dica da barra pede para desmarcar.
+- [ ] Foto da Caixa na capa: conferir no navegador (daqui a rede não chega à Caixa; a da Leilões Judiciais carrega). Sem
+  foto, a capa fica sem ela.
+- [ ] Depois de integrar com a página do imóvel nova: a régua "muito abaixo… muito acima" do relatório é a mesma da página
+  (`compararComMedia`), escrita à parte no relatório para não mexer nos arquivos da página; dá para usar uma só. O mesmo
+  vale para as linhas "sem média" da região (motivos iguais aos de `linhasLeiloes` da página) e para o recorte do
+  simulador (`entradaDoImovel` no relatório e o objeto montado em `PaginaImovel.tsx`).
+- [ ] Antes de integrar com a frente de dados, a linha "Rua" do relatório sai sempre "menos de 3 imóveis…": este branch
+  ainda não calcula a referência por rua. Com a frente de dados junta, a linha passa a ter a média de verdade.
+- [ ] O botão "Exportar PDF" do simulador leva o `?plano=lente` só no clique normal: aberto com o botão do meio ou "abrir
+  em nova aba", o relatório sai no plano Luneta (arquivo do simulador, fora da frente do relatório).
+
+Revisão do relatório (17/10/2026):
+- **capa que passava da página:** uma margem de 24 px só da tela entrava na impressão e a capa medida não tinha folga;
+  num caso real (Leilões Judiciais com parcelamento e dois avisos), o resultado inteiro ia para a página 2 e sobravam
+  duas páginas pela metade (7 em vez de 6). Agora a margem é só da tela, a medida tem folga e não remede com a página
+  já no desenho da impressão;
+- **impressão no celular:** a capa só era medida com a folha em largura A4 (computador). Na hora de imprimir
+  (`beforeprint`: botão, Ctrl+P ou menu do navegador), a tela passa por um instante ao desenho A4, mede e marca a capa
+  (compacta ou "transborda"), e volta ao normal depois (`afterprint`);
+- **linha "Fim do relatório" sozinha** numa página quase vazia (exemplo da /assinante): as fontes e o fim agora não se
+  separam;
+- **região:** a tabela dos leilões mostra sempre rua, bairro, cidade e estado (o método pedido no ponto 12); o recorte
+  sem média diz por quê ("menos de 3 imóveis do mesmo tipo em leilão", "a fonte não informa o bairro", "os mesmos
+  imóveis da cidade"). A nota do ITBI não diz mais "tem ITBI desta cidade" sem mostrar tabela: explica o motivo
+  (`cobertura.semComparacao`, da frente de dados) ou que faltam compras parecidas;
+- **matrícula:** a nota traz a averbação dos leilões negativos (ponto 1); ficha lida sem número = "não consta na ficha";
+  fonte que não publica = "a fonte não publica" (as palavras da página do imóvel);
+- menores: "criado por você" repetido na conta do celular; "por R$ 300.000 (R$ 300.000, valor que você definiu)" no
+  cenário personalizado; hora do relatório presa à primeira visita ao voltar pelo navegador; link do anúncio abria na
+  mesma aba; tabelas da região espremidas no celular; tabela de premissas colada na frase de cima.
+
 ### Ler cada leilão com IA: é viável?
 
 Sim: em vez de preencher à mão, um robô baixa a página e os documentos de cada leilão (página da Caixa, edital,
