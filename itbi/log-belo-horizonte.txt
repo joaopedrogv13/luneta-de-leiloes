@@ -1,0 +1,33 @@
+  tentativa 1 falhou: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado)
+  tentativa 2 falhou: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado)
+  tentativa 3 falhou: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado)
+Belo Horizonte: portal https://dados.pbh.gov.br falhou: https://dados.pbh.gov.br: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado)
+  tentativa 1 falhou: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado)
+  tentativa 2 falhou: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado)
+  tentativa 3 falhou: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado)
+Belo Horizonte: portal https://ckan.pbh.gov.br falhou: https://ckan.pbh.gov.br: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado)
+BH: API sem resultado (nenhum arquivo de ITBI achado (https://dados.pbh.gov.br: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado); https://ckan.pbh.gov.br: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado))); tentando pelas páginas do portal
+  tentativa 1 falhou: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/dataset/ (bloqueio: não contornado)
+  tentativa 2 falhou: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/dataset/ (bloqueio: não contornado)
+  tentativa 3 falhou: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/dataset/ (bloqueio: não contornado)
+BH: páginas de https://dados.pbh.gov.br falharam: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/dataset/ (bloqueio: não contornado)
+  tentativa 1 falhou: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/dataset/ (bloqueio: não contornado)
+  tentativa 2 falhou: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/dataset/ (bloqueio: não contornado)
+  tentativa 3 falhou: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/dataset/ (bloqueio: não contornado)
+BH: páginas de https://ckan.pbh.gov.br falharam: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/dataset/ (bloqueio: não contornado)
+Traceback (most recent call last):
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/bh.py", line 46, in rodar_bh
+    rodar(saida, "Belo Horizonte", "MG", BASES, FONTE)
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/ckan.py", line 38, in rodar
+    raise RuntimeError(f"nenhum arquivo de ITBI achado ({'; '.join(erros)})")
+RuntimeError: nenhum arquivo de ITBI achado (https://dados.pbh.gov.br: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado); https://ckan.pbh.gov.br: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/api/3/action/package_search (bloqueio: não contornado))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/comum.py", line 219, in principal
+    funcao(sys.argv[1])
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/bh.py", line 53, in rodar_bh
+    raise RuntimeError("BH: nenhum arquivo de ITBI achado na API nem nas páginas do portal")
+RuntimeError: BH: nenhum arquivo de ITBI achado na API nem nas páginas do portal
+FALHOU: RuntimeError: BH: nenhum arquivo de ITBI achado na API nem nas páginas do portal

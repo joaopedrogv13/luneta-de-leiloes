@@ -1,0 +1,45 @@
+Recife: 12 arquivos no portal https://dados.recife.pe.gov.br
+  - ITBI 2026 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/fc95e204-a121-4b7a-94b2-e4420539c0d1/download/itbi_2026.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2025 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/1d705d4a-f67a-4914-971f-01f9b1685d1b/download/itbi-2025-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2024 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/756d9a7e-33aa-4fdd-a541-0f5dc97c7502/download/itbi-2024-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2023 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/47dfea23-81ec-455e-83a0-3e451e5b5ca6/download/itbi-2023-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2022 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/5226cf6f-ed06-4956-b133-a0c788a5d494/download/itbi-2022-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2021 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/f3a083a1-aa48-416d-b3aa-c022192219e6/download/itbi-2021-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2020 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/6f79d820-b764-4cde-939f-83d80e728c53/download/itbi-2020-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2019 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/6a8a8f7e-8d3d-4729-aaf9-fcc43ae2827a/download/itbi-2019-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2018 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/ae29c630-77b8-4109-8e1b-02292069f4d5/download/itbi-2018-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2017 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/53617998-09e8-420c-9399-75d859c8528e/download/itbi-2017-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2016 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/210db9b0-4ea5-49cb-8084-135ebfca848d/download/itbi-2016-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+  - ITBI 2015 - Imposto sobre a Transmissão de Bens Imóveis [csv] https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/87caf0ce-5f05-4952-abe5-83fa46eece4c/download/itbi-2015-imposto-sobre-a-transmissao-de-bens-imoveis.csv (licença: Licença Aberta para Bases de Dados (ODbL) do Open Data Commons)
+Recife: baixando https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/fc95e204-a121-4b7a-94b2-e4420539c0d1/download/itbi_2026.csv
+  CSV: 13852 linhas, separador ';', codificação utf-8-sig
+Recife: baixando https://dados.recife.pe.gov.br:443/dataset/ae32808e-ab98-4fe4-bacf-a72b2ac14551/resource/1d705d4a-f67a-4914-971f-01f9b1685d1b/download/itbi-2025-imposto-sobre-a-transmissao-de-bens-imoveis.csv
+  CSV: 16318 linhas, separador ';', codificação utf-8-sig
+  30170 linhas; colunas: ['logradouro', 'numero', 'complemento', 'valor_avaliacao', 'bairro', 'cidade', 'uf', 'ano_construcao', 'area_terreno', 'area_construida', 'fracao_ideal', 'padrao_acabamento', 'tipo_construcao', 'tipo_ocupacao', 'data_transacao', 'estado_conservacao', 'tipo_imovel', 'sfh', 'cod_logradouro', 'latitude', 'longitude', 'ano']
+    - logradouro: 30170 preenchidos (conteúdo omitido)
+    - numero: 30163 preenchidos (conteúdo omitido)
+    - complemento: 27850 preenchidos (conteúdo omitido)
+    - valor_avaliacao: 30170 preenchidos, 9232 valores; ex. ['448283,29', '840000,00', '820000,00']
+    - bairro: 30170 preenchidos, 94 valores; ex. ['Encruzilhada', 'Encruzilhada', 'Encruzilhada']
+    - cidade: 30170 preenchidos, 1 valores; mais comuns {'Recife': 30170}
+    - uf: 30170 preenchidos, 1 valores; mais comuns {'PE': 30170}
+    - ano_construcao: 30170 preenchidos, 88 valores; ex. ['2007', '2017', '2017']
+    - area_terreno: 30170 preenchidos, 3874 valores; ex. ['798,91', '1295,39', '1295,39']
+    - area_construida: 30170 preenchidos, 7654 valores; ex. ['118,64', '145,49', '145,68']
+    - fracao_ideal: 30170 preenchidos, 4042 valores; ex. ['0,02518', '0,01581', '0,01586']
+    - padrao_acabamento: 30170 preenchidos, 3 valores; mais comuns {'Superior': 18369, 'Médio': 8177, 'Simples': 3624}
+    - tipo_construcao: 30170 preenchidos, 16 valores; mais comuns {'Apartamento > 4 Pavimentos': 22497, 'Apartamento <= 4 Pavimentos': 2280, 'Casa': 1987, 'Sala > 4 Pavimentos': 1866, 'Loja <= 4 Pavimentos': 644, 'Edificação Especial': 222, 'Sala <= 4 Pavimentos': 207, 'Galpão': 118, 'Hotel': 110, 'Loja > 4 Pavimentos': 83, 'Instituição Financeira': 62, 'Edificação Garagem': 43}
+    - tipo_ocupacao: 30170 preenchidos, 3 valores; mais comuns {'RESIDENCIAL': 26278, 'COMERCIAL COM LIXO ORGANICO': 2148, 'COMERCIAL SEM LIXO ORGANICO': 1744}
+    - data_transacao: 30170 preenchidos, 498 valores; ex. ['2026-08-11', '2026-07-09', '2026-02-27']
+    - estado_conservacao: 30170 preenchidos, 3 valores; mais comuns {'Bom': 29842, 'Regular': 311, 'Mau': 17}
+    - tipo_imovel: 30170 preenchidos, 19 valores; mais comuns {'Apartamento': 24772, 'Casa': 1987, 'Sala': 1984, 'Loja': 723, 'Edificação Especial': 216, 'Galpão': 116, 'Hotel': 110, 'Centro Comercial/Serviços': 90, 'Instituição Financeira': 62, 'Garagem Comercial': 30, 'Industria': 24, 'Hospital': 14}
+    - sfh: 30170 preenchidos, 6687 valores; ex. ['0,00', '248619,76', '0,00']
+    - cod_logradouro: 30170 preenchidos (conteúdo omitido)
+    - latitude: 18887 preenchidos (conteúdo omitido)
+    - longitude: 18887 preenchidos (conteúdo omitido)
+    - ano: 30170 preenchidos, 2 valores; mais comuns {'2025': 16318, '2026': 13852}
+  colunas usadas: {'valor': 'valor_avaliacao', 'area': 'area_construida', 'area_terreno': 'area_terreno', 'fracao': None, 'data': 'data_transacao', 'ano': 'ano', 'mes': None, 'natureza': None, 'bairro': 'bairro', 'rua': 'logradouro', 'tipos': ['tipo_imovel', 'tipo_construcao', 'tipo_ocupacao', 'padrao_acabamento']}
+  tipos: {'apartamento': 24772, 'comercial': 3386, 'casa': 1990, None: 20, 'terreno': 2}
+  30150 transações com tipo, data e R$/m² (de 30170); data de 2025-01-02 00:00:00 a 2026-10-02 00:00:00
+  R$/m² por tipo (mediana): {'apartamento': 4250.0, 'casa': 3220.0, 'comercial': 4058.0, 'terreno': 8.0}
+OK: 17220 transações de 2025-10-03 a 2026-10-02, 68 bairros, 690 ruas, tipos ['apartamento', 'casa', 'comercial']

@@ -1,0 +1,41 @@
+Fortaleza: 1 arquivos no portal https://dados.fortaleza.ce.gov.br
+  - Imposto sobre Transmissão de Bens Imóveis (ITBI) [csv] https://dados.fortaleza.ce.gov.br/dataset/32608ed2-e4ad-4cd2-b7bc-deea35dd189f/resource/46324d49-9809-4d32-8e5c-b4b570f067ce/download/dados_abertos_itbi_transacoes_imobiliarias.csv (licença: Creative Commons Attribution)
+Fortaleza: baixando https://dados.fortaleza.ce.gov.br/dataset/32608ed2-e4ad-4cd2-b7bc-deea35dd189f/resource/46324d49-9809-4d32-8e5c-b4b570f067ce/download/dados_abertos_itbi_transacoes_imobiliarias.csv
+  CSV: 94970 linhas, separador ';', codificação cp1252
+  94970 linhas; colunas: ['VERSAO', 'INSCRICAO_IMOVEL', 'DIGITO', 'NUM_DTI', 'EXERCICIO', 'DATA_CADASTRAMENTO_GI_IMOVEL', 'NUMERO_CEP', 'BAIRRO', 'LOGRADOURO', 'NUMERO', 'XSIRGAS2000', 'YSIRGAS2000', 'QTD_FRENTES', 'FRACAO_IDEAL', 'AREA_TERRENO', 'AREA_EDIFICADA', 'DATA_CONSTRUCAO', 'NUMERO_PAVIMENTOS', 'TIPO_USO_IMOVEL', 'PADRAO_CONSTRUCAO', 'TIPO_TERRENO', 'ANO_MES_DEBITO', 'NOME_ZONEAMENTO', 'ZONA_CARTORIO', 'DATA_DA_TRANSACAO_ITBI', 'ID_IMOVEL', 'CARTOGRAFIA', 'VL_BASE_CALCULO', 'VL_VENAL', 'VL_LANCAMENTO_IPTU', 'IND_COMPRA_VIA_PROGRAMA_HABITACIONAL']
+    - VERSAO: 94970 preenchidos, 6 valores; mais comuns {'1': 86464, '2': 7609, '3': 760, '4': 115, '5': 17, '6': 5}
+    - INSCRICAO_IMOVEL: 94970 preenchidos (conteúdo omitido)
+    - DIGITO: 94970 preenchidos, 10 valores; mais comuns {'0': 17257, '5': 8754, '4': 8729, '1': 8692, '7': 8656, '8': 8609, '6': 8605, '3': 8596, '9': 8557, '2': 8515}
+    - NUM_DTI: 94970 preenchidos, 94970 valores; ex. ['2187/2026', '2186/2026', '2185/2026']
+    - EXERCICIO: 94970 preenchidos, 5 valores; mais comuns {'2025': 24964, '2024': 24131, '2023': 22758, '2022': 21229, '2026': 1888}
+    - DATA_CADASTRAMENTO_GI_IMOVEL: 94970 preenchidos, 88272 valores; ex. ['03/02/2026 07:12', '03/02/2026 05:52', '02/02/2026 23:26']
+    - NUMERO_CEP: 94969 preenchidos (conteúdo omitido)
+    - BAIRRO: 94970 preenchidos, 121 valores; ex. ['JANGURUSSU', 'RACHEL DE QUEIROZ', 'JARDIM CEARENSE']
+    - LOGRADOURO: 94969 preenchidos (conteúdo omitido)
+    - NUMERO: 90357 preenchidos (conteúdo omitido)
+    - XSIRGAS2000: 94964 preenchidos, 22793 valores; ex. ['552894,0129', '548696,4234', '547751,1246']
+    - YSIRGAS2000: 94964 preenchidos, 22767 valores; ex. ['9575866,301', '9580601,625', '9579955,591']
+    - QTD_FRENTES: 94970 preenchidos, 9 valores; mais comuns {'1': 39018, '2': 31253, '3': 15860, '4': 7281, '5': 804, '7': 456, '6': 196, '13': 60, '8': 42}
+    - FRACAO_IDEAL: 94970 preenchidos, 16655 valores; ex. ['1', '0,00257992', '0,00547828']
+    - AREA_TERRENO: 94970 preenchidos, 8347 valores; ex. ['140', '14268,41', '7284,2']
+    - AREA_EDIFICADA: 92526 preenchidos, 15487 valores; ex. ['84,88', '53,76', '114,12']
+    - DATA_CONSTRUCAO: 84772 preenchidos, 5818 valores; ex. ['02/04/1992 00:00', '16/04/2018 00:00', '24/01/2017 00:00']
+    - NUMERO_PAVIMENTOS: 79758 preenchidos (conteúdo omitido)
+    - TIPO_USO_IMOVEL: 94970 preenchidos, 16 valores; mais comuns {'Residencial': 70185, 'Comercial': 16267, 'Sem': 7469, 'Prestação': 673, 'Hotelaria': 125, 'Saúde': 65, 'Instrução': 42, 'Fechado': 39, 'Religioso': 31, 'Industrial': 30, 'Do lazer': 13, 'Transporte': 10}
+    - PADRAO_CONSTRUCAO: 92867 preenchidos, 12 valores; mais comuns {'Alto nivel 1': 23425, 'Alto nivel 3': 17568, 'Alto nivel 2': 17309, 'Luxo 1': 12052, 'Baixo nivel 1': 7151, 'Luxo 2': 6393, 'Normal 3': 5004, 'Normal 2': 3190, 'Luxo 3': 573, 'Normal 1': 159, 'Baixo nivel 3': 40, 'Baixo nivel 2': 3}
+    - TIPO_TERRENO: 0 preenchidos, 0 valores; mais comuns {}
+    - ANO_MES_DEBITO: 94970 preenchidos, 93 valores; ex. ['2026/FEVEREIRO', '2026/FEVEREIRO', '2026/FEVEREIRO']
+    - NOME_ZONEAMENTO: 78180 preenchidos (conteúdo omitido)
+    - ZONA_CARTORIO: 94945 preenchidos, 6 valores; mais comuns {'1ª Zona': 21348, '6ª Zona': 19366, '2ª Zona': 16683, '3ª Zona': 16488, '4ª Zona': 12197, '5ª Zona': 8863}
+    - DATA_DA_TRANSACAO_ITBI: 10843 preenchidos, 1701 valores; ex. ['17/12/2025 00:00', '20/01/2026 00:00', '09/01/2026 00:00']
+    - ID_IMOVEL: 94970 preenchidos, 80008 valores; ex. ['1796683', '2085952', '2087824']
+    - CARTOGRAFIA: 94970 preenchidos, 22316 valores; ex. ['74-322-80', '41-194-677', '43-65-381']
+    - VL_BASE_CALCULO: 88080 preenchidos, 35981 valores; ex. ['205770', '213420', '497000']
+    - VL_VENAL: 94970 preenchidos, 57733 valores; ex. ['33081,92', '76330,21', '207360,08']
+    - VL_LANCAMENTO_IPTU: 89348 preenchidos, 36850 valores; ex. ['0', '0', '1308,98']
+    - IND_COMPRA_VIA_PROGRAMA_HABITACIONAL: 94970 preenchidos, 3 valores; mais comuns {'Nenhum': 63874, 'Sistema Financeiro de Habitação': 29210, 'Outros': 1886}
+  colunas usadas: {'valor': 'VL_BASE_CALCULO', 'area': 'AREA_EDIFICADA', 'area_terreno': 'AREA_TERRENO', 'fracao': None, 'data': 'DATA_DA_TRANSACAO_ITBI', 'ano': 'ANO_MES_DEBITO', 'mes': 'ANO_MES_DEBITO', 'natureza': None, 'bairro': 'BAIRRO', 'rua': 'LOGRADOURO', 'tipos': ['TIPO_USO_IMOVEL', 'PADRAO_CONSTRUCAO', 'TIPO_TERRENO']}
+  tipos: {None: 78548, 'comercial': 16422}
+  952 transações com tipo, data e R$/m² (de 94970); data de 2000-02-11 00:00:00 a 2025-12-29 00:00:00
+  R$/m² por tipo (mediana): {'comercial': 2524.0}
+OK: 115 transações de 2024-12-19 a 2025-12-18, 5 bairros, 11 ruas, tipos ['comercial']

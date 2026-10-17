@@ -1,4 +1,4 @@
-Recife ok
+Recife {'erro': 'JSONDecodeError: Expecting value: line 1 column 1 (char 0)'}
 Porto Alegre ok
 Belo Horizonte {'erro': 'JSONDecodeError: Expecting value: line 1 column 1 (char 0)'}
 Fortaleza ok

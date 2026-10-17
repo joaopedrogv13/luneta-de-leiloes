@@ -1,0 +1,53 @@
+Porto Alegre: 13 arquivos no portal https://dadosabertos.poa.br
+  - ITBI 2020 [zip] https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/60256fcf-9ae6-4adf-b0b4-b6b45fb4b34b/download/itbi-2020.zip (licença: Creative Commons Attribution)
+  - ITBI 2021 [zip] https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/150848b4-0d01-4ffb-96e0-f5f2a276f5ef/download/itbi-2021.zip (licença: Creative Commons Attribution)
+  - ITBI 2022 [zip] https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/102520c0-3edc-4f85-947f-6a98b96ed160/download/itbi-2022.zip (licença: Creative Commons Attribution)
+  - ITBI 2023 [zip] https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/2a4b0aee-7126-4323-936d-5f82fd04aeef/download/itbi-2023.zip (licença: Creative Commons Attribution)
+  - ITBI 2024 [zip] https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/4947bed6-6be6-40e6-a120-42957e745da5/download/itbi-2024.zip (licença: Creative Commons Attribution)
+  - ITBI 2025 [zip] https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/e46f56f3-ac8a-4513-b155-5d3038a275b2/download/itbi-2025.zip (licença: Creative Commons Attribution)
+  - ITBI 2026 [zip] https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/b4cf6e78-6cb9-41f7-8ef7-57dc67feda0c/download/itbi-2026.zip (licença: Creative Commons Attribution)
+  - ITBI - Imunidades e Benefícios Fiscais 2025 [csv] https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/85be5cc0-514f-4c39-9757-643ee7c2964a/download/renuncia_fiscal_itbi_dados_abertos_2025.csv (licença: Creative Commons Attribution)
+  - ITBI - Imunidades e Benefícios Fiscais 2024 [csv] https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/c30ba665-0930-42ed-995c-d405710d5f4a/download/renuncia_fiscal_itbi_dados_abertos_2024.csv (licença: Creative Commons Attribution)
+  - ITBI - Imunidades e Benefícios Fiscais 2023 [csv] https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/b81b3936-5583-4ca7-8b08-35cb6f2bdc7c/download/renuncia_fiscal_itbi_dados_abertos_2023.csv (licença: Creative Commons Attribution)
+  - ITBI - Imunidades e Benefícios Fiscais 2022 [csv] https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/aed8e65f-2f7a-42e6-ae3e-a3cd01007e7c/download/renuncia_fiscal_itbi_dados_abertos_2022.csv (licença: Creative Commons Attribution)
+  - ITBI - Imunidades e Benefícios Fiscais 2021 [csv] https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/2466a9f8-1257-480d-9a1b-f4ad9c8b952d/download/renuncia_fiscal_itbi_dados_abertos_2021.csv (licença: Creative Commons Attribution)
+  - ITBI - Imunidades e Benefícios Fiscais 2020 [csv] https://dadosabertos.poa.br/dataset/f96cafeb-8969-484a-bd4d-e091ada5d3a5/resource/950e26c9-c702-4284-ba01-00f036c2aa5d/download/renuncia_fiscal_itbi_dados_abertos_2020.csv (licença: Creative Commons Attribution)
+Porto Alegre: baixando https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/e46f56f3-ac8a-4513-b155-5d3038a275b2/download/itbi-2025.zip
+  ZIP com ['itbi-2025.csv']
+  CSV: 59743 linhas, separador ';', codificação utf-8-sig
+Porto Alegre: baixando https://dadosabertos.poa.br/dataset/dd8ee5be-06f4-4107-a3bf-5e15aebba6c1/resource/b4cf6e78-6cb9-41f7-8ef7-57dc67feda0c/download/itbi-2026.zip
+  ZIP com ['itbi-2026.csv']
+  CSV: 45516 linhas, separador ';', codificação utf-8-sig
+  105259 linhas; colunas: ['data_estimativa', 'data_pagamento', 'base_de_calculo', 'perc_transmitido', 'finalidade_construcao', 'logradouro', 'n_endereco', 'n_unidade', 'complemento_endereco', 'bairro', 'cep', 'area_total_terreno', 'area_constr_total', 'area_constr_privativa', 'ano_construcao', 'n_matricula_reg_imoveis', 'n_zona_reg_imoveis', 'situacao']
+    - data_estimativa: 105259 preenchidos, 600 valores; ex. ['2025-01-17 00:00:00', '2025-01-06 00:00:00', '2025-01-03 00:00:00']
+    - data_pagamento: 64860 preenchidos, 450 valores; ex. ['2025-01-13 00:00:00', '2025-01-13 00:00:00', '2025-01-07 00:00:00']
+    - base_de_calculo: 92904 preenchidos, 14555 valores; ex. ['100000.0', '423041.95', '70147.08']
+    - perc_transmitido: 105259 preenchidos, 798 valores; ex. ['100.0', '100.0', '100.0']
+    - finalidade_construcao: 101337 preenchidos, 41 valores; mais comuns {'APARTAMENTO': 51990, 'ESPACO DE ESTACIONAMENTO RESIDENCIAL': 22850, 'RESIDENCIA ISOLADA': 5239, 'SALA COMERCIAL': 4820, 'ESPACO DE ESTACIONAMENTO RESIDENCIAL DESCOBERTO': 3833, 'ESPACO DE ESTACIONAMENTO NAO RESIDENCIAL': 2501, 'RESIDENCIA PADRONIZADA EM COND HORIZONTAL FECHADO': 1752, 'APARTAMENTO DE COBERTURA': 1344, 'APART-HOTEL(FLAT)': 843, 'UNIDADE DE COMERCIO E SERVICO ISOLADA': 820, 'RESIDENCIA CONDOM HORIZ ABERTO SEM AREA USO COMUM': 792, 'LOJA TERREA EM EDIFICIO': 723}
+    - logradouro: 105259 preenchidos (conteúdo omitido)
+    - n_endereco: 105259 preenchidos (conteúdo omitido)
+    - n_unidade: 97465 preenchidos, 2638 valores; ex. ['46', '1209', '6']
+    - complemento_endereco: 40490 preenchidos (conteúdo omitido)
+    - bairro: 105074 preenchidos, 95 valores; ex. ['PETROPOLIS', 'RIO BRANCO', 'AUXILIADORA']
+    - cep: 105259 preenchidos (conteúdo omitido)
+    - area_total_terreno: 105259 preenchidos, 4040 valores; ex. ['0.0', '0.0', '0.0']
+    - area_constr_total: 101341 preenchidos, 23028 valores; ex. ['19.3', '46.0362', '11.56']
+    - area_constr_privativa: 101341 preenchidos, 17137 valores; ex. ['10.58', '26.37', '10.58']
+    - ano_construcao: 88938 preenchidos, 88 valores; ex. ['2011', '2024', '2020']
+    - n_matricula_reg_imoveis: 105237 preenchidos (conteúdo omitido)
+    - n_zona_reg_imoveis: 105185 preenchidos, 75 valores; ex. ['1', '1', '1']
+    - situacao: 105259 preenchidos, 4 valores; mais comuns {'Impressa': 99221, 'Retificada': 3779, 'Reestimada': 1682, 'Lançada': 577}
+  colunas usadas: {'valor': 'base_de_calculo', 'area': 'area_constr_privativa', 'area_terreno': 'area_total_terreno', 'fracao': None, 'data': 'data_pagamento', 'ano': None, 'mes': None, 'natureza': None, 'bairro': 'bairro', 'rua': 'logradouro', 'tipos': []}
+Traceback (most recent call last):
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/comum.py", line 219, in principal
+    funcao(sys.argv[1])
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/poa.py", line 17, in <lambda>
+    principal(lambda saida: rodar(saida, "Porto Alegre", "RS", ["https://dadosabertos.poa.br"], FONTE))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/ckan.py", line 52, in rodar
+    padrao, usadas = padronizar(df, ano_padrao=max(anos_arquivo) if anos_arquivo else None, forcar=forcar)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/transacoes.py", line 83, in padronizar
+    raise RuntimeError(f"faltam colunas essenciais (valor, área ou tipo): {usadas}")
+RuntimeError: faltam colunas essenciais (valor, área ou tipo): {'valor': 'base_de_calculo', 'area': 'area_constr_privativa', 'area_terreno': 'area_total_terreno', 'fracao': None, 'data': 'data_pagamento', 'ano': None, 'mes': None, 'natureza': None, 'bairro': 'bairro', 'rua': 'logradouro', 'tipos': []}
+FALHOU: RuntimeError: faltam colunas essenciais (valor, área ou tipo): {'valor': 'base_de_calculo', 'area': 'area_constr_privativa', 'area_terreno': 'area_total_terreno', 'fracao': None, 'data': 'data_pagamento', 'ano': None, 'mes': None, 'natureza': None, 'bairro': 'bairro', 'rua': 'logradouro', 'tipos': []}
