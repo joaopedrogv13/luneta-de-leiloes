@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { BotaoFavoritar } from "@/components/catalogo/cartoes/partes";
 import { SeverityIcon } from "@/components/niveis/severity";
 import { data, dataHora, moeda, MODALIDADE_ROTULO, PRACA_ROTULO } from "@/lib/catalogo/rotulos";
@@ -8,6 +8,8 @@ import type { ImovelResumo, Severidade } from "@/lib/catalogo/tipos";
 import { useImovel } from "./ContextoImovel";
 import { fraseDesagio } from "./formato";
 import { IconeCadeado, IconeCalculadora, IconeCalendario, IconeCompartilhar, IconeExterno, IconeSetaDireita } from "./icones";
+import { CHAVE_BARRA_LANCE, gravarPreferencia, lerPreferencia } from "./preferencias";
+import { BotaoRecolher } from "./ResumoRecolhivel";
 
 export interface DadosResumo extends Pick<ImovelResumo, "id" | "titulo" | "lance" | "avaliacao" | "desagio" | "modalidade" | "praca" | "dataPraca" | "coletadoEm"> {
   fonteNome: string;
@@ -86,11 +88,12 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
   return (
     <section
       aria-labelledby="resumo-preco-titulo"
-      className="rounded-3xl border border-nevoa/20 bg-tinta p-5 sm:p-6 [[data-theme=light]_&]:shadow-[0_1px_2px_rgba(15,24,48,.05),0_12px_32px_-14px_rgba(15,24,48,.18)]"
+      className="relative rounded-3xl border border-nevoa/20 bg-tinta p-5 sm:p-6 [[data-theme=light]_&]:shadow-[0_1px_2px_rgba(15,24,48,.05),0_12px_32px_-14px_rgba(15,24,48,.18)]"
     >
       <h2 id="resumo-preco-titulo" className="sr-only">
         Preço, praça e ações
       </h2>
+      <BotaoRecolher />
       <p className="text-[11px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">Lance mínimo</p>
       <p className="mt-2 font-display text-[34px] leading-none font-bold tracking-[-0.03em] whitespace-nowrap text-luar sm:text-[38px]">{moeda(d.lance)}</p>
       <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-nevoa">
@@ -219,12 +222,31 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
   );
 }
 
+// Barra do lance minimizada: localStorage e, sem ele (aba anônima, bloqueio), a memória desta visita.
+const ouvintesBarra = new Set<() => void>();
+let barraNaMemoria: boolean | null = null;
+function assinarBarra(aviso: () => void) {
+  ouvintesBarra.add(aviso);
+  return () => {
+    ouvintesBarra.delete(aviso);
+  };
+}
+const barraMinimizada = () => barraNaMemoria ?? lerPreferencia(CHAVE_BARRA_LANCE) === "min";
+function definirBarraMinimizada(v: boolean) {
+  barraNaMemoria = v;
+  gravarPreferencia(CHAVE_BARRA_LANCE, v ? "min" : null);
+  for (const f of ouvintesBarra) f();
+}
+
 /**
  * Celular: barra fixa no pé da tela com o lance e "Ver anúncio" (ou "Simular", nos exemplos). Aparece
- * quando os botões do resumo saem da tela por cima; some de novo quando eles voltam.
+ * quando os botões do resumo saem da tela por cima; some de novo quando eles voltam. A pessoa pode minimizá-la
+ * (fica uma pílula pequena no canto com o lance, para trazê-la de volta); a escolha fica salva no navegador.
  */
 export function BarraInferior({ d }: { d: DadosResumo }) {
   const [visivel, setVisivel] = useState(false);
+  // a escolha salva vale depois da hidratação (a barra só aparece depois de rolar: não há o que piscar)
+  const minimizada = useSyncExternalStore(assinarBarra, barraMinimizada, () => false);
   useEffect(() => {
     const alvo = document.getElementById(ID_ACOES);
     if (!alvo) return;
@@ -247,42 +269,82 @@ export function BarraInferior({ d }: { d: DadosResumo }) {
       window.removeEventListener("resize", agendar);
     };
   }, []);
+  const minimizar = (v: boolean) => {
+    definirBarraMinimizada(v);
+    // o foco vai para o controle que fica à vista (a pílula, ou o botão de minimizar da barra que voltou)
+    requestAnimationFrame(() => document.getElementById(v ? "barra-lance-abrir" : "barra-lance-minimizar")?.focus({ preventScroll: true }));
+  };
   const desagio = d.desagio !== null && d.desagio > 0 ? `−${d.desagio}%` : null;
+  const barra = visivel && !minimizada;
+  const pilula = visivel && minimizada;
   return (
-    <aside
-      aria-label="Lance e anúncio"
-      data-barra-fixa=""
-      inert={!visivel}
-      aria-hidden={!visivel}
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-nevoa/20 bg-noite/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-md [@media(max-height:500px)]:pt-1.5 [@media(max-height:500px)]:pb-[max(6px,env(safe-area-inset-bottom))] transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden [[data-theme=light]_&]:shadow-[0_-8px_24px_rgba(15,24,48,.08)] ${
-        visivel ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
-      }`}
-    >
-      <div className="mx-auto flex max-w-[640px] items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">Lance mínimo</p>
-          <p className="mt-1 flex items-baseline gap-2 whitespace-nowrap">
-            <span className="font-display text-[22px] leading-none font-bold tracking-[-0.02em] text-luar">{moeda(d.lance)}</span>
-            {desagio && (
-              <span className="text-[13px] font-semibold text-latao-texto">
-                {desagio}
-                <span className="sr-only"> de deságio</span>
-              </span>
-            )}
-          </p>
+    <>
+      <aside
+        aria-label="Lance e anúncio"
+        data-barra-fixa=""
+        inert={!barra}
+        aria-hidden={!barra}
+        className={`fixed inset-x-0 bottom-0 z-40 border-t border-nevoa/20 bg-noite/95 pt-3 pr-4 pl-1.5 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-md [@media(max-height:500px)]:pt-1.5 [@media(max-height:500px)]:pb-[max(6px,env(safe-area-inset-bottom))] transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden [[data-theme=light]_&]:shadow-[0_-8px_24px_rgba(15,24,48,.08)] ${
+          barra ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
+        }`}
+      >
+        <div className="mx-auto flex max-w-[640px] items-center justify-between gap-2">
+          <button
+            id="barra-lance-minimizar"
+            type="button"
+            onClick={() => minimizar(true)}
+            aria-label="Minimizar a barra do lance"
+            title="Minimizar"
+            className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-nevoa transition-colors hover:bg-nevoa/10 hover:text-luar"
+          >
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+              <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">Lance mínimo</p>
+            <p className="mt-1 flex items-baseline gap-2 whitespace-nowrap">
+              <span className="font-display text-[22px] leading-none font-bold tracking-[-0.02em] text-luar">{moeda(d.lance)}</span>
+              {desagio && (
+                <span className="text-[13px] font-semibold text-latao-texto">
+                  {desagio}
+                  <span className="sr-only"> de deságio</span>
+                </span>
+              )}
+            </p>
+          </div>
+          {d.anuncio ? (
+            <a href={d.anuncio} target="_blank" rel="noopener noreferrer" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]!">
+              Ver anúncio
+              <IconeExterno tamanho={16} />
+              <span className="sr-only"> na fonte (abre em nova aba)</span>
+            </a>
+          ) : (
+            <a href="#simulador" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]!">
+              Simular lance
+            </a>
+          )}
         </div>
-        {d.anuncio ? (
-          <a href={d.anuncio} target="_blank" rel="noopener noreferrer" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]!">
-            Ver anúncio
-            <IconeExterno tamanho={16} />
-            <span className="sr-only"> na fonte (abre em nova aba)</span>
-          </a>
-        ) : (
-          <a href="#simulador" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]!">
-            Simular lance
-          </a>
-        )}
-      </div>
-    </aside>
+      </aside>
+      <button
+        id="barra-lance-abrir"
+        type="button"
+        onClick={() => minimizar(false)}
+        inert={!pilula}
+        aria-hidden={!pilula}
+        aria-label={`Mostrar a barra do lance (lance mínimo ${moeda(d.lance)})`}
+        className={`fixed right-4 bottom-[max(16px,env(safe-area-inset-bottom))] z-40 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-latao/45 bg-tinta/95 py-1.5 pr-2 pl-4 text-[14px] leading-none text-luar shadow-[0_10px_30px_rgba(7,11,22,.45)] backdrop-blur-md transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden [[data-theme=light]_&]:shadow-[0_8px_24px_rgba(15,24,48,.16)] ${
+          pilula ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-[calc(100%+24px)] opacity-0"
+        }`}
+      >
+        <span className="font-display font-bold tracking-[-0.01em] tabular-nums">{moeda(d.lance)}</span>
+        {desagio && <span className="text-[12.5px] font-semibold text-latao-texto">{desagio}</span>}
+        <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-nevoa/10 text-nevoa">
+          <svg viewBox="0 0 20 20" width="16" height="16">
+            <path d="M5 12l5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </button>
+    </>
   );
 }

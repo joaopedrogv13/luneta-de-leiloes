@@ -1,7 +1,22 @@
-import { dataHora, moeda, MODALIDADE_ROTULO, normalizar, OCUPACAO_ROTULO, PRACA_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
-import type { ImovelDetalhe } from "@/lib/catalogo/tipos";
+import { termoModalidade, type ChaveGlossario } from "@/content/glossario";
+import { data, dataHora, moeda, MODALIDADE_ROTULO, normalizar, OCUPACAO_ROTULO, PRACA_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
+import type { ImovelDetalhe, Praca } from "@/lib/catalogo/tipos";
 import { Descricao } from "./Descricao";
-import { AREA_HECTARE, areaDetalhada, dominio, ehExemplo, faltaParaPraca, fraseDesagio, naoInformado, numeroDaPraca, precoPorArea, rotuloNumeroPraca } from "./formato";
+import {
+  AREA_HECTARE,
+  areaDetalhada,
+  dominio,
+  ehExemplo,
+  faltaParaPraca,
+  fraseDesagio,
+  listaE,
+  naoInformado,
+  numeroDaPraca,
+  precoPorArea,
+  registroNaTela,
+  rotuloNumeroPraca,
+  type RegistroNaTela,
+} from "./formato";
 import {
   IconeArea,
   IconeAreaTotal,
@@ -12,6 +27,7 @@ import {
   IconeCarteira,
   IconeCasa,
   IconeChave,
+  IconeCheck,
   IconeDocumento,
   IconeEtiqueta,
   IconeExterno,
@@ -27,6 +43,7 @@ import {
   IconeVaga,
 } from "./icones";
 import { Fato, GradeFatos, NovaAba, Secao, Subtitulo } from "./partes";
+import { BotaoTermo } from "./Termo";
 
 const I = 16;
 
@@ -36,13 +53,68 @@ const semUnidade = (i: ImovelDetalhe) => i.tipo === "terreno" || i.tipo === "rur
 const comVagas = (i: ImovelDetalhe) => !semUnidade(i) || i.vagas !== null;
 const comPrivativa = (i: ImovelDetalhe) => !semUnidade(i) || i.areaPrivativa !== null;
 
-/** "Matrícula 13.941" → "13.941" (rótulo dos links de matrícula da Leilões Judiciais). */
-const numeroMatricula = (rotulo: string) => /matr[ií]cula\s+(?:n[ºo°.]*\s*)?([\d.\-/]+)/i.exec(rotulo)?.[1] ?? null;
-
-/** "a, b e c" */
-const lista = (itens: string[]) => (itens.length <= 1 ? itens.join("") : `${itens.slice(0, -1).join(", ")} e ${itens.at(-1)}`);
+const TERMO_PRACA: Record<Praca, ChaveGlossario> = { "1": "praca_1", "2": "praca_2", unica: "praca_unica" };
 
 const LINK_INTERNO = "font-medium text-latao-texto underline underline-offset-4 hover:text-luar";
+
+const BOTAO_FONTE =
+  "inline-flex min-h-11 items-center gap-2 rounded-full border border-nevoa/35 bg-noite/40 px-4 text-[13.5px] font-medium text-luar no-underline transition-colors hover:border-latao hover:bg-latao/10 pointer-fine:min-h-9";
+
+/** Os termos do registro que a ficha traz, cada um com o (i). */
+const TERMOS_REGISTRO: { termo: ChaveGlossario; rotulo: string }[] = [
+  { termo: "matricula", rotulo: "Matrícula" },
+  { termo: "cartorio", rotulo: "Comarca e ofício" },
+  { termo: "inscricao_imobiliaria", rotulo: "Inscrição imobiliária" },
+  { termo: "averbacao_leiloes_negativos", rotulo: "Averbação dos leilões negativos" },
+];
+
+/**
+ * Registro "pendente" (Caixa, ficha ainda não lida): a fonte publica matrícula, comarca, ofício, inscrição e
+ * averbação na página do imóvel, que a Luneta ainda não leu. Nunca "não informado": aponta para a ficha e para o
+ * PDF da matrícula.
+ */
+function RegistroPendente({ reg, fonte }: { reg: RegistroNaTela; fonte: string }) {
+  return (
+    <div className="mb-2.5 rounded-2xl border border-nevoa/12 bg-tinta px-3.5 pt-3 pb-4 sm:px-4">
+      <p className="flex items-center gap-2 text-[12.5px] leading-snug text-nevoa">
+        <IconeDocumento tamanho={I} className="text-nevoa/90" />
+        Matrícula, comarca, ofício, inscrição imobiliária e averbação
+      </p>
+      <p className="mt-1.5 text-[15px] leading-snug font-semibold text-luar sm:text-[16px]">
+        Na ficha da {fonte} <span className="font-normal text-nevoa">·</span> <span className="font-medium text-luar/85">ainda não lida pela Luneta</span>
+      </p>
+      <p className="mt-1 max-w-[62ch] text-[13px] leading-snug text-nevoa">
+        A {fonte} publica esses dados na página do imóvel (a ficha), que não vem na lista que a Luneta lê. Abra a ficha para ver os números.
+      </p>
+      <ul aria-label="O que cada dado quer dizer" className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+        {TERMOS_REGISTRO.map((t) => (
+          <li key={t.termo} className="flex items-center gap-1 text-[13px] text-luar/90">
+            {t.rotulo}
+            <BotaoTermo termo={t.termo} />
+          </li>
+        ))}
+      </ul>
+      {(reg.paginaFonte || reg.pdfs.length > 0) && (
+        <div className="mt-3.5 flex flex-wrap gap-2">
+          {reg.paginaFonte && (
+            <a href={reg.paginaFonte} target="_blank" rel="noopener noreferrer" className={BOTAO_FONTE}>
+              Abrir a ficha no site da {fonte}
+              <IconeExterno tamanho={15} className="text-nevoa" />
+              <NovaAba />
+            </a>
+          )}
+          {reg.pdfs.slice(0, 1).map((l) => (
+            <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className={BOTAO_FONTE}>
+              PDF da matrícula
+              <IconeExterno tamanho={15} className="text-nevoa" />
+              <NovaAba />
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Seção 1, "Resumo": a grade de fatos (o imóvel, preço, venda e pagamento, documentação e processo), todas
@@ -70,12 +142,28 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
   const porArea = hectare ? "por hectare" : "por m²";
   const precoArea = (total: number | null, m2: number) => precoPorArea(hectare && total !== null && i.area ? total / i.area : m2, i.area);
 
-  // documentação: várias matrículas (lote com mais de uma), o PDF quando o número não vem, o site do leiloeiro
-  const linksMatricula = i.links.filter((l) => l.tipo === "matricula");
-  const numerosMatricula = [...new Set(linksMatricula.map((l) => numeroMatricula(l.rotulo)).filter((n): n is string => !!n))];
-  if (i.matricula && !numerosMatricula.includes(i.matricula)) numerosMatricula.unshift(i.matricula);
-  const textoMatricula =
-    numerosMatricula.length > 1 ? `${numerosMatricula.length} matrículas: ${lista(numerosMatricula)}` : i.matricula ? `Matrícula ${i.matricula}` : null;
+  // documentação: o registro (ficha da Caixa, campos da fonte) e os PDFs de matrícula; o site do leiloeiro
+  const reg = registroNaTela(i);
+  /** Campo de registro vazio: "não consta na ficha" (lida), "a fonte não publica" ou "não informado pela fonte". */
+  const semRegistro = (genero: "m" | "f") => (reg.situacao === "lido" ? "não consta na ficha" : reg.situacao === "nao_publica" ? "a fonte não publica" : semDado(genero));
+  const matricula =
+    reg.matriculas.length > 1
+      ? { valor: `${reg.matriculas.length} matrículas: ${listaE(reg.matriculas)}`, vazio: false }
+      : reg.matriculas.length === 1
+        ? { valor: `nº ${reg.matriculas[0]}`, vazio: false }
+        : { valor: reg.pdfs.length > 0 ? "Número não informado pela fonte" : semRegistro("m"), vazio: true };
+  const notaPdfs =
+    reg.pdfs.length === 1 ? (
+      <a href={reg.pdfs[0]!.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 ${LINK_INTERNO}`}>
+        PDF da matrícula
+        <IconeExterno tamanho={13} />
+        <NovaAba />
+      </a>
+    ) : reg.pdfs.length > 1 ? (
+      <a href="#documentos" className={LINK_INTERNO}>
+        PDFs das {reg.pdfs.length} matrículas em Documentos
+      </a>
+    ) : undefined;
   const siteLeiloeiro = i.leiloeiro ? null : i.links.find((l) => l.tipo === "leiloeiro");
 
   return (
@@ -145,6 +233,7 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
               icone={<IconeMartelo tamanho={I} />}
               rotulo="Modalidade"
               valor={MODALIDADE_ROTULO[i.modalidade]}
+              termo={termoModalidade(i.modalidade, i.modalidadeFonte)}
               nota={
                 exemplo
                   ? undefined
@@ -158,23 +247,32 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
               rotulo="Praça atual"
               valor={i.praca ? PRACA_ROTULO[i.praca] : semDado("f")}
               vazio={!i.praca}
+              termo={i.praca ? TERMO_PRACA[i.praca] : null}
               nota={i.dataPraca ? dataHora(i.dataPraca) : i.praca ? "data não informada pela fonte" : undefined}
             />
-            <Fato icone={<IconeBanco tamanho={I} />} rotulo="Financiamento" {...fin} />
-            <Fato icone={<IconeCarteira tamanho={I} />} rotulo="Uso do FGTS" {...fgts} />
-            <Fato icone={<IconeParcelas tamanho={I} />} rotulo="Parcelamento" {...parc} nota={i.parcelamento && i.condicoesPagamento ? i.condicoesPagamento : undefined} />
+            <Fato icone={<IconeBanco tamanho={I} />} rotulo="Financiamento" {...fin} termo="financiamento" />
+            <Fato icone={<IconeCarteira tamanho={I} />} rotulo="Uso do FGTS" {...fgts} termo="fgts" />
+            <Fato
+              icone={<IconeParcelas tamanho={I} />}
+              rotulo="Parcelamento"
+              {...parc}
+              termo="parcelamento"
+              nota={i.parcelamento && i.condicoesPagamento ? i.condicoesPagamento : undefined}
+            />
             <Fato
               icone={<IconeChave tamanho={I} />}
               rotulo="Ocupação"
               valor={i.ocupacao ? OCUPACAO_ROTULO[i.ocupacao] : semDado("f")}
               vazio={!i.ocupacao}
-              nota={i.ocupacao ? undefined : "Na dúvida, considere que pode estar ocupado"}
+              termo="ocupacao"
+              nota={i.ocupacao || exemplo ? undefined : "Confira no edital ou visite a região"}
             />
             <Fato
               icone={<IconeBalanca tamanho={I} />}
               rotulo="Natureza"
               valor={i.judicial === null ? semDado("f") : i.judicial ? "Judicial" : "Extrajudicial"}
               vazio={i.judicial === null}
+              termo={i.judicial === null ? null : i.judicial ? "judicial" : "extrajudicial"}
               nota={i.judicial === null ? undefined : i.judicial ? "Venda determinada pela Justiça" : "Venda direta do credor ou do dono"}
             />
           </GradeFatos>
@@ -236,26 +334,69 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
 
         <div>
           <Subtitulo className="mb-3">Documentação e processo</Subtitulo>
-          <GradeFatos rotulo="Documentação e processo">
-            <Fato
-              icone={<IconeDocumento tamanho={I} />}
-              rotulo={numerosMatricula.length > 1 ? "Matrículas e cartório" : "Matrícula e cartório"}
-              valor={textoMatricula || i.cartorio ? [textoMatricula, i.cartorio].filter(Boolean).join(" · ") : linksMatricula.length > 0 ? "Número não informado pela fonte" : semDado("f")}
-              vazio={!textoMatricula && !i.cartorio}
-              nota={
-                linksMatricula.length > 0 ? (
-                  <a href="#documentos" className={LINK_INTERNO}>
-                    {linksMatricula.length > 1 ? `PDFs das ${linksMatricula.length} matrículas` : "PDF da matrícula"} em Documentos
+          {reg.situacao === "pendente" && <RegistroPendente reg={reg} fonte={i.fonte.nome} />}
+          {reg.situacao === "lido" && (
+            <p className="-mt-1 mb-3 text-[13px] leading-snug text-nevoa">
+              Lidos na ficha da {i.fonte.nome}
+              {reg.lidoEm ? <> em <span className="tabular-nums">{data(reg.lidoEm)}</span></> : null}
+              {reg.paginaFonte && (
+                <>
+                  {" · "}
+                  <a href={reg.paginaFonte} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 ${LINK_INTERNO}`}>
+                    Abrir a ficha
+                    <IconeExterno tamanho={13} />
+                    <NovaAba />
                   </a>
-                ) : undefined
-              }
-            />
+                </>
+              )}
+            </p>
+          )}
+          <GradeFatos rotulo="Documentação e processo">
+            {reg.situacao !== "pendente" && (
+              <>
+                <Fato
+                  icone={<IconeDocumento tamanho={I} />}
+                  rotulo={reg.matriculas.length > 1 ? "Matrículas" : "Matrícula"}
+                  valor={matricula.valor}
+                  vazio={matricula.vazio}
+                  termo="matricula"
+                  nota={notaPdfs}
+                />
+                <Fato
+                  icone={<IconeDocumento tamanho={I} />}
+                  rotulo="Cartório e comarca"
+                  valor={reg.cartorio ?? semRegistro("m")}
+                  vazio={!reg.cartorio}
+                  termo="cartorio"
+                />
+                {(reg.situacao === "lido" || reg.inscricao) && (
+                  <Fato
+                    icone={<IconeEtiqueta tamanho={I} />}
+                    rotulo="Inscrição imobiliária"
+                    valor={reg.inscricao ?? semRegistro("f")}
+                    vazio={!reg.inscricao}
+                    termo="inscricao_imobiliaria"
+                    nota={reg.inscricao ? "Número do imóvel no IPTU" : undefined}
+                  />
+                )}
+                {(reg.situacao === "lido" || reg.averbacao) && (
+                  <Fato
+                    icone={<IconeCheck tamanho={I} />}
+                    rotulo="Averbação dos leilões negativos"
+                    valor={reg.averbacao ?? semRegistro("f")}
+                    vazio={!reg.averbacao}
+                    termo="averbacao_leiloes_negativos"
+                  />
+                )}
+              </>
+            )}
             <Fato icone={<IconePasta tamanho={I} />} rotulo="Processo" valor={i.numeroProcesso ?? semDado()} vazio={!i.numeroProcesso} />
             <Fato
               icone={<IconeLeiloeiro tamanho={I} />}
               rotulo="Leiloeiro"
               valor={i.leiloeiro ?? (siteLeiloeiro ? "Nome não informado pela fonte" : semDado())}
               vazio={!i.leiloeiro}
+              termo="leiloeiro"
               nota={
                 siteLeiloeiro ? (
                   <a href={siteLeiloeiro.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 ${LINK_INTERNO}`}>
@@ -266,7 +407,7 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
                 ) : undefined
               }
             />
-            <Fato icone={<IconePredio tamanho={I} />} rotulo="Comitente (quem vende)" valor={i.comitente ?? semDado()} vazio={!i.comitente} />
+            <Fato icone={<IconePredio tamanho={I} />} rotulo="Comitente (quem vende)" valor={i.comitente ?? semDado()} vazio={!i.comitente} termo="comitente" />
           </GradeFatos>
         </div>
 

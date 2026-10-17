@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import type { ChaveGlossario } from "@/content/glossario";
+import { BotaoTermo } from "./Termo";
 
 /**
  * Peças de layout da página do imóvel (sem estado: servem ao servidor e ao navegador).
@@ -46,7 +48,10 @@ export function Subtitulo({ children, className = "", id }: { children: ReactNod
   );
 }
 
-/** Um fato da grade: ícone, rótulo (dt) e valor (dd); valor ausente sai esmaecido. */
+/**
+ * Um fato da grade: ícone, rótulo (dt) e valor (dd); valor ausente sai esmaecido. Com `termo`, o valor ganha ao
+ * lado o (i) que abre a explicação do glossário.
+ */
 export function Fato({
   icone,
   rotulo,
@@ -54,6 +59,7 @@ export function Fato({
   vazio = false,
   nota,
   largo = false,
+  termo,
 }: {
   icone: ReactNode;
   rotulo: string;
@@ -63,6 +69,8 @@ export function Fato({
   nota?: ReactNode;
   /** ocupa a linha inteira da grade */
   largo?: boolean;
+  /** termo do glossário que explica o valor (o (i) ao lado) */
+  termo?: ChaveGlossario | null;
 }) {
   return (
     <div className={`min-w-0 rounded-2xl border border-nevoa/12 bg-tinta px-3.5 pt-3 pb-3.5 sm:px-4 ${largo ? "col-span-full" : ""}`}>
@@ -72,9 +80,37 @@ export function Fato({
         </span>
         {rotulo}
       </dt>
-      <dd className={`mt-1.5 leading-snug break-words ${vazio ? "text-[13.5px] text-nevoa" : "text-[15px] font-semibold text-luar tabular-nums sm:text-[16px]"}`}>{valor}</dd>
+      <dd className={`mt-1.5 leading-snug break-words ${vazio ? "text-[13.5px] text-nevoa" : "text-[15px] font-semibold text-luar tabular-nums sm:text-[16px]"}`}>
+        {termo ? <ComTermo valor={valor} termo={termo} /> : valor}
+      </dd>
       {nota && <dd className="mt-1 text-[12.5px] leading-snug break-words text-nevoa">{nota}</dd>}
     </div>
+  );
+}
+
+/**
+ * O valor com o (i) colado à última palavra: os dois vão juntos para a linha de baixo quando o texto quebra (o (i)
+ * nunca fica sozinho numa linha nem solto no canto do cartão).
+ */
+export function ComTermo({ valor, termo }: { valor: ReactNode; termo: ChaveGlossario }) {
+  const botao = <BotaoTermo termo={termo} className="-my-1 ml-1.5 align-middle" />;
+  if (typeof valor !== "string") {
+    return (
+      <>
+        {valor}
+        {botao}
+      </>
+    );
+  }
+  const k = valor.trimEnd().lastIndexOf(" ");
+  return (
+    <>
+      {k > 0 ? valor.slice(0, k + 1) : ""}
+      <span className="whitespace-nowrap">
+        {k > 0 ? valor.slice(k + 1) : valor}
+        {botao}
+      </span>
+    </>
   );
 }
 

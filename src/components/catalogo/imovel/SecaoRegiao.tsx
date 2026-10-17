@@ -1,130 +1,314 @@
-import type { ImovelDetalhe, Vizinhanca } from "@/lib/catalogo/tipos";
+import { numero } from "@/lib/catalogo/rotulos";
+import type { ImovelDetalhe, ReferenciaM2, Vizinhanca } from "@/lib/catalogo/tipos";
+import { BuscasPortais } from "./BuscasPortais";
+import { Expansor } from "./Expansor";
+import { FontesPrecos } from "./FontesPrecos";
+import {
+  alvoDaReferencia,
+  AREA_HECTARE,
+  compararComMedia,
+  diferencaCurta,
+  ehExemplo,
+  fonteDaReferencia,
+  frasePercentil,
+  linhasLeiloes,
+  logradouro,
+  lugarDoRecorte,
+  mediaDe,
+  NIVEIS_COMPARACAO,
+  ondeRecorte,
+  periodoCurto,
+  precoPorArea,
+  predicadoComparacao,
+  referenciaPrincipal,
+  referenciasItbi,
+  ROTULO_ESCOPO,
+  TIPO_NA_FRASE,
+  type NivelComparacao,
+} from "./formato";
 import { GraficoM2 } from "./GraficoM2";
-import { ehExemplo, fraseComparacao, frasePercentil, lanceForaDaRegiao, TIPO_NA_FRASE } from "./formato";
-import { IconeAlerta, IconeExterno, IconeInfo } from "./icones";
-import { Parecidos } from "./Parecidos";
-import { NovaAba, Secao } from "./partes";
+import { IconeInfo } from "./icones";
+import { Secao } from "./partes";
 
-/** Os critérios que de fato valeram para os parecidos: área e quartos só entram quando o imóvel os tem. */
-export function criteriosParecidos(i: Pick<ImovelDetalhe, "area" | "quartos">) {
-  const extra =
-    i.area !== null && i.quartos !== null ? ", com área e quartos próximos" : i.area !== null ? ", com área próxima" : i.quartos !== null ? ", com quartos próximos" : "";
-  return `do mesmo tipo e da mesma cidade${extra}`;
+/**
+ * Selo de 5 níveis da comparação (muito abaixo · abaixo · na média · acima · muito acima): o segmento do nível
+ * aceso. Para o leitor de tela, uma frase só. No celular, só o rótulo do nível aceso aparece embaixo.
+ */
+function EscalaNiveis({ nivel }: { nivel: NivelComparacao }) {
+  return (
+    <div role="img" aria-label={`Nível da comparação: ${NIVEIS_COMPARACAO[nivel].toLowerCase()} (escala de 5: muito abaixo, abaixo, na média, acima, muito acima)`}>
+      <div aria-hidden="true" className="grid grid-cols-5 gap-1">
+        {NIVEIS_COMPARACAO.map((rotulo, k) => (
+          <div key={rotulo} className="min-w-0">
+            <span
+              className={`block h-2 rounded-full transition-colors ${
+                k === nivel ? "bg-latao shadow-[0_0_0_3px_rgba(201,162,77,.18)]" : k === 2 ? "bg-nevoa/30" : "bg-nevoa/18"
+              }`}
+            />
+            {/* celular: só o rótulo aceso, inteiro (nas pontas, alinhado à borda: "Muito acima" não cabe num quinto da
+                largura e transborda para dentro, nunca cortado) */}
+            <span
+              className={`mt-2 text-[12px] leading-tight sm:justify-center ${k === 0 ? "justify-start" : k === 4 ? "justify-end" : "justify-center"} ${
+                k === nivel ? "flex font-semibold text-luar" : "hidden text-nevoa sm:flex"
+              }`}
+            >
+              <span className="whitespace-nowrap">{rotulo}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Linha da tabela: recorte, média e a diferença deste imóvel. */
+function Linha({
+  rotulo,
+  lugar,
+  amostra,
+  media,
+  dif,
+  falta,
+  destaque,
+  m2,
+}: {
+  rotulo: string;
+  lugar: string | null;
+  amostra: string | null;
+  media: number | null;
+  dif: { pct: number; razao: number } | null;
+  falta: string | null;
+  destaque: boolean;
+  m2: (v: number) => string;
+}) {
+  return (
+    <tr className={`border-t border-nevoa/10 align-top ${destaque ? "bg-latao/[0.07] shadow-[inset_3px_0_0_#c9a24d]" : ""}`}>
+      <th scope="row" className="py-3 pr-3 pl-4 text-left font-normal sm:pl-6">
+        <span className="block text-[14px] leading-snug font-semibold text-luar">
+          {rotulo}
+          {/* celular: o lugar desce para a linha de baixo (a coluna é estreita) */}
+          {lugar && (
+            <span className="block text-[13px] font-normal break-words text-nevoa sm:inline sm:text-[14px]">
+              <span className="hidden sm:inline"> · </span>
+              {lugar}
+            </span>
+          )}
+        </span>
+        {amostra && <span className="mt-0.5 block text-[12px] leading-snug text-nevoa tabular-nums">{amostra}</span>}
+        {destaque && <span className="sr-only"> (usada na frase acima)</span>}
+      </th>
+      {falta ? (
+        <td colSpan={2} className="py-3 pr-4 text-right text-[13px] leading-snug text-nevoa sm:pr-6">
+          {falta}
+        </td>
+      ) : (
+        <>
+          <td className="py-3 pr-3 text-right text-[14px] leading-snug font-semibold whitespace-nowrap text-luar tabular-nums">{media !== null ? m2(media) : "—"}</td>
+          <td className="py-3 pr-4 text-right text-[13px] leading-snug whitespace-nowrap text-luar/90 tabular-nums sm:pr-6">{dif ? diferencaCurta(dif) : "—"}</td>
+        </>
+      )}
+    </tr>
+  );
 }
 
 /**
- * Seção 4, "Preço do m² na região": faixas de R$/m² dos outros imóveis do mesmo tipo em leilão na base
- * (bairro, cidade, estado), a frase direta da comparação e o aviso de que isso não é preço de mercado.
- * Em seguida, "Imóveis parecidos" (cartões da base) e as buscas prontas nos portais (só links).
+ * Seção "Preço do m² na região". Primeiro a resposta: uma frase grande sobre a AVALIAÇÃO deste imóvel por m² contra
+ * a média da região, com o selo de 5 níveis, e a tabela curta com as médias da rua, do bairro, da cidade e do estado
+ * (imóveis em leilão na base) e, à parte, as do preço pago nas compras registradas na prefeitura (ITBI). O gráfico
+ * com as faixas fica em "Ver detalhes". Logo abaixo, os anúncios parecidos nos portais (por rua, bairro e cidade) e
+ * de onde vêm os preços.
  */
 export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalhe; vizinhanca: Vizinhanca }) {
   const exemplo = ehExemplo(i);
   const refs = v.referencias;
-  const principal = refs.find((r) => r.avaliacaoM2) ?? refs[0];
-  const frase = principal ? fraseComparacao(principal) : null;
-  const percentil = principal ? frasePercentil(principal) : null;
-  const foraDaRegiao = principal ? lanceForaDaRegiao(principal) : false;
   const tipos = TIPO_NA_FRASE[i.tipo];
+  const hectare = i.area !== null && i.area >= AREA_HECTARE;
+  const m2 = (valor: number) => precoPorArea(valor, i.area);
+  // por hectare, o valor sai do total ÷ área (o R$/m² da base vem arredondado)
+  const porArea = (total: number | null, m2Base: number | null) => (m2Base === null ? null : hectare && total !== null && i.area ? total / i.area : m2Base);
+  const avaliacao = porArea(i.avaliacao, i.avaliacaoM2);
+  const lance = porArea(i.lance, i.lanceM2);
+  // o que se compara: a avaliação; sem ela, o lance
+  const valor = avaliacao ?? lance;
+  const sujeito = avaliacao !== null ? "A avaliação deste imóvel" : "O lance mínimo deste imóvel";
+
+  const principal = referenciaPrincipal(refs);
+  const comparacao = principal ? compararComMedia(valor, mediaDe(principal)) : null;
+  const comparacaoLance = principal && avaliacao !== null ? compararComMedia(lance, mediaDe(principal)) : null;
+  const leiloes = linhasLeiloes(refs);
+  const itbi = referenciasItbi(refs);
+  const refRua = refs.find((r) => r.escopo === "rua");
+  const ruaNome = refRua ? lugarDoRecorte(refRua) : logradouro(i.endereco);
+  const temLeiloes = refs.some((r) => fonteDaReferencia(r) === "leiloes");
+  const lugarCidade = `${i.cidade}/${i.uf}`;
+  const percentil = (() => {
+    const r = refs.find((x) => fonteDaReferencia(x) === "leiloes" && x.percentilLance !== null && x.amostra >= 5);
+    return r ? frasePercentil(r) : null;
+  })();
+
+  const contexto = (r: ReferenciaM2) =>
+    r.fonte === "itbi"
+      ? `Preço médio pago em ${numero(r.amostra)} ${r.amostra === 1 ? "compra" : "compras"} de ${tipos} registradas na prefeitura (ITBI) ${ondeRecorte(r)}${periodoCurto(r.periodo) ? `, de ${periodoCurto(r.periodo)}` : ""}: `
+      : `Média de avaliação de ${numero(r.amostra)} ${tipos} em leilão ${ondeRecorte(r)}: `;
+
+  const faltaLeiloes = (escopo: ReferenciaM2["escopo"], igualA: ReferenciaM2["escopo"] | null) => {
+    if (igualA) return `os mesmos imóveis ${igualA === "rua" ? "da rua" : igualA === "bairro" ? "do bairro" : "da cidade"}`;
+    // sem o lugar, não há o que comparar (não é falta de imóveis)
+    if (escopo === "rua" && !ruaNome) return "a fonte não informa a rua";
+    if (escopo === "bairro" && !i.bairro) return "a fonte não informa o bairro";
+    return "sem dados suficientes";
+  };
+  // na linha "Rua", o nome sem o "Rua" do começo ("Rua · Expedicionário...")
+  const lugarDe = (escopo: ReferenciaM2["escopo"], r: ReferenciaM2 | null) => {
+    const nome = r ? lugarDoRecorte(r) : escopo === "rua" ? ruaNome : escopo === "bairro" ? i.bairro : escopo === "cidade" ? lugarCidade : null;
+    return escopo === "rua" && nome ? nome.replace(/^rua\s+/i, "") : nome;
+  };
+
+  const semReferencia = !principal;
+  // a cidade tem ITBI, mas a comparação não vale para este imóvel (ex.: em São Paulo, a área publicada para apartamentos
+  // inclui a parte comum do prédio). Campo novo do contrato (CoberturaPrecos.semComparacao), lido sem depender dele.
+  const itbiSemComparacao = (v.cobertura as { semComparacao?: string | null } | undefined)?.semComparacao || null;
 
   return (
-    <>
-      <Secao
-        id="regiao"
-        titulo="Preço do m² na região"
-        sobretitulo="Comparação com outros leilões"
-        descricao="Referência entre imóveis em leilão na base (avaliação da fonte), não é preço de mercado."
-      >
-        {refs.length === 0 || !principal ? (
+    <Secao
+      id="regiao"
+      titulo="Preço do m² na região"
+      sobretitulo="Comparação com a região"
+      descricao="Médias de avaliação dos imóveis do mesmo tipo em leilão na base e, onde a Luneta tem o dado, do preço pago nas compras registradas na prefeitura (ITBI). Avaliação de leilão não é preço de mercado: use como referência."
+    >
+      <div className="space-y-6">
+        {semReferencia ? (
           <p className="rounded-2xl border border-nevoa/15 bg-tinta px-4 py-3.5 text-[14px] leading-relaxed text-nevoa">
-            {exemplo
-              ? "Exemplo fictício: a demonstração tem poucos imóveis, então não há referência de preço da região."
-              : `Ainda não há ${tipos} suficientes em leilão na base para comparar (pelo menos 5 no bairro ou na cidade, ou 3 no estado).`}
+            {exemplo && !temLeiloes
+              ? "Exemplo fictício: a demonstração tem poucos imóveis, então não há média de leilões da região para comparar."
+              : `Ainda não há ${tipos} suficientes em leilão na base para comparar (pelo menos 3 na rua, 5 no bairro ou na cidade, ou 3 no estado).`}
           </p>
         ) : (
-          <div className="space-y-5">
-            {foraDaRegiao && (
-              <p className="flex items-start gap-2.5 rounded-2xl border border-aten/45 bg-aten/10 px-4 py-3 text-sm leading-snug text-luar">
-                <IconeAlerta tamanho={18} className="mt-px shrink-0 text-aten" />
-                <span>
-                  O lance por m² deste imóvel está muito fora da faixa da região. Pode haver erro no anúncio (no preço ou na área, ou um lote com vários
-                  imóveis): confira no site da fonte antes de usar a comparação.
-                </span>
-              </p>
-            )}
-            {frase ? (
-              // fora da faixa, a comparação ("13.263% maior") não merece o destaque: vai em texto pequeno, depois do aviso
-              <p
-                className={
-                  foraDaRegiao
-                    ? "text-[14.5px] leading-relaxed text-nevoa"
-                    : "font-display text-[19px] leading-snug font-bold tracking-[-0.01em] text-luar sm:text-[21px]"
-                }
-              >
-                {frase}
-              </p>
+          <div className="rounded-3xl border border-nevoa/15 bg-tinta p-4 sm:p-6">
+            {comparacao ? (
+              <>
+                <p className="font-display text-[21px] leading-snug font-bold tracking-[-0.015em] text-balance text-luar sm:text-[25px]">
+                  {sujeito}, <span className="whitespace-nowrap tabular-nums">{m2(valor!)}</span>, {predicadoComparacao(comparacao, alvoDaReferencia(principal))}.
+                </p>
+                <div className="mt-4 max-w-[34rem]">
+                  <EscalaNiveis nivel={comparacao.nivel} />
+                </div>
+              </>
             ) : (
-              <p className="text-[15px] leading-relaxed text-luar">
-                A fonte não informa a área deste imóvel: sem ela não dá para comparar o preço por m². Veja abaixo a faixa da região.
+              <p className="text-[16px] leading-relaxed font-medium text-luar">
+                A fonte não informa a área deste imóvel: sem ela não dá para comparar o preço por m². Veja as médias da região abaixo.
               </p>
             )}
-            {percentil && !foraDaRegiao && <p className="text-[14.5px] leading-relaxed text-nevoa">{percentil}</p>}
-            <GraficoM2 referencias={refs} area={i.area} lanceTotal={i.lance} avaliacaoTotal={i.avaliacao} />
-            <p className="flex gap-2.5 text-[13px] leading-relaxed text-nevoa">
-              <IconeInfo tamanho={16} className="mt-0.5" />
-              <span>
-                A avaliação é a que a fonte publica, feita para o leilão; o lance é o mínimo de hoje. Os dois podem estar longe do preço de venda de
-                verdade. Use como referência, junto com os anúncios da região.
-              </span>
+            <p className="mt-4 text-[14px] leading-relaxed text-nevoa">
+              {contexto(principal)}
+              <span className="font-semibold whitespace-nowrap text-luar tabular-nums">{m2(mediaDe(principal)!)}</span>.
             </p>
+            {comparacaoLance && lance !== null && (
+              <p className="mt-1.5 text-[14px] leading-relaxed text-nevoa">
+                Pelo lance mínimo (<span className="whitespace-nowrap text-luar tabular-nums">{m2(lance)}</span>), o preço por m²{" "}
+                {predicadoComparacao(comparacaoLance, alvoDaReferencia(principal))}.
+              </p>
+            )}
           </div>
         )}
 
-        <div className="mt-6 rounded-2xl border border-dashed border-nevoa/35 px-4 py-3.5">
-          <p className="text-[12px] leading-none font-semibold tracking-[0.12em] text-nevoa uppercase">Em breve</p>
-          <p className="mt-2 text-[13.5px] leading-relaxed text-nevoa">
-            Preço de transações reais (dados de ITBI das prefeituras) no Rio de Janeiro, em São Paulo, Porto Alegre, Fortaleza, Belo Horizonte e Recife,
-            e o índice FipeZAP, com autorização.
-          </p>
-        </div>
-      </Secao>
-
-      <Secao id="parecidos" titulo="Imóveis parecidos">
-        {v.parecidos.length > 0 ? (
-          <Parecidos itens={v.parecidos} rotulo="Imóveis parecidos" criterios={criteriosParecidos(i)} />
-        ) : (
-          <p className="rounded-2xl border border-nevoa/15 bg-tinta px-4 py-3.5 text-[14px] leading-relaxed text-nevoa">
-            {exemplo
-              ? "Exemplo fictício: sem imóveis parecidos na demonstração."
-              : `Nenhum imóvel parecido em leilão agora (${criteriosParecidos(i)}).`}
-          </p>
+        {!semReferencia && (
+          <div className="overflow-hidden rounded-3xl border border-nevoa/15 bg-tinta">
+            <table className="w-full border-collapse">
+              <caption className="sr-only">
+                Média do preço por {hectare ? "hectare" : "m²"} na rua, no bairro, na cidade e no estado, e a diferença para {valor !== null ? (avaliacao !== null ? "a avaliação" : "o lance") : "este imóvel"} deste imóvel
+              </caption>
+              <thead>
+                <tr className="text-[11px] leading-tight font-semibold tracking-[0.1em] text-nevoa uppercase">
+                  <th scope="col" className="pt-4 pr-3 pb-2.5 pl-4 text-left font-semibold sm:pl-6">
+                    Onde
+                  </th>
+                  <th scope="col" className="pt-4 pr-3 pb-2.5 text-right font-semibold">
+                    Média{hectare ? "/ha" : "/m²"}
+                  </th>
+                  <th scope="col" className="pt-4 pr-4 pb-2.5 text-right font-semibold sm:pr-6">
+                    {avaliacao !== null ? "Esta avaliação" : lance !== null ? "Este lance" : "Este imóvel"}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-nevoa/15">
+                  <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[12px] font-medium text-nevoa sm:px-6">
+                    Imóveis em leilão na base · média de avaliação
+                  </th>
+                </tr>
+                {leiloes.map(({ escopo, ref, igualA }) => (
+                  <Linha
+                    key={escopo}
+                    rotulo={ROTULO_ESCOPO[escopo]}
+                    lugar={lugarDe(escopo, ref)}
+                    amostra={ref ? `${numero(ref.amostra)} ${tipos}` : null}
+                    media={ref ? mediaDe(ref) : null}
+                    dif={ref ? compararComMedia(valor, mediaDe(ref)) : null}
+                    falta={ref ? (mediaDe(ref) === null ? "sem avaliações suficientes" : null) : faltaLeiloes(escopo, igualA)}
+                    destaque={ref !== null && ref === principal}
+                    m2={m2}
+                  />
+                ))}
+              </tbody>
+              <tbody>
+                <tr className="border-t border-nevoa/15">
+                  <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[12px] font-medium text-nevoa sm:px-6">
+                    Transações reais (ITBI) · preço médio pago
+                    {itbi[0]?.periodo && <span className="whitespace-nowrap"> · {periodoCurto(itbi[0].periodo)}</span>}
+                  </th>
+                </tr>
+                {itbi.length > 0 ? (
+                  itbi.map((r) => (
+                    <Linha
+                      key={r.escopo}
+                      rotulo={ROTULO_ESCOPO[r.escopo]}
+                      lugar={lugarDe(r.escopo, r)}
+                      amostra={`${numero(r.amostra)} ${r.amostra === 1 ? "compra" : "compras"}`}
+                      media={mediaDe(r)}
+                      dif={compararComMedia(valor, mediaDe(r))}
+                      falta={mediaDe(r) === null ? "sem dados suficientes" : null}
+                      destaque={r === principal}
+                      m2={m2}
+                    />
+                  ))
+                ) : (
+                  <tr className="border-t border-nevoa/10">
+                    <td colSpan={3} className="px-4 py-3 text-[13px] leading-snug text-nevoa sm:px-6">
+                      {itbiSemComparacao
+                        ? itbiSemComparacao
+                        : v.cobertura?.cidadeTemItbi
+                        ? `A prefeitura de ${i.cidade} não registra compras de ${tipos} suficientes para comparar.`
+                        : `Ainda não temos o preço pago nas compras registradas em ${lugarCidade}.${v.cobertura ? " Veja abaixo de quais cidades temos." : ""}`}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
 
-        <div className="mt-8">
-          <h3 className="text-[13px] leading-none font-semibold tracking-[0.12em] text-nevoa uppercase">Veja anúncios parecidos nos portais</h3>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {v.buscasExternas.map((l) => (
-              <li key={l.url}>
-                <a
-                  href={l.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={l.descricao}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-nevoa/30 px-4 text-[13.5px] font-medium text-luar no-underline transition-colors hover:border-latao hover:bg-latao/10 pointer-fine:min-h-9"
-                >
-                  {l.rotulo}
-                  {l.rotulo !== "Google" && <span className="text-[12px] font-normal text-nevoa">· busca no Google</span>}
-                  <IconeExterno tamanho={14} className="text-nevoa" />
-                  <NovaAba />
-                </a>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 max-w-[68ch] text-[12.5px] leading-relaxed text-nevoa">
-            Cada botão abre, em nova aba, uma busca do Google só com anúncios daquele portal, com o tipo, os quartos e o local deste imóvel. A Luneta não
-            copia nem mostra anúncios: a comparação com preço de mercado fica com você.
-          </p>
-        </div>
-      </Secao>
-    </>
+        {refs.length > 0 && (
+          <Expansor rotulo="Ver detalhes: faixas e medianas" rotuloAberto="Fechar os detalhes" className="-mt-2">
+            <div className="space-y-4 pt-3">
+              <GraficoM2 referencias={refs} area={i.area} lanceTotal={i.lance} avaliacaoTotal={i.avaliacao} />
+              {percentil && <p className="text-[14px] leading-relaxed text-nevoa">{percentil}</p>}
+              <p className="flex gap-2.5 text-[13px] leading-relaxed text-nevoa">
+                <IconeInfo tamanho={16} className="mt-0.5" />
+                <span>
+                  A média tira os 10% mais baixos e os 10% mais altos de cada recorte; a faixa mostra a metade do meio e o traço, a mediana. A
+                  avaliação é a que a fonte publica para o leilão e o lance é o mínimo de hoje: os dois podem estar longe do preço de venda de
+                  verdade. O ITBI é o preço declarado na compra, registrado na prefeitura.
+                </span>
+              </p>
+            </div>
+          </Expansor>
+        )}
+
+        <BuscasPortais imovel={i} buscas={v.buscasExternas} rua={ruaNome} />
+
+        <FontesPrecos cobertura={v.cobertura} cidade={lugarCidade} exemplo={exemplo} semComparacao={itbiSemComparacao ? { motivo: itbiSemComparacao, naTabela: !semReferencia } : null} />
+      </div>
+    </Secao>
   );
 }

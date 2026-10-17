@@ -313,9 +313,8 @@ Pendências da página:
   quase sempre abre com "não atinge sua meta". Opções: (a) meta de 15% ao ano; (b) meta "render mais que a aplicação"
   (10% a.a. + margem); (c) o cartão abre pelo retorno com o lance mínimo ("com o lance mínimo: 5,8% ao ano") e a meta vira
   pergunta logo abaixo. Por ora, o aviso de "não atinge" já diz o retorno com o lance mínimo e a meta lado a lado.
-- [ ] Preço de mercado na região: hoje a seção compara com outros leilões e os botões dos portais são buscas no Google
-  (agora rotuladas assim). Próximo passo: a mediana de R$/m² das transações reais do ITBI (dado aberto) do Rio e de São
-  Paulo como uma barra a mais no gráfico ("Transações reais, ITBI, 12 meses"); cobre 3.225 imóveis do Rio e 490 de SP.
+- [x] Preço de mercado na região: a seção mostra também o preço pago nas compras registradas na prefeitura (ITBI), em
+  linhas à parte das de leilão, nas cidades que temos (rodada 3, 17/10/2026; ver abaixo).
 - [x] Máscara LGPD: o nome logo depois de "Rua", "Av.", "Travessa" deixou de ser mascarado (`base/util/lgpd.ts`); riscos
   recalculados e instantâneo regerado em 14/10/2026 (nenhum "Rua [NOME]" restante; os 14 nomes de pessoas seguem
   mascarados).
@@ -402,6 +401,37 @@ Revisão do relatório (17/10/2026):
 - menores: "criado por você" repetido na conta do celular; "por R$ 300.000 (R$ 300.000, valor que você definiu)" no
   cenário personalizado; hora do relatório presa à primeira visita ao voltar pelo navegador; link do anúncio abria na
   mesma aba; tabelas da região espremidas no celular; tabela de premissas colada na frase de cima.
+
+Rodada 3 (17/10/2026), página do imóvel:
+- **Matrícula e registro:** matrícula, comarca, ofício, inscrição imobiliária e averbação dos leilões negativos vêm do
+  registro do imóvel. Ficha lida: os valores ("Comarca de São Gonçalo/RJ · 6º Ofício", "Averbado"). Caixa com a ficha
+  ainda não lida: "Na ficha da Caixa · ainda não lida pela Luneta", com "Abrir a ficha no site da Caixa" e o PDF da
+  matrícula (nunca mais "não informado"). Leilões Judiciais: os números do campo e dos PDFs.
+- **(i) que explica o valor:** ao lado de modalidade, praça, financiamento, FGTS, parcelamento, ocupação, natureza,
+  matrícula, cartório/comarca, inscrição, averbação, leiloeiro, comitente e da tag "direito de preferência". Abre o
+  texto do glossário (`src/content/glossario.ts`: o que é, na prática, base legal em letra menor), com "Veja também"
+  (ex.: execução extrajudicial → direito de preferência).
+- **Preço do m² na região, mais simples:** uma frase grande ("A avaliação deste imóvel, R$ 2.682/m², está 11% abaixo da
+  média da cidade"), o selo de 5 níveis (muito abaixo · abaixo · na média · acima · muito acima) e uma tabela curta com as
+  médias da rua, do bairro, da cidade e do estado (n de cada; "sem dados suficientes" quando falta) e, à parte, as do
+  ITBI. O gráfico de faixas foi para "Ver detalhes". Saiu o aviso "muito fora da faixa da região". Logo abaixo, os
+  anúncios nos portais por nível (na mesma rua, no mesmo bairro, na cidade) e "De onde vêm os preços" (no lugar do "Em
+  breve"): temos, coleta pendente, sem dado aberto (LAI) e FipeZAP (autorização).
+- **Resumo da direita recolhível:** botão discreto no canto; recolhido, vira uma pílula com o lance na barra das seções
+  e o conteúdo ocupa a largura (escolha salva no navegador e num cookie, para a página já abrir assim). No celular, a
+  barra do lance pode ser minimizada (fica uma pílula no canto).
+- **Ordem:** Resumo · Riscos · Localização · Simulador · Região · Documentos · Fonte · Parecidos (os parecidos no fim).
+- [ ] **Decisão sua:** os limites do selo da região (hoje: muito abaixo até −30%; abaixo de −10% a −29%; na média de −9%
+  a +9%; acima de +10% a +29%; muito acima a partir de +30%).
+- [ ] Revisar os textos do glossário (os (i)) com o advogado parceiro.
+- Revisão da página (17/10/2026): quando a cidade tem ITBI mas a comparação não vale para o imóvel (apartamentos e
+  comerciais em São Paulo e Fortaleza: a área publicada inclui a parte comum), a tabela diz o motivo em vez de "não
+  registra compras suficientes"; a fila das seções (8 abas) esmaece nas pontas e ganha setas no mouse quando não cabe
+  (celular e telas de 1024 a ~1200 px com o resumo aberto); o rótulo "Muito acima" do selo não é mais cortado no
+  celular; bairro ou rua que a fonte não informa aparecem como tal na tabela (e não como "sem dados suficientes").
+- [ ] Técnico (dados): quando o bairro tem exatamente os mesmos imóveis da rua, o servidor não repete o recorte e a
+  tabela mostra "sem dados suficientes" no bairro (não dá para distinguir de "poucos imóveis"). Uma marca no recorte
+  ("igual ao da rua") resolveria.
 
 ### Ler cada leilão com IA: é viável?
 

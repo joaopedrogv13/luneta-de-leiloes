@@ -1,0 +1,81 @@
+/*
+ * Layout da página do imóvel no computador (lg, 1024 px ou mais): o conteúdo à esquerda e o resumo fixo à direita.
+ * Com data-resumo="recolhido" na grade (botão no canto do resumo; ver ResumoRecolhivel.tsx), a coluna do resumo
+ * vai a 0, o conteúdo ocupa a largura liberada (transição da grade) e a pílula aparece na barra das seções.
+ * O conteúdo do resumo tem largura fixa: na transição ele não se espreme, só desliza e some.
+ */
+
+.pilula {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .grade {
+    grid-template-columns: minmax(0, 1fr) 368px;
+    grid-template-rows: auto 1fr;
+    column-gap: 2.5rem;
+    transition:
+      grid-template-columns 300ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      column-gap 300ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .lateral {
+    grid-column-start: 2;
+    grid-row: 1 / span 2;
+    align-self: start;
+    position: sticky;
+    top: 88px;
+    transition:
+      opacity 200ms ease,
+      translate 300ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      visibility 0s linear 0s;
+  }
+  .lateralConteudo {
+    width: 368px;
+  }
+
+  .grade[data-resumo="recolhido"] {
+    grid-template-columns: minmax(0, 1fr) 0px;
+    column-gap: 0px;
+  }
+  .grade[data-resumo="recolhido"] .lateral {
+    opacity: 0;
+    translate: 32px 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 150ms ease,
+      translate 300ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      visibility 0s linear 300ms;
+  }
+  .grade[data-resumo="recolhido"] .pilula {
+    display: inline-flex;
+    animation: surgir 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+}
+
+@media (min-width: 80rem) {
+  .grade {
+    grid-template-columns: minmax(0, 1fr) 392px;
+    column-gap: 3.5rem;
+  }
+  .lateralConteudo {
+    width: 392px;
+  }
+}
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+    translate: 8px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grade,
+  .lateral {
+    transition: none !important;
+  }
+  .pilula {
+    animation: none !important;
+  }
+}

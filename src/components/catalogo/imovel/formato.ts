@@ -3,7 +3,7 @@
  * Imports relativos, sem "@/": o teste roda em Node puro.
  */
 import { area, moeda, normalizar, numero, PRACA_ROTULO, UF_NOME } from "../../../lib/catalogo/rotulos";
-import type { ImovelResumo, LinkImovel, Praca, PracaDetalhe, ReferenciaM2, TipoImovel, TipoLink } from "../../../lib/catalogo/tipos";
+import type { ImovelResumo, LinkImovel, Praca, PracaDetalhe, ReferenciaM2, RegistroImovel, TipoImovel, TipoLink } from "../../../lib/catalogo/tipos";
 
 /** "não informado pela fonte" / "não informada pela fonte", pelo gênero do campo. */
 export function naoInformado(genero: "m" | "f" = "m") {
@@ -124,12 +124,19 @@ export function deEstado(uf: string) {
 /** Cidades com artigo ("do Rio de Janeiro", "do Recife"). */
 const CIDADE_COM_ARTIGO = new Set(["Rio de Janeiro", "Recife"]);
 
-/** Onde fica o recorte, já com a preposição: "no bairro Centro, Uberlândia/MG", "na cidade de Uberlândia/MG", "no estado de Minas Gerais". */
+/** Tipos de logradouro no masculino ("no Largo do Machado", "no Beco..."); o resto é feminino ("na Rua", "na Avenida"). */
+const LOGRADOURO_MASCULINO = new Set(["largo", "beco", "caminho", "parque", "viaduto", "acesso", "anel", "conjunto", "loteamento", "trecho", "ramal", "corredor", "contorno"]);
+
+/** Onde fica o recorte, já com a preposição: "na Rua X, Uberlândia/MG", "no bairro Centro, Uberlândia/MG", "na cidade de Uberlândia/MG", "no estado de Minas Gerais". */
 export function ondeRecorte(r: Pick<ReferenciaM2, "escopo" | "nome">): string {
   if (r.escopo === "uf") return `no estado ${deEstado(r.nome)}`;
   if (r.escopo === "cidade") {
     const [cidade = r.nome] = r.nome.split("/");
     return `na cidade ${CIDADE_COM_ARTIGO.has(cidade) ? "do" : "de"} ${r.nome}`;
+  }
+  if (r.escopo === "rua") {
+    const primeira = normalizar(r.nome.split(/\s+/)[0] ?? "");
+    return `${LOGRADOURO_MASCULINO.has(primeira) ? "no" : "na"} ${r.nome}`;
   }
   return `no bairro ${r.nome}`;
 }
@@ -139,26 +146,23 @@ export function nomeRecorte(r: Pick<ReferenciaM2, "escopo" | "nome">) {
   return r.escopo === "uf" ? (UF_NOME[r.nome] ?? r.nome) : r.nome;
 }
 
-export const ROTULO_ESCOPO: Record<ReferenciaM2["escopo"], string> = { rua: "Rua", bairro: "Bairro", cidade: "Cidade", uf: "Estado" };
-
-/**
- * Frase direta da comparação, com a referência mais local que tem avaliação:
- * "O lance por m² deste imóvel é 23% menor que a mediana de avaliação dos apartamentos em leilão no bairro
- * Centro, Uberlândia/MG (n = 14)." Sem avaliação no recorte, compara com a mediana dos lances. null quando o
- * imóvel não tem R$/m² (sem área) ou não há referência.
- */
-export function fraseComparacao(r: ReferenciaM2): string | null {
-  const lance = r.imovel.lanceM2;
-  if (lance === null) return null;
-  const faixa = r.avaliacaoM2 ?? r.lanceM2;
-  if (!faixa || faixa.mediana <= 0) return null;
-  const doQue = r.avaliacaoM2 ? "a mediana de avaliação" : "a mediana dos lances";
-  const quem = `${concorda(r.tipo).dos} ${TIPO_NA_FRASE[r.tipo]} em leilão ${ondeRecorte(r)} (n = ${numero(r.amostra)})`;
-  const dif = lance / faixa.mediana - 1;
-  const pct = Math.round(Math.abs(dif) * 100);
-  if (pct < 2) return `O lance por m² deste imóvel é praticamente igual ${doQue.replace(/^a /, "à ")} ${quem}.`;
-  return `O lance por m² deste imóvel é ${numero(pct)}% ${dif < 0 ? "menor" : "maior"} que ${doQue} ${quem}.`;
+/** "Rua X, N. 338, Lt 28" → "Rua X": o trecho antes da primeira vírgula, quando parece um logradouro (senão null). */
+export function logradouro(endereco: string | null): string | null {
+  if (!endereco) return null;
+  const t = endereco.split(",")[0]!.trim();
+  return t.length >= 4 && t.length <= 80 && /\p{L}{3}/u.test(t) && !/^\d/.test(t) ? t : null;
 }
+
+/** Só o lugar, sem a cidade que já está no contexto: "Rua X", "Centro", "Uberlândia/MG", "Minas Gerais". */
+export function lugarDoRecorte(r: Pick<ReferenciaM2, "escopo" | "nome">) {
+  if (r.escopo === "rua" || r.escopo === "bairro") {
+    const k = r.nome.lastIndexOf(", ");
+    return k > 0 ? r.nome.slice(0, k) : r.nome;
+  }
+  return nomeRecorte(r);
+}
+
+export const ROTULO_ESCOPO: Record<ReferenciaM2["escopo"], string> = { rua: "Rua", bairro: "Bairro", cidade: "Cidade", uf: "Estado" };
 
 /**
  * "Por m², o lance deste imóvel é menor que o de 78% dos apartamentos em leilão no bairro …". Nas pontas (0% e
@@ -185,19 +189,129 @@ export function frasePercentil(r: ReferenciaM2): string | null {
   return `Por m², o lance deste imóvel é menor que o de ${numero(p)}% ${g.dos} ${tipos} em leilão ${onde}.`;
 }
 
-/** Quantas vezes fora da faixa do meio (p25–p75) um valor precisa estar para ser "muito fora" da região. */
+/** Quantas vezes fora da faixa das referências um valor do imóvel pode estar e ainda entrar na escala do gráfico. */
 export const FATOR_FORA = 3;
 
+// ---------------------------------------------------------------------------
+// Comparação simples com a região: a avaliação deste imóvel contra a média da rua, do bairro, da cidade e do estado
+// ---------------------------------------------------------------------------
+
+/** Os 5 níveis do selo da comparação, do mais abaixo ao mais acima. */
+export const NIVEIS_COMPARACAO = ["Muito abaixo", "Abaixo", "Na média", "Acima", "Muito acima"] as const;
+export type NivelComparacao = 0 | 1 | 2 | 3 | 4;
+
 /**
- * O lance por m² deste imóvel está muito longe da região (mais de 3 vezes o p75, ou menos de um terço do p25)?
- * Quase sempre é erro na fonte (área ou preço digitados errado, lote com vários imóveis): a página pede para
- * conferir no anúncio.
+ * Diferença de um valor para a média, em % inteiro com sinal (−31 = 31% abaixo), e o nível: muito abaixo (−30% ou
+ * menos), abaixo (de −29% a −10%), na média (de −9% a +9%), acima (de +10% a +29%), muito acima (+30% ou mais). O
+ * nível sai do % já arredondado, para o selo nunca contradizer o número escrito ao lado. null sem os dois valores.
  */
-export function lanceForaDaRegiao(r: ReferenciaM2): boolean {
-  const v = r.imovel.lanceM2;
-  const f = r.avaliacaoM2 ?? r.lanceM2;
-  if (v === null || !f || f.p25 <= 0) return false;
-  return v > f.p75 * FATOR_FORA || v < f.p25 / FATOR_FORA;
+export function compararComMedia(valor: number | null | undefined, media: number | null | undefined): { pct: number; razao: number; nivel: NivelComparacao } | null {
+  if (valor == null || media == null || !(valor > 0) || !(media > 0)) return null;
+  const razao = valor / media;
+  const pct = Math.round((razao - 1) * 100);
+  const nivel: NivelComparacao = pct <= -30 ? 0 : pct <= -10 ? 1 : pct < 10 ? 2 : pct < 30 ? 3 : 4;
+  return { pct, razao, nivel };
+}
+
+/** "2,4" (uma casa, vírgula). */
+const vezes = (x: number) => new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(Math.round(x * 10) / 10);
+
+/** Diferença curta para a tabela: "31% abaixo", "12% acima", "igual", "2,4 vezes". */
+export function diferencaCurta(c: { pct: number; razao: number }): string {
+  if (c.razao >= 2) return `${vezes(c.razao)} vezes`;
+  if (Math.abs(c.pct) < 2) return "igual";
+  return `${numero(Math.abs(c.pct))}% ${c.pct < 0 ? "abaixo" : "acima"}`;
+}
+
+/** Com o que se compara: "a média do bairro" (leilões) ou "o preço médio pago no bairro" (ITBI). */
+export interface AlvoComparacao {
+  artigo: "a" | "o";
+  nome: string;
+}
+
+const ESCOPO_NA_FRASE: Record<ReferenciaM2["escopo"], string> = { rua: "da rua", bairro: "do bairro", cidade: "da cidade", uf: "do estado" };
+const ESCOPO_NO: Record<ReferenciaM2["escopo"], string> = { rua: "na rua", bairro: "no bairro", cidade: "na cidade", uf: "no estado" };
+
+/** "a média do bairro" para os leilões; "o preço médio pago no bairro" para o ITBI. */
+export function alvoDaReferencia(r: Pick<ReferenciaM2, "escopo" | "fonte">): AlvoComparacao {
+  return r.fonte === "itbi" ? { artigo: "o", nome: `preço médio pago ${ESCOPO_NO[r.escopo]}` } : { artigo: "a", nome: `média ${ESCOPO_NA_FRASE[r.escopo]}` };
+}
+
+/**
+ * Frase da comparação, sem o sujeito: "está 31% abaixo da média do bairro", "está praticamente igual à média da
+ * cidade", "é 2,4 vezes a média do bairro" (a partir do dobro, "vezes" se lê melhor que "140% acima").
+ */
+export function predicadoComparacao(c: { pct: number; razao: number }, alvo: AlvoComparacao): string {
+  const de = alvo.artigo === "a" ? "da" : "do";
+  if (c.razao >= 2) return `é ${vezes(c.razao)} vezes ${alvo.artigo} ${alvo.nome}`;
+  if (Math.abs(c.pct) < 2) return `está praticamente igual ${alvo.artigo === "a" ? "à" : "ao"} ${alvo.nome}`;
+  return `está ${numero(Math.abs(c.pct))}% ${c.pct < 0 ? "abaixo" : "acima"} ${de} ${alvo.nome}`;
+}
+
+/**
+ * Média de uma referência (R$/m²). Dados de antes do campo `media` (sem a chave) usam a mediana da avaliação, que
+ * fica perto da média aparada; `null` = o recorte não tem avaliações suficientes.
+ */
+export const mediaDe = (r: Pick<ReferenciaM2, "media" | "avaliacaoM2">): number | null => (r.media === undefined ? (r.avaliacaoM2?.mediana ?? null) : r.media);
+
+/** Fonte de uma referência (dados antigos sem o campo são de leilões). */
+export const fonteDaReferencia = (r: Pick<ReferenciaM2, "fonte">) => r.fonte ?? "leiloes";
+
+/**
+ * A referência da frase principal: a média de leilões mais local com pelo menos 5 imóveis (senão a mais local
+ * que tiver média); sem nenhuma de leilões, a do ITBI pelo mesmo critério. null sem média nenhuma.
+ */
+export function referenciaPrincipal(refs: readonly ReferenciaM2[]): ReferenciaM2 | null {
+  const comMedia = refs.filter((r) => (mediaDe(r) ?? 0) > 0);
+  const escolher = (lista: ReferenciaM2[]) => lista.find((r) => r.amostra >= 5) ?? lista[0] ?? null;
+  return escolher(comMedia.filter((r) => fonteDaReferencia(r) === "leiloes")) ?? escolher(comMedia.filter((r) => r.fonte === "itbi"));
+}
+
+export const ESCOPOS: readonly ReferenciaM2["escopo"][] = ["rua", "bairro", "cidade", "uf"];
+/** Amostra mínima de cada recorte de leilões (src/lib/catalogo/vizinhanca.ts). */
+const MINIMO_LEILOES: Record<ReferenciaM2["escopo"], number> = { rua: 3, bairro: 5, cidade: 5, uf: 3 };
+/** O conjunto de cada recorte contém o do recorte (mais local) da chave? A rua pode atravessar bairros: o bairro não contém a rua. */
+const CONTEM: Record<ReferenciaM2["escopo"], readonly ReferenciaM2["escopo"][]> = { rua: [], bairro: [], cidade: ["rua", "bairro"], uf: ["rua", "bairro", "cidade"] };
+
+export interface LinhaRegiao {
+  escopo: ReferenciaM2["escopo"];
+  ref: ReferenciaM2 | null;
+  /** sem referência própria porque os imóveis são os mesmos do recorte anterior (ex.: todas as casas da cidade estão no bairro) */
+  igualA: ReferenciaM2["escopo"] | null;
+}
+
+/**
+ * As linhas da tabela de leilões: sempre rua, bairro, cidade e estado. O servidor não repete um recorte com a
+ * mesma amostra do anterior; quando dá para ter certeza de que foi isso (a cidade contém o bairro, e o bairro já
+ * tinha amostra suficiente para a cidade), a linha diz "os mesmos do bairro" em vez de "sem dados suficientes".
+ */
+export function linhasLeiloes(refs: readonly ReferenciaM2[]): LinhaRegiao[] {
+  const leiloes = refs.filter((r) => fonteDaReferencia(r) === "leiloes");
+  let anterior: ReferenciaM2 | null = null;
+  return ESCOPOS.map((escopo) => {
+    const ref = leiloes.find((r) => r.escopo === escopo) ?? null;
+    if (ref) {
+      anterior = ref;
+      return { escopo, ref, igualA: null };
+    }
+    const a = anterior as ReferenciaM2 | null;
+    const igual = a !== null && CONTEM[escopo].includes(a.escopo) && a.amostra >= MINIMO_LEILOES[escopo];
+    return { escopo, ref: null, igualA: igual ? a.escopo : null };
+  });
+}
+
+/** As referências de ITBI (rua, bairro, cidade), na ordem do mais local ao mais amplo. */
+export const referenciasItbi = (refs: readonly ReferenciaM2[]) => ESCOPOS.flatMap((e) => refs.filter((r) => r.fonte === "itbi" && r.escopo === e));
+
+/** "set/2025 a set/2026" a partir de ["2025-09-01", "2026-09-30"]. */
+export function periodoCurto(p: readonly [string, string] | null | undefined): string | null {
+  if (!p) return null;
+  const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const mes = (iso: string) => {
+    const m = Number(iso.slice(5, 7));
+    return m >= 1 && m <= 12 ? `${MESES[m - 1]}/${iso.slice(0, 4)}` : iso;
+  };
+  return `${mes(p[0])} a ${mes(p[1])}`;
 }
 
 /**
@@ -283,6 +397,95 @@ export const TIPO_LINK_ROTULO: Record<TipoLink, string> = {
   mapa: "Mapa",
   outro: "Link",
 };
+
+// ---------------------------------------------------------------------------
+// Registro (matrícula, cartório, comarca, ofício, inscrição, averbação)
+// ---------------------------------------------------------------------------
+
+const CONECTIVOS = new Set(["de", "da", "do", "das", "dos", "e"]);
+
+/**
+ * Texto todo em maiúsculas (como a ficha da Caixa escreve) em forma de nome: "SÃO GONÇALO-RJ" → "São Gonçalo-RJ",
+ * "AVERBADO" → "Averbado". A sigla de 2 letras no fim (UF) fica em maiúsculas. Texto com minúsculas fica como está.
+ */
+export function formaDeNome(texto: string): string {
+  if (/\p{Ll}/u.test(texto)) return texto;
+  return texto
+    .toLowerCase()
+    .split(/(\s+|[-/])/)
+    .map((p, k, partes) => {
+      if (/^\s+$|^[-/]$/.test(p) || p === "") return p;
+      const ultima = partes.slice(k + 1).every((x) => x === "" || /^\s+$/.test(x));
+      if (ultima && p.length === 2 && k > 0 && /[-/]/.test(partes[k - 1] ?? "")) return p.toUpperCase();
+      if (k > 0 && CONECTIVOS.has(p)) return p;
+      return p.charAt(0).toUpperCase() + p.slice(1);
+    })
+    .join("");
+}
+
+/** "06" → "6º Ofício"; "2º Ofício de Registro de Imóveis" fica como está. */
+export function textoOficio(oficio: string): string {
+  const o = oficio.trim();
+  if (/^\d+$/.test(o)) return `${Number(o)}º Ofício`;
+  if (/^\d+\s*[ºo°]?$/i.test(o)) return `${Number.parseInt(o, 10)}º Ofício`;
+  return /of[ií]cio/i.test(o) ? formaDeNome(o) : `Ofício ${formaDeNome(o)}`;
+}
+
+/** "Matrícula 13.941" → "13.941" (rótulo dos links de matrícula da Leilões Judiciais). */
+export const numeroMatricula = (rotulo: string) => /matr[ií]cula\s+(?:n[ºo°.]*\s*)?([\d.\-/]+)/i.exec(rotulo)?.[1] ?? null;
+
+/** "a, b e c" */
+export const listaE = (itens: readonly string[]) => (itens.length <= 1 ? itens.join("") : `${itens.slice(0, -1).join(", ")} e ${itens.at(-1)}`);
+
+export interface RegistroNaTela {
+  situacao: "lido" | "pendente" | "na_fonte" | "nao_publica";
+  /** números de matrícula (do registro, do campo da fonte e dos rótulos dos PDFs), sem repetir */
+  matriculas: string[];
+  /** cartório, comarca e ofício juntos: "2º CRI", "Comarca de São Gonçalo-RJ · 6º Ofício" */
+  cartorio: string | null;
+  inscricao: string | null;
+  averbacao: string | null;
+  /** PDFs de matrícula entre os links */
+  pdfs: LinkImovel[];
+  paginaFonte: string | null;
+  lidoEm: string | null;
+}
+
+/**
+ * O que a seção mostra dos dados de registro. A fonte da verdade é `registro` (situação e campos da ficha); o campo
+ * `matricula`/`cartorio` do detalhe e os rótulos dos PDFs ("Matrícula 13.941") completam os números.
+ */
+export function registroNaTela(
+  i: { registro: RegistroImovel; matricula: string | null; cartorio: string | null; links: readonly LinkImovel[] },
+): RegistroNaTela {
+  const r = i.registro;
+  const pdfs = i.links.filter((l) => l.tipo === "matricula");
+  const numeros = [...r.matriculas, ...(i.matricula ?? "").split(/\s*[;,]\s*/), ...pdfs.map((l) => numeroMatricula(l.rotulo) ?? "")]
+    .map((m) => m.trim())
+    .filter(Boolean);
+  const matriculas = [...new Set(numeros)];
+  // "SÃO GONÇALO-RJ" → "São Gonçalo/RJ" (o jeito do site de escrever cidade e UF)
+  const comarca = r.comarca ? `Comarca de ${formaDeNome(r.comarca).replace(/\s*-\s*([A-Z]{2})$/, "/$1")}` : null;
+  const oficio = r.oficio ? textoOficio(r.oficio) : null;
+  const base = r.cartorio ?? i.cartorio;
+  // o cartório já diz a cidade ("... de Campinas/SP"): a comarca não se repete
+  const comarcaNova = comarca && !(base && r.comarca && normalizar(base).includes(normalizar(r.comarca).replace(/-/g, "/")));
+  // o cartório da fonte sem o número do ofício ("CRI de São Gonçalo"): o ofício da ficha entra junto
+  const oficioNovo = oficio && !(base && /of[ií]cio|\d\s*[ºo°]/i.test(base));
+  const cartorio = base
+    ? [base, comarcaNova ? comarca : null, oficioNovo ? oficio : null].filter(Boolean).join(" · ")
+    : [comarca, oficio].filter(Boolean).join(" · ") || null;
+  return {
+    situacao: r.situacao,
+    matriculas,
+    cartorio,
+    inscricao: r.inscricaoImobiliaria ? r.inscricaoImobiliaria.trim() : null,
+    averbacao: r.averbacaoLeiloesNegativos ? formaDeNome(r.averbacaoLeiloesNegativos.trim()) : null,
+    pdfs,
+    paginaFonte: r.paginaFonte,
+    lidoEm: r.lidoEm,
+  };
+}
 
 /**
  * A linha "bairro · cidade/UF" repetiria o endereço? (Sem bairro, e o endereço já termina com a cidade:

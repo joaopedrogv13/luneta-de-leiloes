@@ -1,6 +1,6 @@
 import { moedaCurta, numero } from "@/lib/catalogo/rotulos";
 import type { ReferenciaM2 } from "@/lib/catalogo/tipos";
-import { AREA_HECTARE, concorda, escalaRegiao, nomeRecorte, posicaoNaEscala, precoPorArea, ROTULO_ESCOPO, TIPO_NA_FRASE } from "./formato";
+import { AREA_HECTARE, concorda, escalaRegiao, fonteDaReferencia, nomeRecorte, posicaoNaEscala, precoPorArea, ROTULO_ESCOPO, TIPO_NA_FRASE } from "./formato";
 
 /** Posição (0–100%) de um valor na escala, presa às bordas. */
 const pos = (v: number, min: number, max: number) => `${posicaoNaEscala(v, min, max).pct.toFixed(2)}%`;
@@ -42,7 +42,8 @@ export function GraficoM2({
   const doImovel = referencias[0]?.imovel;
   const lance = doImovel?.lanceM2 == null ? null : hectare && area ? lanceTotal / area : doImovel.lanceM2;
   const avaliacao = doImovel?.avaliacaoM2 == null ? null : hectare && area && avaliacaoTotal !== null ? avaliacaoTotal / area : doImovel.avaliacaoM2;
-  const faixas = referencias.map((r) => ({ r, faixa: r.avaliacaoM2 ?? r.lanceM2, deAvaliacao: r.avaliacaoM2 !== null }));
+  const faixas = referencias.map((r) => ({ r, faixa: r.avaliacaoM2 ?? r.lanceM2, deAvaliacao: r.avaliacaoM2 !== null, itbi: fonteDaReferencia(r) === "itbi" }));
+  const temLeiloes = faixas.some((f) => !f.itbi);
   const escala = escalaRegiao(
     faixas.flatMap(({ faixa }) => (faixa ? [faixa.p25, faixa.p75, faixa.mediana] : [])),
     [...(lance !== null ? [lance] : []), ...(avaliacao !== null ? [avaliacao] : [])],
@@ -58,14 +59,14 @@ export function GraficoM2({
     <figure className="rounded-3xl border border-nevoa/15 bg-tinta p-4 sm:p-6">
       <figcaption className="sr-only">
         Avaliação {hectare ? "por hectare" : "por m²"} {concorda(referencias[0]!.tipo).dos} {concorda(referencias[0]!.tipo).outros}{" "}
-        {TIPO_NA_FRASE[referencias[0]!.tipo]} em leilão em cada recorte, comparada ao lance e à
-        avaliação {hectare ? "por hectare" : "por m²"} deste imóvel.
+        {TIPO_NA_FRASE[referencias[0]!.tipo]} em leilão em cada recorte e, quando houver, o preço pago nas compras registradas na prefeitura
+        (ITBI), comparados ao lance e à avaliação {hectare ? "por hectare" : "por m²"} deste imóvel.
       </figcaption>
 
       <ul aria-label="Legenda" className="flex flex-wrap gap-x-5 gap-y-2 text-[12.5px] leading-snug text-nevoa">
         <li className="flex items-center gap-2">
           <span aria-hidden="true" className="block h-2.5 w-6 rounded-full bg-nevoa/35" />
-          Metade do meio dos outros imóveis
+          Metade do meio (do 1º ao 3º quartil)
         </li>
         <li className="flex items-center gap-2">
           <span aria-hidden="true" className="block h-3.5 w-0.5 rounded-full bg-luar" />
@@ -92,15 +93,20 @@ export function GraficoM2({
       </ul>
 
       <div className="mt-5 space-y-5">
-        {faixas.map(({ r, faixa, deAvaliacao }) => (
-          <div key={r.escopo}>
+        {faixas.map(({ r, faixa, deAvaliacao, itbi }, k) => (
+          <div key={`${itbi ? "itbi" : "leiloes"}-${r.escopo}`}>
+            {(k === 0 || itbi !== faixas[k - 1]!.itbi) && (temLeiloes || itbi) && (
+              <p className={`mb-3 text-[11px] leading-none font-semibold tracking-[0.12em] text-nevoa uppercase ${k > 0 ? "border-t border-nevoa/15 pt-5" : ""}`}>
+                {itbi ? "Transações reais (ITBI) · preço pago" : "Imóveis em leilão na base · avaliação"}
+              </p>
+            )}
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
               <p className="text-[14px] font-semibold text-luar">
                 <span className="text-nevoa">{ROTULO_ESCOPO[r.escopo]} · </span>
                 {nomeRecorte(r)}
               </p>
               <p className="text-[12.5px] text-nevoa tabular-nums">
-                n = {numero(r.amostra)} {TIPO_NA_FRASE[r.tipo]}
+                n = {numero(r.amostra)} {itbi ? (r.amostra === 1 ? "compra" : "compras") : TIPO_NA_FRASE[r.tipo]}
               </p>
             </div>
             {faixa && (
@@ -131,7 +137,7 @@ export function GraficoM2({
                   )}
                 </div>
                 <p className="mt-1.5 text-[12.5px] leading-snug text-nevoa">
-                  {deAvaliacao ? "Avaliações" : "Lances"}: metade entre <span className="text-luar/90 tabular-nums">{m2(faixa.p25)}</span> e{" "}
+                  {itbi ? "Preço pago" : deAvaliacao ? "Avaliações" : "Lances"}: metade entre <span className="text-luar/90 tabular-nums">{m2(faixa.p25)}</span> e{" "}
                   <span className="text-luar/90 tabular-nums">{m2(faixa.p75)}</span> · mediana <span className="text-luar/90 tabular-nums">{m2(faixa.mediana)}</span>
                   {deAvaliacao && r.lanceM2 && (
                     <>

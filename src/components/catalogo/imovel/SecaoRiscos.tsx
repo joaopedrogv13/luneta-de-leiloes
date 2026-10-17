@@ -4,9 +4,14 @@ import { TagClicavel } from "@/components/catalogo/tags/TagClicavel";
 import { Seal } from "@/components/ui/Seal";
 import { SELO_ROTULO, SEVERIDADE_ROTULO } from "@/lib/catalogo/rotulos";
 import type { ImovelDetalhe, Plano, Severidade, TagDetalhe } from "@/lib/catalogo/tipos";
+import type { ChaveGlossario } from "@/content/glossario";
 import { BotaoConhecerLuneta } from "./BotaoConhecerLuneta";
 import { IconeCadeado, IconeInfo } from "./icones";
 import { Secao, Subtitulo } from "./partes";
+import { BotaoTermo } from "./Termo";
+
+/** Tags que têm um termo no glossário: o (i) ao lado explica o termo (a pílula explica a tag). */
+const TERMO_DA_TAG: Record<string, ChaveGlossario> = { "direito-preferencia": "direito_preferencia" };
 
 const GRUPO: Record<Severidade, string> = {
   grave: "Riscos graves",
@@ -30,8 +35,11 @@ function LinhaTag({ tag }: { tag: TagDetalhe }) {
   const c = conteudoTag(tag);
   return (
     <li className="grid gap-x-4 gap-y-1.5 border-t border-nevoa/10 py-3 first:border-t-0 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:items-start">
-      <div className="min-w-0">
-        <TagClicavel tag={tag} tamanho="md" />
+      <div className="flex min-w-0 items-center gap-1.5">
+        <div className="min-w-0">
+          <TagClicavel tag={tag} tamanho="md" />
+        </div>
+        {TERMO_DA_TAG[tag.slug] && <BotaoTermo termo={TERMO_DA_TAG[tag.slug]!} className="shrink-0" />}
       </div>
       <p className="text-[13.5px] leading-relaxed text-nevoa sm:pt-1.5">
         {tag.emRevisao && <span className={`font-semibold ${TOM_TITULO[tag.severidade]}`}>{SEVERIDADE_ROTULO[tag.severidade]}, se confirmada. </span>}

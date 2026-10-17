@@ -11,20 +11,25 @@ import { BarraInferior, ResumoLateral, type DadosResumo } from "./ResumoLateral"
 import { RolagemSegura } from "./RolagemSegura";
 import { SecaoDocumentos } from "./SecaoDocumentos";
 import { SecaoLocalizacao } from "./SecaoLocalizacao";
+import { SecaoParecidos } from "./SecaoParecidos";
 import { SecaoRegiao } from "./SecaoRegiao";
 import { AVISO_CLASSIFICACAO, SecaoRiscos } from "./SecaoRiscos";
 import { SecaoResumo } from "./SecaoResumo";
 import { SecaoSimulador } from "./SecaoSimulador";
 import { TopoImovel } from "./TopoImovel";
+import { GradeImovel, LateralRecolhivel, PilulaResumo } from "./ResumoRecolhivel";
 import { VoltarBusca } from "./VoltarBusca";
 
+/** Ordem das seções e da navegação: a localização antes do simulador; os parecidos no fim da página. */
 const SECOES: SecaoNav[] = [
   { id: "resumo", rotulo: "Resumo" },
   { id: "riscos", rotulo: "Riscos" },
+  { id: "localizacao", rotulo: "Localização" },
   { id: "simulador", rotulo: "Simulador" },
   { id: "regiao", rotulo: "Região" },
-  { id: "localizacao", rotulo: "Localização" },
   { id: "documentos", rotulo: "Documentos" },
+  { id: "fonte", rotulo: "Fonte" },
+  { id: "parecidos", rotulo: "Parecidos" },
 ];
 
 /**
@@ -32,10 +37,24 @@ const SECOES: SecaoNav[] = [
  * entrega aos pedaços interativos (galeria, resumo, navegação, tags, simulador, mapa, parecidos) só o que
  * cada um usa. O plano já vem aplicado pelo servidor: no Lente não há tags nem selo nos dados.
  *
- * Computador: galeria grande no topo; embaixo, o conteúdo à esquerda e o resumo fixo à direita.
- * Celular: uma coluna (título, resumo, seções) e a barra fixa no pé com o lance e "Ver anúncio".
+ * Computador: galeria grande no topo; embaixo, o conteúdo à esquerda e o resumo fixo à direita, que a pessoa pode
+ * recolher (o conteúdo ocupa a largura e uma pílula com o lance fica na barra das seções; a escolha fica salva).
+ * Celular: uma coluna (título, resumo, seções) e a barra fixa no pé com o lance e "Ver anúncio" (minimizável).
  */
-export function PaginaImovel({ conjunto, plano, pagina, agora }: { conjunto: Conjunto; plano: Plano; pagina: DadosPagina; agora: number }) {
+export function PaginaImovel({
+  conjunto,
+  plano,
+  pagina,
+  agora,
+  resumoRecolhido = false,
+}: {
+  conjunto: Conjunto;
+  plano: Plano;
+  pagina: DadosPagina;
+  agora: number;
+  /** a pessoa deixou o resumo da direita recolhido (cookie lido pelo servidor) */
+  resumoRecolhido?: boolean;
+}) {
   const i = pagina.imovel;
   const exemplo = ehExemplo(i);
   const falta = faltaParaPraca(i.dataPraca, agora);
@@ -106,14 +125,14 @@ export function PaginaImovel({ conjunto, plano, pagina, agora }: { conjunto: Con
           semFotoTexto={exemplo ? "Exemplo fictício: sem fotos" : "A fonte não publicou fotos deste imóvel"}
         />
 
-        <div className="mt-6 grid gap-x-10 gap-y-6 lg:mt-9 lg:grid-cols-[minmax(0,1fr)_368px] lg:grid-rows-[auto_1fr] xl:gap-x-14 xl:grid-cols-[minmax(0,1fr)_392px]">
+        <GradeImovel recolhidoNoServidor={resumoRecolhido} className="mt-6 grid gap-y-6 lg:mt-9">
           <div className="min-w-0 lg:col-start-1 lg:row-start-1">
             <CabecalhoImovel imovel={i} pracaPassou={!!falta?.passou} />
           </div>
 
-          <aside aria-label="Resumo do preço e ações" className="min-w-0 lg:sticky lg:top-[88px] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+          <LateralRecolhivel>
             <ResumoLateral d={resumo} />
-          </aside>
+          </LateralRecolhivel>
 
           <div className="min-w-0 lg:col-start-1 lg:row-start-2">
             {/* celular deitado (pouca altura): o cabeçalho deixa de ser fixo e a navegação cola no topo */}
@@ -121,19 +140,25 @@ export function PaginaImovel({ conjunto, plano, pagina, agora }: { conjunto: Con
               data-topo-fixo=""
               className="sticky top-14 z-30 -mx-4 border-b border-nevoa/15 bg-noite px-4 py-1.5 sm:top-16 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 [@media(max-height:500px)]:top-0"
             >
-              <NavSecoes secoes={SECOES} />
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <NavSecoes secoes={SECOES} />
+                </div>
+                <PilulaResumo lance={i.lance} desagio={i.desagio} />
+              </div>
             </div>
 
             <div className="mt-8 [&>*+*]:mt-16 sm:[&>*+*]:mt-20">
               <SecaoResumo imovel={i} agora={agora} />
               <SecaoRiscos imovel={i} plano={plano} selosDesligados={pagina.selosDesligados} />
+              <SecaoLocalizacao imovel={i} />
               <SecaoSimulador imovel={entradaSimulador} referencias={pagina.vizinhanca.referencias} />
               <SecaoRegiao imovel={i} vizinhanca={pagina.vizinhanca} />
-              <SecaoLocalizacao imovel={i} />
               <SecaoDocumentos imovel={i} />
+              <SecaoParecidos imovel={i} vizinhanca={pagina.vizinhanca} />
             </div>
           </div>
-        </div>
+        </GradeImovel>
       </main>
 
       <footer className="border-t border-nevoa/15 px-4 pt-8 pb-28 text-[13px] leading-relaxed text-nevoa sm:px-6 lg:px-8 lg:pb-12">

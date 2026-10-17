@@ -1,5 +1,6 @@
 import "server-only";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { SITE } from "@/content/site";
@@ -9,6 +10,7 @@ import { paginaImovel } from "@/lib/catalogo/servidor";
 import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
 import { fraseDesagio } from "./formato";
 import { PaginaImovel } from "./PaginaImovel";
+import { CHAVE_RESUMO_LATERAL, RECOLHIDO } from "./preferencias";
 
 type Parametros = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
@@ -76,10 +78,12 @@ export async function garantirImovel(conjunto: Conjunto, params: Promise<{ id: s
 
 /** A página: id inexistente dá 404 (not-found.tsx da rota). */
 export async function renderizarImovel(conjunto: Conjunto, entrada: Parametros) {
-  const { id, plano } = await lerEntrada(entrada);
+  const [{ id, plano }, jarra] = await Promise.all([lerEntrada(entrada), cookies()]);
   const pagina = await carregar(conjunto, id, plano);
   if (!pagina) notFound();
+  // o resumo da direita recolhido (escolha da pessoa, espelhada no cookie): a primeira pintura já sai assim
+  const resumoRecolhido = jarra.get(CHAVE_RESUMO_LATERAL)?.value === RECOLHIDO;
   // key: indo de um imóvel a outro (cartão de "parecidos"), a página começa do zero (galeria na 1ª foto,
   // descrição fechada); trocar só o plano mantém o estado
-  return <PaginaImovel key={pagina.imovel.id} conjunto={conjunto} plano={plano} pagina={pagina} agora={Date.now()} />;
+  return <PaginaImovel key={pagina.imovel.id} conjunto={conjunto} plano={plano} pagina={pagina} agora={Date.now()} resumoRecolhido={resumoRecolhido} />;
 }
