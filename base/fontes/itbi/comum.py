@@ -110,7 +110,7 @@ TIPOS = [
 # prefeitura junta sem distinguir ("PROLETARIO CASA/APTO" no Rio)
 FORA = ("garagem", "box", "vaga", "estacionamento", "jazigo", "tumulo", "boxe", "hotel", "flat", "hospital", "saude",
         "instituicao financeira", "edificacao especial", "religios", "templo", "igreja", "escola", "instrucao", "ensino",
-        "proletario", "posto", "cinema", "teatro", "clube", "lazer", "transporte")
+        "proletario", "posto", "cinema", "teatro", "clube", "lazer", "transporte", "colegio", "creche", "especial")
 FORA_TIPO = "fora"
 
 
