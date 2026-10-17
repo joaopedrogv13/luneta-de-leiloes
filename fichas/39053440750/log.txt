@@ -1,0 +1,13 @@
+GET https://venda-imoveis.caixa.gov.br/robots.txt → HTTP 404, 4863 bytes, 804 ms
+GET https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444419640129 → HTTP 200, 18363 bytes, 740 ms
+[1/5] 1444419640129: BLOQUEIO · Conteúdo recusado em https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444419640129: página de desafio anti-robô (perfdrive)
+GET https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444402395965 → HTTP 200, 18363 bytes, 222 ms
+[2/5] 8444402395965: BLOQUEIO · Conteúdo recusado em https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444402395965: página de desafio anti-robô (perfdrive)
+GET https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444419018304 → HTTP 200, 18363 bytes, 231 ms
+[3/5] 1444419018304: BLOQUEIO · Conteúdo recusado em https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444419018304: página de desafio anti-robô (perfdrive)
+GET https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=0000010003975 → HTTP 200, 18363 bytes, 238 ms
+[4/5] 0000010003975: BLOQUEIO · Conteúdo recusado em https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=0000010003975: página de desafio anti-robô (perfdrive)
+GET https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1555500213530 → HTTP 200, 18363 bytes, 229 ms
+[5/5] 1555500213530: BLOQUEIO · Conteúdo recusado em https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1555500213530: página de desafio anti-robô (perfdrive)
+5 bloqueios seguidos: parando (o coletor não contorna anti-robô).
+Fim: 0 ok, 5 bloqueio(s), 0 falha(s).

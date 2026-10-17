@@ -1,0 +1,26 @@
+{
+ "ok": [],
+ "bloqueio": [
+  {
+   "id": "1444419640129",
+   "motivo": "Conteúdo recusado em https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444419640129: página de desafio anti-robô (perfdrive)"
+  },
+  {
+   "id": "8444402395965",
+   "motivo": "Conteúdo recusado em https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=8444402395965: página de desafio anti-robô (perfdrive)"
+  },
+  {
+   "id": "1444419018304",
+   "motivo": "Conteúdo recusado em https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1444419018304: página de desafio anti-robô (perfdrive)"
+  },
+  {
+   "id": "0000010003975",
+   "motivo": "Conteúdo recusado em https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=0000010003975: página de desafio anti-robô (perfdrive)"
+  },
+  {
+   "id": "1555500213530",
+   "motivo": "Conteúdo recusado em https://venda-imoveis.caixa.gov.br/sistema/detalhe-imovel.asp?hdnimovel=1555500213530: página de desafio anti-robô (perfdrive)"
+  }
+ ],
+ "falha": []
+}
