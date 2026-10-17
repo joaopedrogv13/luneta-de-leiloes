@@ -15,8 +15,13 @@ BH: páginas de https://dados.pbh.gov.br falharam: RuntimeError: HTTP 403 em htt
   tentativa 2 falhou: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/dataset/ (bloqueio: não contornado)
   tentativa 3 falhou: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/dataset/ (bloqueio: não contornado)
 BH: páginas de https://ckan.pbh.gov.br falharam: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/dataset/ (bloqueio: não contornado)
+BH: tentando o download direto dos arquivos conhecidos
+  tentativa 1 falhou: RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/dataset/itbi-relatorios/resource/453b3f6d-ec7f-415c-af5e-c23d1f488e2a/download/pda_itbi_relatorio_202602.csv (bloqueio: não contornado)
+BH: https://ckan.pbh.gov.br/dataset/itbi-relatorios/resource/453b3f6d-ec7f-415c-af5e-c23d1f488e2a/download/pda_itbi_relatorio_202602.csv → RuntimeError: HTTP 403 em https://ckan.pbh.gov.br/dataset/itbi-relatorios/resource/453b3f6d-ec7f-415c-af5e-c23d1f488e2a/download/pda_itbi_relatorio_202602.csv (bloqueio: não contornado)
+  tentativa 1 falhou: RuntimeError: HTTP 403 em https://dados.pbh.gov.br/dataset/itbi-relatorios/resource/453b3f6d-ec7f-415c-af5e-c23d1f488e2a/download/pda_itbi_relatorio_202602.csv (bloqueio: não contornado)
+BH: https://dados.pbh.gov.br/dataset/itbi-relatorios/resource/453b3f6d-ec7f-415c-af5e-c23d1f488e2a/download/pda_itbi_relatorio_202602.csv → RuntimeError: HTTP 403 em https://dados.pbh.gov.br/dataset/itbi-relatorios/resource/453b3f6d-ec7f-415c-af5e-c23d1f488e2a/download/pda_itbi_relatorio_202602.csv (bloqueio: não contornado)
 Traceback (most recent call last):
-  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/bh.py", line 46, in rodar_bh
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/bh.py", line 54, in rodar_bh
     rodar(saida, "Belo Horizonte", "MG", BASES, FONTE)
   File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/ckan.py", line 39, in rodar
     raise RuntimeError(f"nenhum arquivo de ITBI achado ({'; '.join(erros)})")
@@ -27,7 +32,7 @@ During handling of the above exception, another exception occurred:
 Traceback (most recent call last):
   File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/comum.py", line 225, in principal
     funcao(sys.argv[1])
-  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/bh.py", line 53, in rodar_bh
-    raise RuntimeError("BH: nenhum arquivo de ITBI achado na API nem nas páginas do portal")
-RuntimeError: BH: nenhum arquivo de ITBI achado na API nem nas páginas do portal
-FALHOU: RuntimeError: BH: nenhum arquivo de ITBI achado na API nem nas páginas do portal
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/itbi/bh.py", line 72, in rodar_bh
+    raise RuntimeError("BH: o portal da PBH recusou a API, as páginas e o download direto (HTTP 403 para este servidor); rodar de uma rede no Brasil")
+RuntimeError: BH: o portal da PBH recusou a API, as páginas e o download direto (HTTP 403 para este servidor); rodar de uma rede no Brasil
+FALHOU: RuntimeError: BH: o portal da PBH recusou a API, as páginas e o download direto (HTTP 403 para este servidor); rodar de uma rede no Brasil
