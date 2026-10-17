@@ -3,7 +3,8 @@
  *
  *   venda               = valor de referência × % do cenário
  *   aquisição           = comissão + ITBI + escritura/registro (máx. de % e piso) + reserva, sobre o lance
- *                         (o ITBI pode ter outra base: a avaliação, ou o maior entre lance e avaliação)
+ *                         (o ITBI pode ter outra base: a avaliação, ou o maior entre lance e avaliação); cada um
+ *                         pode vir em reais, informado pela pessoa (e a corretagem também)
  *   regularização       = desocupação + dívidas que passam ao comprador
  *   reforma             = R$/m² × área (modo m²) ou valor fixo (terreno, rural, ou se a pessoa preferir)
  *   custos mensais      = condomínio × meses + IPTU/ITR × meses + contas × meses  [+ seguros do financiamento]
@@ -26,6 +27,8 @@
  */
 import { cenariosDaMatriz, multiplicador, type Modelo } from "./premissas";
 import type { Cenario, ExtraSimulado, LinhaDesligavel, Meta, Premissas, ResultadoFinanciamento, Simulacao } from "./tipos";
+
+const TETO_BUSCA = 1e11;
 
 /** Taxa mensal equivalente a uma taxa anual: (1 + a.a.)^(1/12) − 1. */
 export function taxaMensal(aa: number): number {
@@ -127,12 +130,13 @@ export function simular(modelo: Modelo, lance: number, cenario: Cenario, meses: 
   const liga = (linha: LinhaDesligavel) => ligada(p, linha);
 
   const venda = p.valorVenda * multiplicador(p, cenario);
-  const corretagem = liga("corretagem") ? p.corretagemPct * venda : 0;
+  // cada custo pela fórmula (%), ou pelo valor em reais que a pessoa informou (a guia, o orçamento)
+  const corretagem = liga("corretagem") ? (p.corretagemValor ?? p.corretagemPct * venda) : 0;
 
-  const comissao = liga("comissao") ? p.comissaoPct * L : 0;
-  const itbi = liga("itbi") ? p.itbiPct * baseItbi(modelo, p, L) : 0;
-  const registro = liga("registro") ? Math.max(p.registroPct * L, p.registroMin) : 0;
-  const reserva = liga("reserva") ? p.reservaPct * L : 0;
+  const comissao = liga("comissao") ? (p.comissaoValor ?? p.comissaoPct * L) : 0;
+  const itbi = liga("itbi") ? (p.itbiValor ?? p.itbiPct * baseItbi(modelo, p, L)) : 0;
+  const registro = liga("registro") ? (p.registroValor ?? Math.max(p.registroPct * L, p.registroMin)) : 0;
+  const reserva = liga("reserva") ? (p.reservaValor ?? p.reservaPct * L) : 0;
   const aquisicao = comissao + itbi + registro + reserva;
 
   const desocupacao = liga("desocupacao") ? p.desocupacao : 0;
@@ -235,8 +239,6 @@ export function atingeMeta(s: Simulacao, meta: Meta): boolean {
   }
 }
 
-const TETO_BUSCA = 1e11;
-
 /**
  * Maior lance inteiro (R$) que ainda atinge a meta, com precisão de R$ 1: busca binária, porque o retorno
  * cai quando o lance sobe. `null` quando nem o lance zero atinge (ou falta o valor de venda).
@@ -263,6 +265,38 @@ export function lanceMaximo(modelo: Modelo, cenario: Cenario, meses: number, met
   return lo;
 }
 
+/** id do custo de teste da margem de segurança (não colide com os criados pela pessoa: eles não têm "_"). */
+const ID_MARGEM = "_margem";
+
+/**
+ * Margem de segurança de uma compra a preço fixo (venda direta, em que o preço não sobe): o maior custo
+ * imprevisto, em reais e de uma vez só, que ainda deixa a meta ser atingida com este lance. Entra como um custo
+ * criado (não abate o IR: conservador). Busca binária com precisão de R$ 1, porque o retorno cai quando o custo
+ * sobe. `null` quando nem sem imprevisto a meta é atingida (ou falta o valor de venda).
+ */
+export function margemDeCusto(modelo: Modelo, lance: number, cenario: Cenario, meses: number, meta: Meta): number | null {
+  const p = modelo.premissas;
+  const com = (c: number): Premissas => ({ ...p, custosExtras: [...p.custosExtras, { id: ID_MARGEM, nome: "imprevisto", modo: "fixo", valor: c }] });
+  const ok = (c: number) => {
+    const s = simular(modelo, lance, cenario, meses, c === 0 ? p : com(c));
+    return s !== null && atingeMeta(s, meta);
+  };
+  if (!ok(0)) return null;
+  let lo = 0;
+  let hi = Math.max(1, Math.ceil((p.valorVenda ?? 0) * multiplicador(p, cenario)) + 1);
+  while (ok(hi)) {
+    lo = hi;
+    hi *= 2;
+    if (hi > TETO_BUSCA) return lo;
+  }
+  while (hi - lo > 1) {
+    const meio = Math.floor((lo + hi) / 2);
+    if (ok(meio)) lo = meio;
+    else hi = meio;
+  }
+  return lo;
+}
+
 export interface CelulaMatriz {
   cenario: Cenario;
   meses: number;
@@ -270,11 +304,17 @@ export interface CelulaMatriz {
   teto: number | null;
   /** simulação com o lance escolhido pela pessoa */
   comMeuLance: Simulacao;
+  /**
+   * venda direta (preço fixo): a margem de segurança pelo preço pedido (`margemDeCusto`); null: nem sem imprevisto
+   * a meta é atingida. Ausente fora da venda direta.
+   */
+  margem?: number | null;
 }
 
 /**
  * Matriz cenários × prazos. `null` quando falta o valor de venda. Linhas: os três cenários e o personalizado,
  * se houver; colunas: os prazos da pessoa (ou os informados, que podem incluir o prazo escolhido no cartão).
+ * Com `margemPeloPreco` (venda direta), cada célula traz também a margem de segurança comprando por esse preço.
  */
 export function matriz(
   modelo: Modelo,
@@ -282,6 +322,7 @@ export function matriz(
   meuLance: number,
   colunas: readonly number[] = modelo.premissas.prazos,
   linhas: readonly Cenario[] = cenariosDaMatriz(modelo.premissas),
+  margemPeloPreco: number | null = null,
 ): CelulaMatriz[][] | null {
   if (modelo.premissas.valorVenda === null) return null;
   return linhas.map((cenario) =>
@@ -290,6 +331,7 @@ export function matriz(
       meses,
       teto: lanceMaximo(modelo, cenario, meses, meta),
       comMeuLance: simular(modelo, meuLance, cenario, meses)!,
+      ...(margemPeloPreco !== null ? { margem: margemDeCusto(modelo, margemPeloPreco, cenario, meses, meta) } : {}),
     })),
   );
 }
@@ -307,15 +349,16 @@ export interface Etapa {
 
 /**
  * Cascata da venda ao lucro, na ordem da tela; etapas zeradas saem (menos a venda e o lucro).
- * `rotuloReforma` segue o tipo do imóvel ("Limpeza e cercamento" no terreno, "Adequações" no rural).
+ * `rotuloReforma` segue o tipo do imóvel ("Limpeza e cercamento" no terreno, "Adequações" no rural); `rotuloLance`,
+ * a modalidade ("Preço" na venda direta).
  */
-export function cascata(s: Simulacao, rotuloReforma = "Reforma"): Etapa[] {
+export function cascata(s: Simulacao, rotuloReforma = "Reforma", rotuloLance = "Lance"): Etapa[] {
   const fin = s.financiamento;
   const etapas: Etapa[] = [
     { chave: "venda", rotulo: "Venda", valor: s.venda },
     { chave: "corretagem", rotulo: "Corretagem", valor: -s.corretagem },
     { chave: "ir", rotulo: "Imposto de renda", valor: -s.ir },
-    { chave: "lance", rotulo: "Lance", valor: -s.lance },
+    { chave: "lance", rotulo: rotuloLance, valor: -s.lance },
     { chave: "juros", rotulo: fin?.tipo === "fonte" ? "Correção das parcelas" : "Juros do financiamento", valor: fin ? -fin.jurosPagos : 0 },
     { chave: "aquisicao", rotulo: "Custos da compra", valor: -s.aquisicao },
     { chave: "regularizacao", rotulo: "Desocupação e dívidas", valor: -(s.desocupacao + s.dividas) },

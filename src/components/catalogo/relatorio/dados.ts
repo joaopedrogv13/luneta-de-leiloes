@@ -4,14 +4,15 @@
  * mostrar e como escrever. Imports relativos, sem "@/": o teste roda em Node puro.
  */
 import { MODALIDADE_ROTULO, normalizar, numero, OCUPACAO_ROTULO, PRACA_ROTULO, TIPO_ROTULO, UF_NOME } from "../../../lib/catalogo/rotulos";
-import type { ImovelDetalhe, ReferenciaM2 } from "../../../lib/catalogo/tipos";
+import type { ImovelDetalhe, Plano, ReferenciaM2 } from "../../../lib/catalogo/tipos";
 import type { ResultadoCompleto } from "../../../lib/simulador/completa";
 import { chaveAjustada } from "../../../lib/simulador/conta";
 import { area, juntar, meses, moeda, moedaMes, pct, porArea } from "../../../lib/simulador/formato";
 import { multiplicador, PADRAO, reformaPadrao, ROTULO_NIVEL, type Modelo } from "../../../lib/simulador/premissas";
 import { CENARIO_ROTULO, vendaDoCenario } from "../../../lib/simulador/textos";
 import type { Ajustes, EntradaSimulador, LinhaDesligavel, Premissas } from "../../../lib/simulador/tipos";
-import { areaDetalhada, precoPorArea } from "../imovel/formato";
+import { areaDetalhada, descricaoReferencia, precoPorArea } from "../imovel/formato";
+import { referenciaLeiloes, referenciaPrincipal } from "../../../lib/catalogo/referencia";
 
 // ---------------------------------------------------------------------------
 // Imóvel
@@ -146,7 +147,8 @@ export function capaImovel(i: ImovelDetalhe): CapaImovel {
   const d = i.desagio;
   const precos: FatoRel[] = [
     { rotulo: "Avaliação", valor: i.avaliacao !== null ? moeda(i.avaliacao) : semDado("f"), vazio: i.avaliacao === null },
-    { rotulo: "Lance mínimo", valor: moeda(i.lance), nota: i.lanceM2 !== null ? precoPorArea(i.lanceM2, i.area) : undefined },
+    // venda direta: preço fixo, sem disputa (não há lance)
+    { rotulo: i.modalidade === "venda_direta" ? "Preço de venda" : "Lance mínimo", valor: moeda(i.lance), nota: i.lanceM2 !== null ? precoPorArea(i.lanceM2, i.area) : undefined },
     d === null
       ? { rotulo: "Deságio", valor: "—", nota: "sem avaliação para comparar", vazio: true }
       : {
@@ -280,7 +282,7 @@ function textoVenda(m: Modelo, p: Premissas): string {
     o.tipo === "avaliacao"
       ? "avaliação da fonte"
       : o.tipo === "referencia"
-        ? `referência da região: ${porArea(o.m2, m.entrada.tipo)} × ${area(o.area)}`
+        ? `referência da região: ${porArea(o.m2, m.entrada.tipo)} × ${area(o.area)}; ${descricaoReferencia(o.referencia)}`
         : "valor informado por você";
   return `${moeda(p.valorVenda)} (${origem})`;
 }
@@ -317,9 +319,10 @@ const NOME_DESLIGAVEL: Record<string, string> = {
 
 /**
  * Todas as premissas da simulação, em grupos, com o valor usado e, quando a pessoa mudou alguma coisa, o padrão
- * ao lado. Os custos criados pela pessoa entram num grupo próprio.
+ * ao lado. Os custos criados pela pessoa entram num grupo próprio. No plano Lente as tags de risco não chegam: a
+ * falta de dívida apontada não quer dizer que não haja dívida, e o texto diz isso.
  */
-export function premissasUsadas(r: Pick<ResultadoCompleto, "modelo">): GrupoPremissas[] {
+export function premissasUsadas(r: Pick<ResultadoCompleto, "modelo">, plano: Plano = "luneta"): GrupoPremissas[] {
   const m = r.modelo;
   const { premissas: p, padrao: d, perfil, entrada: e } = m;
   const tirada = (l: LinhaDesligavel) => p.desligados.includes(l);
@@ -333,6 +336,8 @@ export function premissasUsadas(r: Pick<ResultadoCompleto, "modelo">): GrupoPrem
     };
   };
   const rotuloArea = perfil.rotuloArea;
+  // custo informado em reais (a guia, o orçamento) no lugar do %
+  const emReais = (v: number | null) => (v === null ? null : `${moeda(v)} (valor informado por você)`);
   const vendaCenario = (c: "conservador" | "base" | "otimista") => {
     const k = c === "conservador" ? "cenarioConservador" : c === "base" ? "cenarioBase" : "cenarioOtimista";
     const venda = p.valorVenda !== null ? ` = ${moeda(p.valorVenda * multiplicador(p, c))}` : "";
@@ -359,7 +364,9 @@ export function premissasUsadas(r: Pick<ResultadoCompleto, "modelo">): GrupoPrem
       ? `${moeda(p.dividas)} (valor informado por você)`
       : m.dividasApontadas.length
         ? `falta informar: a análise aponta ${juntar(m.dividasApontadas)}`
-        : "nenhuma apontada pela análise";
+        : plano === "lente"
+          ? "não analisadas no plano Lente (as tags de dívida são da Luneta): confira no edital"
+          : "nenhuma apontada pela análise";
 
   const grupos: GrupoPremissas[] = [
     {
@@ -372,7 +379,13 @@ export function premissasUsadas(r: Pick<ResultadoCompleto, "modelo">): GrupoPrem
         vendaCenario("otimista"),
         ...(p.vendaPersonalizada ? [linha("Cenário personalizado", ["vendaPersonalizada"], vendaDoCenario(m, "personalizado"), "não definido")] : []),
         linha("Prazos de venda da tabela", ["prazos"], `${juntar(p.prazos.map(String))} meses`, `${juntar(d.prazos.map(String))} meses`),
-        linha("Corretagem na venda", ["corretagemPct"], `${pct(p.corretagemPct)} da venda`, `${pct(d.corretagemPct)} da venda`, "corretagem"),
+        linha(
+          "Corretagem na venda",
+          ["corretagemPct", "corretagemValor"],
+          emReais(p.corretagemValor) ?? `${pct(p.corretagemPct)} da venda`,
+          `${pct(d.corretagemPct)} da venda`,
+          "corretagem",
+        ),
         linha(
           "Imposto de renda",
           ["irPct", "irIsento"],
@@ -387,27 +400,33 @@ export function premissasUsadas(r: Pick<ResultadoCompleto, "modelo">): GrupoPrem
       linhas: [
         linha(
           "Comissão do leiloeiro",
-          ["comissaoPct"],
-          p.comissaoPct === 0 ? "sem leiloeiro nesta modalidade" : `${pct(p.comissaoPct)} do lance`,
+          ["comissaoPct", "comissaoValor"],
+          emReais(p.comissaoValor) ?? (p.comissaoPct === 0 ? "sem leiloeiro nesta modalidade" : `${pct(p.comissaoPct)} do lance`),
           d.comissaoPct === 0 ? "sem leiloeiro nesta modalidade" : `${pct(d.comissaoPct)} do lance`,
           "comissao",
         ),
-        linha("ITBI", ["itbiPct", "itbiBase"], `${pct(p.itbiPct)} ${BASE_ITBI[p.itbiBase]}`, `${pct(d.itbiPct)} ${BASE_ITBI[d.itbiBase]}`, "itbi"),
+        linha("ITBI", ["itbiPct", "itbiBase", "itbiValor"], emReais(p.itbiValor) ?? `${pct(p.itbiPct)} ${BASE_ITBI[p.itbiBase]}`, `${pct(d.itbiPct)} ${BASE_ITBI[d.itbiBase]}`, "itbi"),
         linha(
           "Escritura e registro",
-          ["registroPct", "registroMin"],
-          `maior entre ${pct(p.registroPct)} do lance e ${moeda(p.registroMin)}`,
+          ["registroPct", "registroMin", "registroValor"],
+          emReais(p.registroValor) ?? `maior entre ${pct(p.registroPct)} do lance e ${moeda(p.registroMin)}`,
           `maior entre ${pct(d.registroPct)} do lance e ${moeda(d.registroMin)}`,
           "registro",
         ),
-        linha("Reserva para imprevistos", ["reservaPct"], `${pct(p.reservaPct)} do lance`, `${pct(d.reservaPct)} do lance`, "reserva"),
+        linha("Reserva para imprevistos", ["reservaPct", "reservaValor"], emReais(p.reservaValor) ?? `${pct(p.reservaPct)} do lance`, `${pct(d.reservaPct)} do lance`, "reserva"),
       ],
     },
     {
       titulo: "Regularização e reforma",
       linhas: [
         linha("Desocupação", ["desocupacao"], desocTexto(p.desocupacao), desocTexto(d.desocupacao), "desocupacao"),
-        linha("Dívidas que passam ao comprador", ["dividas"], dividasTexto, m.dividasApontadas.length ? "falta informar" : "nenhuma", "dividas"),
+        linha(
+          "Dívidas que passam ao comprador",
+          ["dividas"],
+          dividasTexto,
+          m.dividasApontadas.length ? "falta informar" : plano === "lente" ? "não analisadas (plano Lente)" : "nenhuma",
+          "dividas",
+        ),
         linha(
           perfil.rotuloReforma,
           ["reformaNivel", "reformaModo", "reformaUnitario"],
@@ -569,6 +588,10 @@ export interface RecorteRel {
 export interface RegiaoRel {
   /** a frase principal ("A avaliação deste imóvel (R$ 2.680/m²) está 12% abaixo da média do bairro (R$ 3.050/m²).") */
   frase: string | null;
+  /** com a frase pelo preço pago (ITBI), a comparação com os leilões em segunda linha (null sem ela) */
+  fraseLeiloes: string | null;
+  /** de onde vem a referência da frase (a tabela dela vem primeiro) */
+  fontePrincipal: "leiloes" | "itbi" | null;
   nivel: ComparacaoRel["nivel"] | null;
   /** só os recortes com média */
   leiloes: LinhaRegiaoRel[];
@@ -596,8 +619,10 @@ export function logradouroRel(endereco: string | null | undefined): string | nul
 /**
  * Comparação com a região para o relatório: as médias de R$/m² da rua, do bairro, da cidade e do estado (outros
  * imóveis em leilão na base) e, quando houver, o preço pago nas transações registradas na prefeitura (ITBI).
- * A frase principal usa a avaliação deste imóvel (o lance, se não houver avaliação) contra a média de leilões
- * mais local com pelo menos 5 imóveis (senão a mais local com média; sem leilões, o ITBI).
+ * A frase principal usa a avaliação deste imóvel (o lance, se não houver avaliação) contra a referência principal
+ * (`referenciaPrincipal`, a mesma da página e do simulador): o preço pago (ITBI) no recorte mais local com compras
+ * suficientes; sem ele, a média de leilões mais local com pelo menos 5 imóveis. Com o ITBI na frase, os leilões
+ * vêm numa segunda linha.
  */
 export function regiaoRel(
   i: Pick<ImovelDetalhe, "avaliacaoM2" | "lanceM2" | "area" | "tipo" | "endereco" | "bairro" | "cidade" | "uf">,
@@ -646,11 +671,27 @@ export function regiaoRel(
             : `menos de ${MINIMO_RECORTE[escopo]} imóveis do mesmo tipo em leilão`;
     return { escopo, lugar: lugarPadrao[escopo], linha: null, falta };
   });
-  const escolher = (lista: LinhaRegiaoRel[]) => lista.find((l) => l.amostra >= 5) ?? lista[0] ?? null;
-  const principal = escolher(leiloes) ?? escolher(itbi);
+  const refPrincipal = referenciaPrincipal(refs);
+  const principal = refPrincipal ? linha(refPrincipal) : null;
 
   let frase: string | null = null;
+  let fraseLeiloes: string | null = null;
   let nivel: RegiaoRel["nivel"] = null;
+  if (principal?.fonte === "itbi") {
+    const refL = referenciaLeiloes(refs);
+    const l = refL ? linha(refL) : null;
+    const c = l ? (l.avaliacao ?? l.lance) : null;
+    if (l && c) {
+      const quem = l.avaliacao ? "a avaliação deste imóvel" : "o lance mínimo deste imóvel";
+      const media = `${precoPorArea(l.media, i.area)}, ${numero(l.amostra)} ${l.amostra === 1 ? "imóvel" : "imóveis"}`;
+      fraseLeiloes =
+        c.razao >= 2
+          ? `Entre os imóveis em leilão, ${quem} é ${vezes(c.razao)} vezes a média de avaliação ${ESCOPO_DA[l.escopo]} (${media}).`
+          : Math.abs(c.pct) < 2
+            ? `Entre os imóveis em leilão, ${quem} está praticamente igual à média de avaliação ${ESCOPO_DA[l.escopo]} (${media}).`
+            : `Entre os imóveis em leilão, ${quem} está ${numero(Math.abs(c.pct))}% ${c.pct < 0 ? "abaixo" : "acima"} da média de avaliação ${ESCOPO_DA[l.escopo]} (${media}).`;
+    }
+  }
   if (principal) {
     const alvo = principal.fonte === "itbi" ? `o preço médio pago ${ESCOPO_NO[principal.escopo]}` : `a média ${ESCOPO_DA[principal.escopo]}`;
     const de = principal.fonte === "itbi" ? "do" : "da";
@@ -672,7 +713,7 @@ export function regiaoRel(
       frase = `A fonte não informa a área deste imóvel: sem ela, não dá para comparar o preço por m². A média ${ESCOPO_DA[principal.escopo]} é ${media}.`;
     }
   }
-  return { frase, nivel, leiloes, recortes, itbi };
+  return { frase, fraseLeiloes, fontePrincipal: principal?.fonte ?? null, nivel, leiloes, recortes, itbi };
 }
 
 // ---------------------------------------------------------------------------
@@ -694,9 +735,12 @@ export function stringCss(texto: string): string {
  */
 export function cssPaginas({ cabecalho, rodape }: { cabecalho: string; rodape: string }): string {
   const caixa = `font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif; font-size: 7.5pt; color: #5b6478; letter-spacing: .01em;`;
+  // o fundo branco na @page e o color-scheme claro com !important: com o site no tema escuro, ":root { color-scheme:
+  // dark }" vencia a regra de impressão e o Chrome pintava as margens da página de escuro (uma moldura preta no PDF)
   return `@page {
   size: A4;
   margin: 17mm 15mm 17mm 15mm;
+  background: #fff;
   @top-left { content: "LUNETA DE LEILÕES · RELATÓRIO DE SIMULAÇÃO"; ${caixa} font-size: 6.8pt; font-weight: 600; letter-spacing: .12em; vertical-align: bottom; padding-bottom: 3mm; }
   @top-right { content: ${stringCss(cabecalho)}; ${caixa} vertical-align: bottom; padding-bottom: 3mm; }
   @bottom-left { content: ${stringCss(rodape)}; ${caixa} vertical-align: top; padding-top: 3mm; }
@@ -707,7 +751,7 @@ export function cssPaginas({ cabecalho, rodape }: { cabecalho: string; rodape: s
   @top-right { content: none; }
 }
 @media print {
-  html, body { background: #fff !important; color-scheme: light; }
+  :root, html, body { background: #fff !important; color-scheme: light !important; }
 }`;
 }
 

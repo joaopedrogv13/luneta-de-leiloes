@@ -1,17 +1,16 @@
 import "server-only";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { cache } from "react";
 import { SITE } from "@/content/site";
-import { paginaImovel } from "@/lib/catalogo/servidor";
+import { carregarImovel } from "@/components/catalogo/imovel/carregar";
 import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
 import { tituloDocumento } from "./dados";
 import { Relatorio } from "./Relatorio";
 
 type Parametros = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-/** Uma leitura por requisição para os metadados e a página. */
-const carregar = cache((conjunto: Conjunto, id: string, plano: Plano) => paginaImovel(conjunto, id, plano));
+/** Uma leitura por requisição para o layout, os metadados e a página (a mesma da página do imóvel). */
+const carregar = carregarImovel;
 
 async function lerEntrada({ params, searchParams }: Parametros) {
   const [{ id: bruto }, sp] = await Promise.all([params, searchParams]);

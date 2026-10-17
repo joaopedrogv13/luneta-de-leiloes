@@ -6,7 +6,7 @@ import { atingeMeta, type CelulaMatriz } from "@/lib/simulador/calculo";
 import type { ResultadoCompleto } from "@/lib/simulador/completa";
 import { curto, meses, moeda, moedaCurta, moedaSinal, pct, porArea } from "@/lib/simulador/formato";
 import { LIMITES, multiplicador, PADRAO } from "@/lib/simulador/premissas";
-import { CENARIO_ROTULO, metaPorExtenso } from "@/lib/simulador/textos";
+import { CENARIO_ROTULO, metaPorExtenso, palavrasPreco } from "@/lib/simulador/textos";
 import type { Ajustes, Celula, Cenario, CenarioFixo, VendaPersonalizada } from "@/lib/simulador/tipos";
 import { EditorPersonalizado } from "./CartaoResposta";
 import { Aviso, CampoNumero, Deslizante, IconeAjuda, IconeLapis, IconeNao, IconeOk, IconeVoltar, Segmentado } from "./controles";
@@ -18,35 +18,65 @@ const CHAVE_CENARIO: Record<CenarioFixo, "cenarioConservador" | "cenarioBase" | 
   otimista: "cenarioOtimista",
 };
 
-/** O que uma célula quer dizer, em frase de leigo (a leitura embaixo da tabela e a dica no hover). */
-export function leituraCelula(r: ResultadoCompleto, cel: CelulaMatriz, visao: Visao): { titulo: string; texto: string; tom: "ok" | "nao" | "neutro" } {
+/**
+ * O que uma célula quer dizer, em frase de leigo (a leitura embaixo da tabela e a dica no hover), e a versão curta
+ * (só os números), usada quando a célula é a escolhida: o cartão de cima já disse a frase inteira.
+ */
+export function leituraCelula(r: ResultadoCompleto, cel: CelulaMatriz, visao: Visao): { titulo: string; texto: string; curta: string; tom: "ok" | "nao" | "neutro" } {
   const p = r.modelo.premissas;
   const lance = r.modelo.entrada.lance;
   const venda = (p.valorVenda ?? 0) * multiplicador(p, cel.cenario);
   const titulo = `${CENARIO_ROTULO[cel.cenario]} · ${meses(cel.meses)}`;
   const quando = `vendendo por ${moedaCurta(venda)} daqui a ${meses(cel.meses)}`;
+  const objetivo = r.meta.tipo === "lucro" ? `ganhar ${moeda(r.meta.valor)}` : `render ${metaPorExtenso(r.meta)}`;
+  if (visao === "teto" && r.semDisputa) {
+    // venda direta: o preço não sobe; o que interessa é quanto de imprevisto cabe mantendo a meta
+    const m = cel.margem ?? null;
+    if (m === null) {
+      return {
+        titulo,
+        texto: `Comprando por ${moeda(lance)} e ${quando}, nem sem imprevistos você consegue ${objetivo}.`,
+        curta: "não atinge a meta, nem sem imprevistos",
+        tom: "nao",
+      };
+    }
+    return {
+      titulo,
+      texto: `Comprando por ${moeda(lance)} e ${quando}, você ainda consegue ${objetivo} mesmo com até ${moeda(m)} de custos imprevistos.`,
+      curta: `margem de ${moeda(m)} para imprevistos`,
+      tom: "ok",
+    };
+  }
   if (visao === "teto") {
     if (cel.teto === null) {
-      return { titulo, texto: `Nenhum lance atinge ${metaPorExtenso(r.meta)} ${quando}: a venda não cobre os custos com esse retorno.`, tom: "neutro" };
+      return {
+        titulo,
+        texto: `Nenhum lance atinge ${metaPorExtenso(r.meta)} ${quando}: a venda não cobre os custos com esse retorno.`,
+        curta: "nenhum lance atinge a meta",
+        tom: "neutro",
+      };
     }
     const folga = cel.teto - lance;
     return {
       titulo,
       texto:
-        `${quando}, você pode dar até ${moeda(cel.teto)} de lance e ainda ${r.meta.tipo === "lucro" ? `ganhar ${moeda(r.meta.valor)}` : `render ${metaPorExtenso(r.meta)}`}. ` +
+        `${quando}, você pode dar até ${moeda(cel.teto)} de lance e ainda ${objetivo}. ` +
         (folga >= 0
           ? `Sobra ${moeda(folga)} acima do lance mínimo (${moeda(lance)}).`
           : `É menos que o lance mínimo (${moeda(lance)}): aqui, a meta não é atingida.`),
+      curta: `lance máximo ${moeda(cel.teto)} · ${folga >= 0 ? `sobra ${moeda(folga)}` : `${moeda(-folga)} abaixo do lance mínimo`}`,
       tom: folga >= 0 ? "ok" : "nao",
     };
   }
   const s = cel.comMeuLance;
   const ok = atingeMeta(s, r.meta);
+  const comQue = r.semDisputa ? `Comprando por ${moeda(s.lance)}` : `Com ${moeda(s.lance)} de lance`;
   return {
     titulo,
-    texto: `Com ${moeda(s.lance)} de lance, ${quando}, você ${s.lucro >= 0 ? "lucra" : "perde"} ${moeda(Math.abs(Math.round(s.lucro)))} (${pct(s.roiAA)} ao ano). ${
+    texto: `${comQue}, ${quando}, você ${s.lucro >= 0 ? "lucra" : "perde"} ${moeda(Math.abs(Math.round(s.lucro)))} (${pct(s.roiAA)} ao ano). ${
       ok ? "Atinge" : "Não atinge"
     } a sua meta (${metaPorExtenso(r.meta)}).`,
+    curta: `${s.lucro >= 0 ? "lucro" : "prejuízo"} de ${moeda(Math.abs(Math.round(s.lucro)))} · ${pct(s.roiAA)} ao ano · ${ok ? "atinge" : "não atinge"} a meta`,
     tom: ok ? "ok" : "nao",
   };
 }
@@ -83,6 +113,9 @@ export function Matriz({
   const p = modelo.premissas;
   const lance = modelo.entrada.lance;
   const meuLanceAjustado = r.estado.meuLance !== null;
+  // venda direta: preço fixo; a tabela abre no lucro pelo preço e a outra visão é a margem para imprevistos
+  const fixo = r.semDisputa;
+  const pal = palavrasPreco(modelo.entrada);
   const ref = useRef<HTMLTableElement>(null);
   const [sobre, setSobre] = useState<{ r: number; c: number } | null>(null);
   const vendaMax = (p.valorVenda ?? lance) * Math.max(p.cenarioOtimista, 1);
@@ -143,14 +176,21 @@ export function Matriz({
       </div>
 
       <p className="mt-1 px-1 text-[13.5px] leading-relaxed text-nevoa sm:px-0">
-        {visao === "teto" ? (
+        {visao === "teto" && fixo ? (
+          <>
+            Quanto de custo imprevisto ainda cabe, comprando por <strong className="font-semibold text-luar">{moeda(lance)}</strong>, para{" "}
+            {r.meta.tipo === "lucro" ? "ganhar" : "render"} <strong className="font-semibold text-luar">{metaPorExtenso(r.meta)}</strong> em cada
+            combinação: <span className="whitespace-nowrap">linhas = por quanto você vende,</span> colunas = em quantos meses.
+          </>
+        ) : visao === "teto" ? (
           <>
             O lance máximo para {r.meta.tipo === "lucro" ? "ganhar" : "render"} <strong className="font-semibold text-luar">{metaPorExtenso(r.meta)}</strong> em
             cada combinação: <span className="whitespace-nowrap">linhas = por quanto você vende,</span> colunas = em quantos meses.
           </>
         ) : (
           <>
-            Quanto você ganha com o lance de <strong className="font-semibold text-luar">{moeda(meuLance)}</strong> em cada combinação:{" "}
+            Quanto você ganha {fixo ? "comprando por" : "com o lance de"} <strong className="font-semibold text-luar">{moeda(meuLance)}</strong> em cada
+            combinação:{" "}
             <span className="whitespace-nowrap">linhas = por quanto você vende,</span> colunas = em quantos meses.
           </>
         )}
@@ -162,31 +202,45 @@ export function Matriz({
         valor={visao}
         aoMudar={aoMudarVisao}
         tamanho="sm"
-        opcoes={[
-          {
-            valor: "teto",
-            rotulo: (
-              <>
-                Lance máximo<span className="hidden sm:inline"> para a meta</span>
-              </>
-            ),
-          },
-          {
-            valor: "lucro",
-            rotulo: (
-              <>
-                Lucro com <span className="hidden sm:inline">o </span>meu lance
-              </>
-            ),
-          },
-        ]}
+        opcoes={
+          fixo
+            ? [
+                { valor: "lucro", rotulo: "Lucro pelo preço" },
+                {
+                  valor: "teto",
+                  rotulo: (
+                    <>
+                      Margem<span className="hidden sm:inline"> para imprevistos</span>
+                    </>
+                  ),
+                },
+              ]
+            : [
+                {
+                  valor: "teto",
+                  rotulo: (
+                    <>
+                      Lance máximo<span className="hidden sm:inline"> para a meta</span>
+                    </>
+                  ),
+                },
+                {
+                  valor: "lucro",
+                  rotulo: (
+                    <>
+                      Lucro com <span className="hidden sm:inline">o </span>meu lance
+                    </>
+                  ),
+                },
+              ]
+        }
       />
 
       {visao === "lucro" && (
         <div className="mt-3 rounded-2xl border border-nevoa/15 bg-noite/60 p-3 sm:p-4">
           <div className="flex flex-wrap items-center justify-between gap-x-3">
             <label htmlFor="sim-meu-lance" className="text-[14px] font-semibold">
-              Meu lance
+              {fixo ? "Preço que você paga" : "Meu lance"}
             </label>
             {meuLanceAjustado && (
               <button
@@ -195,7 +249,7 @@ export function Matriz({
                 className="-my-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[12.5px] font-medium text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8"
               >
                 <IconeVoltar />
-                usar o lance mínimo ({moeda(lance)})
+                usar o {pal.minimo} ({moeda(lance)})
               </button>
             )}
           </div>
@@ -217,18 +271,21 @@ export function Matriz({
               min={0}
               max={lanceSliderMax}
               passo={1000}
-              ariaLabel="Meu lance"
+              ariaLabel={fixo ? "Preço que você paga" : "Meu lance"}
               textoValor={moeda(meuLance)}
               aoMudar={(n) => aoMudarMeuLance(n === lance ? null : n)}
             />
           </div>
           <p id="sim-meu-lance-ajuda" className="mt-1 text-[12.5px] leading-relaxed text-nevoa">
-            Lance mínimo atual: {moeda(lance)}. O lance que você digitar vale para toda a tabela e para o Detalhe.
+            {fixo
+              ? `Na venda direta o preço é fixo (${moeda(lance)}): mude só para comparar. O valor vale para toda a tabela e para o Detalhe.`
+              : `Lance mínimo atual: ${moeda(lance)}. O lance que você digitar vale para toda a tabela e para o Detalhe.`}
           </p>
           {meuLance < lance && (
             <Aviso className="mt-2">
-              Abaixo do lance mínimo atual ({moeda(lance)}): a fonte não aceita este lance. Serve só para comparar (numa praça seguinte, o mínimo pode
-              cair).
+              {fixo
+                ? `Abaixo do preço pedido (${moeda(lance)}): na venda direta, a fonte não aceita proposta menor. Serve só para comparar.`
+                : `Abaixo do lance mínimo atual (${moeda(lance)}): a fonte não aceita este lance. Serve só para comparar (numa praça seguinte, o mínimo pode cair).`}
             </Aviso>
           )}
         </div>
@@ -238,8 +295,10 @@ export function Matriz({
         <table ref={ref} className="w-full table-fixed border-separate border-spacing-1">
           <caption className="sr-only">
             {visao === "teto"
-              ? `Lance máximo para ${metaPorExtenso(r.meta)}, por cenário de venda (linhas) e prazo de venda (colunas).`
-              : `Lucro e retorno ao ano com um lance de ${moeda(meuLance)}, por cenário de venda (linhas) e prazo de venda (colunas).`}{" "}
+              ? fixo
+                ? `Margem para custos imprevistos mantendo ${metaPorExtenso(r.meta)}, comprando por ${moeda(lance)}, por cenário de venda (linhas) e prazo de venda (colunas).`
+                : `Lance máximo para ${metaPorExtenso(r.meta)}, por cenário de venda (linhas) e prazo de venda (colunas).`
+              : `Lucro e retorno ao ano ${fixo ? "comprando por" : "com um lance de"} ${moeda(meuLance)}, por cenário de venda (linhas) e prazo de venda (colunas).`}{" "}
             Use as setas para trocar de célula.
           </caption>
           <thead>
@@ -248,7 +307,7 @@ export function Matriz({
                 scope="col"
                 className="w-[5.6rem] px-1 pb-1 text-left align-bottom text-[11px] leading-tight font-medium text-nevoa max-[359px]:w-[4.6rem] sm:w-44 sm:text-[12px]"
               >
-                <span className="sm:hidden">{visao === "teto" ? "lance máx. em R$" : "lucro em R$ e % ao ano"}</span>
+                <span className="sm:hidden">{visao === "teto" ? (fixo ? "margem em R$" : "lance máx. em R$") : "lucro em R$ e % ao ano"}</span>
                 <span className="hidden sm:inline">Venda ↓ · em quantos meses →</span>
               </th>
               {colunas.map((m, i) => {
@@ -345,15 +404,37 @@ export function Matriz({
               —
             </span>
           )}
+          {/* a escolhida é a mesma do cartão de cima, que já disse a frase inteira: aqui, só os números */}
           <p>
             <strong className="font-semibold">{leitura.titulo}</strong>
-            {sobre === null && <span className="text-nevoa"> (a célula escolhida, a mesma do cartão)</span>}: {leitura.texto}
+            {sobre === null ? (
+              <>
+                <span className="text-nevoa"> · a célula do cartão acima</span>: {leitura.curta}.
+              </>
+            ) : (
+              <>: {leitura.texto}</>
+            )}
           </p>
         </div>
       )}
 
       <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 px-1 text-[12.5px] leading-relaxed text-nevoa sm:px-0">
-        {visao === "teto" ? (
+        {visao === "teto" && fixo ? (
+          <>
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden="true" className="inline-flex size-4 items-center justify-center rounded border border-pos/40 bg-pos/10">
+                <IconeOk className="size-2.5 text-pos" />
+              </span>
+              atinge a meta; o número é a folga para imprevistos
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden="true" className="inline-flex size-4 items-center justify-center rounded border border-nevoa/25 bg-noite">
+                <IconeNao className="size-2.5 text-grave-texto" />
+              </span>
+              não atinge a meta, nem sem imprevistos
+            </span>
+          </>
+        ) : visao === "teto" ? (
           <>
             <span className="inline-flex items-center gap-1.5">
               <span aria-hidden="true" className="inline-flex size-4 items-center justify-center rounded border border-pos/40 bg-pos/10">
@@ -434,7 +515,8 @@ function EditarPctCenario({
           </>
         ),
         ariaLabel: `Editar o % de venda do cenário ${CENARIO_ROTULO[cenario].toLowerCase()} (${pct(mult, 0)} ${base})`,
-        className: `mt-1 inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-lg border px-1.5 text-[11.5px] leading-none tabular-nums transition-colors hover:border-latao hover:bg-latao/10 sm:text-[12.5px] ${
+        // 32 px de altura à vista; no toque, a área de toque cresce para 44 px (o mesmo truque do (i) do glossário)
+        className: `relative mt-1 inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-lg border px-2 text-[11.5px] leading-none tabular-nums transition-colors before:absolute before:-inset-y-1.5 before:inset-x-0 before:content-[''] hover:border-latao hover:bg-latao/10 sm:text-[12.5px] pointer-fine:px-1.5 pointer-fine:before:hidden ${
           ajustado ? "border-latao/60 bg-latao/10 font-semibold text-latao-texto" : "border-nevoa/30 text-luar"
         }`,
       }}
@@ -527,7 +609,12 @@ function opcoesDaBase(r: ResultadoCompleto): { valor: BaseVendaOpcao; rotulo: st
   const o = modelo.opcoesVenda;
   const opcoes: { valor: BaseVendaOpcao; rotulo: string; detalhe: string }[] = [];
   if (o.avaliacao !== null) opcoes.push({ valor: "avaliacao", rotulo: "Avaliação", detalhe: moedaCurta(o.avaliacao) });
-  if (o.regiao) opcoes.push({ valor: "regiao", rotulo: "Região", detalhe: `${porArea(o.regiao.m2, modelo.entrada.tipo)}` });
+  // o recorte e a fonte à vista: o mesmo número da seção "Preço do m² na região" ("R$ 3.960/m² · bairro, ITBI")
+  if (o.regiao) {
+    const ref = o.regiao.referencia;
+    const onde = { rua: "rua", bairro: "bairro", cidade: "cidade", uf: "estado" }[ref.escopo];
+    opcoes.push({ valor: "regiao", rotulo: "Região", detalhe: `${porArea(o.regiao.m2, modelo.entrada.tipo)} · ${onde}${ref.fonte === "itbi" ? ", ITBI" : ""}` });
+  }
   if (modelo.premissas.baseVenda === "informado") opcoes.push({ valor: "informado", rotulo: "Seu valor", detalhe: moedaCurta(modelo.premissas.valorVenda ?? 0) });
   return opcoes;
 }
@@ -700,7 +787,20 @@ function BotaoCelula({
   let ok: boolean | null;
   let contexto: string;
 
-  if (visao === "teto") {
+  if (visao === "teto" && r.semDisputa) {
+    // venda direta: a margem para imprevistos pelo preço pedido (o preço não sobe: "lance máximo" não quer dizer nada)
+    const m = cel.margem ?? null;
+    ok = m !== null;
+    if (m === null) {
+      principal = { curto: "—", longo: "—", moeda: false };
+      secundario = { curto: "não atinge", longo: "não atinge" };
+      contexto = `: não atinge a meta no cenário ${quando}, nem sem imprevistos`;
+    } else {
+      principal = { curto: curto(m), longo: moeda(m), moeda: true };
+      secundario = { curto: "de folga", longo: "de folga" };
+      contexto = `: margem de ${moeda(m)} para custos imprevistos no cenário ${quando}, mantendo a meta`;
+    }
+  } else if (visao === "teto") {
     if (cel.teto === null) {
       principal = { curto: "—", longo: "—", moeda: false };
       secundario = { curto: "sem teto", longo: "nenhum lance" };
@@ -784,8 +884,10 @@ function BotaoCelula({
       {/* dica no hover (só mouse): o que a célula quer dizer, em frase */}
       <span
         aria-hidden="true"
-        className={`pointer-events-none absolute bottom-full z-20 mb-2 hidden w-64 rounded-xl border border-nevoa/25 bg-tinta px-3 py-2 text-left text-[12px] leading-snug text-luar opacity-0 shadow-[0_12px_32px_rgba(7,11,22,.35)] transition-opacity delay-0 duration-150 peer-hover:opacity-100 peer-hover:delay-300 motion-reduce:transition-none pointer-fine:block ${
-          c === 0 ? "left-0" : c >= r.colunas.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2"
+        // só a partir de 640 px (numa janela estreita com mouse, a dica de 256 px passava da borda e criava rolagem para o
+        // lado); nas duas últimas colunas, ancorada pela direita
+        className={`pointer-events-none absolute bottom-full z-20 mb-2 hidden w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-nevoa/25 bg-tinta px-3 py-2 text-left text-[12px] leading-snug text-luar opacity-0 shadow-[0_12px_32px_rgba(7,11,22,.35)] transition-opacity delay-0 duration-150 peer-hover:opacity-100 peer-hover:delay-300 motion-reduce:transition-none sm:pointer-fine:block ${
+          c === 0 ? "left-0" : c >= r.colunas.length - 2 ? "right-0" : "left-1/2 -translate-x-1/2"
         }`}
       >
         <strong className="font-semibold">{dica.titulo}:</strong> {dica.texto}

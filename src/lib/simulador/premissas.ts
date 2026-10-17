@@ -5,6 +5,7 @@
  * Cada premissa tem uma frase de explicação na tela e pode ser trocada pela pessoa. A ordem de resolução
  * importa: área → reforma e condomínio; avaliação/referência e área → valor de venda.
  */
+import { mediaReferencia, referenciaPrincipal } from "../catalogo/referencia";
 import type { ReferenciaM2, TipoImovel } from "../catalogo/tipos";
 import {
   LINHAS_DESLIGAVEIS,
@@ -238,6 +239,12 @@ export const LIMITES = {
   extraFixo: [0, 10_000_000_000],
   extraPctLance: [0, 1],
   extraMensal: [0, 100_000_000],
+  // valores em reais no lugar do % (a guia do ITBI, o orçamento do cartório...)
+  comissaoValor: [0, 10_000_000_000],
+  itbiValor: [0, 10_000_000_000],
+  registroValor: [0, 10_000_000_000],
+  reservaValor: [0, 10_000_000_000],
+  corretagemValor: [0, 10_000_000_000],
 } as const satisfies Record<string, readonly [number, number]>;
 
 export const SLUGS_DIVIDA = ["condominio-em-atraso", "iptu-em-atraso", "divida-passa-arrematante"] as const;
@@ -266,14 +273,14 @@ export function areaDaFonte(e: Pick<EntradaSimulador, "tipo" | "area" | "areaTer
   return positivo(e.area) && e.area !== e.areaTerreno ? e.area : null;
 }
 
-/** Referência de R$/m² mais local com mediana de avaliação: bairro, senão cidade, senão UF. */
+/**
+ * A referência de R$/m² da região para o valor de venda: a MESMA da seção "Preço do m² na região" e do PDF
+ * (`referenciaPrincipal`: o preço pago no ITBI com amostra suficiente; senão a média de avaliação dos leilões mais
+ * local com 5 ou mais imóveis), só do mesmo tipo. O valor por m² é a média dela (`mediaReferencia`).
+ */
 export function referenciaLocal(refs: readonly ReferenciaM2[] | undefined, tipo: TipoImovel): ReferenciaM2 | null {
   if (!refs?.length) return null;
-  const ordem = { rua: 0, bairro: 1, cidade: 2, uf: 3 } as const;
-  const uteis = refs
-    .filter((r) => r.tipo === tipo && r.amostra > 0 && r.avaliacaoM2 && positivo(r.avaliacaoM2.mediana))
-    .sort((a, b) => ordem[a.escopo] - ordem[b.escopo]);
-  return uteis[0] ?? null;
+  return referenciaPrincipal(refs.filter((r) => r.tipo === tipo && r.amostra > 0));
 }
 
 /**
@@ -366,7 +373,7 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
   // --- valor de venda (100%): avaliação ou referência da região; a pessoa escolhe a base ou informa o valor
   const referencia = referenciaLocal(referencias, entrada.tipo);
   const vendaAvaliacao = positivo(entrada.avaliacao) ? entrada.avaliacao : null;
-  const m2Regiao = referencia?.avaliacaoM2?.mediana ?? null;
+  const m2Regiao = referencia ? mediaReferencia(referencia) : null;
   const opcoesVenda: OpcoesVenda = {
     avaliacao: vendaAvaliacao,
     regiao: referencia && m2Regiao !== null && areaReal ? { valor: Math.round(m2Regiao * area), m2: m2Regiao, area, referencia } : null,
@@ -404,6 +411,11 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
     registroPct: PADRAO.registroPct,
     registroMin: PADRAO.registroMin,
     reservaPct: PADRAO.reservaPct,
+    comissaoValor: null,
+    itbiValor: null,
+    registroValor: null,
+    reservaValor: null,
+    corretagemValor: null,
     desocupacao: ocupado ? PADRAO.desocupacao : 0,
     dividas: 0,
     reformaNivel: PADRAO.reformaNivel,
@@ -456,6 +468,11 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
     valorVenda,
     baseVenda,
     iptuAnual: a.iptuAnual ?? null,
+    comissaoValor: a.comissaoValor ?? null,
+    itbiValor: a.itbiValor ?? null,
+    registroValor: a.registroValor ?? null,
+    reservaValor: a.reservaValor ?? null,
+    corretagemValor: a.corretagemValor ?? null,
     mesesCondominio: a.mesesCondominio ?? null,
     mesesIptu: a.mesesIptu ?? null,
     mesesContas: a.mesesContas ?? null,
@@ -545,6 +562,11 @@ const NUMERICOS = [
   "parcelasEntradaPct",
   "parcelasN",
   "parcelasCorrecaoAA",
+  "comissaoValor",
+  "itbiValor",
+  "registroValor",
+  "reservaValor",
+  "corretagemValor",
 ] as const satisfies readonly (keyof Ajustes & keyof typeof LIMITES)[];
 
 const MESES_CUSTO = ["mesesCondominio", "mesesIptu", "mesesContas"] as const;

@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { atingeMeta } from "@/lib/simulador/calculo";
 import type { ResultadoCompleto } from "@/lib/simulador/completa";
-import { juntar, meses, moeda, moedaCurta, moedaCurtaSinal, pct, redondo } from "@/lib/simulador/formato";
+import { juntar, meses, moeda, moedaCurta, moedaCurtaSinal, moedaSinal, pct, redondo } from "@/lib/simulador/formato";
 import { LIMITES, multiplicador } from "@/lib/simulador/premissas";
-import { CENARIO_ROTULO, converterMeta, metaComoObjetivo, PERIODO_META, vendaDoCenario } from "@/lib/simulador/textos";
+import { CENARIO_ROTULO, converterMeta, metaComoObjetivo, metaPorExtenso, PERIODO_META, vendaDoCenarioCurta } from "@/lib/simulador/textos";
 import { TODOS_CENARIOS, type Celula, type Cenario, type Meta, type TipoMeta, type VendaPersonalizada } from "@/lib/simulador/tipos";
 import { CampoNumero, CampoPedido, Chip, FOCO_RESULTADO, IconeAtencao, IconeInfo, IconeOk, Segmentado } from "./controles";
 
@@ -24,7 +25,8 @@ const igualMeta = (a: Meta, b: Meta) => a.tipo === b.tipo && Math.abs(a.valor - 
  * jeito mais fácil: quanto quer ganhar em reais ou quanto quer render em % (no total, ao ano ou ao mês), com
  * atalhos prontos; em quanto tempo vende; e por quanto vende (cenário). Quando a análise aponta dívidas que
  * passam ao comprador e a pessoa ainda não disse quanto são, o número sai marcado "sem as dívidas" e o pedido
- * do valor fica ali mesmo.
+ * do valor fica ali mesmo. Na venda direta (preço fixo, sem disputa), a resposta se inverte: o número grande é o
+ * lucro pelo preço pedido, com o veredito da meta e a margem de segurança (quanto de custo imprevisto ainda cabe).
  */
 export function CartaoResposta({
   r,
@@ -70,8 +72,15 @@ export function CartaoResposta({
   ];
 
   const cenarioTexto = celula.cenario === "personalizado" ? "personalizado" : CENARIO_ROTULO[celula.cenario].toLowerCase();
-  const resumo =
-    teto === null
+  const fixo = r.semDisputa;
+  const atinge = atingeMeta(sim, meta);
+  const resumo = fixo
+    ? `Comprando por ${moeda(lance)} e vendendo em ${meses(celula.meses)} no cenário ${cenarioTexto}: ${sim.lucro >= 0 ? "lucro" : "prejuízo"} de ${moeda(Math.abs(Math.round(sim.lucro)))} (${pct(sim.roiAA)} ao ano). ` +
+      (r.margem !== null
+        ? `Atinge a meta de ${metaComoObjetivo(meta)}, com margem de ${moeda(r.margem)} para custos imprevistos.`
+        : `Não atinge a meta de ${metaComoObjetivo(meta)}.`) +
+      (semDividas ? " Sem contar as dívidas apontadas." : "")
+    : teto === null
       ? `Nenhum lance atinge a meta de ${metaComoObjetivo(meta)} vendendo em ${meses(celula.meses)} no cenário ${cenarioTexto}.`
       : `Dê no máximo ${moeda(teto)} para ${metaComoObjetivo(meta)} vendendo em ${meses(celula.meses)} no cenário ${cenarioTexto}. ` +
         (folga! >= 0 ? `Sobra ${moeda(folga!)} entre o lance mínimo e o seu teto.` : `O lance mínimo passa ${moeda(-folga!)} do seu teto.`) +
@@ -89,92 +98,96 @@ export function CartaoResposta({
 
       {/* ------------------------------------------------------------------ a resposta */}
       <div className="relative p-5 sm:p-7">
-        <div className="grid gap-x-8 gap-y-5 @2xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] @2xl:items-end">
-          <div className="min-w-0">
-            <p id={FOCO_RESULTADO} tabIndex={-1} className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 outline-none">
-              <span className="text-[13px] font-semibold tracking-[0.12em] text-nevoa uppercase">Seu lance máximo</span>
-              {semDividas && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-aten/55 bg-aten/12 px-2 py-0.5 text-[11.5px] leading-tight font-semibold text-luar">
-                  <IconeAtencao className="size-3 text-aten" />
-                  sem as dívidas
-                </span>
-              )}
-            </p>
-            {teto === null ? (
-              <p className="mt-3 font-display text-[28px] leading-[1.05] font-bold tracking-[-0.02em] text-nevoa sm:text-[34px]">Nenhum lance atinge a meta</p>
-            ) : (
-              <>
-                <p className="mt-3 text-[15px] font-medium text-nevoa">Dê no máximo</p>
-                <p
-                  className="mt-1 font-display leading-none font-bold tracking-[-0.035em] tabular-nums [--max:46px] sm:[--max:60px]"
-                  // o número encolhe para caber na largura do cartão ("R$ 17.638.267" num celular de 320 px)
-                  style={{ fontSize: `min(var(--max), ${(100 / (moeda(teto).length * 0.6)).toFixed(2)}cqi)` }}
-                >
-                  {moeda(teto)}
-                </p>
-              </>
-            )}
-            <p className="mt-3 text-[14px] leading-relaxed text-nevoa">
-              para <strong className="font-semibold text-luar">{metaComoObjetivo(meta)}</strong> vendendo em{" "}
-              <strong className="font-semibold text-luar">{meses(celula.meses)}</strong>, por {moeda(venda)} ({vendaDoCenario(modelo, celula.cenario)}).
-            </p>
-          </div>
-
-          <ul className="flex min-w-0 flex-col gap-2.5 text-[14px] leading-snug @2xl:rounded-2xl @2xl:border @2xl:border-nevoa/15 @2xl:bg-noite/50 @2xl:p-4">
-            <li className="flex gap-2.5">
+        {fixo ? (
+          <RespostaPrecoFixo r={r} venda={venda} atinge={atinge} />
+        ) : (
+          <div className="grid gap-x-8 gap-y-5 @2xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] @2xl:items-end">
+            <div className="min-w-0">
+              <p id={FOCO_RESULTADO} tabIndex={-1} className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 outline-none">
+                <span className="text-[13px] font-semibold tracking-[0.12em] text-nevoa uppercase">Seu lance máximo</span>
+                {semDividas && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-aten/55 bg-aten/12 px-2 py-0.5 text-[11.5px] leading-tight font-semibold text-luar">
+                    <IconeAtencao className="size-3 text-aten" />
+                    sem as dívidas
+                  </span>
+                )}
+              </p>
               {teto === null ? (
-                <>
-                  <IconeAtencao className="mt-0.5 text-aten" />
-                  <span>
-                    Lance mínimo hoje: <strong className="font-semibold tabular-nums">{moeda(lance)}</strong>
-                    <span className="text-nevoa"> · tente uma meta menor, outro prazo ou outro cenário</span>
-                  </span>
-                </>
-              ) : folga! >= 0 ? (
-                <>
-                  {semDividas ? <IconeInfo className="mt-0.5 text-nevoa" /> : <IconeOk className="mt-1 size-3.5 text-pos" />}
-                  <span>
-                    Lance mínimo hoje: <strong className="font-semibold tabular-nums">{moeda(lance)}</strong>
-                    <span className="text-nevoa"> · </span>
-                    sobra <strong className="font-semibold tabular-nums">{moeda(folga!)}</strong> até o seu teto
-                    {semDividas && <span className="text-nevoa"> (sem as dívidas)</span>}
-                  </span>
-                </>
+                <p className="mt-3 font-display text-[28px] leading-[1.05] font-bold tracking-[-0.02em] text-nevoa sm:text-[34px]">Nenhum lance atinge a meta</p>
               ) : (
                 <>
-                  <IconeAtencao className="mt-0.5 text-aten" />
-                  <span>
-                    Lance mínimo hoje: <strong className="font-semibold tabular-nums">{moeda(lance)}</strong>
-                    <span className="text-nevoa"> · </span>
-                    <strong className="font-semibold tabular-nums">{moeda(-folga!)}</strong> acima do seu teto: não atinge a meta
-                  </span>
+                  <p className="mt-3 text-[15px] font-medium text-nevoa">Dê no máximo</p>
+                  <p
+                    className="mt-1 font-display leading-none font-bold tracking-[-0.035em] tabular-nums [--max:46px] sm:[--max:60px]"
+                    // o número encolhe para caber na largura do cartão ("R$ 17.638.267" num celular de 320 px)
+                    style={{ fontSize: `min(var(--max), ${(100 / (moeda(teto).length * 0.6)).toFixed(2)}cqi)` }}
+                  >
+                    {moeda(teto)}
+                  </p>
                 </>
               )}
-            </li>
-            <li className="flex gap-2.5">
-              <Ponto />
-              <span>
-                Pelo lance mínimo:{" "}
-                <strong className={`font-semibold tabular-nums ${sim.lucro < 0 ? "text-grave-texto" : ""}`}>
-                  {sim.lucro >= 0 ? "lucro" : "prejuízo"} de {moedaCurtaSinal(Math.abs(sim.lucro))}
-                </strong>{" "}
-                em {meses(celula.meses)} <span className="whitespace-nowrap text-nevoa tabular-nums">({pct(sim.roiAA, 0)} ao ano)</span>
-              </span>
-            </li>
-            <li className="flex gap-2.5">
-              <Ponto />
-              <span>
-                Dinheiro que você precisa: <strong className="font-semibold tabular-nums">{moedaCurta(sim.capital)}</strong>
-                {sim.financiamento && <span className="text-nevoa"> (entrada, parcelas e custos)</span>}
-              </span>
-            </li>
-          </ul>
-        </div>
+              <p className="mt-3 text-[14px] leading-relaxed text-nevoa">
+                para <strong className="font-semibold text-luar">{metaComoObjetivo(meta)}</strong> vendendo em{" "}
+                <strong className="font-semibold text-luar">{meses(celula.meses)}</strong>, por {moeda(venda)} ({vendaDoCenarioCurta(modelo, celula.cenario)}).
+              </p>
+            </div>
 
-        <Regua lance={lance} teto={teto} pendente={semDividas} />
+            <ul className="flex min-w-0 flex-col gap-2.5 text-[14px] leading-snug @2xl:rounded-2xl @2xl:border @2xl:border-nevoa/15 @2xl:bg-noite/50 @2xl:p-4">
+              <li className="flex gap-2.5">
+                {teto === null ? (
+                  <>
+                    <IconeAtencao className="mt-0.5 text-aten" />
+                    <span>
+                      Lance mínimo hoje: <strong className="font-semibold tabular-nums">{moeda(lance)}</strong>
+                      <span className="text-nevoa"> · tente uma meta menor, outro prazo ou outro cenário</span>
+                    </span>
+                  </>
+                ) : folga! >= 0 ? (
+                  <>
+                    {semDividas ? <IconeInfo className="mt-0.5 text-nevoa" /> : <IconeOk className="mt-1 size-3.5 text-pos" />}
+                    <span>
+                      Lance mínimo hoje: <strong className="font-semibold tabular-nums">{moeda(lance)}</strong>
+                      <span className="text-nevoa"> · </span>
+                      sobra <strong className="font-semibold tabular-nums">{moeda(folga!)}</strong> até o seu teto
+                      {semDividas && <span className="text-nevoa"> (sem as dívidas)</span>}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <IconeAtencao className="mt-0.5 text-aten" />
+                    <span>
+                      Lance mínimo hoje: <strong className="font-semibold tabular-nums">{moeda(lance)}</strong>
+                      <span className="text-nevoa"> · </span>
+                      <strong className="font-semibold tabular-nums">{moeda(-folga!)}</strong> acima do seu teto: não atinge a meta
+                    </span>
+                  </>
+                )}
+              </li>
+              <li className="flex gap-2.5">
+                <Ponto />
+                <span>
+                  Pelo lance mínimo:{" "}
+                  <strong className={`font-semibold tabular-nums ${sim.lucro < 0 ? "text-grave-texto" : ""}`}>
+                    {sim.lucro >= 0 ? "lucro" : "prejuízo"} de {moedaCurtaSinal(Math.abs(sim.lucro))}
+                  </strong>{" "}
+                  em {meses(celula.meses)} <span className="whitespace-nowrap text-nevoa tabular-nums">({pct(sim.roiAA, 0)} ao ano)</span>
+                </span>
+              </li>
+              <li className="flex gap-2.5">
+                <Ponto />
+                <span>
+                  Dinheiro que você precisa: <strong className="font-semibold tabular-nums">{moedaCurta(sim.capital)}</strong>
+                  {sim.financiamento && <span className="text-nevoa"> (entrada, parcelas e custos)</span>}
+                </span>
+              </li>
+            </ul>
+          </div>
+        )}
+
+        {!fixo && <Regua lance={lance} teto={teto} pendente={semDividas} />}
 
         {semDividas && (
-          <div className="mt-1 rounded-2xl border border-aten/45 bg-aten/10 p-3.5 sm:p-4">
+          <div className={`rounded-2xl border border-aten/45 bg-aten/10 p-3.5 sm:p-4 ${fixo ? "mt-5" : "mt-1"}`}>
             <p className="flex gap-2.5 text-[13.5px] leading-relaxed">
               <IconeAtencao className="mt-0.5 text-aten" />
               <span>
@@ -230,7 +243,8 @@ export function CartaoResposta({
                   <span className="text-[14px] text-nevoa">de lucro</span>
                 </div>
               ) : (
-                <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+                // cresce até o fim da linha: preso na largura mínima, o seletor quebrava "no total" e "ao mês" em duas linhas
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
                   <CampoNumero
                     id="sim-meta-valor"
                     valor={Math.round(meta.valor * 10_000) / 100}
@@ -251,9 +265,9 @@ export function CartaoResposta({
                     tamanho="sm"
                     className="min-w-[12rem] flex-1"
                     opcoes={[
-                      { valor: "roi_periodo", rotulo: "no total" },
-                      { valor: "roi_aa", rotulo: "ao ano" },
-                      { valor: "roi_am", rotulo: "ao mês" },
+                      { valor: "roi_periodo", rotulo: <span className="whitespace-nowrap">no total</span> },
+                      { valor: "roi_aa", rotulo: <span className="whitespace-nowrap">ao ano</span> },
+                      { valor: "roi_am", rotulo: <span className="whitespace-nowrap">ao mês</span> },
                     ]}
                   />
                 </div>
@@ -283,10 +297,100 @@ export function CartaoResposta({
 
         {/* no celular a resposta já saiu da tela: repete aqui, curta */}
         <p className="mt-5 flex items-baseline justify-between gap-3 rounded-2xl border border-latao/40 bg-tinta px-4 py-3 @2xl:hidden" aria-hidden="true">
-          <span className="text-[13px] text-nevoa">Seu lance máximo</span>
-          <span className="font-display text-[20px] font-bold tabular-nums">{teto === null ? "nenhum" : moeda(teto)}</span>
+          <span className="text-[13px] text-nevoa">{fixo ? (sim.lucro >= 0 ? "Lucro pelo preço pedido" : "Prejuízo pelo preço pedido") : "Seu lance máximo"}</span>
+          <span className={`font-display text-[20px] font-bold tabular-nums ${fixo && sim.lucro < 0 ? "text-grave-texto" : ""}`}>
+            {fixo ? moedaSinal(sim.lucro) : teto === null ? "nenhum" : moeda(teto)}
+          </span>
         </p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Venda direta (preço fixo, sem disputa): "Vale a pena comprar por R$ X?". O número grande é o lucro (ou o
+ * prejuízo) pelo preço pedido; ao lado, se atinge a meta, a margem de segurança (o custo imprevisto que ainda
+ * cabe mantendo a meta) e o dinheiro necessário. Nada de "lance máximo" nem "sobra até o teto": o preço não sobe.
+ */
+function RespostaPrecoFixo({ r, venda, atinge }: { r: ResultadoCompleto; venda: number; atinge: boolean }) {
+  const { modelo, meta, celula, semDividas, margem } = r;
+  const sim = r.comLanceMinimo!;
+  const preco = modelo.entrada.lance;
+  const lucro = Math.round(sim.lucro);
+  return (
+    <div className="grid gap-x-8 gap-y-5 @2xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] @2xl:items-end">
+      <div className="min-w-0">
+        <p id={FOCO_RESULTADO} tabIndex={-1} className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 outline-none">
+          <span className="text-[13px] font-semibold tracking-[0.12em] text-nevoa uppercase">Comprando pelo preço pedido</span>
+          {semDividas && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-aten/55 bg-aten/12 px-2 py-0.5 text-[11.5px] leading-tight font-semibold text-luar">
+              <IconeAtencao className="size-3 text-aten" />
+              sem as dívidas
+            </span>
+          )}
+        </p>
+        <p className="mt-3 text-[15px] font-medium text-nevoa">{lucro >= 0 ? "Lucro de" : "Prejuízo de"}</p>
+        <p
+          className={`mt-1 font-display leading-none font-bold tracking-[-0.035em] tabular-nums [--max:46px] sm:[--max:60px] ${lucro < 0 ? "text-grave-texto" : ""}`}
+          // o número encolhe para caber na largura do cartão (como o lance máximo)
+          style={{ fontSize: `min(var(--max), ${(100 / (moeda(Math.abs(lucro)).length * 0.6)).toFixed(2)}cqi)` }}
+        >
+          {moeda(Math.abs(lucro))}
+        </p>
+        <p className="mt-3 text-[14px] leading-relaxed text-nevoa">
+          em <strong className="font-semibold text-luar">{meses(celula.meses)}</strong>
+          <span className="whitespace-nowrap">
+            {" "}
+            · <strong className={`font-semibold tabular-nums ${sim.roiAA < 0 ? "text-grave-texto" : "text-luar"}`}>{pct(sim.roiAA)} ao ano</strong>
+          </span>
+          , comprando por {moeda(preco)} e vendendo por {moeda(venda)} ({vendaDoCenarioCurta(modelo, celula.cenario)}).
+        </p>
+      </div>
+
+      <ul className="flex min-w-0 flex-col gap-2.5 text-[14px] leading-snug @2xl:rounded-2xl @2xl:border @2xl:border-nevoa/15 @2xl:bg-noite/50 @2xl:p-4">
+        <li className="flex gap-2.5">
+          {atinge ? (
+            semDividas ? (
+              <IconeInfo className="mt-0.5 text-nevoa" />
+            ) : (
+              <IconeOk className="mt-1 size-3.5 text-pos" />
+            )
+          ) : (
+            <IconeAtencao className="mt-0.5 text-aten" />
+          )}
+          <span>
+            {atinge ? "Atinge" : "Não atinge"} a sua meta: <strong className="font-semibold">{metaPorExtenso(meta)}</strong>
+            {semDividas && atinge && <span className="text-nevoa"> (sem as dívidas)</span>}
+            {!atinge && <span className="text-nevoa"> · tente outro prazo ou cenário, ou uma meta menor</span>}
+          </span>
+        </li>
+        <li className="flex gap-2.5">
+          <Ponto />
+          <span>
+            {margem !== null ? (
+              <>
+                Margem de segurança: <strong className="font-semibold tabular-nums">{moeda(margem)}</strong>
+                <span className="text-nevoa">
+                  {" "}
+                  · com custos imprevistos até esse valor (reforma maior, dívida, outro gasto), você ainda consegue {metaComoObjetivo(meta)}
+                </span>
+              </>
+            ) : (
+              <>
+                Margem de segurança: <strong className="font-semibold">nenhuma</strong>
+                <span className="text-nevoa"> · mesmo sem imprevistos, a conta não chega à meta</span>
+              </>
+            )}
+          </span>
+        </li>
+        <li className="flex gap-2.5">
+          <Ponto />
+          <span>
+            Dinheiro que você precisa: <strong className="font-semibold tabular-nums">{moedaCurta(sim.capital)}</strong>
+            {sim.financiamento && <span className="text-nevoa"> (entrada, parcelas e custos)</span>}
+          </span>
+        </li>
+      </ul>
     </div>
   );
 }

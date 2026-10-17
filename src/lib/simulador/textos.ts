@@ -3,7 +3,39 @@
  */
 import { multiplicador, type Modelo } from "./premissas";
 import { meses as mesesTexto, moeda, pct } from "./formato";
-import type { Cenario, Meta, TipoMeta } from "./tipos";
+import type { Cenario, EntradaSimulador, Meta, Premissas, TipoMeta } from "./tipos";
+
+/**
+ * Venda direta: preço fixo, sem disputa (leva quem formaliza primeiro a proposta pelo preço pedido). O simulador
+ * troca a pergunta: em vez de "até quanto dar de lance", "vale a pena comprar por este preço" (o lucro grande e
+ * a margem de segurança para custos imprevistos).
+ */
+export function semDisputa(e: Pick<EntradaSimulador, "modalidade">): boolean {
+  return e.modalidade === "venda_direta";
+}
+
+/** As palavras do preço de compra: "lance mínimo" e "lance" num leilão; "preço pedido" e "preço" na venda direta. */
+export function palavrasPreco(e: Pick<EntradaSimulador, "modalidade">) {
+  const fixo = semDisputa(e);
+  return {
+    fixo,
+    minimo: fixo ? "preço pedido" : "lance mínimo",
+    Minimo: fixo ? "Preço pedido" : "Lance mínimo",
+    lance: fixo ? "preço" : "lance",
+    Lance: fixo ? "Preço" : "Lance",
+  };
+}
+
+/**
+ * Como o lucro trata o imposto de renda, conforme a premissa: "já sem o IR"; "com isenção do IR"; ou, com a linha
+ * tirada da conta, "sem descontar o IR (você tirou da conta)". `longo` escreve "imposto de renda" por extenso.
+ */
+export function notaIr(p: Pick<Premissas, "desligados" | "irIsento">, longo = false): string {
+  const ir = longo ? "o imposto de renda" : "o IR";
+  if (p.desligados.includes("ir")) return `sem descontar ${ir} (você tirou da conta)`;
+  if (p.irIsento) return longo ? "com a isenção do imposto de renda que você indicou" : "com isenção do IR";
+  return `já sem ${ir}`;
+}
 
 export const CENARIO_ROTULO: Record<Cenario, string> = {
   conservador: "Conservador",
@@ -50,6 +82,16 @@ export function vendaDoCenario(modelo: Modelo, cenario: Cenario): string {
   const p = modelo.premissas;
   if (cenario === "personalizado" && p.vendaPersonalizada?.modo === "valor") return `${moeda(p.vendaPersonalizada.valor)}, valor que você definiu`;
   return `${pct(multiplicador(p, cenario), 0)} ${baseDaVenda(modelo)}`;
+}
+
+/**
+ * De onde vem a venda, para ir entre parênteses logo depois do valor: "por R$ 251.000 (100% da avaliação)" e, no
+ * personalizado em reais, "por R$ 150.000 (valor que você definiu)", sem repetir o valor.
+ */
+export function vendaDoCenarioCurta(modelo: Modelo, cenario: Cenario): string {
+  const p = modelo.premissas;
+  if (cenario === "personalizado" && p.vendaPersonalizada?.modo === "valor") return "valor que você definiu";
+  return vendaDoCenario(modelo, cenario);
 }
 
 /** Converte uma meta em % para outro período, pelo mesmo rendimento (juros compostos), dado o prazo de venda. */

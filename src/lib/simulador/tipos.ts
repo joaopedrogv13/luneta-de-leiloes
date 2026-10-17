@@ -116,6 +116,15 @@ export interface Premissas {
   registroMin: number;
   /** reserva para imprevistos */
   reservaPct: number;
+  /**
+   * Valor em reais que a pessoa já sabe (a guia do ITBI, o orçamento do cartório...): quando informado, vale no lugar
+   * do %. null = a conta usa o %. ITBI, registro, comissão e corretagem informados em reais continuam abatendo do IR.
+   */
+  comissaoValor: number | null;
+  itbiValor: number | null;
+  registroValor: number | null;
+  reservaValor: number | null;
+  corretagemValor: number | null;
 
   // --- Regularização e reforma (valores fixos)
   desocupacao: number;
@@ -195,10 +204,29 @@ export interface Premissas {
  * só com número no ajuste: tirar o ajuste é voltar ao padrão.
  */
 export type Ajustes = Partial<
-  Omit<Premissas, "areaEstimada" | "baseVenda" | "iptuAnual" | "mesesCondominio" | "mesesIptu" | "mesesContas" | "vendaPersonalizada">
+  Omit<
+    Premissas,
+    | "areaEstimada"
+    | "baseVenda"
+    | "iptuAnual"
+    | "mesesCondominio"
+    | "mesesIptu"
+    | "mesesContas"
+    | "vendaPersonalizada"
+    | "comissaoValor"
+    | "itbiValor"
+    | "registroValor"
+    | "reservaValor"
+    | "corretagemValor"
+  >
 > & {
   baseVenda?: "avaliacao" | "regiao";
   iptuAnual?: number;
+  comissaoValor?: number;
+  itbiValor?: number;
+  registroValor?: number;
+  reservaValor?: number;
+  corretagemValor?: number;
   mesesCondominio?: number;
   mesesIptu?: number;
   mesesContas?: number;

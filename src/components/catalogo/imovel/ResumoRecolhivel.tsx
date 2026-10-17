@@ -114,7 +114,7 @@ export function BotaoRecolher() {
  * Com o resumo recolhido (computador), a pílula fixa na barra das seções: "Lance R$ 25.100 · −90%" e o ícone de
  * abrir. Tocar nela traz o resumo de volta. Escondida pelo CSS enquanto o resumo está aberto e no celular.
  */
-export function PilulaResumo({ lance, desagio }: { lance: number; desagio: number | null }) {
+export function PilulaResumo({ lance, desagio, precoFixo = false }: { lance: number; desagio: number | null; /** venda direta: "Preço", não "Lance" */ precoFixo?: boolean }) {
   const recolhido = useResumoRecolhido();
   const abaixo = desagio !== null && desagio > 0;
   return (
@@ -127,7 +127,7 @@ export function PilulaResumo({ lance, desagio }: { lance: number; desagio: numbe
       onClick={() => definirResumoRecolhido(false)}
       className={`${styles.pilula} min-h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-latao/45 bg-tinta py-1 pr-2 pl-3.5 text-[13px] leading-none whitespace-nowrap text-luar transition-colors duration-150 hover:border-latao hover:bg-latao/10 [[data-theme=light]_&]:shadow-[0_4px_14px_-6px_rgba(15,24,48,.25)]`}
     >
-      <span className="text-nevoa">Lance</span>
+      <span className="text-nevoa">{precoFixo ? "Preço" : "Lance"}</span>
       <span className="font-display font-bold tracking-[-0.01em] tabular-nums">{moeda(lance)}</span>
       {abaixo && (
         <span className="font-semibold text-latao-texto tabular-nums">

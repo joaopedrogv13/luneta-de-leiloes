@@ -144,7 +144,7 @@ export function PaginaImovel({
                 <div className="min-w-0 flex-1">
                   <NavSecoes secoes={SECOES} />
                 </div>
-                <PilulaResumo lance={i.lance} desagio={i.desagio} />
+                <PilulaResumo lance={i.lance} desagio={i.desagio} precoFixo={i.modalidade === "venda_direta"} />
               </div>
             </div>
 

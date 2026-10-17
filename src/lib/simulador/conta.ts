@@ -5,7 +5,7 @@
 import { baseItbi, ligada, simular } from "./calculo";
 import { area as areaTexto, meses, moeda, moedaMes, moedaSinal, pct } from "./formato";
 import { multiplicador, ROTULO_NIVEL, type Modelo } from "./premissas";
-import { baseDaVenda } from "./textos";
+import { baseDaVenda, semDisputa } from "./textos";
 import type { Ajustes, LinhaDesligavel, Premissas, Simulacao } from "./tipos";
 
 /** O pop-up que edita a linha: um por tipo de despesa. */
@@ -30,13 +30,13 @@ export type EditorLinha =
 /** As premissas que cada pop-up muda (para "ajustada" e "voltar ao padrão"). */
 export const CHAVES_EDITOR: Record<Exclude<EditorLinha, "extra">, (keyof Ajustes)[]> = {
   venda: ["valorVenda", "baseVenda", "cenarioConservador", "cenarioBase", "cenarioOtimista", "vendaPersonalizada"],
-  corretagem: ["corretagemPct"],
+  corretagem: ["corretagemPct", "corretagemValor"],
   ir: ["irPct", "irIsento"],
   lance: ["financiar", "parcelar", "entradaPct", "jurosAA", "prazoFinanciamento", "segurosMensal", "parcelasEntradaPct", "parcelasN", "parcelasCorrecaoAA"],
-  comissao: ["comissaoPct"],
-  itbi: ["itbiPct", "itbiBase"],
-  registro: ["registroPct", "registroMin"],
-  reserva: ["reservaPct"],
+  comissao: ["comissaoPct", "comissaoValor"],
+  itbi: ["itbiPct", "itbiBase", "itbiValor"],
+  registro: ["registroPct", "registroMin", "registroValor"],
+  reserva: ["reservaPct", "reservaValor"],
   reforma: ["reformaNivel", "reformaModo", "reformaUnitario"],
   condominio: ["emCondominio", "condominio", "mesesCondominio"],
   iptu: ["iptuPct", "iptuAnual", "mesesIptu"],
@@ -188,7 +188,15 @@ export function linhasDaConta(modelo: Modelo, sim: Simulacao): { conta: LinhaCon
     valor: sim.venda,
     desligavel: null,
   });
-  add({ id: "corretagem", editor: "corretagem", grupo: "venda", rotulo: "Corretagem", formula: `${pct(p.corretagemPct)} da venda`, valor: -tudo.corretagem });
+  const informado = "valor que você informou";
+  add({
+    id: "corretagem",
+    editor: "corretagem",
+    grupo: "venda",
+    rotulo: "Corretagem",
+    formula: p.corretagemValor !== null ? informado : `${pct(p.corretagemPct)} da venda`,
+    valor: -tudo.corretagem,
+  });
   // o IR depende das outras linhas (o ITBI tirado aumenta o ganho): ligado, vale a simulação de verdade
   const sIr = ligada(p, "ir") ? sim : tudo;
   add({
@@ -209,7 +217,8 @@ export function linhasDaConta(modelo: Modelo, sim: Simulacao): { conta: LinhaCon
     id: "lance",
     editor: "lance",
     grupo: "compra",
-    rotulo: "Lance",
+    // na venda direta não há lance: é o preço pedido (ou o que a pessoa digitou para comparar)
+    rotulo: semDisputa(e) ? "Preço" : "Lance",
     formula: fin ? `entrada ${moeda(fin.entrada)} + ${fin.tipo === "fonte" ? "parcelado" : "financiado"} ${moeda(fin.financiado)}` : "pago à vista",
     valor: -sim.lance,
     desligavel: null,
@@ -233,7 +242,7 @@ export function linhasDaConta(modelo: Modelo, sim: Simulacao): { conta: LinhaCon
     editor: "comissao",
     grupo: "compra",
     rotulo: "Comissão do leiloeiro",
-    formula: p.comissaoPct === 0 ? "sem leiloeiro nesta modalidade" : `${pct(p.comissaoPct)} do lance`,
+    formula: p.comissaoValor !== null ? informado : p.comissaoPct === 0 ? "sem leiloeiro nesta modalidade" : `${pct(p.comissaoPct)} do lance`,
     valor: -tudo.comissao,
   });
   const baseI = baseItbi(modelo, p, sim.lance);
@@ -243,7 +252,9 @@ export function linhasDaConta(modelo: Modelo, sim: Simulacao): { conta: LinhaCon
     grupo: "compra",
     rotulo: "ITBI",
     formula:
-      p.itbiBase === "lance" || baseI === sim.lance
+      p.itbiValor !== null
+        ? `${informado} (a guia da prefeitura)`
+        : p.itbiBase === "lance" || baseI === sim.lance
         ? `${pct(p.itbiPct)} do lance`
         : `${pct(p.itbiPct)} ${p.itbiBase === "avaliacao" ? "da avaliação" : "da avaliação (maior que o lance)"} (${moeda(baseI)})`,
     valor: -tudo.itbi,
@@ -253,10 +264,17 @@ export function linhasDaConta(modelo: Modelo, sim: Simulacao): { conta: LinhaCon
     editor: "registro",
     grupo: "compra",
     rotulo: "Escritura e registro",
-    formula: `maior entre ${pct(p.registroPct)} do lance e ${moeda(p.registroMin)}`,
+    formula: p.registroValor !== null ? `${informado} (orçamento do cartório)` : `maior entre ${pct(p.registroPct)} do lance e ${moeda(p.registroMin)}`,
     valor: -tudo.registro,
   });
-  add({ id: "reserva", editor: "reserva", grupo: "compra", rotulo: "Reserva para imprevistos", formula: `${pct(p.reservaPct)} do lance`, valor: -tudo.reserva });
+  add({
+    id: "reserva",
+    editor: "reserva",
+    grupo: "compra",
+    rotulo: "Reserva para imprevistos",
+    formula: p.reservaValor !== null ? informado : `${pct(p.reservaPct)} do lance`,
+    valor: -tudo.reserva,
+  });
 
   // --- Regularização e reforma
   if (mostraDesocupacao(modelo) || !ligada(p, "desocupacao")) {

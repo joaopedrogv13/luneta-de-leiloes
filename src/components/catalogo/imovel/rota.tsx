@@ -2,28 +2,19 @@ import "server-only";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { cache } from "react";
 import { SITE } from "@/content/site";
 import { local, moeda, normalizar, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
-import { paginaImovel } from "@/lib/catalogo/servidor";
 import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
+import { carregarImovel, garantirImovel, lerId } from "./carregar";
 import { fraseDesagio } from "./formato";
 import { PaginaImovel } from "./PaginaImovel";
 import { CHAVE_RESUMO_LATERAL, RECOLHIDO } from "./preferencias";
 
 type Parametros = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-/** O mesmo carregamento para os metadados e para a página (uma leitura por requisição). */
-const carregar = cache((conjunto: Conjunto, id: string, plano: Plano) => paginaImovel(conjunto, id, plano));
-
-function lerId(bruto: string) {
-  try {
-    return decodeURIComponent(bruto);
-  } catch {
-    return bruto;
-  }
-}
+/** O mesmo carregamento para o layout, os metadados e a página (uma leitura por requisição). */
+const carregar = carregarImovel;
 
 async function lerEntrada({ params, searchParams }: Parametros) {
   const [{ id }, sp] = await Promise.all([params, searchParams]);
@@ -60,21 +51,7 @@ export async function metadadosImovel(conjunto: Conjunto, entrada: Parametros): 
   };
 }
 
-/**
- * Para o layout da rota: id inexistente dá 404 ANTES do esqueleto de carregamento (loading.tsx) começar a ser
- * enviado; depois disso o Next já mandou o status 200. Falha ao ler os dados não decide nada aqui: a página
- * tenta de novo e mostra o erro dela (error.tsx, com "Tentar de novo").
- */
-export async function garantirImovel(conjunto: Conjunto, params: Promise<{ id: string }>) {
-  const { id } = await params;
-  let existe = true;
-  try {
-    existe = (await carregar(conjunto, lerId(id), "luneta")) !== null;
-  } catch {
-    // a página mostra o erro
-  }
-  if (!existe) notFound();
-}
+export { garantirImovel };
 
 /** A página: id inexistente dá 404 (not-found.tsx da rota). */
 export async function renderizarImovel(conjunto: Conjunto, entrada: Parametros) {

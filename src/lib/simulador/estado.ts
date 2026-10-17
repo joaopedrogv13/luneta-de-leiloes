@@ -11,7 +11,8 @@
  *               // lucro em R$; as outras em fração (0.2 = 20%): no total, ao ano ou ao mês
  *     "celula": { "cenario": "conservador" | "base" | "otimista" | "personalizado", "meses": number },
  *               // o cenário e o prazo de venda do cartão "Seu lance máximo" e da célula escolhida na matriz
- *     "visao":  "teto" | "lucro",          // o que a matriz mostra
+ *     "visao":  "teto" | "lucro" | null,   // o que a matriz mostra; null = o padrão do imóvel (lance máximo;
+ *                                          // na venda direta, o lucro pelo preço pedido)
  *     "meuLance": number | null,           // lance escolhido pela pessoa; null = o lance mínimo atual
  *     "lanceDetalhe": "meu" | "teto",      // o Detalhe usa o lance da pessoa (ou o mínimo) ou o lance máximo
  *     "ajustes": {                         // só o que a pessoa trocou; o resto é o padrão (premissas.ts)
@@ -21,6 +22,7 @@
  *       "cenarioConservador", "cenarioBase", "cenarioOtimista", "corretagemPct", "irPct", "aplicacaoAA",
  *       "entradaPct", "jurosAA", "prazoFinanciamento", "segurosMensal", "parcelasEntradaPct", "parcelasN",
  *       "parcelasCorrecaoAA", "mesesCondominio", "mesesIptu", "mesesContas" (meses de cada custo mensal),
+ *       "comissaoValor", "itbiValor", "registroValor", "reservaValor", "corretagemValor" (R$ no lugar do %),
  *       // escolhas:
  *       "reformaNivel": "nenhuma" | "leve" | "media" | "pesada", "reformaModo": "m2" | "fixo",
  *       "itbiBase": "lance" | "avaliacao" | "maior", "baseVenda": "avaliacao" | "regiao",
@@ -48,7 +50,8 @@ export interface EstadoSimulador {
   ajustes: Ajustes;
   meta: Meta;
   celula: Celula;
-  visao: Visao;
+  /** o que a matriz mostra; null = o padrão do imóvel (resolvido em `completarModelo`) */
+  visao: Visao | null;
   /** lance escolhido pela pessoa; null = o lance mínimo atual */
   meuLance: number | null;
   lanceDetalhe: LanceDetalhe;
@@ -58,7 +61,7 @@ export const ESTADO_INICIAL: EstadoSimulador = {
   ajustes: {},
   meta: META_PADRAO,
   celula: { cenario: "base", meses: 12 },
-  visao: "teto",
+  visao: null,
   meuLance: null,
   lanceDetalhe: "meu",
 };
@@ -101,7 +104,7 @@ export function interpretarEstado(bruto: string | null, versao1 = false): Estado
       ajustes,
       meta: limparMeta(o.meta),
       celula: { cenario, meses },
-      visao: o.visao === "lucro" ? "lucro" : "teto",
+      visao: o.visao === "lucro" || o.visao === "teto" ? o.visao : null,
       meuLance,
       lanceDetalhe: o.lanceDetalhe === "teto" ? "teto" : "meu",
     };

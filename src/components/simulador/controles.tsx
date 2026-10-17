@@ -160,7 +160,7 @@ export function Chip({
       aria-label={ariaLabel}
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 text-[13.5px] leading-none font-medium whitespace-nowrap tabular-nums transition-[background-color,border-color,color,scale] duration-150 ease-luneta select-none active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none pointer-fine:min-h-9 pointer-fine:px-3 ${
+      className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-3.5 text-[13.5px] leading-none font-medium whitespace-nowrap tabular-nums transition-[background-color,border-color,color,scale] duration-150 ease-luneta select-none active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none pointer-fine:min-h-9 pointer-fine:min-w-0 pointer-fine:px-3 ${
         ativo ? "border-latao bg-latao/15 font-semibold text-luar" : "border-nevoa/30 text-luar hover:border-nevoa/65 hover:bg-nevoa/[0.07]"
       } ${className}`}
     >
@@ -172,7 +172,7 @@ export function Chip({
 }
 
 // ---------------------------------------------------------------------------
-// Botão de editar (lápis): discreto, aparece no hover no computador e fica sempre visível no toque
+// Botão de editar (lápis): discreto no computador (40%, acende no hover e no foco) e sempre inteiro no toque
 // ---------------------------------------------------------------------------
 
 export function BotaoEditar({
@@ -199,7 +199,9 @@ export function BotaoEditar({
       aria-haspopup="dialog"
       onClick={onClick}
       className={`group/lapis relative -my-2.5 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity duration-150 motion-reduce:transition-none pointer-fine:size-8 pointer-fine:my-0 ${
-        sempreVisivel ? "" : "pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100 pointer-fine:focus-visible:opacity-100"
+        // no computador fica à vista, discreto (40%), e acende ao passar o mouse na linha ou com o foco: um lápis
+        // invisível não é descoberto
+        sempreVisivel ? "" : "pointer-fine:opacity-40 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100 pointer-fine:focus-visible:opacity-100"
       } ${className}`}
     >
       <span
@@ -359,7 +361,8 @@ export function CampoNumero({
         }}
         onKeyDown={onKeyDown}
         style={inline ? { width: `${Math.max(larguraMin, exibido.length + 0.5)}ch` } : undefined}
-        className={`min-w-0 bg-transparent text-[15px] tabular-nums outline-none placeholder:text-nevoa/70 focus-visible:outline-none ${
+        // 16 px no toque: o Safari do iPhone amplia a página ao focar um campo com fonte menor (e não desfaz depois)
+        className={`min-w-0 bg-transparent text-base tabular-nums outline-none placeholder:text-nevoa/70 focus-visible:outline-none pointer-fine:text-[15px] ${
           inline ? "text-center font-semibold" : "w-full flex-1 text-right font-medium"
         }`}
       />
@@ -559,7 +562,7 @@ export function SeletorInline<T extends string>({
         value={valor}
         aria-label={ariaLabel}
         onChange={(e) => aoMudar(e.target.value as T)}
-        className="field-sizing-content h-11 cursor-pointer appearance-none rounded-full border border-latao/60 bg-latao/10 pr-8 pl-3 text-[15px] leading-none font-semibold text-latao-texto transition-colors hover:bg-latao/15 focus-visible:border-latao pointer-fine:h-9"
+        className="field-sizing-content h-11 cursor-pointer appearance-none rounded-full border border-latao/60 bg-latao/10 pr-8 pl-3 text-base leading-none font-semibold text-latao-texto transition-colors hover:bg-latao/15 focus-visible:border-latao pointer-fine:h-9 pointer-fine:text-[15px]"
       >
         {opcoes.map((o) => (
           <option key={o.valor} value={o.valor} className="bg-tinta text-luar">

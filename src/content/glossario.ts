@@ -59,6 +59,12 @@ export const GLOSSARIO = {
     naPratica: "Tende a ser mais rápida que a judicial. O antigo dono pode recomprar até o 2º leilão (direito de preferência), e o imóvel muitas vezes ainda está ocupado: a desocupação, se preciso, é pedida à Justiça depois.",
     base: "Lei 9.514/1997, arts. 26 e 27.",
   },
+  extrajudicial_venda_direta: {
+    titulo: "Execução extrajudicial (venda direta)",
+    oQueE: "O banco retomou o imóvel dado em garantia sem processo na Justiça (alienação fiduciária). Os leilões já terminaram sem vencedor e agora o banco vende direto, pelo preço anunciado.",
+    naPratica: "Na venda direta, a fase de leilão já acabou: não há leiloeiro (nem a comissão dele) e o antigo dono não tem mais o direito de preferência. O imóvel pode estar ocupado: a desocupação, se preciso, é pedida à Justiça depois.",
+    base: "Lei 9.514/1997, arts. 26 e 27.",
+  },
   // Praças
   praca_1: {
     titulo: "1ª praça (1º leilão)",

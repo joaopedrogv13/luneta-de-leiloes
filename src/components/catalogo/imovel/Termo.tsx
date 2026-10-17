@@ -79,7 +79,7 @@ function PainelTermo({ inicial, fechar }: { inicial: ChaveGlossario; fechar: () 
             <button
               type="button"
               onClick={() => ir(pilha.slice(0, -1))}
-              className="-mt-1 -ml-1 inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-full px-1 text-[12.5px] font-medium text-latao-texto hover:text-luar"
+              className="-mt-1 -ml-1 inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full px-1 text-[12.5px] font-medium text-latao-texto hover:text-luar pointer-fine:min-h-8"
             >
               <IconeVoltar tamanho={14} />
               {anterior.titulo}
@@ -126,7 +126,7 @@ function PainelTermo({ inicial, fechar }: { inicial: ChaveGlossario; fechar: () 
               key={k}
               type="button"
               onClick={() => ir([...pilha, k])}
-              className="inline-flex min-h-8 cursor-pointer items-center rounded-full border border-nevoa/30 px-3 text-[12.5px] font-medium text-luar transition-colors hover:border-latao hover:bg-latao/10"
+              className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-nevoa/30 px-3 text-[12.5px] font-medium text-luar transition-colors hover:border-latao hover:bg-latao/10 pointer-fine:min-h-8"
             >
               {GLOSSARIO[k].titulo}
             </button>

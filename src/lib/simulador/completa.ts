@@ -11,8 +11,9 @@
  */
 import { cascata, lanceMaximo, matriz, simular, type CelulaMatriz, type Etapa } from "./calculo";
 import { adicionaveis, contarAjustes, linhasDaConta, type Adicionavel, type LinhaConta } from "./conta";
-import { prazoValido, type EstadoSimulador, type LanceDetalhe } from "./estado";
+import { prazoValido, type EstadoSimulador, type LanceDetalhe, type Visao } from "./estado";
 import { cenariosDaMatriz, colunasDaMatriz, montarModelo, type Modelo } from "./premissas";
+import { semDisputa } from "./textos";
 import type { ReferenciaM2 } from "../catalogo/tipos";
 import type { Celula, Cenario, EntradaSimulador, Meta, Simulacao } from "./tipos";
 
@@ -34,6 +35,13 @@ export interface ResultadoCompleto {
   entrada: EntradaSimulador;
   /** o estado já conferido (cenário personalizado só se definido, prazo dentro da faixa) */
   estado: EstadoSimulador;
+  /**
+   * venda direta: preço fixo, sem disputa. A resposta deixa de ser o lance máximo e passa a ser o lucro pelo preço
+   * pedido, com a margem de segurança (`margem`); a matriz abre no lucro.
+   */
+  semDisputa: boolean;
+  /** o que a matriz mostra (a escolha da pessoa, ou o padrão do imóvel: lance máximo; na venda direta, o lucro) */
+  visao: Visao;
   modelo: Modelo;
   meta: Meta;
   celula: Celula;
@@ -48,6 +56,11 @@ export interface ResultadoCompleto {
   teto: number | null;
   /** simulação com o lance mínimo atual, no cenário e prazo escolhidos */
   comLanceMinimo: Simulacao | null;
+  /**
+   * venda direta: a margem de segurança pelo preço pedido no cenário e prazo escolhidos (o custo imprevisto que
+   * ainda cabe mantendo a meta; null: nem sem imprevisto a meta é atingida). Fora da venda direta, sempre null.
+   */
+  margem: number | null;
   /** o lance da pessoa (ou o mínimo) */
   meuLance: number;
   /** a análise aponta dívidas e a pessoa ainda não disse quanto são: os números saem "sem as dívidas" */
@@ -82,7 +95,8 @@ export function completarModelo(modelo: Modelo, estadoBruto: EstadoSimulador): R
   const meuLance = estado.meuLance ?? entrada.lance;
   const colunas = colunasDaMatriz(p.prazos, celula.meses);
   const linhas = cenariosDaMatriz(p);
-  const tabela = matriz(modelo, meta, meuLance, colunas, linhas);
+  const fixo = semDisputa(entrada);
+  const tabela = matriz(modelo, meta, meuLance, colunas, linhas, fixo ? entrada.lance : null);
   const cel = tabela?.[linhas.indexOf(celula.cenario)]?.[colunas.indexOf(celula.meses)] ?? null;
   const teto = cel ? cel.teto : null;
   const comLanceMinimo = simular(modelo, entrada.lance, celula.cenario, celula.meses);
@@ -90,17 +104,21 @@ export function completarModelo(modelo: Modelo, estadoBruto: EstadoSimulador): R
 
   let detalhe: Detalhamento | null = null;
   if (cel) {
-    const base: LanceDetalhe = estado.lanceDetalhe === "teto" && teto !== null ? "teto" : "meu";
+    // na venda direta não há "lance máximo" para usar na conta: vale o preço (o pedido, ou o que a pessoa digitou)
+    const base: LanceDetalhe = !fixo && estado.lanceDetalhe === "teto" && teto !== null ? "teto" : "meu";
     const lance = base === "teto" ? teto! : meuLance;
     const sim = base === "teto" ? simular(modelo, lance, celula.cenario, celula.meses)! : cel.comMeuLance;
     const { conta, retiradas } = linhasDaConta(modelo, sim);
-    const qualLance = Math.round(sim.lance) === Math.round(entrada.lance) ? "minimo" : teto !== null && Math.round(sim.lance) === Math.round(teto) ? "teto" : "meu";
-    detalhe = { base, qualLance, sim, conta, retiradas, etapas: cascata(sim, modelo.perfil.rotuloReforma) };
+    const qualLance =
+      Math.round(sim.lance) === Math.round(entrada.lance) ? "minimo" : !fixo && teto !== null && Math.round(sim.lance) === Math.round(teto) ? "teto" : "meu";
+    detalhe = { base, qualLance, sim, conta, retiradas, etapas: cascata(sim, modelo.perfil.rotuloReforma, fixo ? "Preço" : "Lance") };
   }
 
   return {
     entrada,
     estado,
+    semDisputa: fixo,
+    visao: estado.visao ?? (fixo ? "lucro" : "teto"),
     modelo,
     meta,
     celula,
@@ -110,6 +128,7 @@ export function completarModelo(modelo: Modelo, estadoBruto: EstadoSimulador): R
     tabela,
     teto,
     comLanceMinimo,
+    margem: cel?.margem ?? null,
     meuLance,
     semDividas,
     detalhe,

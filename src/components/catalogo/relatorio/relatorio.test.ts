@@ -158,7 +158,7 @@ test("capa: características numa linha, preços e detalhes, com 'não informado
     c.precos.map((p) => [p.rotulo, p.valor, p.nota ?? null]),
     [
       ["Avaliação", "R$ 251.000", null],
-      ["Lance mínimo", "R$ 25.100", "R$ 268/m²"],
+      ["Preço de venda", "R$ 25.100", "R$ 268/m²"],
       ["Deságio", "90%", "abaixo da avaliação"],
       ["Praça", "Praça única", "data não informada pela fonte"],
     ],
@@ -226,7 +226,7 @@ test("premissas: no padrão não há coluna de padrão; o que mudou mostra o pad
   assert.ok(Math.abs(soma - r.detalhe!.sim.lucro) < 1e-6);
 });
 
-test("região: níveis da comparação e a frase com a média mais local de leilões (5 ou mais imóveis)", () => {
+test("região: níveis da comparação e a frase com a referência principal (ITBI com compras suficientes, senão leilões)", () => {
   assert.deepEqual(compararRel(70, 100)?.nivel, 0);
   assert.deepEqual(compararRel(71, 100)?.nivel, 1);
   assert.deepEqual(compararRel(91, 100)?.nivel, 2);
@@ -255,9 +255,17 @@ test("região: níveis da comparação e a frase com a média mais local de leil
   );
   assert.equal(r.itbi.length, 1);
   assert.equal(r.itbi[0]!.periodo, "set/2025 a ago/2026");
-  // a rua tem só 3 imóveis: a frase usa o bairro
-  assert.equal(r.frase, "A avaliação deste imóvel (R$ 2.682/m²) está 12% abaixo da média do bairro (R$ 3.050/m²).");
-  assert.equal(r.nivel, 1);
+  // o bairro tem 120 compras registradas (ITBI): a frase usa o preço pago, e os leilões vêm em segunda linha
+  assert.equal(r.frase, "A avaliação deste imóvel (R$ 2.682/m²) está 33% abaixo do preço médio pago no bairro (R$ 4.000/m²).");
+  assert.equal(r.nivel, 0);
+  assert.equal(r.fontePrincipal, "itbi");
+  // a rua tem só 3 imóveis em leilão: a segunda linha usa o bairro
+  assert.equal(r.fraseLeiloes, "Entre os imóveis em leilão, a avaliação deste imóvel está 12% abaixo da média de avaliação do bairro (R$ 3.050/m², 9 imóveis).");
+  // sem o ITBI: a frase volta à média de leilões mais local com 5 ou mais imóveis
+  const semItbi = regiaoRel(casa, refs.slice(0, 3));
+  assert.equal(semItbi.frase, "A avaliação deste imóvel (R$ 2.682/m²) está 12% abaixo da média do bairro (R$ 3.050/m²).");
+  assert.equal(semItbi.nivel, 1);
+  assert.equal(semItbi.fraseLeiloes, null);
 
   // a tabela dos leilões tem sempre os quatro recortes; o estado sem média diz por quê
   assert.deepEqual(

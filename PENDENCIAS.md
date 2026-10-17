@@ -1,7 +1,7 @@
 # Luneta de Leilões · onde estamos e pendências
 
 Este é o arquivo central do projeto: **onde estamos, que dados temos, o que falta e o próximo passo**. Atualizado a cada
-entrega (última atualização: 14/10/2026, correções da revisão do catálogo).
+entrega (última atualização: 17/10/2026, correções integradas da rodada 3: venda direta, região única com ITBI, PDF).
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
@@ -282,6 +282,11 @@ o extrajudicial dos bancos. Ordem proposta:
   Caminho pronto: baixar as fichas de uma rede no Brasil (`base/fontes/caixa/baixar-fichas.ts`) e aplicar com
   `npm run base:fichas -- --arquivo fichas.json`; a exportação leva matrícula, comarca, ofício, inscrição, averbação e a
   data ao site. **Decisão do dono:** de onde rodar as fichas (o PC dele, uma VPS no Brasil).
+  Atalho possível (não feito: mexe em `base/` e nos dados, fora da rodada de correções do site): aceitar um
+  `base/fontes/caixa/fichas-manuais.json` no mesmo formato (`{ lidas_em, fichas: { id13: FichaCaixa } }`), aplicado por
+  `aplicar-fichas.ts` com a origem "conferida no site da Caixa em dd/mm", e preencher o 1444419640129 com os valores do
+  ponto 1 (matrícula 868, São Gonçalo-RJ, 6º ofício, inscrição 50334, averbado). Hoje a página mostra "Na ficha da Caixa ·
+  ainda não lida pela Luneta" com o link (nunca "não informado").
 - **Tendência:** série IVG-R do Banco Central (SGS 21340, JSON), só nacional.
 - **FipeZAP** (56 cidades, mensal): consulta grátis, mas sem termos de uso comercial encontrados. **Pedir autorização à
   Fipe** antes de exibir; até lá, no máximo um link para o informe.
@@ -373,14 +378,15 @@ Pendências do relatório:
   se sobrepõem); a dica da barra pede para desmarcar.
 - [ ] Foto da Caixa na capa: conferir no navegador (daqui a rede não chega à Caixa; a da Leilões Judiciais carrega). Sem
   foto, a capa fica sem ela.
-- [ ] Depois de integrar com a página do imóvel nova: a régua "muito abaixo… muito acima" do relatório é a mesma da página
-  (`compararComMedia`), escrita à parte no relatório para não mexer nos arquivos da página; dá para usar uma só. O mesmo
-  vale para as linhas "sem média" da região (motivos iguais aos de `linhasLeiloes` da página) e para o recorte do
-  simulador (`entradaDoImovel` no relatório e o objeto montado em `PaginaImovel.tsx`).
+- [x] A referência da frase da região é uma só (`src/lib/catalogo/referencia.ts`, `referenciaPrincipal`) na página, no
+  simulador e no relatório (17/10/2026).
+- [ ] Técnico: a régua "muito abaixo… muito acima" do relatório (`compararRel`) repete a da página (`compararComMedia`), e
+  as linhas "sem média" repetem os motivos de `linhasLeiloes`; dá para usar uma só. O mesmo para o recorte do simulador
+  (`entradaDoImovel` no relatório e o objeto montado em `PaginaImovel.tsx`).
 - [ ] Antes de integrar com a frente de dados, a linha "Rua" do relatório sai sempre "menos de 3 imóveis…": este branch
   ainda não calcula a referência por rua. Com a frente de dados junta, a linha passa a ter a média de verdade.
-- [ ] O botão "Exportar PDF" do simulador leva o `?plano=lente` só no clique normal: aberto com o botão do meio ou "abrir
-  em nova aba", o relatório sai no plano Luneta (arquivo do simulador, fora da frente do relatório).
+- [x] O botão "Exportar PDF" leva o `?plano=lente` no próprio link (botão do meio, "abrir em nova aba" e "copiar link"
+  também), 17/10/2026.
 
 Revisão do relatório (17/10/2026):
 - **capa que passava da página:** uma margem de 24 px só da tela entrava na impressão e a capa medida não tinha folga;
@@ -432,6 +438,54 @@ Rodada 3 (17/10/2026), página do imóvel:
 - [ ] Técnico (dados): quando o bairro tem exatamente os mesmos imóveis da rua, o servidor não repete o recorte e a
   tabela mostra "sem dados suficientes" no bairro (não dá para distinguir de "poucos imóveis"). Uma marca no recorte
   ("igual ao da rua") resolveria.
+
+Rodada 3, correções integradas (17/10/2026), depois da revisão dos 16 pontos, do celular e dos bugs:
+- **Venda direta (57% da base, o caso do dono):** o simulador não fala mais em lance. Título "Vale a pena comprar por
+  R$ 25.100?"; o número grande é o **lucro pelo preço pedido** ("Lucro de R$ 134.057 em 12 meses · 174% ao ano"), com
+  "Atinge a sua meta" e a **margem de segurança**: quanto de custo imprevisto (reforma maior, dívida, outro gasto) ainda
+  cabe mantendo a meta (R$ 98.857 no caso do dono; conta nova em `margemDeCusto`, busca binária como o lance máximo). A
+  tabela abre em "Lucro pelo preço" e a outra visão virou "Margem para imprevistos"; o Detalhe diz "Com o preço de" e a
+  linha "Preço"; "Lance mínimo" vira "Preço pedido" no simulador e "Preço de venda" no resumo, na barra do celular, na
+  pílula e na capa do PDF; "Simular lance" vira "Simular compra"; o PDF abre pelo lucro e pela margem. Leilão, venda
+  online e licitação seguem como antes (há disputa). A escolha da visão da tabela agora é guardada só quando a pessoa
+  troca (`visao: null` = o padrão do imóvel).
+- **Venda direta no resumo:** "Leiloeiro: não há (venda direta)", "Processo: não se aplica (venda extrajudicial)" e um (i)
+  próprio na natureza ("Execução extrajudicial (venda direta)": a fase de leilão já acabou, sem leiloeiro nem direito de
+  preferência).
+- **Região: uma referência só.** A frase, a "Região" do simulador e a seção 05 do PDF usam a mesma referência e o mesmo
+  número (a média): primeiro o **preço pago (ITBI)** no recorte mais local com compras suficientes (rua e bairro ≥ 10,
+  cidade ≥ 30); sem ITBI comparável (apartamentos de SP e Fortaleza, cidades sem o dado), a média de avaliação dos
+  leilões mais local com 5 ou mais imóveis. Com o ITBI na frase, os leilões vêm numa segunda linha ("Entre os imóveis em
+  leilão, a avaliação deste está 33% abaixo da média da cidade"), e a tabela dele vem primeiro. Sacomã: "12% abaixo do
+  preço médio pago no bairro" (era "33% abaixo, muito abaixo", pela média de 22 casas em leilão); Mooca: 24% acima;
+  Ramos (Rio): ITBI do bairro (60 compras), não a rua com 5. O simulador escreve de onde vem o número ("preço médio pago
+  em 10 compras registradas na prefeitura (ITBI) no bairro Sacoma" ou "avaliação média de 813 casas em leilão na cidade"),
+  e o chip mostra o recorte ("R$ 3.960/m² · bairro, ITBI").
+- **Custos em reais:** ITBI, escritura e registro, comissão, reserva e corretagem têm "Como informar: em % | valor em R$"
+  (a guia do ITBI, o orçamento do cartório). O valor substitui a fórmula e os que abatem o IR continuam abatendo.
+- **Textos:** a leitura da célula escolhida na tabela mostra só os números (o cartão já disse a frase); "já sem o IR" vira
+  "sem descontar o IR (você tirou da conta)" ou "com isenção do IR" conforme a premissa (tela e PDF); o lucro anualizado
+  explica "média: lucro ÷ 18 × 12 · 91,7% ao ano em juros compostos"; personalizado em R$ sem repetir o valor.
+- **Celular e toque:** campos do simulador com 16 px no toque (o iPhone não amplia ao focar); % dos cenários com área de
+  toque de 44 px; chips de prazo 44×44; "Veja também" e "voltar" do glossário, o link do leiloeiro e o chip travado do
+  Lente com 44 px; barra do pé com o deságio na linha do rótulo (nunca sob o botão, nem com R$ 1.901.112 em 360 px);
+  "Lucro anualizado" de 7 dígitos cabe no cartão de 360 px; "no total / ao ano / ao mês" numa linha no tablet; a dica
+  da tabela não cria rolagem para o lado numa janela estreita com mouse; lápis do Detalhe à vista no computador (40%,
+  acende no hover).
+- **Lente:** "Conhecer a Luneta" dentro do pop-up das dívidas fecha o pop-up e abre o convite por cima (antes ficava
+  atrás e um Esc fechava os dois); o PDF no Lente diz "dívidas não analisadas no plano Lente: confira no edital" (dizia
+  "nenhuma apontada").
+- **Relatório:** no tema escuro, o PDF não sai mais com moldura preta nas margens; no celular, a barra fixa é uma linha só
+  ("Voltar ao imóvel" e "Salvar PDF", 65 px em 360) e "Como salvar o PDF" rola com a página; o /relatorio não baixa mais
+  o JavaScript da página do imóvel (582 KB contra 843 KB: o layout da rota importava a página inteira; o carregamento foi
+  para `imovel/carregar.ts` e o aviso da classificação para `src/content/avisos.ts`).
+- [ ] **Decisão sua:** a amostra mínima do ITBI para valer como referência (hoje rua e bairro 10 compras, cidade 30).
+- [ ] **Decisão sua:** na venda direta, o texto da margem de segurança ("cabem mais R$ X de custos imprevistos e você
+  ainda consegue render 20% ao ano") e se o preço pode ser trocado "para comparar" (hoje pode, com aviso).
+- [ ] Matrícula 868 do caso do dono: depende das fichas da Caixa (ver "Matrícula da Caixa" acima; o atalho com
+  `fichas-manuais.json` mexe em `base/`).
+- [ ] O JavaScript da página do imóvel subiu ~35 KB sem compressão (venda direta, custos em reais, margem). Dá para
+  carregar o simulador com `next/dynamic` perto da seção (ele fica abaixo da dobra).
 
 ### Ler cada leilão com IA: é viável?
 

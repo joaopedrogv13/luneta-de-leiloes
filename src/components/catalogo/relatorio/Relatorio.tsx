@@ -1,5 +1,5 @@
 import { conteudoTag, origemTag, partesEvidencia, SEVERIDADE_ORDEM } from "@/components/catalogo/tags/conteudo";
-import { AVISO_CLASSIFICACAO } from "@/components/catalogo/imovel/SecaoRiscos";
+import { AVISO_CLASSIFICACAO } from "@/content/avisos";
 import { SITE } from "@/content/site";
 import { MODALIDADE_ROTULO, numero, SELO_ROTULO, SEVERIDADE_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
@@ -68,7 +68,7 @@ export function Relatorio({ conjunto, plano, pagina, imprimir }: { conjunto: Con
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <BarraRelatorio voltar={rotaImovel(conjunto, i.id, plano)} imprimir={imprimir} />
 
-      <ProvedorRelatorio entrada={entrada} referencias={refs}>
+      <ProvedorRelatorio entrada={entrada} referencias={refs} plano={plano}>
         {/* sem margem em linha: o espaço acima da folha é só da tela (na impressão, 24 px a mais empurravam a capa) */}
         <main id="conteudo" data-relatorio="" className={`${s.folhas} ${s.documento}`}>
           {/* ------------------------------------------------------------ folha 1: capa e resultado */}
@@ -358,8 +358,11 @@ function Regiao({ pagina }: { pagina: PaginaImovel }) {
             : `Ainda não há imóveis do mesmo tipo suficientes em leilão na base para comparar (pelo menos ${MINIMO_RECORTE.rua} na rua, ${MINIMO_RECORTE.bairro} no bairro ou na cidade, ou ${MINIMO_RECORTE.uf} no estado).`}
         </p>
       )}
+      {r.fraseLeiloes && <p className={s.p}>{r.fraseLeiloes}</p>}
+      {/* a tabela da referência da frase vem primeiro */}
+      {r.fontePrincipal === "itbi" && <TabelaRegiao linhas={r.itbi} itbi area={i.area} />}
       {temLeiloes && <TabelaRegiao recortes={r.recortes} itbi={false} area={i.area} />}
-      {r.itbi.length > 0 && <TabelaRegiao linhas={r.itbi} itbi area={i.area} />}
+      {r.fontePrincipal !== "itbi" && r.itbi.length > 0 && <TabelaRegiao linhas={r.itbi} itbi area={i.area} />}
       {(temLeiloes || r.itbi.length > 0) && (
         <p className={s.pequeno}>
           Níveis: muito abaixo (30% ou mais abaixo da média), abaixo (10% a 29%), na média (menos de 10% de diferença), acima e muito acima. Para ter média, o

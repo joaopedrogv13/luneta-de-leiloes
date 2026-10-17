@@ -1,15 +1,16 @@
 "use client";
 
 import { useId, useMemo, useState, type ReactNode } from "react";
-import { MODALIDADE_ROTULO, TIPO_PLURAL } from "@/lib/catalogo/rotulos";
+import { descricaoReferencia, mediaDe } from "@/components/catalogo/imovel/formato";
+import { MODALIDADE_ROTULO } from "@/lib/catalogo/rotulos";
 import type { Plano, ReferenciaM2 } from "@/lib/catalogo/tipos";
-import { custoReforma, iptuMensal } from "@/lib/simulador/calculo";
+import { baseItbi, custoReforma, iptuMensal } from "@/lib/simulador/calculo";
 import { completarModelo, type ResultadoCompleto } from "@/lib/simulador/completa";
 import { CHAVES_EDITOR, confirmaDado, DESLIGAVEL, editorAjustado, type EditorLinha } from "@/lib/simulador/conta";
 import { semAjuste, type EstadoSimulador } from "@/lib/simulador/estado";
 import { area, capitalizar, juntar, meses, moeda, moedaCurta, moedaMes, moedaSinal, pct, porArea } from "@/lib/simulador/formato";
 import { LIMITES, montarModelo, PADRAO, reformaPadrao, ROTULO_NIVEL, RE_ID_EXTRA, type Modelo } from "@/lib/simulador/premissas";
-import { CENARIO_ROTULO } from "@/lib/simulador/textos";
+import { CENARIO_ROTULO, palavrasPreco } from "@/lib/simulador/textos";
 import {
   NIVEIS_REFORMA,
   type Ajustes,
@@ -170,8 +171,17 @@ export function EditorCusto({
   // custo novo ou criado: precisa de nome e valor (apagar o nome de um custo criado não pode excluí-lo calado;
   // para isso há "Excluir este custo")
   const novoValido = (editor !== "novo" && editor !== "extra") || (extra.nome.trim().length > 0 && extra.valor > 0);
+  const fixo = previa.semDisputa;
   const titulo =
-    editor === "reforma" ? modelo.perfil.rotuloReforma : editor === "iptu" ? modelo.perfil.rotuloImposto : editor === "extra" ? extra.nome || TITULO.extra : TITULO[editor];
+    editor === "reforma"
+      ? modelo.perfil.rotuloReforma
+      : editor === "iptu"
+        ? modelo.perfil.rotuloImposto
+        : editor === "extra"
+          ? extra.nome || TITULO.extra
+          : editor === "lance" && fixo
+            ? "Preço e pagamento"
+            : TITULO[editor];
 
   const antes = atual.detalhe?.sim ?? null;
   const depois = previa.detalhe?.sim ?? null;
@@ -190,14 +200,26 @@ export function EditorCusto({
                 <span className="text-nevoa">Lucro total: </span>
                 <Mudanca antes={antes.lucro} depois={depois.lucro} />
               </span>
-              <span>
-                <span className="text-nevoa">Seu lance máximo: </span>
-                {atual.teto === null && previa.teto === null ? (
-                  <span className="font-semibold">nenhum</span>
-                ) : (
-                  <Mudanca antes={atual.teto} depois={previa.teto} />
-                )}
-              </span>
+              {fixo ? (
+                // venda direta: o preço não sobe; o que muda é a folga para imprevistos
+                <span>
+                  <span className="text-nevoa">Margem de segurança: </span>
+                  {atual.margem === null && previa.margem === null ? (
+                    <span className="font-semibold">nenhuma</span>
+                  ) : (
+                    <Mudanca antes={atual.margem} depois={previa.margem} vazio="nenhuma" />
+                  )}
+                </span>
+              ) : (
+                <span>
+                  <span className="text-nevoa">Seu lance máximo: </span>
+                  {atual.teto === null && previa.teto === null ? (
+                    <span className="font-semibold">nenhum</span>
+                  ) : (
+                    <Mudanca antes={atual.teto} depois={previa.teto} />
+                  )}
+                </span>
+              )}
             </p>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -250,31 +272,55 @@ export function EditorCusto({
         <div className={naConta ? "" : "pointer-events-none opacity-50"} inert={!naConta}>
           {editor === "venda" && <EdVenda m={modelo} r={previa} rascunho={rascunho} definir={definir} tirar={tirar} mudarEstado={mudarEstado} />}
           {editor === "corretagem" && (
-            <CampoPct
-              k="corretagemPct"
+            <PctOuValor
               m={modelo}
-              rotulo="Corretagem na venda"
+              kValor="corretagemValor"
+              valorAtual={modelo.premissas.corretagemPct * (previa.detalhe?.sim.venda ?? 0)}
+              nome="sim-ed-corretagem-modo"
+              legenda="Como informar a corretagem"
+              rotuloValor="Corretagem, em reais"
+              ajudaValor="O valor combinado com a imobiliária. Vale para todos os cenários de venda e continua abatendo do imposto de renda."
               definir={definir}
               tirar={tirar}
-              deslizante={[0, 8, 0.5]}
-              ajuda="Comissão da imobiliária que vende o imóvel (em geral 5% a 6% do valor de venda). Zere se for vender por conta própria."
-            />
+            >
+              <CampoPct
+                k="corretagemPct"
+                m={modelo}
+                rotulo="Corretagem na venda"
+                definir={definir}
+                tirar={tirar}
+                deslizante={[0, 8, 0.5]}
+                ajuda="Comissão da imobiliária que vende o imóvel (em geral 5% a 6% do valor de venda). Zere se for vender por conta própria."
+              />
+            </PctOuValor>
           )}
           {editor === "ir" && <EdIr m={modelo} r={previa} definir={definir} tirar={tirar} />}
           {editor === "lance" && <EdLance m={modelo} r={previa} rascunho={rascunho} definir={definir} tirar={tirar} mudarEstado={mudarEstado} />}
-          {editor === "comissao" && <EdComissao m={modelo} definir={definir} tirar={tirar} />}
-          {editor === "itbi" && <EdItbi m={modelo} definir={definir} tirar={tirar} />}
-          {editor === "registro" && <EdRegistro m={modelo} definir={definir} tirar={tirar} />}
+          {editor === "comissao" && <EdComissao m={modelo} r={previa} definir={definir} tirar={tirar} />}
+          {editor === "itbi" && <EdItbi m={modelo} r={previa} definir={definir} tirar={tirar} />}
+          {editor === "registro" && <EdRegistro m={modelo} r={previa} definir={definir} tirar={tirar} />}
           {editor === "reserva" && (
-            <CampoPct
-              k="reservaPct"
+            <PctOuValor
               m={modelo}
-              rotulo="Reserva, em % do lance"
+              kValor="reservaValor"
+              valorAtual={modelo.premissas.reservaPct * lanceDaConta(modelo, previa)}
+              nome="sim-ed-reserva-modo"
+              legenda="Como informar a reserva"
+              rotuloValor="Reserva, em reais"
+              ajudaValor="Uma folga fixa para o que só aparece depois da compra (laudos, taxas, reparos escondidos)."
               definir={definir}
               tirar={tirar}
-              deslizante={[0, 15, 1]}
-              ajuda="Folga para o que só aparece depois da compra: laudos, taxas, reparos escondidos. Padrão: 5% do lance."
-            />
+            >
+              <CampoPct
+                k="reservaPct"
+                m={modelo}
+                rotulo="Reserva, em % do lance"
+                definir={definir}
+                tirar={tirar}
+                deslizante={[0, 15, 1]}
+                ajuda="Folga para o que só aparece depois da compra: laudos, taxas, reparos escondidos. Padrão: 5% do lance."
+              />
+            </PctOuValor>
           )}
           {editor === "reforma" && <EdReforma m={modelo} definir={definir} tirar={tirar} mudarEstado={mudarEstado} />}
           {editor === "condominio" && <EdCondominio m={modelo} r={previa} definir={definir} tirar={tirar} mudarEstado={mudarEstado} />}
@@ -331,20 +377,20 @@ export function EditorCusto({
 const BOTAO_LINK =
   "inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-2 text-[13px] font-medium text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-9";
 
-function Mudanca({ antes, depois }: { antes: number | null; depois: number | null }) {
+function Mudanca({ antes, depois, vazio = "nenhum" }: { antes: number | null; depois: number | null; vazio?: string }) {
   const a = antes === null ? null : Math.round(antes);
   const b = depois === null ? null : Math.round(depois);
-  if (a === b) return <span className="font-semibold tabular-nums">{b === null ? "nenhum" : moedaSinal(b)}</span>;
+  if (a === b) return <span className="font-semibold tabular-nums">{b === null ? vazio : moedaSinal(b)}</span>;
   const diff = a !== null && b !== null ? b - a : null;
   return (
     <span className="tabular-nums">
-      <span className="text-nevoa line-through decoration-nevoa/60">{a === null ? "nenhum" : moedaSinal(a)}</span>
+      <span className="text-nevoa line-through decoration-nevoa/60">{a === null ? vazio : moedaSinal(a)}</span>
       <span aria-hidden="true" className="text-nevoa">
         {" "}
         →{" "}
       </span>
       <span className="sr-only"> passa a </span>
-      <strong className="font-semibold">{b === null ? "nenhum" : moedaSinal(b)}</strong>
+      <strong className="font-semibold">{b === null ? vazio : moedaSinal(b)}</strong>
       {diff !== null && <span className={`ml-1 text-[12px] ${diff < 0 ? "text-grave-texto" : "text-pos"}`}>({moedaSinal(diff, true)})</span>}
     </span>
   );
@@ -546,6 +592,68 @@ function Meses({ k, m, r, definir, tirar }: { k: "mesesCondominio" | "mesesIptu"
   );
 }
 
+/** O lance (ou preço) da conta do Detalhe: o valor dos custos em % que a pessoa troca por reais parte dele. */
+function lanceDaConta(m: Modelo, r: ResultadoCompleto) {
+  return r.detalhe?.sim.lance ?? m.entrada.lance;
+}
+
+/**
+ * "Como informar: em % | valor em R$" de um custo: pela fórmula (o % de sempre) ou pelo valor que a pessoa já sabe
+ * (a guia do ITBI, o orçamento do cartório, o combinado com a imobiliária). Ao trocar para reais, o campo já vem
+ * com o valor de hoje; voltar ao % apaga o valor informado.
+ */
+function PctOuValor({
+  m,
+  kValor,
+  valorAtual,
+  nome,
+  legenda,
+  rotuloValor,
+  ajudaValor,
+  definir,
+  tirar,
+  children,
+}: {
+  m: Modelo;
+  kValor: "comissaoValor" | "itbiValor" | "registroValor" | "reservaValor" | "corretagemValor";
+  /** o valor de hoje pela fórmula (o ponto de partida em reais) */
+  valorAtual: number;
+  nome: string;
+  legenda: string;
+  rotuloValor: string;
+  ajudaValor: ReactNode;
+  definir: Definir;
+  tirar: Tirar;
+  /** os campos do modo % */
+  children: ReactNode;
+}) {
+  const emReais = m.premissas[kValor] !== null;
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <p className="text-[14px] font-semibold">Como informar</p>
+        <Segmentado<"pct" | "valor">
+          className="mt-2.5 sm:max-w-sm"
+          nome={nome}
+          legenda={legenda}
+          valor={emReais ? "valor" : "pct"}
+          tamanho="sm"
+          aoMudar={(v) => (v === "pct" ? tirar(kValor) : definir(kValor, Math.max(0, Math.round(valorAtual))))}
+          opcoes={[
+            { valor: "pct", rotulo: "Em %", detalhe: "estimativa" },
+            { valor: "valor", rotulo: "Valor em R$", detalhe: "se você já sabe" },
+          ]}
+        />
+      </div>
+      {emReais ? (
+        <CampoValor k={kValor} m={m} rotulo={rotuloValor} padraoTexto="em %" passo={100} definir={definir} tirar={tirar} ajuda={ajudaValor} />
+      ) : (
+        children
+      )}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Um editor por tipo
 // ---------------------------------------------------------------------------
@@ -587,7 +695,8 @@ function EdVenda({
   };
   const ref = m.referencia;
   const vendaM2 = p.valorVenda !== null && !p.areaEstimada && p.area > 0 ? p.valorVenda / p.area : null;
-  const medianaRef = ref?.avaliacaoM2?.mediana ?? null;
+  // a mesma referência e a mesma medida (a média) da seção "Preço do m² na região"
+  const mediaRef = ref ? mediaDe(ref) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -611,7 +720,7 @@ function EdVenda({
             titulo="Referência da região"
             detalhe={
               o.regiao
-                ? `${porArea(o.regiao.m2, e.tipo)} × ${area(o.regiao.area)} = ${moeda(o.regiao.valor)} (mediana de ${TIPO_PLURAL[e.tipo].toLowerCase()} em leilão em ${o.regiao.referencia.nome})`
+                ? `${porArea(o.regiao.m2, e.tipo)} × ${area(o.regiao.area)} = ${moeda(o.regiao.valor)} (${descricaoReferencia(o.regiao.referencia)})`
                 : o.regiaoSemArea
                   ? "informe a área abaixo para usar"
                   : "sem referência da região para este tipo"
@@ -642,9 +751,9 @@ function EdVenda({
         {vendaM2 !== null && (
           <p className="mt-2.5 text-[12.5px] leading-relaxed text-nevoa">
             Venda de 100% = <span className="font-semibold text-luar tabular-nums">{porArea(vendaM2, e.tipo)}</span>
-            {medianaRef !== null && ref
-              ? `. Em ${ref.nome}, a avaliação mediana de ${TIPO_PLURAL[e.tipo].toLowerCase()} em leilão é ${porArea(medianaRef, e.tipo)} (${ref.amostra} imóveis): ${
-                  Math.abs(vendaM2 / medianaRef - 1) < 0.03 ? "praticamente igual" : `${pct(Math.abs(vendaM2 / medianaRef - 1), 0)} ${vendaM2 > medianaRef ? "acima" : "abaixo"}`
+            {mediaRef !== null && ref
+              ? `. Referência da região, ${descricaoReferencia(ref)}: ${porArea(mediaRef, e.tipo)}, ${
+                  Math.abs(vendaM2 / mediaRef - 1) < 0.03 ? "praticamente igual" : `${pct(Math.abs(vendaM2 / mediaRef - 1), 0)} ${vendaM2 > mediaRef ? "acima" : "abaixo"}`
                 }.`
               : "."}
           </p>
@@ -833,7 +942,7 @@ function EdIr({ m, definir, tirar }: { m: Modelo; r: ResultadoCompleto; definir:
   );
 }
 
-function EdComissao({ m, definir, tirar }: { m: Modelo; definir: Definir; tirar: Tirar }) {
+function EdComissao({ m, r, definir, tirar }: { m: Modelo; r: ResultadoCompleto; definir: Definir; tirar: Tirar }) {
   const e = m.entrada;
   const modalidade = e.modalidadeFonte ?? MODALIDADE_ROTULO[e.modalidade];
   const ajuda =
@@ -842,59 +951,97 @@ function EdComissao({ m, definir, tirar }: { m: Modelo; definir: Definir; tirar:
       : e.modalidade === "leilao" || e.judicial
         ? "Leilão com leiloeiro (como o “Leilão SFI” da Caixa e os judiciais): em geral 5% do lance, pagos à parte. Confira no edital."
         : "A fonte não deixa claro se há leiloeiro: por segurança, contamos 5% do lance. Confira no edital.";
-  return <CampoPct k="comissaoPct" m={m} rotulo="Comissão, em % do lance" definir={definir} tirar={tirar} deslizante={[0, 10, 0.5]} ajuda={ajuda} />;
+  return (
+    <PctOuValor
+      m={m}
+      kValor="comissaoValor"
+      valorAtual={m.premissas.comissaoPct * lanceDaConta(m, r)}
+      nome="sim-ed-comissao-modo"
+      legenda="Como informar a comissão"
+      rotuloValor="Comissão, em reais"
+      ajudaValor="O valor que o edital ou o leiloeiro informa. Continua abatendo do imposto de renda."
+      definir={definir}
+      tirar={tirar}
+    >
+      <CampoPct k="comissaoPct" m={m} rotulo="Comissão, em % do lance" definir={definir} tirar={tirar} deslizante={[0, 10, 0.5]} ajuda={ajuda} />
+    </PctOuValor>
+  );
 }
 
-function EdItbi({ m, definir, tirar }: { m: Modelo; definir: Definir; tirar: Tirar }) {
+function EdItbi({ m, r, definir, tirar }: { m: Modelo; r: ResultadoCompleto; definir: Definir; tirar: Tirar }) {
   const p = m.premissas;
   const e = m.entrada;
   const temAv = e.avaliacao !== null && e.avaliacao > 0;
   return (
-    <div className="flex flex-col gap-5">
-      <CampoPct
-        k="itbiPct"
-        m={m}
-        rotulo="Alíquota"
-        definir={definir}
-        tirar={tirar}
-        deslizante={[0, 5, 0.5]}
-        ajuda={`Imposto da prefeitura na transferência. A alíquota (em geral 2% a 3%) varia por município: confira com a prefeitura de ${e.cidade}.`}
-      />
-      <div>
-        <p className="text-[14px] font-semibold">Sobre qual valor</p>
-        <Segmentado<"lance" | "avaliacao" | "maior">
-          className="mt-2.5"
-          nome="sim-ed-itbi-base"
-          legenda="Base de cálculo do ITBI"
-          valor={p.itbiBase}
-          tamanho="sm"
-          aoMudar={(v) => (v === "lance" ? tirar("itbiBase") : definir("itbiBase", v))}
-          opcoes={[
-            { valor: "lance", rotulo: "Lance" },
-            ...(temAv
-              ? [
-                  { valor: "avaliacao" as const, rotulo: "Avaliação", detalhe: moedaCurta(e.avaliacao!) },
-                  { valor: "maior" as const, rotulo: "O maior dos dois" },
-                ]
-              : []),
-          ]}
+    <PctOuValor
+      m={m}
+      kValor="itbiValor"
+      valorAtual={p.itbiPct * baseItbi(m, p, lanceDaConta(m, r))}
+      nome="sim-ed-itbi-modo"
+      legenda="Como informar o ITBI"
+      rotuloValor="ITBI, em reais"
+      ajudaValor={`O valor da guia do ITBI (a prefeitura de ${e.cidade} calcula pela inscrição do imóvel). Entra na conta como está e continua abatendo do imposto de renda.`}
+      definir={definir}
+      tirar={tirar}
+    >
+      <div className="flex flex-col gap-5">
+        <CampoPct
+          k="itbiPct"
+          m={m}
+          rotulo="Alíquota"
+          definir={definir}
+          tirar={tirar}
+          deslizante={[0, 5, 0.5]}
+          ajuda={`Imposto da prefeitura na transferência. A alíquota (em geral 2% a 3%) varia por município: confira com a prefeitura de ${e.cidade}.`}
         />
-        <Ajuda>
-          Muitas prefeituras cobram sobre o maior valor entre o preço pago e o valor venal (de referência) do imóvel; outras aceitam o valor do
-          leilão (há decisões do STJ a favor do valor da arrematação). {temAv ? "" : "Sem avaliação na fonte, a base é o lance."}
-        </Ajuda>
+        <div>
+          <p className="text-[14px] font-semibold">Sobre qual valor</p>
+          <Segmentado<"lance" | "avaliacao" | "maior">
+            className="mt-2.5"
+            nome="sim-ed-itbi-base"
+            legenda="Base de cálculo do ITBI"
+            valor={p.itbiBase}
+            tamanho="sm"
+            aoMudar={(v) => (v === "lance" ? tirar("itbiBase") : definir("itbiBase", v))}
+            opcoes={[
+              { valor: "lance", rotulo: "Lance" },
+              ...(temAv
+                ? [
+                    { valor: "avaliacao" as const, rotulo: "Avaliação", detalhe: moedaCurta(e.avaliacao!) },
+                    { valor: "maior" as const, rotulo: "O maior dos dois" },
+                  ]
+                : []),
+            ]}
+          />
+          <Ajuda>
+            Muitas prefeituras cobram sobre o maior valor entre o preço pago e o valor venal (de referência) do imóvel; outras aceitam o valor do
+            leilão (há decisões do STJ a favor do valor da arrematação). {temAv ? "" : "Sem avaliação na fonte, a base é o lance."}
+          </Ajuda>
+        </div>
       </div>
-    </div>
+    </PctOuValor>
   );
 }
 
-function EdRegistro({ m, definir, tirar }: { m: Modelo; definir: Definir; tirar: Tirar }) {
+function EdRegistro({ m, r, definir, tirar }: { m: Modelo; r: ResultadoCompleto; definir: Definir; tirar: Tirar }) {
   const p = m.premissas;
   return (
-    <div className="flex flex-col gap-5">
-      <CampoPct k="registroPct" m={m} rotulo="% do lance" definir={definir} tirar={tirar} ajuda="Cartório: escritura (quando há) e registro na matrícula." />
-      <CampoValor k="registroMin" m={m} rotulo="Mínimo" passo={500} definir={definir} tirar={tirar} ajuda={`Usamos o maior entre ${pct(p.registroPct)} do lance e este mínimo.`} />
-    </div>
+    <PctOuValor
+      m={m}
+      kValor="registroValor"
+      valorAtual={Math.max(p.registroPct * lanceDaConta(m, r), p.registroMin)}
+      nome="sim-ed-registro-modo"
+      legenda="Como informar a escritura e o registro"
+      rotuloValor="Escritura e registro, em reais"
+      ajudaValor="O orçamento do cartório (escritura, quando há, e registro na matrícula). Continua abatendo do imposto de renda."
+      definir={definir}
+      tirar={tirar}
+    >
+      <div className="flex flex-col gap-5">
+        <CampoPct k="registroPct" m={m} rotulo="% do lance" definir={definir} tirar={tirar} ajuda="Cartório: escritura (quando há) e registro na matrícula." />
+        <CampoValor k="registroMin" m={m} rotulo="Mínimo" passo={500} definir={definir} tirar={tirar} ajuda={`Usamos o maior entre ${pct(p.registroPct)} do lance e este mínimo.`} />
+      </div>
+    </PctOuValor>
   );
 }
 
@@ -1193,29 +1340,39 @@ function EdLance({
   const p = m.premissas;
   const e = m.entrada;
   const lance = e.lance;
-  const qual: "minimo" | "teto" | "outro" = rascunho.lanceDetalhe === "teto" && r.teto !== null ? "teto" : rascunho.meuLance === null ? "minimo" : "outro";
+  const pal = palavrasPreco(e);
+  const qual: "minimo" | "teto" | "outro" = !pal.fixo && rascunho.lanceDetalhe === "teto" && r.teto !== null ? "teto" : rascunho.meuLance === null ? "minimo" : "outro";
   const [outro, setOutro] = useState<number | null>(rascunho.meuLance);
   const sim = r.detalhe?.sim ?? null;
   return (
     <div className="flex flex-col gap-6">
       <fieldset>
-        <legend className="text-[14px] font-semibold">Qual lance usar na conta</legend>
+        <legend className="text-[14px] font-semibold">Qual {pal.lance} usar na conta</legend>
+        {pal.fixo && <p className="mt-0.5 text-[12.5px] text-nevoa">Na venda direta o preço é fixo: não há disputa, então ele não sobe. Outro valor serve só para comparar.</p>}
         <div className="mt-2.5 flex flex-col gap-2">
-          <OpcaoRadio nome="sim-ed-lance" ativo={qual === "minimo"} aoEscolher={() => mudarEstado((x) => ({ ...x, meuLance: null, lanceDetalhe: "meu" }))} titulo="Lance mínimo atual" detalhe={moeda(lance)} />
           <OpcaoRadio
             nome="sim-ed-lance"
-            ativo={qual === "teto"}
-            desabilitado={r.teto === null}
-            aoEscolher={() => mudarEstado((x) => ({ ...x, lanceDetalhe: "teto" }))}
-            titulo="Seu lance máximo para a meta"
-            detalhe={r.teto !== null ? moeda(r.teto) : "nenhum lance atinge a meta"}
+            ativo={qual === "minimo"}
+            aoEscolher={() => mudarEstado((x) => ({ ...x, meuLance: null, lanceDetalhe: "meu" }))}
+            titulo={pal.fixo ? "Preço pedido" : "Lance mínimo atual"}
+            detalhe={moeda(lance)}
           />
+          {!pal.fixo && (
+            <OpcaoRadio
+              nome="sim-ed-lance"
+              ativo={qual === "teto"}
+              desabilitado={r.teto === null}
+              aoEscolher={() => mudarEstado((x) => ({ ...x, lanceDetalhe: "teto" }))}
+              titulo="Seu lance máximo para a meta"
+              detalhe={r.teto !== null ? moeda(r.teto) : "nenhum lance atinge a meta"}
+            />
+          )}
           <OpcaoRadio
             nome="sim-ed-lance"
             ativo={qual === "outro"}
             aoEscolher={() => mudarEstado((x) => ({ ...x, meuLance: outro ?? Math.round(lance), lanceDetalhe: "meu" }))}
             titulo="Outro valor"
-            detalhe="vale também para a tabela, na visão “Lucro com meu lance”"
+            detalhe={pal.fixo ? "para comparar; vale também para a tabela, na visão “Lucro pelo preço”" : "vale também para a tabela, na visão “Lucro com meu lance”"}
           >
             <CampoNumero
               valor={qual === "outro" ? rascunho.meuLance : outro}
@@ -1223,8 +1380,8 @@ function EdLance({
               min={0}
               max={1e10}
               passo={1000}
-              placeholder="seu lance"
-              ariaLabel="Outro valor de lance"
+              placeholder={pal.fixo ? "outro preço" : "seu lance"}
+              ariaLabel={pal.fixo ? "Outro preço, para comparar" : "Outro valor de lance"}
               aoMudar={(n) => {
                 setOutro(n);
                 mudarEstado((x) => ({ ...x, meuLance: n, lanceDetalhe: "meu" }));
@@ -1242,7 +1399,7 @@ function EdLance({
             <Segmentado<"vista" | "banco" | "fonte">
               className="mt-2.5"
               nome="sim-ed-forma"
-              legenda="Como você paga o lance"
+              legenda={`Como você paga o ${pal.lance}`}
               valor={p.parcelar ? "fonte" : p.financiar ? "banco" : "vista"}
               aoMudar={(v) =>
                 mudarEstado((x) => {
@@ -1404,7 +1561,8 @@ function EdExtra({
             value={extra.nome}
             placeholder="ex.: laudo de vistoria, assessoria jurídica, mudança"
             onChange={(e) => setExtra((x) => ({ ...x, nome: e.target.value }))}
-            className="mt-2.5 h-11 w-full rounded-xl border border-nevoa/30 bg-noite px-3 text-[15px] text-luar outline-none placeholder:text-nevoa/70 hover:border-nevoa/50 focus:border-latao-texto focus:ring-2 focus:ring-latao/35 pointer-fine:h-10"
+            // 16 px no toque: o Safari do iPhone não amplia a página ao focar
+            className="mt-2.5 h-11 w-full rounded-xl border border-nevoa/30 bg-noite px-3 text-base text-luar outline-none placeholder:text-nevoa/70 hover:border-nevoa/50 focus:border-latao-texto focus:ring-2 focus:ring-latao/35 pointer-fine:h-10 pointer-fine:text-[15px]"
           />
         </div>
         <div>
@@ -1451,7 +1609,7 @@ function EdExtra({
               />
             )}
             <span className="text-[12.5px] text-nevoa tabular-nums">
-              {extra.modo === "pct_lance" && extra.valor > 0 ? `= ${moeda(extra.valor * L)} com o lance mínimo` : extra.modo === "mensal" && extra.valor > 0 ? `= ${moeda(extra.valor * prazo)} em ${meses(prazo)}` : ""}
+              {extra.modo === "pct_lance" && extra.valor > 0 ? `= ${moeda(extra.valor * L)} com o ${palavrasPreco(m.entrada).minimo}` : extra.modo === "mensal" && extra.valor > 0 ? `= ${moeda(extra.valor * prazo)} em ${meses(prazo)}` : ""}
             </span>
           </div>
         </div>

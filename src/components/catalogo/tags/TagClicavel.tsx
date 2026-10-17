@@ -178,7 +178,8 @@ export function TagsBloqueadas({
       type="button"
       aria-haspopup="dialog"
       onClick={(ev: MouseEvent<HTMLButtonElement>) => onUpsell(ev.currentTarget)}
-      className={`group/bloq relative z-10 flex w-full max-w-[26rem] cursor-pointer items-center overflow-hidden rounded-full py-1 text-left ${className}`}
+      // 44 px de altura no toque (a fileira de tags borradas tem 26 a 33 px)
+      className={`group/bloq relative z-10 flex min-h-11 w-full max-w-[26rem] cursor-pointer items-center overflow-hidden rounded-full py-1 text-left pointer-fine:min-h-0 ${className}`}
     >
       <span aria-hidden="true" className="flex gap-1.5 blur-[3px] transition-[filter] duration-200 group-hover/bloq:blur-[4px] motion-reduce:transition-none">
         {LARGURAS_BLOQUEADAS.map((w) => (

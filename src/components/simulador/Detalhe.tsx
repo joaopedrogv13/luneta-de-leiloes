@@ -7,7 +7,7 @@ import { GRUPO_ROTULO, type GrupoConta, type LinhaConta } from "@/lib/simulador/
 import type { EstadoSimulador } from "@/lib/simulador/estado";
 import { meses, moeda, moedaSinal, pct } from "@/lib/simulador/formato";
 import { LIMITES, multiplicador, PADRAO } from "@/lib/simulador/premissas";
-import { CENARIO_ROTULO } from "@/lib/simulador/textos";
+import { CENARIO_ROTULO, notaIr, palavrasPreco } from "@/lib/simulador/textos";
 import { TODOS_CENARIOS, type Ajustes, type CenarioFixo, type LinhaDesligavel } from "@/lib/simulador/tipos";
 import { BotaoEditar, CampoNumero, focar, IconeLapis, IconeMais, IconeOlhoFechado, IconeVoltar, Segmentado } from "./controles";
 import type { AlvoEditor } from "./Editores";
@@ -42,7 +42,9 @@ export function Detalhe({
   const [desfazer, setDesfazer] = useState<EstadoSimulador["ajustes"] | null>(null);
   // a diferença sai dos dois números já arredondados que a frase mostra
   const diferenca = Math.round(sim.lucro) - Math.round(sim.rendimentoAplicacao);
-  const qual = d.qualLance === "minimo" ? "lance mínimo atual" : d.qualLance === "teto" ? "seu lance máximo para a meta" : "seu lance";
+  const pal = palavrasPreco(r.modelo.entrada);
+  const fixo = pal.fixo;
+  const qual = d.qualLance === "minimo" ? (fixo ? "preço pedido" : "lance mínimo atual") : d.qualLance === "teto" ? "seu lance máximo para a meta" : fixo ? "seu preço" : "seu lance";
   const editar = (alvo: AlvoEditor) => (ev: { currentTarget: HTMLElement }) => aoEditar(alvo, ev.currentTarget);
 
   const religar = (linha: LinhaDesligavel) =>
@@ -66,7 +68,7 @@ export function Detalhe({
             Detalhe · cenário {CENARIO_ROTULO[sim.cenario].toLowerCase()}, venda em {meses(sim.meses)}
           </p>
           <h3 id={ID_DETALHE} tabIndex={-1} className="mt-1.5 font-display text-[19px] leading-tight font-bold tracking-[-0.01em] outline-none sm:text-[21px]">
-            Com o lance de {moeda(sim.lance)} <span className="font-sans text-[14px] font-medium tracking-normal text-nevoa sm:text-[15px]">({qual})</span>
+            Com o {pal.lance} de {moeda(sim.lance)} <span className="font-sans text-[14px] font-medium tracking-normal text-nevoa sm:text-[15px]">({qual})</span>
           </h3>
         </div>
         <button
@@ -125,7 +127,8 @@ export function Detalhe({
                 return { ...x, celula: { ...x.celula, cenario: c } };
               });
             }}
-            className="h-11 w-full cursor-pointer rounded-xl border border-nevoa/30 bg-noite px-3 text-[15px] font-medium text-luar hover:border-nevoa/50 focus-visible:border-latao-texto pointer-fine:h-10"
+            // 16 px no toque: o Safari do iPhone não amplia a página ao focar
+            className="h-11 w-full cursor-pointer rounded-xl border border-nevoa/30 bg-noite px-3 text-base font-medium text-luar hover:border-nevoa/50 focus-visible:border-latao-texto pointer-fine:h-10 pointer-fine:text-[15px]"
           >
             {TODOS_CENARIOS.map((c) => (
               <option key={c} value={c} className="bg-tinta">
@@ -158,25 +161,33 @@ export function Detalhe({
           <p className="mt-1 text-[11.5px] leading-tight text-nevoa">3 a 60 meses</p>
         </div>
         <div className="col-span-2 min-w-0 sm:col-span-3">
-          <p aria-hidden="true" className="mb-1 text-[12px] font-medium text-nevoa">Lance usado na conta</p>
+          <p aria-hidden="true" className="mb-1 text-[12px] font-medium text-nevoa">{pal.Lance} usado na conta</p>
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <Segmentado<"minimo" | "teto" | "meu">
-              nome="sim-det-lance"
-              legenda="Lance usado na conta"
-              legendaVisivel={false}
-              valor={d.qualLance}
-              tamanho="sm"
-              className="w-full min-w-0 flex-1"
-              aoMudar={(v) => {
-                if (v === "meu") return;
-                atualizar((x) => (v === "teto" ? { ...x, lanceDetalhe: "teto" } : { ...x, meuLance: null, lanceDetalhe: "meu" }));
-              }}
-              opcoes={[
-                { valor: "minimo", rotulo: "Lance mínimo", detalhe: moeda(r.modelo.entrada.lance) },
-                ...(r.teto !== null ? [{ valor: "teto" as const, rotulo: "Seu teto", detalhe: moeda(r.teto) }] : []),
-                ...(d.qualLance === "meu" ? [{ valor: "meu" as const, rotulo: "Seu lance", detalhe: moeda(sim.lance) }] : []),
-              ]}
-            />
+            {fixo && d.qualLance === "minimo" ? (
+              // venda direta: só há o preço pedido (o preço não sobe); outro valor, para comparar, pelo lápis ao lado
+              <p className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl border border-nevoa/25 bg-noite px-3.5 text-[13px] pointer-fine:min-h-9">
+                <span className="font-semibold">Preço pedido</span>
+                <span className="font-semibold tabular-nums">{moeda(r.modelo.entrada.lance)}</span>
+              </p>
+            ) : (
+              <Segmentado<"minimo" | "teto" | "meu">
+                nome="sim-det-lance"
+                legenda={`${pal.Lance} usado na conta`}
+                legendaVisivel={false}
+                valor={d.qualLance}
+                tamanho="sm"
+                className="w-full min-w-0 flex-1"
+                aoMudar={(v) => {
+                  if (v === "meu") return;
+                  atualizar((x) => (v === "teto" ? { ...x, lanceDetalhe: "teto" } : { ...x, meuLance: null, lanceDetalhe: "meu" }));
+                }}
+                opcoes={[
+                  { valor: "minimo", rotulo: pal.Minimo, detalhe: moeda(r.modelo.entrada.lance) },
+                  ...(!fixo && r.teto !== null ? [{ valor: "teto" as const, rotulo: "Seu teto", detalhe: moeda(r.teto) }] : []),
+                  ...(d.qualLance === "meu" ? [{ valor: "meu" as const, rotulo: fixo ? "Seu preço" : "Seu lance", detalhe: moeda(sim.lance) }] : []),
+                ]}
+              />
+            )}
             <button
               type="button"
               aria-haspopup="dialog"
@@ -184,7 +195,7 @@ export function Detalhe({
               className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 self-start rounded-full px-2 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline sm:self-auto pointer-fine:min-h-9"
             >
               <IconeLapis className="size-3" />
-              outro lance e forma de pagamento
+              outro {pal.lance} e forma de pagamento
             </button>
           </div>
         </div>
@@ -192,7 +203,14 @@ export function Detalhe({
 
       {/* ------------------------------------------------------------ números-resumo */}
       <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Destaque rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"} valor={moedaSinal(sim.lucro)} tom={sim.lucro < 0 ? "grave" : "forte"} nota={`em ${meses(sim.meses)}, já sem o IR`} />
+        <Destaque
+          rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"}
+          valor={moedaSinal(sim.lucro)}
+          tom={sim.lucro < 0 ? "grave" : "forte"}
+          nota={`em ${meses(sim.meses)}, ${notaIr(p)}`}
+        />
+        {/* o R$/ano é a média simples (lucro ÷ meses × 12) e o % ao ano conta juros compostos: dividir um pelo outro
+            não dá o %, então a nota diz como cada um foi feito */}
         <Destaque
           rotulo="Lucro anualizado"
           valor={`${moedaSinal(sim.lucroAno)}`}
@@ -200,8 +218,11 @@ export function Detalhe({
           tom={sim.lucroAno < 0 ? "grave" : undefined}
           nota={
             <>
-              <strong className={`font-semibold ${sim.roiAA < 0 ? "text-grave-texto" : "text-luar"}`}>{pct(sim.roiAA)} ao ano</strong>
-              {r.meta.tipo === "roi_aa" ? ` · meta ${pct(r.meta.valor)}` : ""}
+              <span className="block">{sim.meses === 12 ? "venda em 12 meses: igual ao total" : `média: lucro ÷ ${sim.meses} × 12`}</span>
+              <span className="mt-0.5 block">
+                <strong className={`font-semibold ${sim.roiAA < 0 ? "text-grave-texto" : "text-luar"}`}>{pct(sim.roiAA)} ao ano</strong> em juros compostos
+                {r.meta.tipo === "roi_aa" ? ` · meta ${pct(r.meta.valor)}` : ""}
+              </span>
             </>
           }
         />
@@ -211,7 +232,7 @@ export function Detalhe({
           tom={sim.roi < 0 ? "grave" : undefined}
           nota={`${pct(sim.roiAM, 2)} ao mês${r.meta.tipo === "roi_periodo" ? ` · meta ${pct(r.meta.valor)}` : ""}`}
         />
-        <Destaque rotulo="Dinheiro investido" valor={moeda(sim.capital)} nota={fin ? "entrada, parcelas e custos" : "lance e custos"} />
+        <Destaque rotulo="Dinheiro investido" valor={moeda(sim.capital)} nota={fin ? "entrada, parcelas e custos" : `${pal.lance} e custos`} />
       </dl>
 
       {p.aplicacaoAA > 0 ? (
@@ -243,7 +264,7 @@ export function Detalhe({
         <h4 className="text-[16px] font-semibold">A conta, linha a linha</h4>
         <p className="text-[12.5px] text-nevoa">
           <span className="pointer-fine:hidden">Toque no lápis de uma linha para ajustar aquele custo.</span>
-          <span className="hidden pointer-fine:inline">Passe o mouse numa linha e clique no lápis para ajustar.</span>
+          <span className="hidden pointer-fine:inline">Clique no lápis de uma linha para ajustar aquele custo.</span>
         </p>
       </div>
       <div className="mt-2 rounded-2xl border border-nevoa/15">
@@ -270,7 +291,7 @@ export function Detalhe({
           );
         })}
         <dl className="border-t-2 border-nevoa/30">
-          <Total rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"} valor={moedaSinal(sim.lucro)} forte grave={sim.lucro < 0} />
+          <Total rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"} detalhe={`venda menos todos os custos, ${notaIr(p)}`} valor={moedaSinal(sim.lucro)} forte grave={sim.lucro < 0} />
           <Total
             rotulo="Lucro anualizado"
             detalhe={sim.meses === 12 ? "venda em 12 meses: igual ao lucro total" : `média por ano: lucro total × 12 ÷ ${sim.meses} meses; o % ao ano conta juros compostos`}
@@ -279,7 +300,7 @@ export function Detalhe({
           />
           <Total
             rotulo="Dinheiro investido"
-            detalhe={fin ? "entrada + parcelas pagas + custos (sem o saldo quitado na venda)" : "lance + custos de compra, regularização, reforma e meses"}
+            detalhe={fin ? "entrada + parcelas pagas + custos (sem o saldo quitado na venda)" : `${pal.lance} + custos de compra, regularização, reforma e meses`}
             valor={moeda(sim.capital)}
           />
           <Total rotulo="Retorno no período" detalhe="lucro ÷ dinheiro investido" valor={pct(sim.roi)} />
@@ -444,16 +465,20 @@ function Total({ rotulo, detalhe, valor, extra, forte, grave }: { rotulo: string
 }
 
 function Destaque({ rotulo, valor, sufixo, tom, nota }: { rotulo: string; valor: string; sufixo?: string; tom?: "grave" | "forte"; nota?: ReactNode }) {
+  // valores de 7 dígitos ("R$ 1.743.472") não cabiam no cartão de 360 px: o número encolhe com a largura do cartão
+  // (até 19/21 px) e, se for longo, o sufixo ("/ano") desce para a linha de baixo
+  const longo = valor.length > 10;
   return (
-    <div className="min-w-0 rounded-2xl border border-nevoa/15 bg-noite/50 px-3 py-3">
+    <div className="@container min-w-0 rounded-2xl border border-nevoa/15 bg-noite/50 px-3 py-3">
       <dt className="text-[12px] leading-tight text-nevoa">{rotulo}</dt>
       <dd
-        className={`mt-1.5 font-display text-[19px] leading-none font-bold tracking-[-0.02em] tabular-nums sm:text-[21px] ${
+        className={`mt-1.5 font-display leading-none font-bold tracking-[-0.02em] tabular-nums [--max:19px] sm:[--max:21px] ${
           tom === "grave" ? "text-grave-texto" : tom === "forte" ? "text-luar" : ""
         }`}
+        style={{ fontSize: `min(var(--max), ${(100 / (valor.length * 0.62)).toFixed(2)}cqi)` }}
       >
         {valor}
-        {sufixo && <span className="font-sans text-[12px] font-medium tracking-normal text-nevoa">{sufixo}</span>}
+        {sufixo && <span className={`font-sans text-[12px] font-medium tracking-normal text-nevoa ${longo ? "mt-1 block" : ""}`}>{sufixo}</span>}
       </dd>
       {nota && <dd className="mt-1.5 text-[11.5px] leading-tight text-nevoa">{nota}</dd>}
     </div>

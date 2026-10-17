@@ -1,4 +1,5 @@
 import { SeverityIcon } from "@/components/niveis/severity";
+import { AVISO_CLASSIFICACAO } from "@/content/avisos";
 import { conteudoTag, SEVERIDADE_ORDEM } from "@/components/catalogo/tags/conteudo";
 import { TagClicavel } from "@/components/catalogo/tags/TagClicavel";
 import { Seal } from "@/components/ui/Seal";
@@ -27,8 +28,7 @@ const TOM_TITULO: Record<Severidade, string> = {
   info: "text-nevoa",
 };
 
-export const AVISO_CLASSIFICACAO =
-  "A classificação não é garantia: é uma análise automática dos dados publicados pela fonte e não substitui a leitura do edital nem a avaliação de um advogado.";
+export { AVISO_CLASSIFICACAO };
 
 /** Uma tag por linha: a pílula (abre a explicação com a evidência) e o "O que é" ao lado, para ler sem clicar. */
 function LinhaTag({ tag }: { tag: TagDetalhe }) {

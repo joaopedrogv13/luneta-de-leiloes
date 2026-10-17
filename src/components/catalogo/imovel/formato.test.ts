@@ -12,6 +12,8 @@ import {
   periodoCurto,
   predicadoComparacao,
   referenciaPrincipal,
+  referenciaLeiloes,
+  descricaoReferencia,
   referenciasItbi,
   registroNaTela,
   textoOficio,
@@ -203,20 +205,36 @@ test("frase da comparação: abaixo, acima, igual e \"vezes\" a partir do dobro"
   assert.equal(diferencaCurta(compararComMedia(1300, 100)!), "13 vezes");
 });
 
-test("referência da frase: leilões mais local com n ≥ 5; sem média de leilões, o ITBI", () => {
+test("referência da frase: o preço pago (ITBI) com compras suficientes; senão leilões mais local com n ≥ 5", () => {
   const rua = ref({ escopo: "rua", fonte: "leiloes", amostra: 3, media: 4100, nome: "Rua X, Uberlândia/MG" });
   const bairro = ref({ escopo: "bairro", fonte: "leiloes", amostra: 14, media: 4000 });
   const cidade = ref({ escopo: "cidade", fonte: "leiloes", amostra: 400, media: 3900, nome: "Uberlândia/MG" });
-  const itbiBairro = ref({ escopo: "bairro", fonte: "itbi", amostra: 300, media: 5200, avaliacaoM2: { mediana: 5100, p25: 4300, p75: 6000 }, lanceM2: null });
-  assert.equal(referenciaPrincipal([rua, bairro, cidade, itbiBairro]), bairro);
+  const itbi = (escopo: "rua" | "bairro" | "cidade", amostra: number, media = 5200) =>
+    ref({ escopo, fonte: "itbi", amostra, media, avaliacaoM2: { mediana: media, p25: media * 0.8, p75: media * 1.2 }, lanceM2: null });
+  const itbiBairro = itbi("bairro", 300);
+  // o ITBI do bairro (300 compras) vence a média de avaliação dos leilões
+  assert.equal(referenciaPrincipal([rua, bairro, cidade, itbiBairro]), itbiBairro);
+  // ITBI com poucas compras (rua 9, bairro 6, cidade 25) não vale: fica a média dos leilões
+  assert.equal(referenciaPrincipal([rua, bairro, cidade, itbi("rua", 9), itbi("bairro", 6), itbi("cidade", 25)]), bairro);
+  // o recorte mais local do ITBI com amostra suficiente (rua 12 > bairro)
+  const itbiRua = itbi("rua", 12, 6000);
+  assert.equal(referenciaPrincipal([itbiBairro, cidade, itbiRua]), itbiRua);
+  assert.equal(referenciaPrincipal([itbi("cidade", 20_333), bairro])?.escopo, "cidade");
+  // só leilões: o mais local com 5 ou mais
+  assert.equal(referenciaPrincipal([rua, bairro, cidade]), bairro);
+  assert.equal(referenciaLeiloes([rua, bairro, cidade, itbiBairro]), bairro);
   assert.equal(referenciaPrincipal([rua]), rua);
-  assert.equal(referenciaPrincipal([{ ...bairro, media: null }, itbiBairro]), itbiBairro);
+  // sem média de leilões: o ITBI mesmo com poucas compras
+  assert.equal(referenciaPrincipal([{ ...bairro, media: null }, itbi("bairro", 4)])?.amostra, 4);
   assert.equal(referenciaPrincipal([]), null);
   // dados de antes do campo "media": a mediana da avaliação no lugar
   assert.equal(mediaDe(ref({})), 4000);
   assert.equal(mediaDe(ref({ media: null })), null);
   assert.equal(referenciaPrincipal([ref({ amostra: 14 })])?.escopo, "bairro");
   assert.deepEqual(referenciasItbi([cidade, itbiBairro, rua]), [itbiBairro]);
+  // a descrição diz de onde vem o número
+  assert.equal(descricaoReferencia(itbi("bairro", 10)), `preço médio pago em 10 compras registradas na prefeitura (ITBI) no bairro ${itbi("bairro", 10).nome}`);
+  assert.match(descricaoReferencia(bairro), /^avaliação média de 14 .* em leilão no bairro /);
 });
 
 test("tabela de leilões: rua, bairro, cidade e estado; recorte repetido vira \"os mesmos de\"", () => {

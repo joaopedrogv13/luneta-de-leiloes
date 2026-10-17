@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { BACK_TO_SITE } from "@/components/assinante/shared";
+import { AVISO_CLASSIFICACAO } from "@/content/avisos";
 import { data, dataHora, numero, plural } from "@/lib/catalogo/rotulos";
 import type { SobreConjunto } from "@/lib/catalogo/tipos";
 
-export const AVISO_CLASSIFICACAO =
-  "A classificação não é garantia: é uma análise automática dos dados publicados pela fonte e não substitui a leitura do edital nem a avaliação de um advogado.";
+export { AVISO_CLASSIFICACAO };
 
 /** "lista de 08/10/2026" (Caixa publica uma lista por dia) ou "dados de 11/10/2026". */
 function quandoDaFonte(f: SobreConjunto["fontes"][number]) {

@@ -2,6 +2,7 @@
  * Textos e contas da página do imóvel (funções puras, iguais no servidor e no navegador).
  * Imports relativos, sem "@/": o teste roda em Node puro.
  */
+import { fonteReferencia as fonteDaReferencia } from "../../../lib/catalogo/referencia";
 import { area, moeda, normalizar, numero, PRACA_ROTULO, UF_NOME } from "../../../lib/catalogo/rotulos";
 import type { ImovelResumo, LinkImovel, Praca, PracaDetalhe, ReferenciaM2, RegistroImovel, TipoImovel, TipoLink } from "../../../lib/catalogo/tipos";
 
@@ -249,22 +250,19 @@ export function predicadoComparacao(c: { pct: number; razao: number }, alvo: Alv
 }
 
 /**
- * Média de uma referência (R$/m²). Dados de antes do campo `media` (sem a chave) usam a mediana da avaliação, que
- * fica perto da média aparada; `null` = o recorte não tem avaliações suficientes.
+ * Média de uma referência (R$/m²), fonte e a referência principal da região: as mesmas funções do simulador e do
+ * relatório (src/lib/catalogo/referencia.ts), para a frase, a "Região" do simulador e o PDF nunca divergirem.
  */
-export const mediaDe = (r: Pick<ReferenciaM2, "media" | "avaliacaoM2">): number | null => (r.media === undefined ? (r.avaliacaoM2?.mediana ?? null) : r.media);
-
-/** Fonte de uma referência (dados antigos sem o campo são de leilões). */
-export const fonteDaReferencia = (r: Pick<ReferenciaM2, "fonte">) => r.fonte ?? "leiloes";
-
+export { mediaReferencia as mediaDe, fonteReferencia as fonteDaReferencia, referenciaLeiloes, referenciaPrincipal } from "../../../lib/catalogo/referencia";
 /**
- * A referência da frase principal: a média de leilões mais local com pelo menos 5 imóveis (senão a mais local
- * que tiver média); sem nenhuma de leilões, a do ITBI pelo mesmo critério. null sem média nenhuma.
+ * Como a referência é descrita numa frase: "preço médio pago em 10 compras registradas na prefeitura (ITBI) no
+ * bairro Sacoma, São Paulo/SP" ou "avaliação média de 22 casas em leilão na cidade de São Paulo/SP".
  */
-export function referenciaPrincipal(refs: readonly ReferenciaM2[]): ReferenciaM2 | null {
-  const comMedia = refs.filter((r) => (mediaDe(r) ?? 0) > 0);
-  const escolher = (lista: ReferenciaM2[]) => lista.find((r) => r.amostra >= 5) ?? lista[0] ?? null;
-  return escolher(comMedia.filter((r) => fonteDaReferencia(r) === "leiloes")) ?? escolher(comMedia.filter((r) => r.fonte === "itbi"));
+export function descricaoReferencia(r: Pick<ReferenciaM2, "escopo" | "nome" | "fonte" | "amostra" | "tipo">): string {
+  const n = numero(r.amostra);
+  return r.fonte === "itbi"
+    ? `preço médio pago em ${n} ${r.amostra === 1 ? "compra registrada" : "compras registradas"} na prefeitura (ITBI) ${ondeRecorte(r)}`
+    : `avaliação média de ${n} ${TIPO_NA_FRASE[r.tipo]} em leilão ${ondeRecorte(r)}`;
 }
 
 export const ESCOPOS: readonly ReferenciaM2["escopo"][] = ["rua", "bairro", "cidade", "uf"];

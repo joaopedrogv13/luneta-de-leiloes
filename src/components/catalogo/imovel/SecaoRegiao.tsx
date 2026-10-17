@@ -20,6 +20,7 @@ import {
   periodoCurto,
   precoPorArea,
   predicadoComparacao,
+  referenciaLeiloes,
   referenciaPrincipal,
   referenciasItbi,
   ROTULO_ESCOPO,
@@ -130,11 +131,16 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
   const lance = porArea(i.lance, i.lanceM2);
   // o que se compara: a avaliação; sem ela, o lance
   const valor = avaliacao ?? lance;
-  const sujeito = avaliacao !== null ? "A avaliação deste imóvel" : "O lance mínimo deste imóvel";
+  const vendaDireta = i.modalidade === "venda_direta";
+  const sujeito = avaliacao !== null ? "A avaliação deste imóvel" : vendaDireta ? "O preço de venda deste imóvel" : "O lance mínimo deste imóvel";
 
   const principal = referenciaPrincipal(refs);
   const comparacao = principal ? compararComMedia(valor, mediaDe(principal)) : null;
   const comparacaoLance = principal && avaliacao !== null ? compararComMedia(lance, mediaDe(principal)) : null;
+  // a frase vai pelo preço pago (ITBI) quando há compras suficientes; os leilões ficam numa segunda linha
+  const principalItbi = principal?.fonte === "itbi";
+  const refLeiloes = principalItbi ? referenciaLeiloes(refs) : null;
+  const comparacaoLeiloes = refLeiloes ? compararComMedia(valor, mediaDe(refLeiloes)) : null;
   const leiloes = linhasLeiloes(refs);
   const itbi = referenciasItbi(refs);
   const refRua = refs.find((r) => r.escopo === "rua");
@@ -168,6 +174,64 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
   // a cidade tem ITBI, mas a comparação não vale para este imóvel (ex.: em São Paulo, a área publicada para apartamentos
   // inclui a parte comum do prédio). Campo novo do contrato (CoberturaPrecos.semComparacao), lido sem depender dele.
   const itbiSemComparacao = (v.cobertura as { semComparacao?: string | null } | undefined)?.semComparacao || null;
+
+  const grupoLeiloes = (
+    <tbody>
+      <tr className="border-t border-nevoa/15">
+        <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[12px] font-medium text-nevoa sm:px-6">
+          Imóveis em leilão na base · média de avaliação
+        </th>
+      </tr>
+      {leiloes.map(({ escopo, ref, igualA }) => (
+        <Linha
+          key={escopo}
+          rotulo={ROTULO_ESCOPO[escopo]}
+          lugar={lugarDe(escopo, ref)}
+          amostra={ref ? `${numero(ref.amostra)} ${tipos}` : null}
+          media={ref ? mediaDe(ref) : null}
+          dif={ref ? compararComMedia(valor, mediaDe(ref)) : null}
+          falta={ref ? (mediaDe(ref) === null ? "sem avaliações suficientes" : null) : faltaLeiloes(escopo, igualA)}
+          destaque={ref !== null && ref === principal}
+          m2={m2}
+        />
+      ))}
+    </tbody>
+  );
+  const grupoItbi = (
+    <tbody>
+      <tr className="border-t border-nevoa/15">
+        <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[12px] font-medium text-nevoa sm:px-6">
+          Transações reais (ITBI) · preço médio pago
+          {itbi[0]?.periodo && <span className="whitespace-nowrap"> · {periodoCurto(itbi[0].periodo)}</span>}
+        </th>
+      </tr>
+      {itbi.length > 0 ? (
+        itbi.map((r) => (
+          <Linha
+            key={r.escopo}
+            rotulo={ROTULO_ESCOPO[r.escopo]}
+            lugar={lugarDe(r.escopo, r)}
+            amostra={`${numero(r.amostra)} ${r.amostra === 1 ? "compra" : "compras"}`}
+            media={mediaDe(r)}
+            dif={compararComMedia(valor, mediaDe(r))}
+            falta={mediaDe(r) === null ? "sem dados suficientes" : null}
+            destaque={r === principal}
+            m2={m2}
+          />
+        ))
+      ) : (
+        <tr className="border-t border-nevoa/10">
+          <td colSpan={3} className="px-4 py-3 text-[13px] leading-snug text-nevoa sm:px-6">
+            {itbiSemComparacao
+              ? itbiSemComparacao
+              : v.cobertura?.cidadeTemItbi
+              ? `A prefeitura de ${i.cidade} não registra compras de ${tipos} suficientes para comparar.`
+              : `Ainda não temos o preço pago nas compras registradas em ${lugarCidade}.${v.cobertura ? " Veja abaixo de quais cidades temos." : ""}`}
+          </td>
+        </tr>
+      )}
+    </tbody>
+  );
 
   return (
     <Secao
@@ -205,8 +269,15 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
             </p>
             {comparacaoLance && lance !== null && (
               <p className="mt-1.5 text-[14px] leading-relaxed text-nevoa">
-                Pelo lance mínimo (<span className="whitespace-nowrap text-luar tabular-nums">{m2(lance)}</span>), o preço por m²{" "}
-                {predicadoComparacao(comparacaoLance, alvoDaReferencia(principal))}.
+                Pelo {vendaDireta ? "preço de venda" : "lance mínimo"} (<span className="whitespace-nowrap text-luar tabular-nums">{m2(lance)}</span>), o
+                preço por m² {predicadoComparacao(comparacaoLance, alvoDaReferencia(principal))}.
+              </p>
+            )}
+            {refLeiloes && comparacaoLeiloes && (
+              <p className="mt-1.5 text-[14px] leading-relaxed text-nevoa">
+                Entre os imóveis em leilão, {sujeito.charAt(0).toLowerCase() + sujeito.slice(1)}{" "}
+                {predicadoComparacao(comparacaoLeiloes, { artigo: "a", nome: `média de avaliação ${{ rua: "da rua", bairro: "do bairro", cidade: "da cidade", uf: "do estado" }[refLeiloes.escopo]}` })}{" "}
+                (<span className="whitespace-nowrap text-luar tabular-nums">{m2(mediaDe(refLeiloes)!)}</span>, {numero(refLeiloes.amostra)} {tipos}).
               </p>
             )}
           </div>
@@ -231,59 +302,18 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                <tr className="border-t border-nevoa/15">
-                  <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[12px] font-medium text-nevoa sm:px-6">
-                    Imóveis em leilão na base · média de avaliação
-                  </th>
-                </tr>
-                {leiloes.map(({ escopo, ref, igualA }) => (
-                  <Linha
-                    key={escopo}
-                    rotulo={ROTULO_ESCOPO[escopo]}
-                    lugar={lugarDe(escopo, ref)}
-                    amostra={ref ? `${numero(ref.amostra)} ${tipos}` : null}
-                    media={ref ? mediaDe(ref) : null}
-                    dif={ref ? compararComMedia(valor, mediaDe(ref)) : null}
-                    falta={ref ? (mediaDe(ref) === null ? "sem avaliações suficientes" : null) : faltaLeiloes(escopo, igualA)}
-                    destaque={ref !== null && ref === principal}
-                    m2={m2}
-                  />
-                ))}
-              </tbody>
-              <tbody>
-                <tr className="border-t border-nevoa/15">
-                  <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[12px] font-medium text-nevoa sm:px-6">
-                    Transações reais (ITBI) · preço médio pago
-                    {itbi[0]?.periodo && <span className="whitespace-nowrap"> · {periodoCurto(itbi[0].periodo)}</span>}
-                  </th>
-                </tr>
-                {itbi.length > 0 ? (
-                  itbi.map((r) => (
-                    <Linha
-                      key={r.escopo}
-                      rotulo={ROTULO_ESCOPO[r.escopo]}
-                      lugar={lugarDe(r.escopo, r)}
-                      amostra={`${numero(r.amostra)} ${r.amostra === 1 ? "compra" : "compras"}`}
-                      media={mediaDe(r)}
-                      dif={compararComMedia(valor, mediaDe(r))}
-                      falta={mediaDe(r) === null ? "sem dados suficientes" : null}
-                      destaque={r === principal}
-                      m2={m2}
-                    />
-                  ))
-                ) : (
-                  <tr className="border-t border-nevoa/10">
-                    <td colSpan={3} className="px-4 py-3 text-[13px] leading-snug text-nevoa sm:px-6">
-                      {itbiSemComparacao
-                        ? itbiSemComparacao
-                        : v.cobertura?.cidadeTemItbi
-                        ? `A prefeitura de ${i.cidade} não registra compras de ${tipos} suficientes para comparar.`
-                        : `Ainda não temos o preço pago nas compras registradas em ${lugarCidade}.${v.cobertura ? " Veja abaixo de quais cidades temos." : ""}`}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+              {/* o grupo da referência da frase vem primeiro (o preço pago, quando há compras suficientes) */}
+              {principalItbi ? (
+                <>
+                  {grupoItbi}
+                  {grupoLeiloes}
+                </>
+              ) : (
+                <>
+                  {grupoLeiloes}
+                  {grupoItbi}
+                </>
+              )}
             </table>
           </div>
         )}

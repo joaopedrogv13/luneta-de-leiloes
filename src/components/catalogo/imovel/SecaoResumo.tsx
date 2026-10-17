@@ -165,6 +165,10 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
       </a>
     ) : undefined;
   const siteLeiloeiro = i.leiloeiro ? null : i.links.find((l) => l.tipo === "leiloeiro");
+  // venda direta: a fase de leilão já acabou (preço fixo, sem leiloeiro e, na Caixa, sem processo)
+  const vendaDireta = i.modalidade === "venda_direta";
+  const semLeiloeiro = vendaDireta && !i.leiloeiro && !siteLeiloeiro;
+  const semProcesso = vendaDireta && i.judicial === false && !i.numeroProcesso;
 
   return (
     <Secao id="resumo" titulo="Resumo do imóvel" sobretitulo="Tudo o que a fonte informa">
@@ -198,7 +202,7 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
         <div>
           <Subtitulo className="mb-3">Preço</Subtitulo>
           <GradeFatos rotulo="Preço">
-            <Fato icone={<IconeEtiqueta tamanho={I} />} rotulo="Lance mínimo" valor={moeda(i.lance)} />
+            <Fato icone={<IconeEtiqueta tamanho={I} />} rotulo={vendaDireta ? "Preço de venda" : "Lance mínimo"} valor={moeda(i.lance)} />
             <Fato
               icone={<IconeAvaliacao tamanho={I} />}
               rotulo="Avaliação"
@@ -213,7 +217,7 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
             />
             <Fato
               icone={<IconeRegua tamanho={I} />}
-              rotulo={`Lance ${porArea}`}
+              rotulo={`${vendaDireta ? "Preço" : "Lance"} ${porArea}`}
               valor={i.lanceM2 !== null ? precoArea(i.lance, i.lanceM2) : "sem a área, não dá para calcular"}
               vazio={i.lanceM2 === null}
             />
@@ -272,7 +276,7 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
               rotulo="Natureza"
               valor={i.judicial === null ? semDado("f") : i.judicial ? "Judicial" : "Extrajudicial"}
               vazio={i.judicial === null}
-              termo={i.judicial === null ? null : i.judicial ? "judicial" : "extrajudicial"}
+              termo={i.judicial === null ? null : i.judicial ? "judicial" : vendaDireta ? "extrajudicial_venda_direta" : "extrajudicial"}
               nota={i.judicial === null ? undefined : i.judicial ? "Venda determinada pela Justiça" : "Venda direta do credor ou do dono"}
             />
           </GradeFatos>
@@ -305,7 +309,7 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
                           <p className={`shrink-0 text-right whitespace-nowrap tabular-nums ${p.valorMinimo !== null ? "text-[15px] font-semibold text-luar" : "text-[13px] text-nevoa"}`}>
                             {p.valorMinimo !== null ? (
                               <>
-                                <span className="sr-only">Lance mínimo: </span>
+                                <span className="sr-only">{vendaDireta ? "Preço: " : "Lance mínimo: "}</span>
                                 {moeda(p.valorMinimo)}
                               </>
                             ) : (
@@ -390,16 +394,27 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
                 )}
               </>
             )}
-            <Fato icone={<IconePasta tamanho={I} />} rotulo="Processo" valor={i.numeroProcesso ?? semDado()} vazio={!i.numeroProcesso} />
+            <Fato
+              icone={<IconePasta tamanho={I} />}
+              rotulo="Processo"
+              valor={i.numeroProcesso ?? (semProcesso ? "Não se aplica (venda extrajudicial)" : semDado())}
+              vazio={!i.numeroProcesso && !semProcesso}
+            />
             <Fato
               icone={<IconeLeiloeiro tamanho={I} />}
               rotulo="Leiloeiro"
-              valor={i.leiloeiro ?? (siteLeiloeiro ? "Nome não informado pela fonte" : semDado())}
-              vazio={!i.leiloeiro}
+              valor={i.leiloeiro ?? (siteLeiloeiro ? "Nome não informado pela fonte" : semLeiloeiro ? "Não há (venda direta)" : semDado())}
+              vazio={!i.leiloeiro && !semLeiloeiro}
               termo="leiloeiro"
               nota={
                 siteLeiloeiro ? (
-                  <a href={siteLeiloeiro.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 ${LINK_INTERNO}`}>
+                  // área de toque de 44 px sem mudar a linha (como o (i) do glossário)
+                  <a
+                    href={siteLeiloeiro.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`relative inline-flex items-center gap-1 before:absolute before:-inset-y-3.5 before:inset-x-0 before:content-[''] pointer-fine:before:hidden ${LINK_INTERNO}`}
+                  >
                     Site: {dominio(siteLeiloeiro.url)}
                     <IconeExterno tamanho={13} />
                     <NovaAba />

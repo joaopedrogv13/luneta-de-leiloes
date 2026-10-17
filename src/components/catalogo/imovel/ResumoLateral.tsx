@@ -28,6 +28,9 @@ const ID_ACOES = "resumo-acoes";
 const BOTAO_SECUNDARIO =
   "relative inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-nevoa/35 px-3.5 text-[13px] leading-none font-medium whitespace-nowrap text-nevoa transition-[background-color,border-color,color,scale] duration-150 ease-luneta hover:border-latao hover:text-luar active:scale-[0.96] motion-reduce:transition-none pointer-fine:min-h-9";
 
+/** Venda direta: preço fixo, sem disputa ("Preço de venda" e "Simular compra", e não "Lance mínimo" e "Simular lance"). */
+const precoFixo = (d: Pick<DadosResumo, "modalidade">) => d.modalidade === "venda_direta";
+
 const PLURAL: Record<Severidade, [string, string]> = {
   grave: ["grave", "graves"],
   atencao: ["atenção", "atenção"],
@@ -94,7 +97,7 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
         Preço, praça e ações
       </h2>
       <BotaoRecolher />
-      <p className="text-[11px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">Lance mínimo</p>
+      <p className="text-[11px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">{precoFixo(d) ? "Preço de venda" : "Lance mínimo"}</p>
       <p className="mt-2 font-display text-[34px] leading-none font-bold tracking-[-0.03em] whitespace-nowrap text-luar sm:text-[38px]">{moeda(d.lance)}</p>
       <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-nevoa">
         {d.avaliacao !== null ? (
@@ -150,7 +153,7 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
         )}
         <a href="#simulador" className={d.anuncio ? "btn-outline w-full gap-2" : "btn-primary w-full"}>
           <IconeCalculadora tamanho={18} />
-          Simular lance
+          {precoFixo(d) ? "Simular compra" : "Simular lance"}
         </a>
         <div className="grid grid-cols-2 gap-2">
           <BotaoFavoritar
@@ -280,7 +283,7 @@ export function BarraInferior({ d }: { d: DadosResumo }) {
   return (
     <>
       <aside
-        aria-label="Lance e anúncio"
+        aria-label={precoFixo(d) ? "Preço e anúncio" : "Lance e anúncio"}
         data-barra-fixa=""
         inert={!barra}
         aria-hidden={!barra}
@@ -301,27 +304,29 @@ export function BarraInferior({ d }: { d: DadosResumo }) {
               <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
+          {/* o deságio fica na linha do rótulo: ao lado do preço, em 360 px (ou com 7 dígitos), ele ia para baixo do botão */}
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">Lance mínimo</p>
-            <p className="mt-1 flex items-baseline gap-2 whitespace-nowrap">
-              <span className="font-display text-[22px] leading-none font-bold tracking-[-0.02em] text-luar">{moeda(d.lance)}</span>
+            <p className="text-[10px] leading-none font-semibold tracking-[0.12em] whitespace-nowrap text-nevoa uppercase">
+              {precoFixo(d) ? "Preço" : "Lance mínimo"}
               {desagio && (
-                <span className="text-[13px] font-semibold text-latao-texto">
-                  {desagio}
+                <span className="text-[11px] tracking-normal text-latao-texto normal-case">
+                  {" "}
+                  · {desagio}
                   <span className="sr-only"> de deságio</span>
                 </span>
               )}
             </p>
+            <p className="mt-1 font-display text-[clamp(18px,5.6vw,22px)] leading-none font-bold tracking-[-0.02em] whitespace-nowrap text-luar tabular-nums">{moeda(d.lance)}</p>
           </div>
           {d.anuncio ? (
-            <a href={d.anuncio} target="_blank" rel="noopener noreferrer" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]!">
+            <a href={d.anuncio} target="_blank" rel="noopener noreferrer" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]! max-[379px]:px-4!">
               Ver anúncio
               <IconeExterno tamanho={16} />
               <span className="sr-only"> na fonte (abre em nova aba)</span>
             </a>
           ) : (
-            <a href="#simulador" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]!">
-              Simular lance
+            <a href="#simulador" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]! max-[379px]:px-4!">
+              {precoFixo(d) ? "Simular compra" : "Simular lance"}
             </a>
           )}
         </div>
@@ -332,7 +337,7 @@ export function BarraInferior({ d }: { d: DadosResumo }) {
         onClick={() => minimizar(false)}
         inert={!pilula}
         aria-hidden={!pilula}
-        aria-label={`Mostrar a barra do lance (lance mínimo ${moeda(d.lance)})`}
+        aria-label={`Mostrar a barra do ${precoFixo(d) ? "preço" : "lance"} (${precoFixo(d) ? "preço de venda" : "lance mínimo"} ${moeda(d.lance)})`}
         className={`fixed right-4 bottom-[max(16px,env(safe-area-inset-bottom))] z-40 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-latao/45 bg-tinta/95 py-1.5 pr-2 pl-4 text-[14px] leading-none text-luar shadow-[0_10px_30px_rgba(7,11,22,.45)] backdrop-blur-md transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden [[data-theme=light]_&]:shadow-[0_8px_24px_rgba(15,24,48,.16)] ${
           pilula ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-[calc(100%+24px)] opacity-0"
         }`}

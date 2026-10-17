@@ -16,7 +16,7 @@ export function SecaoSimulador({ imovel, referencias }: { imovel: EntradaSimulad
         imovel={imovel}
         referencias={referencias}
         plano={plano}
-        aoPedirLuneta={() => pedirLuneta(document.activeElement instanceof HTMLElement ? document.activeElement : null)}
+        aoPedirLuneta={(abridor) => pedirLuneta(abridor ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null))}
       />
     </div>
   );

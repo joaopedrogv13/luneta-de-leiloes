@@ -2,12 +2,13 @@
 
 import { usePathname } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
-import { TIPO_NA_FRASE } from "@/components/catalogo/imovel/formato";
+import { descricaoReferencia, mediaDe, TIPO_NA_FRASE } from "@/components/catalogo/imovel/formato";
 import { MODALIDADE_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
 import type { Plano, ReferenciaM2 } from "@/lib/catalogo/tipos";
 import { completarModelo } from "@/lib/simulador/completa";
 import { area, moeda, porArea } from "@/lib/simulador/formato";
 import { LIMITES, montarModelo, type Modelo } from "@/lib/simulador/premissas";
+import { palavrasPreco } from "@/lib/simulador/textos";
 import type { Ajustes, EntradaSimulador } from "@/lib/simulador/tipos";
 import { CartaoResposta } from "./CartaoResposta";
 import { ComoUsar } from "./ComoUsar";
@@ -22,9 +23,12 @@ export interface SimuladorProps {
   /** referências de R$/m² da região (Vizinhanca.referencias): valor de venda sem avaliação e comparação */
   referencias?: ReferenciaM2[];
   plano: Plano;
-  /** opcional: abre o convite à Luneta (no Lente, as tags que alimentam os alertas de dívida não chegam) */
-  aoPedirLuneta?: () => void;
-  /** link do relatório em PDF; padrão: a página atual + "/relatorio" (/previa/imovel/<id>/relatorio) */
+  /**
+   * opcional: abre o convite à Luneta (no Lente, as tags que alimentam os alertas de dívida não chegam). `abridor`
+   * recebe o foco quando o convite fecha.
+   */
+  aoPedirLuneta?: (abridor: HTMLElement | null) => void;
+  /** link do relatório em PDF, sem o plano; padrão: a página atual + "/relatorio" (/previa/imovel/<id>/relatorio). No Lente, ganha "?plano=lente" */
   relatorioHref?: string;
 }
 
@@ -42,10 +46,13 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
   const [estado, atualizar] = useEstadoSimulador(imovel.id);
   const modelo = useMemo(() => montarModelo(imovel, estado.ajustes, referencias), [imovel, estado.ajustes, referencias]);
   const r = useMemo(() => completarModelo(modelo, estado), [modelo, estado]);
+  const fixo = r.semDisputa;
   const [editor, setEditor] = useState<{ alvo: AlvoEditor; quem: HTMLElement | null } | null>(null);
   const [comoUsar, setComoUsar] = useState(false);
   const caminho = usePathname();
-  const relatorio = relatorioHref ?? `${caminho?.replace(/\/$/, "") ?? ""}/relatorio`;
+  // o plano da demonstração (?plano=lente) vai no próprio href: vale no clique do meio, em "Abrir em nova aba" e em
+  // "Copiar link", que não passam por onClick
+  const relatorio = (relatorioHref ?? `${caminho?.replace(/\/$/, "") ?? ""}/relatorio`) + (plano === "lente" ? "?plano=lente" : "");
 
   const ajustar = (mudar: (a: Ajustes) => Ajustes) =>
     atualizar((e) => {
@@ -61,15 +68,22 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
     <section aria-labelledby="sim-titulo" className="flex w-full min-w-0 flex-col gap-4 text-luar sm:gap-5">
       <header className="px-1">
         <p className="eyebrow">Simulador de rentabilidade</p>
-        <h2 id="sim-titulo" className="mt-2.5 font-display text-[26px] leading-[1.1] font-bold tracking-[-0.025em] sm:text-[32px]">
-          Até quanto vale dar de lance?
+        <h2 id="sim-titulo" className="mt-2.5 font-display text-[26px] leading-[1.1] font-bold tracking-[-0.025em] text-balance sm:text-[32px]">
+          {/* venda direta: o preço é fixo (não há disputa), então a pergunta é se vale comprar por ele */}
+          {fixo ? (
+            <>
+              Vale a pena comprar por <span className="whitespace-nowrap tabular-nums">{moeda(imovel.lance)}</span>?
+            </>
+          ) : (
+            "Até quanto vale dar de lance?"
+          )}
         </h2>
         <p className="mt-2 text-[14px] leading-relaxed text-nevoa">{resumoImovel(modelo)}</p>
       </header>
 
       {lanceForaDoNormal(modelo) && (
         <Aviso>
-          <strong className="font-semibold">O lance mínimo passa de 3 vezes a avaliação.</strong> Quase sempre é erro no anúncio (no preço, na área ou um
+          <strong className="font-semibold">O {palavrasPreco(imovel).minimo} passa de 3 vezes a avaliação.</strong> Quase sempre é erro no anúncio (no preço, na área ou um
           lote com vários imóveis): confira no site da fonte antes de usar a simulação.
         </Aviso>
       )}
@@ -87,7 +101,7 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
           <Conferir modelo={modelo} ajustar={ajustar} aoEditarDesocupacao={(quem) => abrir({ editor: "desocupacao" }, quem)} />
           <Matriz
             r={r}
-            visao={r.estado.visao}
+            visao={r.visao}
             aoSelecionar={(celula) => atualizar((e) => ({ ...e, celula }))}
             aoMudarVisao={(visao) => atualizar((e) => ({ ...e, visao }))}
             aoMudarMeuLance={(n) => atualizar((e) => ({ ...e, meuLance: n }))}
@@ -110,18 +124,14 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
         <div className="min-w-0">
           <p className="font-display text-[17px] leading-tight font-bold">Terminou a simulação?</p>
           <p className="mt-1 text-[13.5px] leading-relaxed text-nevoa">
-            Exporte um relatório em PDF com tudo: a meta, o lance máximo, a tabela de cenários, a conta linha a linha e as premissas. Seus ajustes ficam
-            guardados neste navegador, só para este imóvel.
+            Exporte um relatório em PDF com tudo: a meta, {fixo ? "o lucro pelo preço pedido e a margem de segurança" : "o lance máximo"}, a tabela de
+            cenários, a conta linha a linha e as premissas. Seus ajustes ficam guardados neste navegador, só para este imóvel.
           </p>
         </div>
         <a
           href={relatorio}
           target="_blank"
           rel="noopener"
-          // o plano da demonstração (?plano=lente) acompanha o relatório
-          onClick={(e) => {
-            e.currentTarget.href = relatorio + window.location.search;
-          }}
           className="btn-primary shrink-0 gap-2"
         >
           <IconeDocumento />
@@ -139,7 +149,16 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
           entrada={imovel}
           referencias={referencias}
           plano={plano}
-          aoPedirLuneta={aoPedirLuneta}
+          aoPedirLuneta={
+            aoPedirLuneta &&
+            (() => {
+              // o convite abre no lugar do editor: os dois modais não se empilham (um ficaria atrás do outro e o Esc
+              // fecharia os dois). O foco volta, no fim, para quem abriu o editor (o lápis ou "Adicionar custo").
+              const quem = editor.quem;
+              setEditor(null);
+              requestAnimationFrame(() => aoPedirLuneta(quem?.isConnected ? quem : document.getElementById(ID_DETALHE)));
+            })
+          }
           aoAplicar={(novo) => atualizar(() => novo)}
           aoFechar={() => setEditor(null)}
           fallbackFocus={() => document.getElementById(ID_DETALHE)}
@@ -169,7 +188,7 @@ function resumoImovel({ entrada: e, premissas: p, perfil }: Modelo) {
     perfil.grande && e.tipo === "comercial" ? "Comercial (galpão ou prédio)" : TIPO_ROTULO[e.tipo],
     p.areaEstimada ? `${perfil.rotuloArea} não informada` : area(p.area),
     e.avaliacao ? `avaliação ${moeda(e.avaliacao)}` : "avaliação não informada pela fonte",
-    `lance mínimo ${moeda(e.lance)}`,
+    `${palavrasPreco(e).minimo} ${moeda(e.lance)}`,
     // o nome padronizado do site; o nome como a fonte chama fica no resumo da página
     MODALIDADE_ROTULO[e.modalidade],
   ];
@@ -265,7 +284,7 @@ function FaltaVenda({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajus
   return (
     <div className="rounded-3xl border border-latao/45 bg-tinta p-5 sm:p-7">
       <p id={FOCO_RESULTADO} tabIndex={-1} className="text-[13px] font-semibold tracking-[0.12em] text-nevoa uppercase">
-        Seu lance máximo
+        {palavrasPreco(e).fixo ? "Comprando pelo preço pedido" : "Seu lance máximo"}
       </p>
       <p className="mt-2 font-display text-[28px] leading-tight font-bold tracking-[-0.02em] sm:text-[34px]">Falta o valor de venda</p>
       <p className="mt-2 text-[14px] leading-relaxed text-nevoa">
@@ -279,7 +298,7 @@ function FaltaVenda({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajus
               {perfil.rotuloArea.charAt(0).toUpperCase() + perfil.rotuloArea.slice(1)}
             </label>
             <p id="sim-falta-area-ajuda" className="mt-0.5 text-[12.5px] text-nevoa">
-              Com a área, usamos a avaliação mediana de {TIPO_NA_FRASE[e.tipo]} em {ref.nome} ({porArea(ref.avaliacaoM2!.mediana, e.tipo)}).
+              Com a área, usamos a referência da região: {descricaoReferencia(ref)} ({porArea(mediaDe(ref) ?? 0, e.tipo)}).
             </p>
             <CampoPedido
               id="sim-falta-area"
@@ -316,7 +335,9 @@ function FaltaVenda({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajus
         </div>
       </div>
       <Aviso tom="info" className="mt-5">
-        Lance mínimo atual: {moeda(e.lance)}. Assim que houver um valor de venda, aparecem o seu lance máximo e a tabela de cenários.
+        {palavrasPreco(e).fixo
+          ? `Preço pedido: ${moeda(e.lance)}. Assim que houver um valor de venda, aparecem o lucro, a margem de segurança e a tabela de cenários.`
+          : `Lance mínimo atual: ${moeda(e.lance)}. Assim que houver um valor de venda, aparecem o seu lance máximo e a tabela de cenários.`}
       </Aviso>
     </div>
   );

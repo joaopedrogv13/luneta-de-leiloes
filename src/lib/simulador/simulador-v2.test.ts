@@ -13,7 +13,7 @@ import { adicionaveis, contarAjustes, linhasDaConta } from "./conta";
 import { completarModelo, simulacaoCompleta } from "./completa";
 import { chaveEstado, ESTADO_INICIAL, interpretarEstado, serializarEstado, type EstadoSimulador } from "./estado";
 import { colunasDaMatriz, limparAjustes, limparMeta, montarModelo, multiplicador, ocupadoComCerteza, PADRAO } from "./premissas";
-import { converterMeta, metaPorExtenso } from "./textos";
+import { converterMeta, metaPorExtenso, notaIr, vendaDoCenario, vendaDoCenarioCurta } from "./textos";
 import type { EntradaSimulador } from "./tipos";
 
 const perto = (real: number, esperado: number, tol = 0.01, msg?: string) =>
@@ -488,13 +488,51 @@ test("simulacaoCompleta: os quatro imóveis do dono", () => {
   assert.ok(!t.detalhe!.conta.some((l) => l.id === "condominio"));
   assert.ok(t.adicionaveis.some((a) => a.editor === "condominio")); // loteamento fechado
 
-  // São Gonçalo com o lance máximo no detalhe
-  const sg = simulacaoCompleta(saoGoncalo, estado({ lanceDetalhe: "teto", celula: { cenario: "base", meses: 18 } }));
-  assert.equal(sg.detalhe!.qualLance, "teto");
-  assert.equal(Math.round(sg.detalhe!.sim.lance), sg.teto);
-  perto(sg.detalhe!.sim.roiAA, 0.2, 1e-4);
+  // venda online (há disputa) com o lance máximo no detalhe
+  const vo = simulacaoCompleta(terrenoCocal, estado({ lanceDetalhe: "teto", celula: { cenario: "base", meses: 18 } }));
+  assert.equal(vo.semDisputa, false);
+  assert.equal(vo.detalhe!.qualLance, "teto");
+  assert.equal(Math.round(vo.detalhe!.sim.lance), vo.teto);
+  perto(vo.detalhe!.sim.roiAA, 0.2, 1e-4);
   // o mesmo resultado a partir do modelo pronto
-  assert.equal(completarModelo(sg.modelo, sg.estado).teto, sg.teto);
+  assert.equal(completarModelo(vo.modelo, vo.estado).teto, vo.teto);
+  assert.equal(vo.margem, null);
+  assert.equal(vo.visao, "teto");
+});
+
+test("venda direta (preço fixo): a conta usa o preço pedido, a margem de segurança e a tabela abre no lucro", () => {
+  // São Gonçalo é venda direta: "lance máximo no detalhe" não existe (o preço não sobe)
+  const sg = simulacaoCompleta(saoGoncalo, estado({ lanceDetalhe: "teto", celula: { cenario: "base", meses: 12 } }));
+  assert.equal(sg.semDisputa, true);
+  assert.equal(sg.visao, "lucro");
+  assert.equal(sg.detalhe!.qualLance, "minimo");
+  assert.equal(sg.detalhe!.sim.lance, saoGoncalo.lance);
+  assert.equal(sg.detalhe!.conta.find((l) => l.id === "lance")!.rotulo, "Preço");
+  assert.equal(sg.detalhe!.etapas.find((e) => e.chave === "lance")!.rotulo, "Preço");
+  // a margem: o maior custo imprevisto (de uma vez) que ainda deixa 20% ao ano, pelo preço pedido
+  const m = sg.margem!;
+  assert.ok(m > 0);
+  const comImprevisto = (c: number) =>
+    simulacaoCompleta(saoGoncalo, estado({ ajustes: { custosExtras: [{ id: "x", nome: "imprevisto", modo: "fixo", valor: c }] } })).comLanceMinimo!;
+  assert.ok(comImprevisto(m).roiAA >= 0.2);
+  assert.ok(comImprevisto(m + 2).roiAA < 0.2);
+  // cada célula da tabela traz a sua margem; a escolhida é a do cartão
+  assert.equal(sg.tabela![sg.linhas.indexOf("base")]![sg.colunas.indexOf(12)]!.margem, m);
+  assert.ok(sg.tabela!.flat().every((c) => c.margem !== undefined && (c.margem === null || c.margem >= 0)));
+  // meta impossível: sem margem
+  assert.equal(simulacaoCompleta(saoGoncalo, estado({ meta: { tipo: "roi_aa", valor: 9 } })).margem, null);
+  // a pessoa escolheu a visão do lance máximo: vale a escolha
+  assert.equal(simulacaoCompleta(saoGoncalo, estado({ visao: "teto" })).visao, "teto");
+});
+
+test("textos: nota do IR conforme a premissa e venda do cenário sem repetir o valor", () => {
+  assert.equal(notaIr({ desligados: [], irIsento: false }), "já sem o IR");
+  assert.equal(notaIr({ desligados: ["ir"], irIsento: false }), "sem descontar o IR (você tirou da conta)");
+  assert.equal(notaIr({ desligados: [], irIsento: true }), "com isenção do IR");
+  assert.equal(notaIr({ desligados: [], irIsento: false }, true), "já sem o imposto de renda");
+  const r = simulacaoCompleta(casaCampos, estado({ ajustes: { vendaPersonalizada: { modo: "valor", valor: 150_000 } } }));
+  assert.equal(vendaDoCenarioCurta(r.modelo, "personalizado"), "valor que você definiu");
+  assert.equal(vendaDoCenarioCurta(r.modelo, "base"), vendaDoCenario(r.modelo, "base"));
 });
 
 test("simulacaoCompleta com os dados reais do instantâneo (quando o imóvel ainda estiver nele)", async () => {
@@ -541,3 +579,27 @@ function pick(d: EntradaSimulador): Omit<EntradaSimulador, "tags"> {
     condicoesPagamento: d.condicoesPagamento,
   };
 }
+
+test("custos em reais no lugar do %: ITBI, registro, comissão, reserva e corretagem; os que abatem o IR continuam abatendo", () => {
+  const base = montarModelo(casaCampos);
+  const s0 = simular(base, 100_000, "base", 12)!;
+  const m = montarModelo(casaCampos, { itbiValor: 4_321, registroValor: 2_500, comissaoValor: 1_000, reservaValor: 0, corretagemValor: 9_000 });
+  const s = simular(m, 100_000, "base", 12)!;
+  assert.equal(s.itbi, 4_321);
+  assert.equal(s.registro, 2_500);
+  assert.equal(s.comissao, 1_000);
+  assert.equal(s.reserva, 0);
+  assert.equal(s.corretagem, 9_000);
+  // o valor não muda com o lance (a guia é a guia)
+  assert.equal(simular(m, 150_000, "base", 12)!.itbi, 4_321);
+  // o ganho de capital (base do IR) abate os valores informados
+  perto(s.ganhoCapital, s.venda - 9_000 - 100_000 - 1_000 - 4_321 - 2_500 - s.reforma, 1e-6);
+  assert.notEqual(s0.ganhoCapital, s.ganhoCapital);
+  // a conta diz de onde veio, e a linha conta como ajustada
+  const { conta } = linhasDaConta(m, s);
+  assert.match(conta.find((l) => l.id === "itbi")!.formula, /valor que você informou/);
+  assert.match(conta.find((l) => l.id === "registro")!.formula, /valor que você informou/);
+  assert.ok(conta.find((l) => l.id === "itbi")!.ajustada);
+  // o navegador guarda e lê de volta; valor fora da faixa (ou que não é número) é descartado
+  assert.deepEqual(limparAjustes({ itbiValor: 4_321, registroValor: -5, corretagemValor: "9000" }), { itbiValor: 4_321 });
+});
