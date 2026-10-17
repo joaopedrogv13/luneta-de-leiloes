@@ -1,19 +1,21 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 import { TIPO_NA_FRASE } from "@/components/catalogo/imovel/formato";
 import { MODALIDADE_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
 import type { Plano, ReferenciaM2 } from "@/lib/catalogo/tipos";
-import { matriz, simular } from "@/lib/simulador/calculo";
+import { completarModelo } from "@/lib/simulador/completa";
+import { area, moeda, porArea } from "@/lib/simulador/formato";
 import { LIMITES, montarModelo, type Modelo } from "@/lib/simulador/premissas";
-import { CENARIOS, type Ajustes, type EntradaSimulador } from "@/lib/simulador/tipos";
+import type { Ajustes, EntradaSimulador } from "@/lib/simulador/tipos";
 import { CartaoResposta } from "./CartaoResposta";
-import { Aviso, CampoPedido, FOCO_RESULTADO, IconeAtencao, IconeInfo } from "./controles";
-import { Detalhe, type BaseDetalhe } from "./Detalhe";
-import { ESTADO_INICIAL, useEstadoSimulador } from "./estado";
-import { area, moeda, porArea } from "./formato";
+import { ComoUsar } from "./ComoUsar";
+import { Aviso, CampoPedido, FOCO_RESULTADO, IconeAtencao, IconeDocumento, IconeInfo } from "./controles";
+import { Detalhe, ID_DETALHE } from "./Detalhe";
+import { EditorCusto, type AlvoEditor } from "./Editores";
+import { useEstadoSimulador } from "./estado";
 import { Matriz } from "./Matriz";
-import { Premissas } from "./Premissas";
 
 export interface SimuladorProps {
   imovel: EntradaSimulador;
@@ -22,37 +24,38 @@ export interface SimuladorProps {
   plano: Plano;
   /** opcional: abre o convite à Luneta (no Lente, as tags que alimentam os alertas de dívida não chegam) */
   aoPedirLuneta?: () => void;
+  /** link do relatório em PDF; padrão: a página atual + "/relatorio" (/previa/imovel/<id>/relatorio) */
+  relatorioHref?: string;
 }
 
 export const AVISO_SIMULADOR =
   "Simulação com premissas genéricas, não é recomendação de investimento; confira edital, custos locais e impostos com um profissional.";
 
 /**
- * Simulador de rentabilidade da página do imóvel. De cima para baixo: o cartão-resposta ("Seu lance
- * máximo"), o que conferir antes de decidir, a matriz cenários × prazos, o detalhamento da célula
- * escolhida e as premissas (tudo editável, padrões conservadores, só o que vale para o tipo).
- * Os ajustes ficam no navegador, por imóvel.
+ * Simulador de rentabilidade da página do imóvel. De cima para baixo: o cartão-resposta ("Seu lance máximo",
+ * com a meta), o que conferir antes de decidir, a tabela de cenários × prazos e o Detalhe da célula escolhida,
+ * que é o lugar único de ajuste (cada linha da conta abre o pop-up daquele tipo de despesa). No fim, o
+ * relatório em PDF. Tudo vem de `simulacaoCompleta` (src/lib/simulador/completa.ts), a mesma conta do PDF.
+ * Os ajustes ficam no navegador, por imóvel (formato em src/lib/simulador/estado.ts).
  */
-export function Simulador({ imovel, referencias, plano, aoPedirLuneta }: SimuladorProps) {
+export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorioHref }: SimuladorProps) {
   const [estado, atualizar] = useEstadoSimulador(imovel.id);
   const modelo = useMemo(() => montarModelo(imovel, estado.ajustes, referencias), [imovel, estado.ajustes, referencias]);
-  const p = modelo.premissas;
-  const meuLance = estado.meuLance ?? imovel.lance;
-  const tabela = useMemo(() => matriz(modelo, estado.meta, meuLance), [modelo, estado.meta, meuLance]);
+  const r = useMemo(() => completarModelo(modelo, estado), [modelo, estado]);
+  const [editor, setEditor] = useState<{ alvo: AlvoEditor; quem: HTMLElement | null } | null>(null);
+  const [comoUsar, setComoUsar] = useState(false);
+  const caminho = usePathname();
+  const relatorio = relatorioHref ?? `${caminho?.replace(/\/$/, "") ?? ""}/relatorio`;
 
-  const celula = { cenario: estado.celula.cenario, prazo: Math.min(estado.celula.prazo, p.prazos.length - 1) };
-  const prazo = p.prazos[celula.prazo];
-  const cel = tabela?.[CENARIOS.indexOf(celula.cenario)][celula.prazo] ?? null;
-  const teto = cel?.teto ?? null;
-  const comLanceMinimo = useMemo(() => simular(modelo, imovel.lance, celula.cenario, prazo), [modelo, imovel.lance, celula.cenario, prazo]);
-
-  // Detalhe: abre com o lance da pessoa (o lance mínimo, se ela não escolheu outro), como o rodapé do cartão;
-  // o lance máximo, por definição, sempre dá a meta exata, então detalhá-lo de saída mostraria outro lucro
-  const [baseEscolhida, setBaseEscolhida] = useState<BaseDetalhe | null>(null);
-  const base: BaseDetalhe = baseEscolhida === "teto" && teto !== null ? "teto" : "meu";
-  const simDetalhe = cel ? (base === "teto" ? simular(modelo, teto!, celula.cenario, prazo) : cel.comMeuLance) : null;
-
-  const ajustar = (mudar: (a: Ajustes) => Ajustes) => atualizar((e) => ({ ...e, ajustes: mudar(e.ajustes) }));
+  const ajustar = (mudar: (a: Ajustes) => Ajustes) =>
+    atualizar((e) => {
+      const ajustes = mudar(e.ajustes);
+      // tirou o cenário personalizado com ele escolhido: a escolha volta ao base (senão, ao criar outro, a
+      // célula pularia sozinha para o personalizado)
+      const celula = !ajustes.vendaPersonalizada && e.celula.cenario === "personalizado" ? { ...e.celula, cenario: "base" as const } : e.celula;
+      return { ...e, ajustes, celula };
+    });
+  const abrir = (alvo: AlvoEditor, quem: HTMLElement | null) => setEditor({ alvo, quem });
 
   return (
     <section aria-labelledby="sim-titulo" className="flex w-full min-w-0 flex-col gap-4 text-luar sm:gap-5">
@@ -71,36 +74,30 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta }: Simulad
         </Aviso>
       )}
 
-      {tabela && cel && comLanceMinimo && simDetalhe ? (
+      {r.tabela && r.detalhe && r.comLanceMinimo ? (
         <>
           <CartaoResposta
-            modelo={modelo}
-            meta={estado.meta}
-            celula={celula}
-            teto={teto}
-            comLanceMinimo={comLanceMinimo}
+            r={r}
             aoMudarMeta={(meta) => atualizar((e) => ({ ...e, meta }))}
-            aoMudarCelula={(c) => atualizar((e) => ({ ...e, celula: c }))}
+            aoMudarCelula={(celula) => atualizar((e) => ({ ...e, celula }))}
+            aoDefinirPersonalizado={(v) => ajustar((a) => ({ ...a, vendaPersonalizada: v }))}
             aoInformarDividas={(n) => ajustar((a) => ({ ...a, dividas: n }))}
           />
           <AvisoFixo />
-          <Conferir modelo={modelo} ajustar={ajustar} />
+          <Conferir modelo={modelo} ajustar={ajustar} aoEditarDesocupacao={(quem) => abrir({ editor: "desocupacao" }, quem)} />
           <Matriz
-            modelo={modelo}
-            celulas={tabela}
-            meta={estado.meta}
-            visao={estado.visao}
-            meuLance={meuLance}
-            meuLanceAjustado={estado.meuLance !== null}
-            selecionada={celula}
-            aoSelecionar={(c) => atualizar((e) => ({ ...e, celula: c }))}
-            aoMudarVisao={(v) => {
-              setBaseEscolhida(null);
-              atualizar((e) => ({ ...e, visao: v }));
-            }}
+            r={r}
+            visao={r.estado.visao}
+            aoSelecionar={(celula) => atualizar((e) => ({ ...e, celula }))}
+            aoMudarVisao={(visao) => atualizar((e) => ({ ...e, visao }))}
             aoMudarMeuLance={(n) => atualizar((e) => ({ ...e, meuLance: n }))}
+            aoAjustar={ajustar}
+            aoComoUsar={() => setComoUsar(true)}
+            aoEditarVenda={() => abrir({ editor: "venda" }, document.activeElement as HTMLElement | null)}
           />
-          <Detalhe modelo={modelo} sim={simDetalhe} meta={estado.meta} base={base} teto={teto} meuLance={meuLance} aoMudarBase={setBaseEscolhida} />
+          <div id="sim-detalhe" className="scroll-mt-28">
+            <Detalhe r={r} aoEditar={abrir} atualizar={atualizar} />
+          </div>
         </>
       ) : (
         <>
@@ -109,15 +106,46 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta }: Simulad
         </>
       )}
 
-      <Premissas
-        modelo={modelo}
-        sim={comLanceMinimo}
-        plano={plano}
-        aoAjustar={ajustar}
-        aoRestaurarTudo={() => atualizar((e) => ({ ...e, ajustes: ESTADO_INICIAL.ajustes }))}
-        aoPedirLuneta={aoPedirLuneta}
-      />
-      <p className="px-1 text-[12px] leading-relaxed text-nevoa">Seus ajustes ficam guardados neste navegador, só para este imóvel.</p>
+      <div className="flex flex-col gap-4 rounded-3xl border border-nevoa/20 bg-tinta p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 in-data-[theme=light]:shadow-[0_1px_2px_rgba(15,24,48,.05)]">
+        <div className="min-w-0">
+          <p className="font-display text-[17px] leading-tight font-bold">Terminou a simulação?</p>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-nevoa">
+            Exporte um relatório em PDF com tudo: a meta, o lance máximo, a tabela de cenários, a conta linha a linha e as premissas. Seus ajustes ficam
+            guardados neste navegador, só para este imóvel.
+          </p>
+        </div>
+        <a
+          href={relatorio}
+          target="_blank"
+          rel="noopener"
+          // o plano da demonstração (?plano=lente) acompanha o relatório
+          onClick={(e) => {
+            e.currentTarget.href = relatorio + window.location.search;
+          }}
+          className="btn-primary shrink-0 gap-2"
+        >
+          <IconeDocumento />
+          Exportar PDF
+          <span className="sr-only"> (abre em nova aba)</span>
+        </a>
+      </div>
+
+      {editor && (
+        <EditorCusto
+          key={`${editor.alvo.editor}-${"extraId" in editor.alvo ? editor.alvo.extraId : ""}`}
+          alvo={editor.alvo}
+          estado={r.estado}
+          atual={r}
+          entrada={imovel}
+          referencias={referencias}
+          plano={plano}
+          aoPedirLuneta={aoPedirLuneta}
+          aoAplicar={(novo) => atualizar(() => novo)}
+          aoFechar={() => setEditor(null)}
+          fallbackFocus={() => document.getElementById(ID_DETALHE)}
+        />
+      )}
+      {comoUsar && <ComoUsar r={r} onFechar={() => setComoUsar(false)} />}
     </section>
   );
 }
@@ -149,13 +177,23 @@ function resumoImovel({ entrada: e, premissas: p, perfil }: Modelo) {
 }
 
 /**
- * "Confira antes de decidir": o que falta ou pesa e pode ser resolvido ali mesmo (a área). As dívidas apontadas
- * são pedidas no próprio cartão-resposta, junto do número que elas mudam.
+ * "Confira antes de decidir": o que falta ou pesa e pode ser resolvido ali mesmo. A área, quando a fonte não
+ * informa; e a reserva de desocupação, só quando o imóvel está ocupado com certeza (fonte ou tag revisada).
+ * Desocupado ou ocupação não informada: nada aqui, e nenhuma reserva (a desocupação pode ser acrescentada no
+ * Detalhe). As dívidas apontadas são pedidas no próprio cartão-resposta.
  */
-function Conferir({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajustes) => Ajustes) => void }) {
+function Conferir({
+  modelo,
+  ajustar,
+  aoEditarDesocupacao,
+}: {
+  modelo: Modelo;
+  ajustar: (m: (a: Ajustes) => Ajustes) => void;
+  aoEditarDesocupacao: (quem: HTMLElement) => void;
+}) {
   const { premissas: p, padrao: d, perfil, entrada: e } = modelo;
-  const usaArea = perfil.modoReforma === "m2" || p.condominio > 0;
-  const paraQue = [perfil.modoReforma === "m2" ? perfil.rotuloReforma.toLowerCase() : null, p.condominio > 0 ? "condomínio" : null].filter(Boolean).join(" e ");
+  const usaArea = p.reformaModo === "m2" || p.condominio > 0;
+  const paraQue = [p.reformaModo === "m2" ? perfil.rotuloReforma.toLowerCase() : null, p.condominio > 0 ? "condomínio" : null].filter(Boolean).join(" e ");
   const itens: { chave: string; tom: "atencao" | "info"; texto: ReactNode; campo?: ReactNode }[] = [];
 
   if (p.areaEstimada && usaArea) {
@@ -181,15 +219,20 @@ function Conferir({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajuste
       ),
     });
   }
-  if (e.ocupacao !== "desocupado" && p.desocupacao === d.desocupacao && p.desocupacao > 0) {
+  if (modelo.ocupado && p.desocupacao === d.desocupacao && p.desocupacao > 0 && !p.desligados.includes("desocupacao")) {
     itens.push({
       chave: "ocupacao",
       tom: "info",
-      texto: (
-        <>
-          {e.ocupacao === "ocupado" ? "Imóvel ocupado" : "Ocupação não informada pela fonte"}: reservamos {moeda(p.desocupacao)} para a desocupação, que pode
-          levar meses.
-        </>
+      texto: <>Imóvel ocupado: reservamos {moeda(p.desocupacao)} para a desocupação, que pode levar meses.</>,
+      campo: (
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          onClick={(ev) => aoEditarDesocupacao(ev.currentTarget)}
+          className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-nevoa/30 px-4 text-[13px] font-semibold transition-colors hover:border-latao pointer-fine:min-h-9"
+        >
+          Ajustar
+        </button>
       ),
     });
   }
@@ -273,8 +316,9 @@ function FaltaVenda({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajus
         </div>
       </div>
       <Aviso tom="info" className="mt-5">
-        Lance mínimo atual: {moeda(e.lance)}. Assim que houver um valor de venda, aparecem o seu lance máximo e a matriz de cenários.
+        Lance mínimo atual: {moeda(e.lance)}. Assim que houver um valor de venda, aparecem o seu lance máximo e a tabela de cenários.
       </Aviso>
     </div>
   );
 }
+

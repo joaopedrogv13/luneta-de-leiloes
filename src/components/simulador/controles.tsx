@@ -71,6 +71,149 @@ export function IconeCadeado({ className = "" }: { className?: string }) {
   );
 }
 
+export function IconeLapis({ className = "" }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" strokeWidth="1.4" {...ICONE} className={`shrink-0 ${className}`}>
+      <path d="M9.6 2.4l2 2-7 7-2.7.7.7-2.7z" />
+      <path d="M8.4 3.6l2 2" />
+    </svg>
+  );
+}
+
+export function IconeMais({ className = "" }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" strokeWidth="1.6" {...ICONE} className={`shrink-0 ${className}`}>
+      <path d="M7 2.5v9M2.5 7h9" />
+    </svg>
+  );
+}
+
+export function IconeAjuda({ className = "" }: { className?: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" strokeWidth="1.5" {...ICONE} className={`shrink-0 ${className}`}>
+      <circle cx="8" cy="8" r="6.5" />
+      <path d="M6.2 6.1a1.9 1.9 0 0 1 3.7.5c0 1.3-1.9 1.6-1.9 2.8" />
+      <circle cx="8" cy="11.6" r="0.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconeLixo({ className = "" }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" strokeWidth="1.4" {...ICONE} className={`shrink-0 ${className}`}>
+      <path d="M2.5 3.8h9M5.5 3.8V2.6h3v1.2M3.6 3.8l.6 7.6h5.6l.6-7.6" />
+    </svg>
+  );
+}
+
+export function IconeDocumento({ className = "" }: { className?: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" strokeWidth="1.5" {...ICONE} className={`shrink-0 ${className}`}>
+      <path d="M4 1.8h5.4L12.5 5v9.2H4z" />
+      <path d="M9.2 1.8V5h3.3M6 8.6h4.4M6 11h4.4" />
+    </svg>
+  );
+}
+
+export function IconeFechar({ className = "" }: { className?: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" strokeWidth="1.6" {...ICONE} className={`shrink-0 ${className}`}>
+      <path d="M4 4l8 8M12 4l-8 8" />
+    </svg>
+  );
+}
+
+export function IconeOlhoFechado({ className = "" }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" strokeWidth="1.4" {...ICONE} className={`shrink-0 ${className}`}>
+      <path d="M1.5 7s2-3.6 5.5-3.6S12.5 7 12.5 7s-2 3.6-5.5 3.6S1.5 7 1.5 7z" />
+      <path d="M2.5 11.5l9-9" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Chip (atalho ou escolha rápida, com aria-pressed)
+// ---------------------------------------------------------------------------
+
+export function Chip({
+  ativo,
+  onClick,
+  children,
+  detalhe,
+  className = "",
+  ariaLabel,
+  disabled,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  detalhe?: ReactNode;
+  className?: string;
+  ariaLabel?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={ativo}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={onClick}
+      className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 text-[13.5px] leading-none font-medium whitespace-nowrap tabular-nums transition-[background-color,border-color,color,scale] duration-150 ease-luneta select-none active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none pointer-fine:min-h-9 pointer-fine:px-3 ${
+        ativo ? "border-latao bg-latao/15 font-semibold text-luar" : "border-nevoa/30 text-luar hover:border-nevoa/65 hover:bg-nevoa/[0.07]"
+      } ${className}`}
+    >
+      {ativo && <IconeOk className="size-2.5 text-latao-texto" />}
+      <span>{children}</span>
+      {detalhe && <span className={`text-[12px] font-normal ${ativo ? "text-luar/80" : "text-nevoa"}`}>{detalhe}</span>}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Botão de editar (lápis): discreto, aparece no hover no computador e fica sempre visível no toque
+// ---------------------------------------------------------------------------
+
+export function BotaoEditar({
+  rotulo,
+  onClick,
+  sempreVisivel = false,
+  destaque = false,
+  className = "",
+}: {
+  /** nome acessível ("Editar ITBI") */
+  rotulo: string;
+  onClick: (ev: { currentTarget: HTMLElement }) => void;
+  /** visível sem hover (linha ajustada, ou fora de uma linha) */
+  sempreVisivel?: boolean;
+  /** latão (linha ajustada) */
+  destaque?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={rotulo}
+      title={rotulo}
+      aria-haspopup="dialog"
+      onClick={onClick}
+      className={`group/lapis relative -my-2.5 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity duration-150 motion-reduce:transition-none pointer-fine:size-8 pointer-fine:my-0 ${
+        sempreVisivel ? "" : "pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100 pointer-fine:focus-visible:opacity-100"
+      } ${className}`}
+    >
+      <span
+        aria-hidden="true"
+        className={`inline-flex size-6 items-center justify-center rounded-full border transition-colors duration-150 group-hover/lapis:border-latao group-hover/lapis:bg-latao/15 group-hover/lapis:text-luar ${
+          destaque ? "border-latao/70 bg-latao/12 text-latao-texto" : "border-nevoa/30 text-nevoa"
+        }`}
+      >
+        <IconeLapis className="size-3" />
+      </span>
+    </button>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Campo numérico com máscara pt-BR
 // ---------------------------------------------------------------------------

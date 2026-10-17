@@ -48,8 +48,9 @@ const terreno = () =>
     ocupacao: "desocupado",
   });
 
-test("apartamento: conta conferida à mão (leilão, ocupação não informada, reforma leve, base, 12 meses)", () => {
-  const m = montarModelo(imovel());
+test("apartamento: conta conferida à mão (leilão, ocupado, reforma leve, base, 12 meses)", () => {
+  // ocupado pela fonte: entra a reserva de desocupação (só com ocupação certa; ver simulador-v2.test.ts)
+  const m = montarModelo(imovel({ ocupacao: "ocupado" }));
   const p = m.premissas;
   assert.equal(p.comissaoPct, 0.05);
   assert.equal(p.desocupacao, 10_000);

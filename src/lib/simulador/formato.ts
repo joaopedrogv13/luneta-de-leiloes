@@ -1,20 +1,24 @@
-import { area as areaCatalogo, moeda as moedaCatalogo, moedaCurta as moedaCurtaCatalogo } from "@/lib/catalogo/rotulos";
-import type { TipoImovel } from "@/lib/catalogo/tipos";
+/**
+ * Formatação dos números do simulador (tela e relatório em PDF). Pura, sem "@/" (os testes rodam em Node).
+ */
+import { area as areaCatalogo, moeda as moedaCatalogo, moedaCurta as moedaCurtaCatalogo } from "../catalogo/rotulos";
+import type { TipoImovel } from "../catalogo/tipos";
 
 /** "R$ 1.234" com espaço que não quebra: "R$" nunca fica sozinho no fim da linha. */
 export function moeda(v: number, centavos = false): string {
-  return moedaCatalogo(v, centavos).replace(/ /g, "\u00a0");
+  return moedaCatalogo(v, centavos).replace(/ /g, " ");
 }
 
 const PCT0 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const PCT1 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+const PCT2 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 const NUM1 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 const NUM0 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const NUM2 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 
 /** "R$ 3 mil" sem quebrar a linha entre o número e a unidade. */
 export function moedaCurta(v: number): string {
-  return moedaCurtaCatalogo(v).replace(/ /g, "\u00a0");
+  return moedaCurtaCatalogo(v).replace(/ /g, " ");
 }
 
 /**
@@ -23,7 +27,7 @@ export function moedaCurta(v: number): string {
  */
 export function area(m2: number): string {
   if (m2 >= 100_000) return areaCatalogo(m2);
-  return `${NUM2.format(m2)}\u00a0m²`;
+  return `${NUM2.format(m2)} m²`;
 }
 
 /** Preço por área: "R$ 4.567/m²"; no rural, por hectare ("R$ 108.333/ha"), que é como o mercado fala. */
@@ -36,16 +40,17 @@ export function moedaMes(v: number): string {
   return Math.abs(v - Math.round(v)) < 0.005 ? moeda(Math.round(v)) : moeda(v, true);
 }
 
-/** 0.246 → "24,6%"; a partir de 100%, sem decimal ("1.240%"). */
-export function pct(fracao: number, casas: 0 | 1 = 1): string {
+/** 0.246 → "24,6%"; a partir de 100%, sem decimal ("1.240%"). `casas` 2 só para taxas pequenas ("0,95%"). */
+export function pct(fracao: number, casas: 0 | 1 | 2 = 1): string {
   const v = fracao * 100;
-  const f = casas === 0 || Math.abs(v) >= 100 ? PCT0 : PCT1;
+  const f = casas === 0 || Math.abs(v) >= 100 ? PCT0 : casas === 2 ? PCT2 : PCT1;
   return `${f.format(v).replace("-", "−")}%`;
 }
 
 /** Moeda com sinal tipográfico: "−R$ 18.000", "+R$ 3.000" (só quando `mais`). */
 export function moedaSinal(v: number, mais = false): string {
-  const r = Math.round(v);
+  // "|| 0" tira o zero negativo (−0 sairia "−R$ 0")
+  const r = Math.round(v) || 0;
   if (r < 0) return `−${moeda(-r)}`;
   return `${mais && r > 0 ? "+" : ""}${moeda(r)}`;
 }
@@ -56,15 +61,15 @@ export function moedaSinal(v: number, mais = false): string {
 export function curto(v: number): string {
   const sinal = v < 0 ? "−" : "";
   const a = Math.abs(v);
-  if (a >= 1_000_000) return `${sinal}${NUM1.format(a / 1_000_000)}\u00a0mi`;
-  if (a >= 10_000) return `${sinal}${NUM0.format(a / 1000)}\u00a0mil`;
-  if (a >= 1000) return `${sinal}${NUM1.format(a / 1000)}\u00a0mil`;
+  if (a >= 1_000_000) return `${sinal}${NUM1.format(a / 1_000_000)} mi`;
+  if (a >= 10_000) return `${sinal}${NUM0.format(a / 1000)} mil`;
+  if (a >= 1000) return `${sinal}${NUM1.format(a / 1000)} mil`;
   return `${sinal}${NUM0.format(a)}`;
 }
 
 /** "12 meses", "1 mês" */
 export function meses(n: number): string {
-  return `${n}\u00a0${n === 1 ? "mês" : "meses"}`;
+  return `${n} ${n === 1 ? "mês" : "meses"}`;
 }
 
 /** "−R$ 8 mil", "R$ 52 mil" */
@@ -76,4 +81,21 @@ export function moedaCurtaSinal(v: number): string {
 export function juntar(itens: readonly string[]): string {
   if (itens.length <= 1) return itens.join("");
   return `${itens.slice(0, -1).join(", ")} e ${itens.at(-1)}`;
+}
+
+/** Primeira letra maiúscula ("área privativa" → "Área privativa"). */
+export function capitalizar(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Um valor "redondo" perto de `v` (1, 2, 2,5 ou 5 × 10ⁿ), para atalhos de meta ("R$ 50 mil", "R$ 250 mil").
+ */
+export function redondo(v: number): number {
+  if (!(v > 0)) return 0;
+  const ordem = Math.pow(10, Math.floor(Math.log10(v)));
+  const passos = [1, 2, 2.5, 5, 10];
+  let melhor = ordem;
+  for (const p of passos) if (Math.abs(p * ordem - v) < Math.abs(melhor - v)) melhor = p * ordem;
+  return melhor;
 }

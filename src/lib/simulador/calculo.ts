@@ -2,23 +2,30 @@
  * Contas do simulador. Funções puras (sem React, sem "@/"), testadas em calculo.test.ts.
  *
  *   venda               = valor de referência × % do cenário
- *   aquisição           = comissão + ITBI + escritura/registro (máx. de % e piso) + reserva, tudo sobre o lance
+ *   aquisição           = comissão + ITBI + escritura/registro (máx. de % e piso) + reserva, sobre o lance
+ *                         (o ITBI pode ter outra base: a avaliação, ou o maior entre lance e avaliação)
  *   regularização       = desocupação + dívidas que passam ao comprador
- *   reforma             = R$/m² × área (construídos) ou valor fixo (terreno, rural)
- *   custos mensais      = (condomínio + IPTU/ITR + contas) × meses  [+ seguros do financiamento]
+ *   reforma             = R$/m² × área (modo m²) ou valor fixo (terreno, rural, ou se a pessoa preferir)
+ *   custos mensais      = condomínio × meses + IPTU/ITR × meses + contas × meses  [+ seguros do financiamento]
+ *                         (cada um pode correr menos meses que o prazo, nunca mais; o IPTU pode vir em R$ por ano)
+ *   custos criados      = valor fixo, % do lance ou valor × meses (não abatem o IR: conservador)
  *   IR                  = alíquota × (venda − corretagem − lance − comissão − ITBI − registro − reforma), só se > 0
+ *                         e sem isenção
  *   lucro               = venda − corretagem − IR − lance − aquisição − regularização − reforma − custos mensais
- *                         (financiado: − juros pagos − seguros; o saldo devedor é quitado com a venda)
+ *                         − custos criados (financiado: − juros pagos − seguros; o saldo devedor sai da venda)
  *   capital             = dinheiro próprio até a venda (à vista: lance + custos; a prazo: entrada + parcelas + custos)
  *   parcelamento da fonte (judicial): entrada + parcelas mensais de (saldo ÷ n) corrigidas pelo índice; o que
  *                         falta pagar na venda (já corrigido) sai do dinheiro da venda
- *   ROI no período      = lucro ÷ capital;  ROI ao ano = (1 + ROI)^(12/meses) − 1
+ *   ROI no período      = lucro ÷ capital;  ROI ao ano = (1 + ROI)^(12/meses) − 1;  ao mês = (1 + ROI)^(1/meses) − 1
+ *   lucro por ano       = lucro × 12 ÷ meses (média simples, para ler em reais)
+ *
+ * Uma linha "desligada" pela pessoa (premissas.desligados) entra como zero; o valor dela fica guardado.
  *
  * O lucro cai e o capital sobe quando o lance sobe; por isso o ROI cai com o lance enquanto o lucro é ≥ 0, e o
  * lance máximo para uma meta ≥ 0 sai por busca binária.
  */
-import { multiplicador, type Modelo } from "./premissas";
-import { CENARIOS, type Cenario, type Meta, type Premissas, type ResultadoFinanciamento, type Simulacao } from "./tipos";
+import { cenariosDaMatriz, multiplicador, type Modelo } from "./premissas";
+import type { Cenario, ExtraSimulado, LinhaDesligavel, Meta, Premissas, ResultadoFinanciamento, Simulacao } from "./tipos";
 
 /** Taxa mensal equivalente a uma taxa anual: (1 + a.a.)^(1/12) − 1. */
 export function taxaMensal(aa: number): number {
@@ -82,16 +89,34 @@ export function roiAoAno(roi: number, meses: number): number {
   return Math.pow(1 + roi, 12 / meses) - 1;
 }
 
-/** Custo da reforma (ou limpeza/adequações) com as premissas atuais. */
-export function custoReforma(modelo: Pick<Modelo, "perfil">, p: Premissas): number {
-  return modelo.perfil.modoReforma === "m2" ? p.reformaUnitario * p.area : p.reformaUnitario;
+export function roiAoMes(roi: number, meses: number): number {
+  if (roi <= -1) return -1;
+  return Math.pow(1 + roi, 1 / meses) - 1;
 }
 
-/** IPTU (ou ITR) por mês: % ao ano sobre a avaliação; sem avaliação, sobre o lance. */
-export function iptuMensal(modelo: Pick<Modelo, "entrada">, p: Premissas, lance: number): number {
+/** Custo da reforma (ou limpeza/adequações) com as premissas atuais. */
+export function custoReforma(p: Pick<Premissas, "reformaModo" | "reformaUnitario" | "area">): number {
+  return p.reformaModo === "m2" ? p.reformaUnitario * p.area : p.reformaUnitario;
+}
+
+/** IPTU (ou ITR) por mês: o valor por ano que a pessoa informou, ou % ao ano sobre a avaliação (sem ela, sobre o lance). */
+export function iptuMensal(modelo: Pick<Modelo, "entrada">, p: Pick<Premissas, "iptuPct" | "iptuAnual">, lance: number): number {
+  if (p.iptuAnual !== null) return p.iptuAnual / 12;
   const av = modelo.entrada.avaliacao;
   const base = av !== null && av > 0 ? av : lance;
   return (p.iptuPct * base) / 12;
+}
+
+/** Base do ITBI para um lance: o lance, a avaliação (sem ela, o lance) ou o maior dos dois. */
+export function baseItbi(modelo: Pick<Modelo, "entrada">, p: Pick<Premissas, "itbiBase">, lance: number): number {
+  const av = modelo.entrada.avaliacao;
+  if (p.itbiBase === "lance" || av === null || !(av > 0)) return lance;
+  return p.itbiBase === "avaliacao" ? av : Math.max(lance, av);
+}
+
+/** A linha está na conta (não foi tirada pela pessoa)? */
+export function ligada(p: Pick<Premissas, "desligados">, linha: LinhaDesligavel): boolean {
+  return !p.desligados.includes(linha);
 }
 
 /** Simula um lance num cenário e prazo. `null` quando falta o valor de venda. */
@@ -99,19 +124,20 @@ export function simular(modelo: Modelo, lance: number, cenario: Cenario, meses: 
   const p = premissas ?? modelo.premissas;
   if (p.valorVenda === null) return null;
   const L = Math.max(0, lance);
+  const liga = (linha: LinhaDesligavel) => ligada(p, linha);
 
   const venda = p.valorVenda * multiplicador(p, cenario);
-  const corretagem = p.corretagemPct * venda;
+  const corretagem = liga("corretagem") ? p.corretagemPct * venda : 0;
 
-  const comissao = p.comissaoPct * L;
-  const itbi = p.itbiPct * L;
-  const registro = Math.max(p.registroPct * L, p.registroMin);
-  const reserva = p.reservaPct * L;
+  const comissao = liga("comissao") ? p.comissaoPct * L : 0;
+  const itbi = liga("itbi") ? p.itbiPct * baseItbi(modelo, p, L) : 0;
+  const registro = liga("registro") ? Math.max(p.registroPct * L, p.registroMin) : 0;
+  const reserva = liga("reserva") ? p.reservaPct * L : 0;
   const aquisicao = comissao + itbi + registro + reserva;
 
-  const desocupacao = p.desocupacao;
-  const dividas = p.dividas;
-  const reforma = custoReforma(modelo, p);
+  const desocupacao = liga("desocupacao") ? p.desocupacao : 0;
+  const dividas = liga("dividas") ? p.dividas : 0;
+  const reforma = liga("reforma") ? custoReforma(p) : 0;
 
   const fin: ResultadoFinanciamento | null =
     p.parcelar && modelo.podeParcelar
@@ -120,20 +146,43 @@ export function simular(modelo: Modelo, lance: number, cenario: Cenario, meses: 
         ? { tipo: "banco", entrada: p.entradaPct * L, ...sac(L - p.entradaPct * L, p.jurosAA, p.prazoFinanciamento, meses) }
         : null;
 
+  const extras: ExtraSimulado[] = p.custosExtras
+    .filter((x) => liga(`extra:${x.id}`))
+    .map((x) => ({
+      id: x.id,
+      nome: x.nome,
+      modo: x.modo,
+      parametro: x.valor,
+      valor: x.modo === "fixo" ? x.valor : x.modo === "pct_lance" ? x.valor * L : x.valor * meses,
+    }));
+  const extrasTotal = extras.reduce((t, x) => t + x.valor, 0);
+
   const mensal = {
-    condominio: p.condominio,
-    iptu: iptuMensal(modelo, p, L),
-    contas: p.contas,
+    condominio: liga("condominio") ? p.condominio : 0,
+    iptu: liga("iptu") ? iptuMensal(modelo, p, L) : 0,
+    contas: liga("contas") ? p.contas : 0,
     seguros: fin?.tipo === "banco" && fin.financiado > 0 ? p.segurosMensal : 0,
+    extras: extras.filter((x) => x.modo === "mensal").reduce((t, x) => t + x.parametro, 0),
     total: 0,
   };
-  mensal.total = mensal.condominio + mensal.iptu + mensal.contas + mensal.seguros;
-  const custosMensais = (mensal.condominio + mensal.iptu + mensal.contas) * meses + mensal.seguros * (fin ? fin.parcelasPagas : 0);
+  mensal.total = mensal.condominio + mensal.iptu + mensal.contas + mensal.seguros + mensal.extras;
+  // cada custo mensal corre até vender, ou pelos meses que a pessoa definiu (nunca além da venda: depois dela,
+  // o custo é do comprador; uma coluna de 6 meses não paga 12 meses de condomínio)
+  const mesesCusto = {
+    condominio: Math.min(meses, p.mesesCondominio ?? meses),
+    iptu: Math.min(meses, p.mesesIptu ?? meses),
+    contas: Math.min(meses, p.mesesContas ?? meses),
+  };
+  const custosMensais =
+    mensal.condominio * mesesCusto.condominio +
+    mensal.iptu * mesesCusto.iptu +
+    mensal.contas * mesesCusto.contas +
+    mensal.seguros * (fin ? fin.parcelasPagas : 0);
 
   const ganhoCapital = venda - corretagem - L - comissao - itbi - registro - reforma;
-  const ir = Math.max(0, p.irPct * ganhoCapital);
+  const ir = liga("ir") && !p.irIsento ? Math.max(0, p.irPct * ganhoCapital) : 0;
 
-  const custosProprios = aquisicao + desocupacao + dividas + reforma + custosMensais;
+  const custosProprios = aquisicao + desocupacao + dividas + reforma + custosMensais + extrasTotal;
   const pagoPeloImovel = fin ? fin.entrada + fin.totalParcelas + fin.saldoDevedor : L;
   const lucro = venda - corretagem - ir - pagoPeloImovel - custosProprios;
   const capital = (fin ? fin.entrada + fin.totalParcelas : L) + custosProprios;
@@ -157,12 +206,17 @@ export function simular(modelo: Modelo, lance: number, cenario: Cenario, meses: 
     dividas,
     reforma,
     mensal,
+    mesesCusto,
     custosMensais,
+    extras,
+    extrasTotal,
     financiamento: fin,
     lucro,
+    lucroAno: (lucro * 12) / meses,
     capital,
     roi,
     roiAA: roiAoAno(roi, meses),
+    roiAM: roiAoMes(roi, meses),
     rendimentoAplicacao: capital * (Math.pow(1 + p.aplicacaoAA, meses / 12) - 1),
   };
 }
@@ -174,6 +228,8 @@ export function atingeMeta(s: Simulacao, meta: Meta): boolean {
       return s.roiAA >= meta.valor;
     case "roi_periodo":
       return s.roi >= meta.valor;
+    case "roi_am":
+      return s.roiAM >= meta.valor;
     case "lucro":
       return s.lucro >= meta.valor;
   }
@@ -216,11 +272,20 @@ export interface CelulaMatriz {
   comMeuLance: Simulacao;
 }
 
-/** Matriz cenários × prazos. `null` quando falta o valor de venda. */
-export function matriz(modelo: Modelo, meta: Meta, meuLance: number): CelulaMatriz[][] | null {
+/**
+ * Matriz cenários × prazos. `null` quando falta o valor de venda. Linhas: os três cenários e o personalizado,
+ * se houver; colunas: os prazos da pessoa (ou os informados, que podem incluir o prazo escolhido no cartão).
+ */
+export function matriz(
+  modelo: Modelo,
+  meta: Meta,
+  meuLance: number,
+  colunas: readonly number[] = modelo.premissas.prazos,
+  linhas: readonly Cenario[] = cenariosDaMatriz(modelo.premissas),
+): CelulaMatriz[][] | null {
   if (modelo.premissas.valorVenda === null) return null;
-  return CENARIOS.map((cenario) =>
-    modelo.premissas.prazos.map((meses) => ({
+  return linhas.map((cenario) =>
+    colunas.map((meses) => ({
       cenario,
       meses,
       teto: lanceMaximo(modelo, cenario, meses, meta),
@@ -256,6 +321,7 @@ export function cascata(s: Simulacao, rotuloReforma = "Reforma"): Etapa[] {
     { chave: "regularizacao", rotulo: "Desocupação e dívidas", valor: -(s.desocupacao + s.dividas) },
     { chave: "reforma", rotulo: rotuloReforma, valor: -s.reforma },
     { chave: "mensais", rotulo: "Custos até vender", valor: -s.custosMensais },
+    { chave: "extras", rotulo: s.extras.length === 1 ? s.extras[0]!.nome : "Outros custos", valor: -s.extrasTotal },
     { chave: "lucro", rotulo: s.lucro >= 0 ? "Lucro" : "Prejuízo", valor: s.lucro, total: true },
   ];
   return etapas.filter((e) => e.total || e.chave === "venda" || Math.abs(e.valor) >= 0.5);

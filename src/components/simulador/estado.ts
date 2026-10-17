@@ -1,31 +1,16 @@
 "use client";
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
-import { limparAjustes, limparMeta, META_PADRAO } from "@/lib/simulador/premissas";
-import { CENARIOS, type Ajustes, type Celula, type Meta } from "@/lib/simulador/tipos";
+import {
+  chaveEstado,
+  interpretarEstado,
+  PREFIXO_ESTADO,
+  PREFIXO_ESTADO_V1,
+  serializarEstado,
+  type EstadoSimulador,
+} from "@/lib/simulador/estado";
 
-/** Matriz: lance máximo para a meta, ou lucro e ROI com o lance escolhido. */
-export type Visao = "teto" | "lucro";
-
-/** O que a pessoa ajustou num imóvel (guardado no navegador, por imóvel). */
-export interface EstadoSimulador {
-  ajustes: Ajustes;
-  meta: Meta;
-  celula: Celula;
-  visao: Visao;
-  /** lance escolhido pela pessoa; null = o lance mínimo atual */
-  meuLance: number | null;
-}
-
-export const ESTADO_INICIAL: EstadoSimulador = {
-  ajustes: {},
-  meta: META_PADRAO,
-  celula: { cenario: "base", prazo: 1 },
-  visao: "teto",
-  meuLance: null,
-};
-
-const PREFIXO = "luneta:simulador:v1:";
+export { ESTADO_INICIAL, semAjuste, type EstadoSimulador, type Visao, type LanceDetalhe } from "@/lib/simulador/estado";
 
 // Guardado em memória também: no modo privado (ou com o armazenamento bloqueado) o simulador segue
 // funcionando nesta visita, só não lembra depois.
@@ -57,7 +42,7 @@ function assinar(f: () => void) {
   ouvintes.add(f);
   // outra aba mudou o mesmo imóvel: vale o que ela gravou
   const onStorage = (e: StorageEvent) => {
-    if (e.key?.startsWith(PREFIXO)) {
+    if (e.key?.startsWith(PREFIXO_ESTADO)) {
       memoria.delete(e.key);
       f();
     }
@@ -69,53 +54,37 @@ function assinar(f: () => void) {
   };
 }
 
-function interpretar(bruto: string | null): EstadoSimulador {
-  if (!bruto) return ESTADO_INICIAL;
-  try {
-    const o = JSON.parse(bruto) as Record<string, unknown>;
-    const c = (o.celula ?? {}) as Record<string, unknown>;
-    const celula: Celula = {
-      cenario: CENARIOS.includes(c.cenario as Celula["cenario"]) ? (c.cenario as Celula["cenario"]) : ESTADO_INICIAL.celula.cenario,
-      prazo: Number.isInteger(c.prazo) && (c.prazo as number) >= 0 && (c.prazo as number) < 4 ? (c.prazo as number) : ESTADO_INICIAL.celula.prazo,
-    };
-    const meuLance = typeof o.meuLance === "number" && Number.isFinite(o.meuLance) && o.meuLance >= 0 && o.meuLance < 1e11 ? o.meuLance : null;
-    return {
-      ajustes: limparAjustes(o.ajustes),
-      meta: limparMeta(o.meta),
-      celula,
-      visao: o.visao === "lucro" ? "lucro" : "teto",
-      meuLance,
-    };
-  } catch {
-    return ESTADO_INICIAL;
-  }
+/** O texto guardado: a v2, ou a v1 marcada ("v1:" na frente) enquanto a v2 não existir. */
+function lerBruto(id: string): string | null {
+  const v2 = ler(chaveEstado(id));
+  if (v2 !== null) return v2;
+  const v1 = ler(PREFIXO_ESTADO_V1 + id);
+  return v1 === null ? null : `v1:${v1}`;
+}
+
+function interpretarBruto(bruto: string | null): EstadoSimulador {
+  if (bruto?.startsWith("v1:")) return interpretarEstado(bruto.slice(3), true);
+  return interpretarEstado(bruto);
 }
 
 /**
- * Estado do simulador de um imóvel, guardado no localStorage (com try/catch). No servidor e na primeira
- * pintura vale o estado inicial; logo depois da hidratação entram os ajustes salvos (sem erro de hidratação).
+ * Estado do simulador de um imóvel, guardado no localStorage (formato em src/lib/simulador/estado.ts). No
+ * servidor e na primeira pintura vale o estado inicial; logo depois da hidratação entram os ajustes salvos
+ * (sem erro de hidratação).
  */
 export function useEstadoSimulador(id: string): [EstadoSimulador, (mudar: (atual: EstadoSimulador) => EstadoSimulador) => void] {
-  const chave = PREFIXO + id;
   const bruto = useSyncExternalStore(
     assinar,
-    () => ler(chave),
+    () => lerBruto(id),
     () => null,
   );
-  const estado = useMemo(() => interpretar(bruto), [bruto]);
+  const estado = useMemo(() => interpretarBruto(bruto), [bruto]);
   const atualizar = useCallback(
     (mudar: (atual: EstadoSimulador) => EstadoSimulador) => {
-      const novo = mudar(interpretar(ler(chave)));
-      gravar(chave, JSON.stringify(novo));
+      const novo = mudar(interpretarBruto(lerBruto(id)));
+      gravar(chaveEstado(id), serializarEstado(novo));
     },
-    [chave],
+    [id],
   );
   return [estado, atualizar];
-}
-
-/** Tira uma chave dos ajustes (volta ao padrão). */
-export function semAjuste(a: Ajustes, ...chaves: (keyof Ajustes)[]): Ajustes {
-  const novo = { ...a };
-  for (const k of chaves) delete novo[k];
-  return novo;
 }

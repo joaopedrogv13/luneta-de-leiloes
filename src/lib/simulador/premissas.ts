@@ -6,7 +6,22 @@
  * importa: área → reforma e condomínio; avaliação/referência e área → valor de venda.
  */
 import type { ReferenciaM2, TipoImovel } from "../catalogo/tipos";
-import { NIVEIS_REFORMA, type Ajustes, type EntradaSimulador, type Meta, type NivelReforma, type OrigemVenda, type PerfilTipo, type Premissas } from "./tipos";
+import {
+  LINHAS_DESLIGAVEIS,
+  NIVEIS_REFORMA,
+  type Ajustes,
+  type Cenario,
+  type CustoExtra,
+  type EntradaSimulador,
+  type LinhaDesligavel,
+  type Meta,
+  type NivelReforma,
+  type OpcoesVenda,
+  type OrigemVenda,
+  type PerfilTipo,
+  type Premissas,
+  type VendaPersonalizada,
+} from "./tipos";
 
 // ---------------------------------------------------------------------------
 // Perfis por tipo
@@ -217,6 +232,12 @@ export const LIMITES = {
   parcelasCorrecaoAA: [0, 0.5],
   metaPct: [0, 10],
   metaLucro: [0, 10_000_000_000],
+  iptuAnual: [0, 100_000_000],
+  mesesCusto: [0, 120],
+  vendaPersonalizadaPct: [0.05, 5],
+  extraFixo: [0, 10_000_000_000],
+  extraPctLance: [0, 1],
+  extraMensal: [0, 100_000_000],
 } as const satisfies Record<string, readonly [number, number]>;
 
 export const SLUGS_DIVIDA = ["condominio-em-atraso", "iptu-em-atraso", "divida-passa-arrematante"] as const;
@@ -294,14 +315,29 @@ export interface Modelo {
   padrao: Premissas;
   ajustes: Ajustes;
   origemVenda: OrigemVenda;
+  /** as bases de venda possíveis (avaliação e referência da região), para a pessoa escolher */
+  opcoesVenda: OpcoesVenda;
   /** referência de R$/m² mais local (para comparar o valor de venda), se houver */
   referencia: ReferenciaM2 | null;
   /** tags de dívida presentes (rótulos; as ainda sem leitura humana levam "(em revisão)") */
   dividasApontadas: string[];
+  /** a fonte (ou uma tag já revisada) diz que o imóvel está ocupado: só então entra a reserva de desocupação */
+  ocupado: boolean;
   /** a fonte aceita financiamento */
   podeFinanciar: boolean;
   /** a fonte oferece parcelamento (leilão judicial) */
   podeParcelar: boolean;
+}
+
+/**
+ * Ocupado com certeza: a fonte diz "ocupado", ou uma tag "ocupado" já lida por uma pessoa (não em revisão) e a
+ * fonte não diz o contrário. Só nesse caso o simulador reserva dinheiro para a desocupação; desocupado ou não
+ * informado fica sem reserva (a pessoa pode acrescentar a desocupação como custo).
+ */
+export function ocupadoComCerteza(e: Pick<EntradaSimulador, "ocupacao" | "tags">): boolean {
+  if (e.ocupacao === "ocupado") return true;
+  if (e.ocupacao === "desocupado") return false;
+  return e.tags.some((t) => t.slug === "ocupado" && t.emRevisao !== true);
 }
 
 /**
@@ -318,53 +354,78 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
   const areaReal = a.area !== undefined || areaFonte !== null;
 
   const reformaNivel = a.reformaNivel ?? PADRAO.reformaNivel;
+  const reformaModo = a.reformaModo ?? perfil.modoReforma;
   const condominioDeSaida = condominioPorPadrao(entrada, perfil);
   const emCondominio = perfil.opcaoCondominio ? (a.emCondominio ?? condominioDeSaida) : false;
   const podeFinanciar = entrada.financiamento === true;
   const podeParcelar = entrada.parcelamento === true;
   const parcelar = podeParcelar && (a.parcelar ?? false);
   const condicoes = lerCondicoesParcelamento(entrada.condicoesPagamento);
+  const ocupado = ocupadoComCerteza(entrada);
 
+  // --- valor de venda (100%): avaliação ou referência da região; a pessoa escolhe a base ou informa o valor
   const referencia = referenciaLocal(referencias, entrada.tipo);
+  const vendaAvaliacao = positivo(entrada.avaliacao) ? entrada.avaliacao : null;
+  const m2Regiao = referencia?.avaliacaoM2?.mediana ?? null;
+  const opcoesVenda: OpcoesVenda = {
+    avaliacao: vendaAvaliacao,
+    regiao: referencia && m2Regiao !== null && areaReal ? { valor: Math.round(m2Regiao * area), m2: m2Regiao, area, referencia } : null,
+    regiaoSemArea: !!referencia && !areaReal,
+  };
+  const vendaPadrao = vendaAvaliacao ?? opcoesVenda.regiao?.valor ?? null;
   let origemVenda: OrigemVenda;
-  let vendaPadrao: number | null;
-  if (positivo(entrada.avaliacao)) {
-    vendaPadrao = entrada.avaliacao;
-    origemVenda = { tipo: "avaliacao", avaliacao: entrada.avaliacao };
-  } else if (referencia && areaReal) {
-    const m2 = referencia.avaliacaoM2!.mediana;
-    vendaPadrao = Math.round(m2 * area);
-    origemVenda = { tipo: "referencia", referencia, m2, area };
+  let valorVenda: number | null;
+  let baseVenda: Premissas["baseVenda"];
+  const querRegiao = a.baseVenda === "regiao" || (a.baseVenda === undefined && vendaAvaliacao === null);
+  if (a.valorVenda !== undefined) {
+    valorVenda = a.valorVenda;
+    origemVenda = { tipo: "ajuste" };
+    baseVenda = "informado";
+  } else if (querRegiao && opcoesVenda.regiao) {
+    valorVenda = opcoesVenda.regiao.valor;
+    origemVenda = { tipo: "referencia", referencia: opcoesVenda.regiao.referencia, m2: opcoesVenda.regiao.m2, area };
+    baseVenda = "regiao";
+  } else if (vendaAvaliacao !== null) {
+    valorVenda = vendaAvaliacao;
+    origemVenda = { tipo: "avaliacao", avaliacao: vendaAvaliacao };
+    baseVenda = "avaliacao";
   } else {
-    vendaPadrao = null;
+    valorVenda = null;
     origemVenda = { tipo: "nenhuma", motivo: referencia ? "sem-area" : "sem-referencia" };
+    baseVenda = "regiao";
   }
-  if (a.valorVenda !== undefined) origemVenda = { tipo: "ajuste" };
-
-  const desocupado = entrada.ocupacao === "desocupado";
 
   const padrao: Premissas = {
     area: areaPadrao,
     areaEstimada: areaFonte === null,
     comissaoPct: comissaoPadrao(entrada),
     itbiPct: PADRAO.itbiPct,
+    itbiBase: "lance",
     registroPct: PADRAO.registroPct,
     registroMin: PADRAO.registroMin,
     reservaPct: PADRAO.reservaPct,
-    desocupacao: desocupado ? 0 : PADRAO.desocupacao,
+    desocupacao: ocupado ? PADRAO.desocupacao : 0,
     dividas: 0,
     reformaNivel: PADRAO.reformaNivel,
-    reformaUnitario: perfil.reforma[reformaNivel],
+    reformaModo: perfil.modoReforma,
+    reformaUnitario: reformaPadrao(perfil, reformaNivel, reformaModo, area),
     emCondominio: condominioDeSaida,
     condominio: condominioPadrao(perfil, area, emCondominio),
     iptuPct: perfil.iptuPadrao,
+    iptuAnual: null,
     contas: perfil.contasPadrao,
+    mesesCondominio: null,
+    mesesIptu: null,
+    mesesContas: null,
     valorVenda: vendaPadrao,
+    baseVenda: vendaAvaliacao !== null ? "avaliacao" : "regiao",
     cenarioConservador: PADRAO.cenarioConservador,
     cenarioBase: PADRAO.cenarioBase,
     cenarioOtimista: PADRAO.cenarioOtimista,
+    vendaPersonalizada: null,
     corretagemPct: PADRAO.corretagemPct,
     irPct: PADRAO.irPct,
+    irIsento: false,
     prazos: [...PADRAO.prazos],
     aplicacaoAA: PADRAO.aplicacaoAA,
     financiar: false,
@@ -376,6 +437,8 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
     parcelasEntradaPct: condicoes.entradaPct ?? PADRAO.parcelasEntradaPct,
     parcelasN: condicoes.parcelas ?? PADRAO.parcelasN,
     parcelasCorrecaoAA: PADRAO.parcelasCorrecaoAA,
+    custosExtras: [],
+    desligados: [],
   };
 
   const premissas: Premissas = {
@@ -384,12 +447,21 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
     area,
     areaEstimada: !areaReal,
     reformaNivel,
+    reformaModo,
     emCondominio,
     // as duas formas de pagar a prazo não se somam: o parcelamento da fonte vale sobre o financiamento
     financiar: podeFinanciar && !parcelar && (a.financiar ?? false),
     parcelar,
     prazos: a.prazos ?? padrao.prazos,
-    valorVenda: a.valorVenda ?? vendaPadrao,
+    valorVenda,
+    baseVenda,
+    iptuAnual: a.iptuAnual ?? null,
+    mesesCondominio: a.mesesCondominio ?? null,
+    mesesIptu: a.mesesIptu ?? null,
+    mesesContas: a.mesesContas ?? null,
+    vendaPersonalizada: a.vendaPersonalizada ?? null,
+    custosExtras: a.custosExtras ?? [],
+    desligados: a.desligados ?? [],
   };
 
   const dividasApontadas = SLUGS_DIVIDA.flatMap((slug) => {
@@ -398,12 +470,47 @@ export function montarModelo(entrada: EntradaSimulador, ajustes: Ajustes = {}, r
     return [tags.every((t) => t.emRevisao === true) ? `${ROTULO_DIVIDA[slug]} (em revisão)` : ROTULO_DIVIDA[slug]];
   });
 
-  return { entrada, perfil, premissas, padrao, ajustes: a, origemVenda, referencia, dividasApontadas, podeFinanciar, podeParcelar };
+  return { entrada, perfil, premissas, padrao, ajustes: a, origemVenda, opcoesVenda, referencia, dividasApontadas, ocupado, podeFinanciar, podeParcelar };
 }
 
-/** Multiplicador do valor de referência em cada cenário. */
-export function multiplicador(p: Premissas, cenario: "conservador" | "base" | "otimista"): number {
-  return cenario === "conservador" ? p.cenarioConservador : cenario === "otimista" ? p.cenarioOtimista : p.cenarioBase;
+/**
+ * Valor padrão da reforma para o nível: R$/m² da tabela (modo m²) ou valor total (modo fixo). Num construído
+ * em que a pessoa escolheu "valor total", o padrão é a tabela × área (o mesmo custo, escrito em reais).
+ */
+export function reformaPadrao(perfil: PerfilTipo, nivel: NivelReforma, modo: "m2" | "fixo", area: number): number {
+  const tabela = perfil.reforma[nivel];
+  if (modo === perfil.modoReforma) return tabela;
+  return modo === "fixo" ? Math.round(tabela * area) : area > 0 ? Math.round(tabela / area) : 0;
+}
+
+/** Multiplicador do valor de referência em cada cenário (o personalizado, em reais, vira fração da referência). */
+export function multiplicador(p: Pick<Premissas, "cenarioConservador" | "cenarioBase" | "cenarioOtimista" | "vendaPersonalizada" | "valorVenda">, cenario: Cenario): number {
+  switch (cenario) {
+    case "conservador":
+      return p.cenarioConservador;
+    case "otimista":
+      return p.cenarioOtimista;
+    case "personalizado": {
+      const v = p.vendaPersonalizada;
+      if (!v) return p.cenarioBase;
+      return v.modo === "pct" ? v.valor : p.valorVenda && p.valorVenda > 0 ? v.valor / p.valorVenda : p.cenarioBase;
+    }
+    default:
+      return p.cenarioBase;
+  }
+}
+
+/** Cenários que viram linhas da matriz: os três fixos e, se a pessoa definiu, o personalizado. */
+export function cenariosDaMatriz(p: Pick<Premissas, "vendaPersonalizada">): Cenario[] {
+  return p.vendaPersonalizada ? ["conservador", "base", "otimista", "personalizado"] : ["conservador", "base", "otimista"];
+}
+
+/**
+ * Colunas da matriz: os prazos da pessoa e, se o prazo escolhido não estiver entre eles, ele também. Sempre em
+ * ordem crescente e sem repetir (a pessoa pode digitar "6, 6, 18, 24" ou "30, 12, 18, 24" nos prazos).
+ */
+export function colunasDaMatriz(prazos: readonly number[], escolhido: number): number[] {
+  return [...new Set([...prazos, escolhido])].sort((x, y) => x - y);
 }
 
 // ---------------------------------------------------------------------------
@@ -422,6 +529,7 @@ const NUMERICOS = [
   "reformaUnitario",
   "condominio",
   "iptuPct",
+  "iptuAnual",
   "contas",
   "valorVenda",
   "cenarioConservador",
@@ -439,7 +547,32 @@ const NUMERICOS = [
   "parcelasCorrecaoAA",
 ] as const satisfies readonly (keyof Ajustes & keyof typeof LIMITES)[];
 
+const MESES_CUSTO = ["mesesCondominio", "mesesIptu", "mesesContas"] as const;
+
 const dentro = (v: unknown, [min, max]: readonly [number, number]): v is number => typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
+
+export const RE_ID_EXTRA = /^[a-z0-9-]{1,40}$/;
+const MAX_EXTRAS = 30;
+
+function limparExtra(bruto: unknown): CustoExtra | null {
+  if (!bruto || typeof bruto !== "object") return null;
+  const o = bruto as Record<string, unknown>;
+  if (typeof o.id !== "string" || !RE_ID_EXTRA.test(o.id)) return null;
+  if (typeof o.nome !== "string") return null;
+  const nome = o.nome.trim().slice(0, 60);
+  if (!nome) return null;
+  const lim = o.modo === "fixo" ? LIMITES.extraFixo : o.modo === "pct_lance" ? LIMITES.extraPctLance : o.modo === "mensal" ? LIMITES.extraMensal : null;
+  if (!lim || !dentro(o.valor, lim)) return null;
+  return { id: o.id, nome, modo: o.modo as CustoExtra["modo"], valor: o.valor };
+}
+
+function limparVendaPersonalizada(bruto: unknown): VendaPersonalizada | null {
+  if (!bruto || typeof bruto !== "object") return null;
+  const o = bruto as Record<string, unknown>;
+  if (o.modo === "pct" && dentro(o.valor, LIMITES.vendaPersonalizadaPct)) return { modo: "pct", valor: o.valor };
+  if (o.modo === "valor" && dentro(o.valor, LIMITES.valorVenda)) return { modo: "valor", valor: o.valor };
+  return null;
+}
 
 /** Mantém só ajustes válidos e dentro das faixas; nunca lança. */
 export function limparAjustes(bruto: unknown): Ajustes {
@@ -449,14 +582,39 @@ export function limparAjustes(bruto: unknown): Ajustes {
   for (const k of NUMERICOS) {
     if (dentro(o[k], LIMITES[k])) a[k] = o[k];
   }
+  for (const k of MESES_CUSTO) {
+    if (Number.isInteger(o[k]) && dentro(o[k], LIMITES.mesesCusto)) a[k] = o[k] as number;
+  }
   if (typeof o.reformaNivel === "string" && (NIVEIS_REFORMA as readonly string[]).includes(o.reformaNivel)) {
     a.reformaNivel = o.reformaNivel as NivelReforma;
   }
+  if (o.reformaModo === "m2" || o.reformaModo === "fixo") a.reformaModo = o.reformaModo;
+  if (o.itbiBase === "lance" || o.itbiBase === "avaliacao" || o.itbiBase === "maior") a.itbiBase = o.itbiBase;
+  if (o.baseVenda === "avaliacao" || o.baseVenda === "regiao") a.baseVenda = o.baseVenda;
   if (typeof o.emCondominio === "boolean") a.emCondominio = o.emCondominio;
   if (typeof o.financiar === "boolean") a.financiar = o.financiar;
   if (typeof o.parcelar === "boolean") a.parcelar = o.parcelar;
+  if (typeof o.irIsento === "boolean") a.irIsento = o.irIsento;
   if (Array.isArray(o.prazos) && o.prazos.length === 4 && o.prazos.every((m) => Number.isInteger(m) && dentro(m, LIMITES.prazo))) {
     a.prazos = [...(o.prazos as number[])];
+  }
+  const vp = limparVendaPersonalizada(o.vendaPersonalizada);
+  if (vp) a.vendaPersonalizada = vp;
+  if (Array.isArray(o.custosExtras)) {
+    const vistos = new Set<string>();
+    const extras = o.custosExtras
+      .map(limparExtra)
+      .filter((x): x is CustoExtra => x !== null && !vistos.has(x.id) && !!vistos.add(x.id))
+      .slice(0, MAX_EXTRAS);
+    if (extras.length) a.custosExtras = extras;
+  }
+  if (Array.isArray(o.desligados)) {
+    const validos = o.desligados.filter(
+      (d): d is LinhaDesligavel =>
+        typeof d === "string" && ((LINHAS_DESLIGAVEIS as readonly string[]).includes(d) || (d.startsWith("extra:") && RE_ID_EXTRA.test(d.slice(6)))),
+    );
+    const unicos = [...new Set(validos)].slice(0, 50);
+    if (unicos.length) a.desligados = unicos;
   }
   return a;
 }
@@ -465,6 +623,6 @@ export function limparMeta(bruto: unknown): Meta {
   if (!bruto || typeof bruto !== "object") return META_PADRAO;
   const o = bruto as Record<string, unknown>;
   if (o.tipo === "lucro" && dentro(o.valor, LIMITES.metaLucro)) return { tipo: "lucro", valor: o.valor };
-  if ((o.tipo === "roi_aa" || o.tipo === "roi_periodo") && dentro(o.valor, LIMITES.metaPct)) return { tipo: o.tipo, valor: o.valor };
+  if ((o.tipo === "roi_aa" || o.tipo === "roi_periodo" || o.tipo === "roi_am") && dentro(o.valor, LIMITES.metaPct)) return { tipo: o.tipo, valor: o.valor };
   return META_PADRAO;
 }
