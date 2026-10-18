@@ -1,6 +1,6 @@
 # Geocodificação (base/geo)
 
-Põe cada imóvel num ponto do mapa. A Caixa não publica coordenadas, então o ponto vem da cidade: a sede do município do IBGE. Quando a fonte traz coordenada (a Leilões Judiciais traz em 3 de 10 lotes, no `iframe_streetview`), ela vale, depois de conferida.
+Põe cada imóvel num ponto do mapa. A Caixa não publica coordenadas: na coleta, o ponto vem da cidade (a sede do município do IBGE) e, depois, da **geocodificação por endereço** (`base/fontes/localizacao`, geocodebr do IPEA sobre o CNEFE 2022), aplicada com `npm run base:geocode`. Quando a fonte traz coordenada (a Leilões Judiciais traz em 3 de 10 lotes, no `iframe_streetview`), ela vale, depois de conferida, e o geocode só a troca se for de precisão melhor.
 
 ## O que fica gravado
 
@@ -9,12 +9,18 @@ Põe cada imóvel num ponto do mapa. A Caixa não publica coordenadas, então o 
 | A fonte traz coordenada e ela cai no município | a da fonte (6 casas) | a que o conector declarou; `exata` se ele não declarou |
 | A fonte traz lat/lon invertidas | desinvertidas, com aviso na coleta | idem |
 | A fonte traz coordenada fora do Brasil ou longe do município | sede do município, com aviso | `cidade` |
-| Sem coordenada (Caixa) | sede do município | `cidade` |
+| Sem coordenada (Caixa), antes do geocode | sede do município | `cidade` |
+| Geocode por endereço: número exato, interpolado ou quadra e lote, desvio até 150 m | o ponto do CNEFE | `exata` |
+| Geocode: rua (ou CEP) até 500 m, ou número com desvio maior | o ponto da rua | `rua` |
+| Geocode: só o bairro (localidade do CNEFE até 2,5 km), ou casamento arriscado rebaixado | o centro da localidade | `bairro` |
+| Geocode sem ponto melhor (rural, só município, bairro espalhado, fora do município) | sede do município | `cidade` |
 | Cidade não reconhecida | `null` (fica fora do mapa), com aviso | `null` |
+
+`exata` passa a ter duas origens: a coordenada da fonte e o número achado no CNEFE. O que distingue é `extras.geo` (precisão do geocode, desvio em metros, setor censitário, motivo do rebaixamento, degrau, data e a assinatura do endereço), gravado só pelo geocode. A coleta seguinte mantém o ponto do geocode enquanto o endereço for o mesmo (`aplicado.ts`, usado por `gravar.ts`). Distribuição em 18/10/2026 (21.230 imóveis): `exata` 49,4%, `rua` 15,1%, `bairro` 21,9%, `cidade` 13,6% (detalhe em `base/saida/localizacao/medicao-geocode.md`).
 
 `cidade` é o nível de município: o contrato da base (`PRECISOES_GEO` em `tipos.ts`, `CHECK` em `esquema.sql`) já tinha esse nome para "centro da cidade", e trocar para `municipio` (o nome do pedido original) exigiria refazer a tabela `imovel` numa migração. Para o site, `precisao_geo = "cidade"` quer dizer "o ponto é a sede do município, não o imóvel". A decisão entre manter `cidade`, migrar ou trocar só na exportação está em `PENDENCIAS.md` (Base de dados: geocodificação).
 
-"Longe do município" = mais que `raio_km + 10 km` da sede, onde `raio_km` é a maior distância da sede até a divisa do município, medida na malha do IBGE (São Caetano do Sul: 4 km; São Paulo: 55 km; Altamira/PA: 753 km). Município sem malha (criado depois de 2013) usa 100 km.
+"Longe do município" = mais que `raio_km + 10 km` da sede, onde `raio_km` é a maior distância da sede até a divisa do município, medida na malha do IBGE (São Caetano do Sul: 4 km; São Paulo: 55 km; Altamira/PA: 753 km). Município sem malha (criado depois de 2013) usa 100 km. Em 24 municípios a malha simplificada fica curta (Rio de Janeiro: 19 km, mas Santa Cruz fica a mais de 50 km do Centro); `raios-cnefe.csv` traz o raio medido nas ruas do CNEFE 2022 e vale o maior dos dois.
 
 A gravação (`gravar.ts`) chama `geocodificar` em todo imóvel; a coleta registra num aviso os imóveis com alerta. A exportação traz `lat`, `lon`, `precisao_geo`, `codigo_ibge` e `mapa` = `[x, y]` no viewBox 400×400 do mapa do site, e geocodifica na hora o que foi gravado sem coordenada.
 
@@ -24,6 +30,8 @@ A gravação (`gravar.ts`) chama `geocodificar` em todo imóvel; a coleta regist
 |---|---|---|
 | `municipios.csv` | 5.571 municípios: `codigo_ibge, uf, nome, lat, lon, capital, raio_km` | [kelvins/Municipios-Brasileiros](https://github.com/kelvins/Municipios-Brasileiros) (commit `503e2f7`), **MIT**, Kelvin S. do Prado; nota de licença em `municipios.LICENSE.txt`. `raio_km` calculado na malha municipal do IBGE de [tbrugz/geodata-br](https://github.com/tbrugz/geodata-br) (commit `c39dfb0`, **CC0 1.0**) |
 | `distritos.csv` | 4.743 distritos com nome diferente do município (dos 10.302 da DTB) | [paulofreitas/dtb-ibge](https://github.com/paulofreitas/dtb-ibge) (geodata-br, commit `3a44b74`), **PDDL 1.0** (domínio público), compilado da DTB do IBGE |
+| `raios-cnefe.csv` | 24 municípios em que o raio da malha fica curto: `raio_km` medido no CNEFE 2022 (percentil 99,9 da distância da sede até cada trecho de rua), `raio_malha_km` e quantos endereços ficavam além | gerado por `base/fontes/localizacao/raios.py` sobre as tabelas do geocodebr (IPEA; dados do IBGE). Separado de `municipios.csv` para o `atualizar.ts` não apagar a correção |
+| `aplicado.ts` | o geocode por endereço no banco: `extras.geo`, a assinatura do endereço e `manterGeocode` (a coleta não apaga o ponto) | nosso |
 | `apelidos.csv` | 35 grafias e nomes antigos curados (`ASSU` → Açu, `Embu` → Embu das Artes, `Governador Edson Lobão`) | nossos; cada linha diz de onde veio (malha IBGE 2010, DTB 2017, grafia usual) |
 | `correcoes.csv` | 4 sedes erradas no kelvins, corrigidas | centroide da malha do IBGE (tbrugz/geodata-br, CC0) |
 | `fixtures/cidades_caixa_2026-10-08.csv` | contagem de linhas por UF + cidade do CSV da Caixa de 08/10/2026 (só nomes de cidade e números) | derivado; o CSV em si não é commitado |

@@ -1,6 +1,6 @@
 {
   "versao": 1,
-  "gerado_em": "2026-10-17T21:38:09.979Z",
+  "gerado_em": "2026-10-18T03:40:15.709Z",
   "fontes": [
     {
       "id": "caixa_csv",
@@ -71,8 +71,10 @@
     "comFotoVerificada": 0,
     "geocodificados": 21227,
     "porPrecisaoGeo": {
-      "cidade": 21226,
-      "rua": 1,
+      "bairro": 4655,
+      "cidade": 2880,
+      "exata": 10481,
+      "rua": 3211,
       "sem": 3
     },
     "porPraca": {
@@ -106,7 +108,7 @@
       "so-direitos": 1
     },
     "centro": [
-      289,
+      288.8,
       224.7
     ]
   },
@@ -164,7 +166,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 21,
       "porPrecisaoGeo": {
-        "cidade": 21
+        "bairro": 4,
+        "cidade": 3,
+        "exata": 6,
+        "rua": 8
       },
       "porPraca": {
         "não informada": 3,
@@ -240,7 +245,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 95,
       "porPrecisaoGeo": {
-        "cidade": 95
+        "bairro": 29,
+        "cidade": 34,
+        "exata": 20,
+        "rua": 12
       },
       "porPraca": {
         "não informada": 33,
@@ -260,7 +268,7 @@
       },
       "centro": [
         360.4,
-        150.2
+        150.1
       ]
     },
     {
@@ -316,7 +324,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 216,
       "porPrecisaoGeo": {
-        "cidade": 216
+        "bairro": 43,
+        "cidade": 43,
+        "exata": 62,
+        "rua": 68
       },
       "porPraca": {
         "não informada": 30,
@@ -336,7 +347,7 @@
       },
       "centro": [
         150.6,
-        93.8
+        93.1
       ]
     },
     {
@@ -371,7 +382,8 @@
       "comFotoVerificada": 0,
       "geocodificados": 2,
       "porPrecisaoGeo": {
-        "cidade": 2
+        "bairro": 1,
+        "exata": 1
       },
       "porPraca": {
         "Praça única": 2
@@ -385,8 +397,8 @@
       },
       "tagsEmRevisao": {},
       "centro": [
-        216.7,
-        72.9
+        216.1,
+        73.3
       ]
     },
     {
@@ -443,7 +455,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 717,
       "porPrecisaoGeo": {
-        "cidade": 717
+        "bairro": 318,
+        "cidade": 51,
+        "exata": 221,
+        "rua": 127
       },
       "porPraca": {
         "não informada": 225,
@@ -462,8 +477,8 @@
         "preco-acima-mercado": 112
       },
       "centro": [
-        333.6,
-        180.1
+        334,
+        179.8
       ]
     },
     {
@@ -520,7 +535,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 619,
       "porPrecisaoGeo": {
-        "cidade": 619,
+        "bairro": 328,
+        "cidade": 43,
+        "exata": 208,
+        "rua": 40,
         "sem": 1
       },
       "porPraca": {
@@ -541,7 +559,7 @@
       },
       "centro": [
         338,
-        102.3
+        102.2
       ]
     },
     {
@@ -596,7 +614,9 @@
       "comFotoVerificada": 0,
       "geocodificados": 63,
       "porPrecisaoGeo": {
-        "cidade": 63
+        "bairro": 8,
+        "cidade": 36,
+        "rua": 19
       },
       "porPraca": {
         "não informada": 43,
@@ -615,8 +635,8 @@
         "preco-acima-mercado": 23
       },
       "centro": [
-        256.2,
-        205.7
+        255.8,
+        205.9
       ]
     },
     {
@@ -672,7 +692,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 44,
       "porPrecisaoGeo": {
-        "cidade": 44
+        "bairro": 12,
+        "cidade": 1,
+        "exata": 15,
+        "rua": 16
       },
       "porPraca": {
         "não informada": 25,
@@ -691,8 +714,8 @@
         "preco-acima-mercado": 10
       },
       "centro": [
-        322.4,
-        245.4
+        322.8,
+        245.8
       ]
     },
     {
@@ -749,7 +772,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 2897,
       "porPrecisaoGeo": {
-        "cidade": 2897
+        "bairro": 872,
+        "cidade": 348,
+        "exata": 883,
+        "rua": 794
       },
       "porPraca": {
         "não informada": 368,
@@ -768,8 +794,8 @@
         "preco-acima-mercado": 174
       },
       "centro": [
-        254,
-        208.5
+        253.9,
+        208.4
       ]
     },
     {
@@ -825,7 +851,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 221,
       "porPrecisaoGeo": {
-        "cidade": 221
+        "bairro": 75,
+        "cidade": 56,
+        "exata": 62,
+        "rua": 28
       },
       "porPraca": {
         "não informada": 83,
@@ -844,8 +873,8 @@
         "preco-acima-mercado": 14
       },
       "centro": [
-        291.3,
-        100.9
+        291.2,
+        101
       ]
     },
     {
@@ -902,7 +931,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 747,
       "porPrecisaoGeo": {
-        "cidade": 747
+        "bairro": 114,
+        "cidade": 83,
+        "exata": 467,
+        "rua": 83
       },
       "porPraca": {
         "não informada": 358,
@@ -922,7 +954,7 @@
       },
       "centro": [
         278,
-        242.6
+        242.7
       ]
     },
     {
@@ -978,7 +1010,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 169,
       "porPrecisaoGeo": {
-        "cidade": 169
+        "bairro": 24,
+        "cidade": 6,
+        "exata": 123,
+        "rua": 16
       },
       "porPraca": {
         "não informada": 77,
@@ -998,7 +1033,7 @@
       },
       "centro": [
         198.7,
-        250.4
+        250.7
       ]
     },
     {
@@ -1055,7 +1090,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 156,
       "porPrecisaoGeo": {
-        "cidade": 156
+        "bairro": 49,
+        "cidade": 31,
+        "exata": 35,
+        "rua": 41
       },
       "porPraca": {
         "não informada": 66,
@@ -1074,7 +1112,7 @@
         "preco-acima-mercado": 19
       },
       "centro": [
-        187.4,
+        187.5,
         202.2
       ]
     },
@@ -1132,7 +1170,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 226,
       "porPrecisaoGeo": {
-        "cidade": 226,
+        "bairro": 76,
+        "cidade": 44,
+        "exata": 67,
+        "rua": 39,
         "sem": 1
       },
       "porPraca": {
@@ -1153,7 +1194,7 @@
       },
       "centro": [
         251.4,
-        84.5
+        84.4
       ]
     },
     {
@@ -1209,7 +1250,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 691,
       "porPrecisaoGeo": {
-        "cidade": 691
+        "bairro": 143,
+        "cidade": 158,
+        "exata": 310,
+        "rua": 80
       },
       "porPraca": {
         "não informada": 133,
@@ -1229,7 +1273,7 @@
       },
       "centro": [
         368.4,
-        128.4
+        128.8
       ]
     },
     {
@@ -1286,7 +1330,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 1157,
       "porPrecisaoGeo": {
-        "cidade": 1157,
+        "bairro": 329,
+        "cidade": 178,
+        "exata": 515,
+        "rua": 135,
         "sem": 1
       },
       "porPraca": {
@@ -1306,7 +1353,7 @@
         "preco-acima-mercado": 54
       },
       "centro": [
-        365.8,
+        365.9,
         136.6
       ]
     },
@@ -1363,7 +1410,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 724,
       "porPrecisaoGeo": {
-        "cidade": 724
+        "bairro": 330,
+        "cidade": 106,
+        "exata": 227,
+        "rua": 61
       },
       "porPraca": {
         "não informada": 65,
@@ -1382,7 +1432,7 @@
         "preco-acima-mercado": 26
       },
       "centro": [
-        303.7,
+        303.8,
         111.3
       ]
     },
@@ -1440,7 +1490,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 391,
       "porPrecisaoGeo": {
-        "cidade": 391
+        "bairro": 108,
+        "cidade": 37,
+        "exata": 202,
+        "rua": 44
       },
       "porPraca": {
         "não informada": 134,
@@ -1517,7 +1570,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 7193,
       "porPrecisaoGeo": {
-        "cidade": 7193
+        "bairro": 785,
+        "cidade": 1003,
+        "exata": 4513,
+        "rua": 892
       },
       "porPraca": {
         "não informada": 741,
@@ -1536,8 +1592,8 @@
         "preco-acima-mercado": 475
       },
       "centro": [
-        298.1,
-        271
+        297.3,
+        270.9
       ]
     },
     {
@@ -1594,7 +1650,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 644,
       "porPrecisaoGeo": {
-        "cidade": 644
+        "bairro": 164,
+        "cidade": 111,
+        "exata": 315,
+        "rua": 54
       },
       "porPraca": {
         "não informada": 56,
@@ -1613,8 +1672,8 @@
         "preco-acima-mercado": 21
       },
       "centro": [
-        361.8,
-        115.3
+        361.9,
+        115.4
       ]
     },
     {
@@ -1668,7 +1727,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 20,
       "porPrecisaoGeo": {
-        "cidade": 20
+        "bairro": 3,
+        "cidade": 4,
+        "exata": 6,
+        "rua": 7
       },
       "porPraca": {
         "não informada": 2,
@@ -1685,7 +1747,7 @@
       },
       "tagsEmRevisao": {},
       "centro": [
-        121.3,
+        121.4,
         154.5
       ]
     },
@@ -1721,7 +1783,7 @@
       "comFotoVerificada": 0,
       "geocodificados": 2,
       "porPrecisaoGeo": {
-        "cidade": 2
+        "rua": 2
       },
       "porPraca": {
         "Praça única": 2
@@ -1734,8 +1796,8 @@
       },
       "tagsEmRevisao": {},
       "centro": [
-        144.8,
-        41.2
+        144.1,
+        41.3
       ]
     },
     {
@@ -1793,7 +1855,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 833,
       "porPrecisaoGeo": {
-        "cidade": 833
+        "bairro": 156,
+        "cidade": 60,
+        "exata": 513,
+        "rua": 104
       },
       "porPraca": {
         "não informada": 423,
@@ -1812,8 +1877,8 @@
         "preco-acima-mercado": 174
       },
       "centro": [
-        224.4,
-        341
+        224.5,
+        341.1
       ]
     },
     {
@@ -1869,7 +1934,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 130,
       "porPrecisaoGeo": {
-        "cidade": 130
+        "bairro": 34,
+        "cidade": 7,
+        "exata": 70,
+        "rua": 19
       },
       "porPraca": {
         "não informada": 97,
@@ -1946,7 +2014,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 389,
       "porPrecisaoGeo": {
-        "cidade": 389
+        "bairro": 105,
+        "cidade": 93,
+        "exata": 147,
+        "rua": 44
       },
       "porPraca": {
         "não informada": 55,
@@ -1965,8 +2036,8 @@
         "preco-acima-mercado": 29
       },
       "centro": [
-        350.4,
-        161.1
+        350.3,
+        161.4
       ]
     },
     {
@@ -2025,8 +2096,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 2842,
       "porPrecisaoGeo": {
-        "cidade": 2841,
-        "rua": 1
+        "bairro": 540,
+        "cidade": 339,
+        "exata": 1492,
+        "rua": 471
       },
       "porPraca": {
         "1ª praça": 1,
@@ -2059,7 +2132,7 @@
         "so-direitos": 1
       },
       "centro": [
-        257.5,
+        257.6,
         267
       ]
     },
@@ -2116,7 +2189,10 @@
       "comFotoVerificada": 0,
       "geocodificados": 18,
       "porPrecisaoGeo": {
-        "cidade": 18
+        "bairro": 5,
+        "cidade": 5,
+        "exata": 1,
+        "rua": 7
       },
       "porPraca": {
         "não informada": 8,

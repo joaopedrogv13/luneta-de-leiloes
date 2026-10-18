@@ -1,6 +1,6 @@
 {
   "versao": 1,
-  "gerado_em": "2026-10-17T21:38:09.979Z",
+  "gerado_em": "2026-10-18T03:40:15.709Z",
   "criterio": "Até 60 imóveis ativos que o site consegue mostrar (apartamento, casa, comercial ou terreno, com avaliação, lance e posição no mapa), variando fonte, modalidade, risco, UF e tipo; escolha determinística.",
   "fontes": [
     {
@@ -25,7 +25,7 @@
       "uf": "AC",
       "city": "Rio Branco",
       "point": [
-        82.3,
+        82.2,
         153.6
       ],
       "type": "terreno",
@@ -128,8 +128,8 @@
       "uf": "AL",
       "city": "Delmiro Gouveia",
       "point": [
-        343,
-        148.3
+        343.2,
+        148.4
       ],
       "type": "comercial",
       "avaliacao": 484000,
@@ -184,8 +184,8 @@
       "uf": "AL",
       "city": "Maceió",
       "point": [
-        362.8,
-        150.8
+        362.7,
+        149.9
       ],
       "type": "apartamento",
       "avaliacao": 190000,
@@ -240,8 +240,8 @@
       "uf": "AM",
       "city": "Manaus",
       "point": [
-        150.5,
-        93.2
+        151.3,
+        92.7
       ],
       "type": "apartamento",
       "avaliacao": 205000,
@@ -287,8 +287,8 @@
       "uf": "AM",
       "city": "Manaus",
       "point": [
-        150.5,
-        93.2
+        150.8,
+        91.9
       ],
       "type": "apartamento",
       "avaliacao": 197000,
@@ -334,8 +334,8 @@
       "uf": "AP",
       "city": "Laranjal do Jari",
       "point": [
-        216.7,
-        72.9
+        216.1,
+        73.2
       ],
       "type": "casa",
       "avaliacao": 180000,
@@ -389,8 +389,8 @@
       "uf": "BA",
       "city": "Maiquinique",
       "point": [
-        323.3,
-        204.3
+        323.2,
+        204.2
       ],
       "type": "comercial",
       "avaliacao": 1190000,
@@ -440,8 +440,8 @@
       "uf": "BA",
       "city": "Itabuna",
       "point": [
-        331.9,
-        196.7
+        331.7,
+        196.9
       ],
       "type": "terreno",
       "avaliacao": 60000,
@@ -491,8 +491,8 @@
       "uf": "CE",
       "city": "Ocara",
       "point": [
-        337.8,
-        105.2
+        337.7,
+        105.1
       ],
       "type": "comercial",
       "avaliacao": 830000,
@@ -538,8 +538,8 @@
       "uf": "CE",
       "city": "Fortaleza",
       "point": [
-        338.3,
-        98.4
+        338.1,
+        99.2
       ],
       "type": "casa",
       "avaliacao": 545000,
@@ -593,8 +593,8 @@
       "uf": "CE",
       "city": "Eusébio",
       "point": [
-        339.1,
-        100
+        338.9,
+        99.7
       ],
       "type": "apartamento",
       "avaliacao": 250000,
@@ -640,8 +640,8 @@
       "uf": "DF",
       "city": "Brasília",
       "point": [
-        256.2,
-        205.7
+        255.1,
+        206.2
       ],
       "type": "comercial",
       "avaliacao": 212000,
@@ -687,8 +687,8 @@
       "uf": "DF",
       "city": "Brasília",
       "point": [
-        256.2,
-        205.7
+        255.3,
+        206.3
       ],
       "type": "comercial",
       "avaliacao": 288000,
@@ -738,8 +738,8 @@
       "uf": "ES",
       "city": "Serra",
       "point": [
-        322.9,
-        245.6
+        322.6,
+        245.4
       ],
       "type": "terreno",
       "avaliacao": 66271.95,
@@ -789,8 +789,8 @@
       "uf": "ES",
       "city": "Cariacica",
       "point": [
-        321.9,
-        246.9
+        322.3,
+        247.6
       ],
       "type": "apartamento",
       "avaliacao": 275000,
@@ -887,7 +887,7 @@
       "uf": "GO",
       "city": "Padre Bernardo",
       "point": [
-        253.1,
+        253.2,
         200.1
       ],
       "type": "casa",
@@ -994,7 +994,7 @@
       "uf": "GO",
       "city": "Santo Antônio do Descoberto",
       "point": [
-        253.4,
+        253,
         207.2
       ],
       "type": "terreno",
@@ -1096,8 +1096,8 @@
       "uf": "MA",
       "city": "São José de Ribamar",
       "point": [
-        290.1,
-        88.2
+        288.8,
+        88.3
       ],
       "type": "apartamento",
       "avaliacao": 146500,
@@ -1194,7 +1194,7 @@
       "uf": "MG",
       "city": "Esmeraldas",
       "point": [
-        287.9,
+        289.2,
         242.3
       ],
       "type": "apartamento",
@@ -1302,7 +1302,7 @@
       "city": "Campo Grande",
       "point": [
         197.7,
-        248.7
+        249.6
       ],
       "type": "casa",
       "avaliacao": 151000,
@@ -1352,8 +1352,8 @@
       "uf": "MS",
       "city": "Campo Grande",
       "point": [
-        197.7,
-        248.7
+        197.8,
+        248.8
       ],
       "type": "comercial",
       "avaliacao": 320000,
@@ -1403,7 +1403,7 @@
       "uf": "MT",
       "city": "Várzea Grande",
       "point": [
-        184.5,
+        184.9,
         204.5
       ],
       "type": "apartamento",
@@ -1450,7 +1450,7 @@
       "uf": "MT",
       "city": "Várzea Grande",
       "point": [
-        184.5,
+        184.9,
         204.5
       ],
       "type": "comercial",
@@ -1650,8 +1650,8 @@
       "uf": "PB",
       "city": "João Pessoa",
       "point": [
-        370.4,
-        128.3
+        370.6,
+        129.2
       ],
       "type": "apartamento",
       "avaliacao": 149000,
@@ -1702,7 +1702,7 @@
       "city": "Recife",
       "point": [
         370.3,
-        136.5
+        136.7
       ],
       "type": "comercial",
       "avaliacao": 103400,
@@ -1813,8 +1813,8 @@
       "uf": "PE",
       "city": "Paulista",
       "point": [
-        370.4,
-        135.5
+        370.5,
+        135.8
       ],
       "type": "apartamento",
       "avaliacao": 170000,
@@ -1915,8 +1915,8 @@
       "uf": "PI",
       "city": "Demerval Lobão",
       "point": [
-        302.1,
-        112.8
+        302.2,
+        112.9
       ],
       "type": "terreno",
       "avaliacao": 75070.94,
@@ -1966,8 +1966,8 @@
       "uf": "PR",
       "city": "Curitiba",
       "point": [
-        244.6,
-        295.9
+        244.5,
+        296
       ],
       "type": "comercial",
       "avaliacao": 270000,
@@ -2073,8 +2073,8 @@
       "uf": "RJ",
       "city": "Maricá",
       "point": [
-        300.9,
-        272.1
+        299.6,
+        272.2
       ],
       "type": "terreno",
       "avaliacao": 240000,
@@ -2133,8 +2133,8 @@
       "uf": "RJ",
       "city": "Rio de Janeiro",
       "point": [
-        297.6,
-        271.9
+        297.3,
+        272
       ],
       "type": "comercial",
       "avaliacao": 266000,
@@ -2329,8 +2329,8 @@
       "uf": "RO",
       "city": "Ji-Paraná",
       "point": [
-        133.8,
-        161.6
+        134,
+        161.9
       ],
       "type": "casa",
       "avaliacao": 222000,
@@ -2376,8 +2376,8 @@
       "uf": "RR",
       "city": "Boa Vista",
       "point": [
-        144.8,
-        41.2
+        144.1,
+        41
       ],
       "type": "apartamento",
       "avaliacao": 100000,
@@ -2427,8 +2427,8 @@
       "uf": "RR",
       "city": "Boa Vista",
       "point": [
-        144.8,
-        41.2
+        144.2,
+        41.6
       ],
       "type": "terreno",
       "avaliacao": 120000,
@@ -2478,7 +2478,7 @@
       "uf": "RS",
       "city": "Porto Alegre",
       "point": [
-        227.6,
+        227.5,
         341.5
       ],
       "type": "comercial",
@@ -2534,7 +2534,7 @@
       "city": "Novo Hamburgo",
       "point": [
         228.2,
-        338
+        338.1
       ],
       "type": "comercial",
       "avaliacao": 1500000,
@@ -2588,7 +2588,7 @@
       "uf": "RS",
       "city": "Feliz",
       "point": [
-        226.8,
+        226.9,
         335.7
       ],
       "type": "terreno",
@@ -2704,8 +2704,8 @@
       "uf": "SC",
       "city": "Capivari de Baixo",
       "point": [
-        247.2,
-        325.6
+        247.4,
+        325.4
       ],
       "type": "terreno",
       "avaliacao": 115000,
@@ -2760,8 +2760,8 @@
       "uf": "SE",
       "city": "São Cristóvão",
       "point": [
-        350,
-        162.8
+        350.8,
+        162.1
       ],
       "type": "terreno",
       "avaliacao": 80000,
@@ -2812,7 +2812,7 @@
       "city": "Aracaju",
       "point": [
         351.2,
-        161.9
+        161.6
       ],
       "type": "apartamento",
       "avaliacao": 150740.06,
@@ -2862,8 +2862,8 @@
       "uf": "SP",
       "city": "São Paulo",
       "point": [
-        267.5,
-        277.8
+        266.8,
+        276.9
       ],
       "type": "apartamento",
       "avaliacao": 268400,

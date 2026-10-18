@@ -14,8 +14,9 @@
 import type { Listing } from "../../content/examples";
 import { TAGS } from "../../../base/riscos/tags";
 import { diaBrasilia } from "./consulta";
+import { localizacaoExemplo } from "./localizacao";
 import { linkGoogleMaps } from "./texto";
-import type { ImovelDetalhe, ImovelResumo, Praca, PracaDetalhe, Selo, Severidade, TagDetalhe, TipoImovel } from "./tipos";
+import type { ImovelDetalhe, ImovelResumo, LocalizacaoImovel, Praca, PracaDetalhe, Selo, Severidade, TagDetalhe, TipoImovel } from "./tipos";
 
 export const FONTE_EXEMPLO = { id: "exemplo", nome: "Exemplo fictício" } as const;
 
@@ -175,6 +176,7 @@ export function converterExemplos(listings: readonly Listing[], agora: Date = ne
       seloPendente: false,
       tags: tagsDoExemplo(l),
       coletadoEm,
+      notaLocal: l.localizacao?.nota ?? null,
       endereco: null,
       areaTotal: x.areaTotal,
       areaPrivativa: l.type === "terreno" ? null : x.area,
@@ -223,5 +225,21 @@ export function resumoDe(d: ImovelDetalhe): ImovelResumo {
     fonte: d.fonte, foto: d.foto, totalFotos: d.totalFotos, selo: d.selo, seloPendente: d.seloPendente,
     tags: d.tags.map(({ slug, rotulo, severidade, emRevisao }) => ({ slug, rotulo, severidade, emRevisao })),
     coletadoEm: d.coletadoEm,
+    notaLocal: d.notaLocal,
   };
+}
+
+/**
+ * Nota de localização FICTÍCIA de cada exemplo (src/content/examples.ts, campo `localizacao`), pelo id do catálogo
+ * ("ex-alvo-sp"); o ponto é a sede da cidade do exemplo. Exemplo sem o campo fica sem nota (null).
+ */
+export function localizacaoDosExemplos(listings: readonly Listing[], agora: Date = new Date()): Map<string, LocalizacaoImovel> {
+  const hoje = diaBrasilia(agora)!;
+  const saida = new Map<string, LocalizacaoImovel>();
+  for (const l of listings) {
+    const x = FICTICIOS[l.id];
+    if (!x || !l.localizacao) continue;
+    saida.set(`ex-${l.id}`, localizacaoExemplo(l.localizacao, { cidade: x.cidade, uf: l.uf, lat: x.lat, lon: x.lon }, hoje));
+  }
+  return saida;
 }

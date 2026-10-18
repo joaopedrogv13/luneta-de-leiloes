@@ -1,0 +1,5 @@
+__pycache__/
+# arquivos baixados por entradas.py (LUNETA_LOCAL_CACHE; cerca de 2,4 GB)
+cache/
+# saída do actions.sh (publicada no branch coletas-dados pelo workflow)
+saida/

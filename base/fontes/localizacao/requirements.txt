@@ -1,0 +1,22 @@
+# Ranking de localização (base/fontes/localizacao). Versões fixas (scipy: árvores k-d da nota): o geocode muda se a padronização do enderecobr ou
+# a escada do geocodebr mudarem. Python 3.12 (Actions) ou 3.13.
+geocodebr==0.2.0
+enderecobr==0.3.0
+duckdb==1.5.6
+pyarrow==26.0.0
+polars==2.0.0
+polars-runtime-32==2.0.0
+pandas==3.0.6
+numpy==2.5.4
+shapely==2.2.0
+h3==4.5.0
+scipy==1.18.1
+requests==2.34.2
+tqdm==4.70.1
+platformdirs==4.13.4
+python-dateutil==2.9.0.post0
+six==1.17.0
+certifi==2026.7.22
+charset-normalizer==3.5.2
+idna==3.20
+urllib3==2.8.0

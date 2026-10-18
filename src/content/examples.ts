@@ -1,5 +1,6 @@
 import type { SealLevel } from "@/components/ui/Seal";
 import { BRAZIL_PINS } from "@/lib/brazil";
+import type { LocalizacaoFicticia } from "@/lib/catalogo/localizacao";
 import type { Severity } from "./tags";
 
 /**
@@ -58,6 +59,11 @@ export type Listing = {
   modalidade?: string;
   /** Data e hora da praça (ISO); null quando a fonte não informa. */
   dataPraca?: string | null;
+  /**
+   * Nota de localização FICTÍCIA (só nos exemplos): coerente com o bairro real do exemplo e marcada como exemplo na
+   * tela. Os moradores e as células são os da cidade de verdade (base/saida/site/localizacao-cidades.json.gz).
+   */
+  localizacao?: LocalizacaoFicticia;
 };
 
 export const LISTINGS: Listing[] = [
@@ -82,6 +88,14 @@ export const LISTINGS: Listing[] = [
       { label: "2ª praça", severity: "positivo" },
     ],
     why: "Dados completos, deságio alto, posse livre, nenhuma dívida passando ao arrematante, documentação e processo limpos e praça favorável. Nenhum risco identificado nos dados do edital.",
+    localizacao: {
+      nota: 91,
+      componentes: { servicos: 88, transporte: 93, renda: 85, infra: 96, comercio: 82, lazer: 71 },
+      indicadores: { mercados_500: 18, farmacias_500: 5, padarias_500: 6, escolas_1k: 31, saude_1k: 14, estacao_m: 420, onibus_500: 26, onibus_face: 21, renda: 5800, pavimentacao: 100, calcada: 99, iluminacao: 100, esgoto: 100, comercio_1k: 3100, parque_m: 650 },
+      moradores: 11437655,
+      celulas: 23601,
+      coberturaRisco: true,
+    },
   },
   {
     id: "namira-pr",
@@ -102,6 +116,14 @@ export const LISTINGS: Listing[] = [
       { label: "Condomínio em atraso · R$ 4.300", severity: "atencao" },
     ],
     why: "Posse livre e nenhuma dívida passando ao arrematante. Segundo o edital, o condomínio em atraso é quitado com o valor da arrematação.",
+    localizacao: {
+      nota: 85,
+      componentes: { servicos: 79, transporte: 74, renda: 88, infra: 94, comercio: 70, lazer: 83 },
+      indicadores: { mercados_500: 6, farmacias_500: 3, padarias_500: 3, escolas_1k: 14, saude_1k: 5, estacao_m: 900, onibus_500: 15, onibus_face: 18, renda: 6400, pavimentacao: 100, calcada: 99, iluminacao: 100, esgoto: 100, comercio_1k: 1500, parque_m: 300 },
+      moradores: 1774310,
+      celulas: 8248,
+      coberturaRisco: true,
+    },
   },
   {
     id: "promissor-ba",
@@ -122,6 +144,14 @@ export const LISTINGS: Listing[] = [
       { label: "Matrícula com pendência", severity: "atencao" },
     ],
     why: "Dados completos e deságio relevante, mas a ocupação não foi informada e a matrícula tem pendência.",
+    localizacao: {
+      nota: 86,
+      componentes: { servicos: 85, transporte: 72, renda: 90, infra: 88, comercio: 86, lazer: 64 },
+      indicadores: { mercados_500: 38, farmacias_500: 7, padarias_500: 6, escolas_1k: 29, saude_1k: 21, estacao_m: 1200, onibus_500: 18, onibus_face: 9, renda: 4800, pavimentacao: 100, calcada: 78, iluminacao: 100, esgoto: 99, comercio_1k: 3300, parque_m: 900 },
+      moradores: 2416356,
+      celulas: 5242,
+      coberturaRisco: true,
+    },
   },
   {
     id: "semselo-rj",
@@ -143,6 +173,14 @@ export const LISTINGS: Listing[] = [
       { label: "Dívida passa ao arrematante", severity: "grave" },
     ],
     why: "O maior desconto da lista vem com ocupante, ação judicial em curso e dívida que passa ao arrematante.",
+    localizacao: {
+      nota: 82,
+      componentes: { servicos: 70, transporte: 98, renda: 58, infra: 92, comercio: 99, lazer: 76 },
+      indicadores: { mercados_500: 12, farmacias_500: 9, padarias_500: 7, escolas_1k: 25, saude_1k: 18, estacao_m: 250, onibus_500: 40, onibus_face: 24, renda: 2400, pavimentacao: 100, calcada: 98, iluminacao: 100, esgoto: 99, comercio_1k: 6800, parque_m: 400 },
+      moradores: 6193495,
+      celulas: 15882,
+      coberturaRisco: true,
+    },
   },
   {
     id: "namira-mg",
@@ -164,6 +202,14 @@ export const LISTINGS: Listing[] = [
       { label: "Sem vistoria", severity: "info" },
     ],
     why: "Desocupado e sem dívida passando ao arrematante. Sem vistoria disponível.",
+    localizacao: {
+      nota: 94,
+      componentes: { servicos: 92, transporte: 85, renda: 94, infra: 97, comercio: 95, lazer: 68 },
+      indicadores: { mercados_500: 16, farmacias_500: 6, padarias_500: 8, escolas_1k: 22, saude_1k: 30, estacao_m: 1100, onibus_500: 30, onibus_face: 35, renda: 7200, pavimentacao: 100, calcada: 100, iluminacao: 100, esgoto: 100, comercio_1k: 4200, parque_m: 700 },
+      moradores: 2317249,
+      celulas: 6654,
+      coberturaRisco: true,
+    },
   },
   {
     id: "semselo-go",
@@ -185,6 +231,14 @@ export const LISTINGS: Listing[] = [
       { label: "Área divergente", severity: "atencao" },
     ],
     why: "Deságio abaixo do relevante, venda de cota-parte e área divergente entre matrícula e edital.",
+    localizacao: {
+      nota: 87,
+      componentes: { servicos: 83, transporte: 66, renda: 91, infra: 95, comercio: 84, lazer: 88 },
+      indicadores: { mercados_500: 9, farmacias_500: 4, padarias_500: 4, escolas_1k: 13, saude_1k: 8, estacao_m: 1600, onibus_500: 12, onibus_face: 8, renda: 6100, pavimentacao: 100, calcada: 100, iluminacao: 100, esgoto: 99, comercio_1k: 1800, parque_m: 250 },
+      moradores: 1439259,
+      celulas: 8740,
+      coberturaRisco: false,
+    },
   },
 ];
 

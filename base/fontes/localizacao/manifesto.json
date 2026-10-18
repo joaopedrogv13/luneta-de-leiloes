@@ -1,0 +1,240 @@
+{
+  "formato": "luneta-manifesto-entradas",
+  "versao": 1,
+  "conferido_em": "2026-10-18",
+  "nota": "Arquivos dos releases do IPEA (geobr_prep_data v2.0.0, padronizacao_cnefe v0.5.0, censobr_prep_data v1.0.0) com os dados do IBGE. O sha256 fixa a versão: o mesmo nome de arquivo já foi trocado sem mudar a tag.",
+  "arquivos": [
+    {
+      "nome": "censobr:2022_tracts_basico",
+      "url": "https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_basico_v1.0.0.parquet",
+      "arquivo": "censobr/2022_tracts_basico_v1.0.0.parquet",
+      "tamanho": 12440910,
+      "last_modified": "2026-09-16T22:23:31Z",
+      "sha256": "98b42c2816d1b4be05e6c91c0b9745ec46c9f1b2d27140d8284ba6d283f89c29",
+      "etapas": [
+        "geocode",
+        "nota"
+      ],
+      "para_que": "moradores por município (soma dos setores): porte da cidade na medição"
+    },
+    {
+      "nome": "censobr:2022_tracts_domicilio",
+      "url": "https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_domicilio_v1.0.0.parquet",
+      "arquivo": "censobr/2022_tracts_domicilio_v1.0.0.parquet",
+      "tamanho": 115466274,
+      "last_modified": "2026-09-16T22:29:45Z",
+      "sha256": "c42bc8bd4ae8e4dc17579705b9df1d306329d703e6df099757516e9c28239946",
+      "etapas": [
+        "nota"
+      ],
+      "para_que": "domicílios por setor: esgoto pela rede geral ou pluvial"
+    },
+    {
+      "nome": "censobr:2022_tracts_entorno",
+      "url": "https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_entorno_v1.0.0.parquet",
+      "arquivo": "censobr/2022_tracts_entorno_v1.0.0.parquet",
+      "tamanho": 31108512,
+      "last_modified": "2026-09-16T22:26:04Z",
+      "sha256": "30cdd1993c8a595519e9ae1f7fdce27a170f3647c7c6b5b8c8f466ff642aa0b6",
+      "etapas": [
+        "nota"
+      ],
+      "para_que": "entorno dos domicílios por setor: pavimentação, calçada, iluminação, ponto de ônibus na face"
+    },
+    {
+      "nome": "censobr:2022_tracts_responsavelrenda",
+      "url": "https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_responsavelrenda_v1.0.0.parquet",
+      "arquivo": "censobr/2022_tracts_responsavelrenda_v1.0.0.parquet",
+      "tamanho": 14798813,
+      "last_modified": "2026-09-16T22:30:01Z",
+      "sha256": "7e358e021f905c3ed4755934febe71585a8d64d1ae2926ef6d82a4775cc48f4e",
+      "etapas": [
+        "nota"
+      ],
+      "para_que": "renda do responsável por setor (V06004 média; V06006 só depois de confirmada, C6)"
+    },
+    {
+      "nome": "censustracts_2022_simplified",
+      "url": "https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/censustracts_2022_simplified.parquet",
+      "arquivo": "geobr/censustracts_2022_simplified.parquet",
+      "tamanho": 380962241,
+      "last_modified": "2026-09-10T23:45:47Z",
+      "sha256": "7f02fabb82c512fd21a62976929d58a884fba8c06d7cb6a5900907485f96c42b",
+      "etapas": [
+        "nota"
+      ],
+      "para_que": "malha de setores censitários 2022 (simplificada): o setor dos domicílios do CNEFE cujo código não está nos agregados (C6, opção a; 6,9% dos domicílios das cidades da base, 96% em Nossa Senhora do Socorro/SE)"
+    },
+    {
+      "nome": "cnefe_2022",
+      "url": "https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/cnefe_2022.parquet",
+      "arquivo": "geobr/cnefe_2022.parquet",
+      "tamanho": 1263462014,
+      "last_modified": "2026-09-15T14:17:54Z",
+      "sha256": "fa38af5c21069d8e8530645ee3709bb60a7e6ab859c715f49321ab216256e9bb",
+      "etapas": [
+        "geocode",
+        "nota"
+      ],
+      "para_que": "CNEFE 2022 completo: degrau quadra e lote (C4), rua interna de condomínio e medição; na nota, domicílios por setor e estabelecimentos (C8, C12)"
+    },
+    {
+      "nome": "disasterriskareas_2010",
+      "url": "https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/disasterriskareas_2010.parquet",
+      "arquivo": "geobr/disasterriskareas_2010.parquet",
+      "tamanho": 6537939,
+      "last_modified": "2026-05-18T01:58:14Z",
+      "sha256": "af07a8d4c1a025da46891e123509a5770614dacb5300d3a84da4c3394b88bec3",
+      "etapas": [
+        "nota"
+      ],
+      "para_que": "BATER (IBGE e Cemaden, 2018, base de 2010): alerta de área de risco mapeada perto (C10)"
+    },
+    {
+      "nome": "geocodebr:municipio",
+      "url": "https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio.parquet",
+      "arquivo": "geocodebr_data_release_v0.5.0/municipio.parquet",
+      "tamanho": 150304,
+      "last_modified": "2026-09-15T18:50:29Z",
+      "sha256": "f94a545fdab4956aa559b9aafee0b25a39f59d9d85974ae5a382504cc93467ab",
+      "etapas": [
+        "geocode",
+        "nota"
+      ],
+      "para_que": "tabela de referência do geocodebr (CNEFE 2022 agregado por rua, número, CEP e localidade)"
+    },
+    {
+      "nome": "geocodebr:municipio_cep",
+      "url": "https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio_cep.parquet",
+      "arquivo": "geocodebr_data_release_v0.5.0/municipio_cep.parquet",
+      "tamanho": 11255628,
+      "last_modified": "2026-09-15T18:50:36Z",
+      "sha256": "d6e87a4ef5674db37ef36b7b8246d0ddb03183c137efd6a43c09b01ab76f381b",
+      "etapas": [
+        "geocode"
+      ],
+      "para_que": "tabela de referência do geocodebr (CNEFE 2022 agregado por rua, número, CEP e localidade)"
+    },
+    {
+      "nome": "geocodebr:municipio_cep_localidade",
+      "url": "https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio_cep_localidade.parquet",
+      "arquivo": "geocodebr_data_release_v0.5.0/municipio_cep_localidade.parquet",
+      "tamanho": 29313957,
+      "last_modified": "2026-09-15T18:50:51Z",
+      "sha256": "4a0b8401fc4ea491e3349d3d315d4f94152661d0cff24299cd2495979d07d1be",
+      "etapas": [
+        "geocode"
+      ],
+      "para_que": "tabela de referência do geocodebr (CNEFE 2022 agregado por rua, número, CEP e localidade)"
+    },
+    {
+      "nome": "geocodebr:municipio_localidade",
+      "url": "https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio_localidade.parquet",
+      "arquivo": "geocodebr_data_release_v0.5.0/municipio_localidade.parquet",
+      "tamanho": 11269831,
+      "last_modified": "2026-09-15T18:50:59Z",
+      "sha256": "fbf1c8a6b6804aa12899d67e4073c66cd88c68ce3012eed9ae2af39452a45495",
+      "etapas": [
+        "geocode"
+      ],
+      "para_que": "tabela de referência do geocodebr (CNEFE 2022 agregado por rua, número, CEP e localidade)"
+    },
+    {
+      "nome": "geocodebr:municipio_logradouro_cep_localidade",
+      "url": "https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio_logradouro_cep_localidade.parquet",
+      "arquivo": "geocodebr_data_release_v0.5.0/municipio_logradouro_cep_localidade.parquet",
+      "tamanho": 98847143,
+      "last_modified": "2026-09-15T18:52:51Z",
+      "sha256": "fd0f43259b45e2e20ad3aaedd7f78a2f9301bcd2634eec0e2398b1260854b86e",
+      "etapas": [
+        "geocode"
+      ],
+      "para_que": "tabela de referência do geocodebr (CNEFE 2022 agregado por rua, número, CEP e localidade)"
+    },
+    {
+      "nome": "geocodebr:municipio_logradouro_localidade",
+      "url": "https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio_logradouro_localidade.parquet",
+      "arquivo": "geocodebr_data_release_v0.5.0/municipio_logradouro_localidade.parquet",
+      "tamanho": 87152553,
+      "last_modified": "2026-09-15T18:53:34Z",
+      "sha256": "73c382e4384f3961207c476ae9e7b207361842dd1c8b4f588648e5b025fdcb13",
+      "etapas": [
+        "geocode",
+        "nota"
+      ],
+      "para_que": "tabela de referência do geocodebr (CNEFE 2022 agregado por rua, número, CEP e localidade)"
+    },
+    {
+      "nome": "geocodebr:municipio_logradouro_numero_cep_localidade",
+      "url": "https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio_logradouro_numero_cep_localidade.parquet",
+      "arquivo": "geocodebr_data_release_v0.5.0/municipio_logradouro_numero_cep_localidade.parquet",
+      "tamanho": 460921580,
+      "last_modified": "2026-09-15T19:04:23Z",
+      "sha256": "b9acdacbc43e1795843ecadf040799f59f0c88afda1d243e30c79c1961948259",
+      "etapas": [
+        "geocode"
+      ],
+      "para_que": "tabela de referência do geocodebr (CNEFE 2022 agregado por rua, número, CEP e localidade)"
+    },
+    {
+      "nome": "geocodebr:municipio_logradouro_numero_localidade",
+      "url": "https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio_logradouro_numero_localidade.parquet",
+      "arquivo": "geocodebr_data_release_v0.5.0/municipio_logradouro_numero_localidade.parquet",
+      "tamanho": 441714149,
+      "last_modified": "2026-09-15T19:08:00Z",
+      "sha256": "4439e8dfedf37be5b26c80da7079f93e9045be670b0fb9abb2c69ab7b3720d34",
+      "etapas": [
+        "geocode"
+      ],
+      "para_que": "tabela de referência do geocodebr (CNEFE 2022 agregado por rua, número, CEP e localidade)"
+    },
+    {
+      "nome": "healthfacilities_202604",
+      "url": "https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/healthfacilities_202604.parquet",
+      "arquivo": "geobr/healthfacilities_202604.parquet",
+      "tamanho": 99764686,
+      "last_modified": "2026-05-18T12:50:49Z",
+      "sha256": "fec9a26c670fcd5da24018b697de32882ce0b60d466e5ff10b1ba1b736582ead",
+      "etapas": [
+        "nota"
+      ],
+      "para_que": "estabelecimentos de saúde do CNES (abr/2026) com coordenada: unidades de atenção a 1 km (C7: só tipo e coordenada; nunca CPF nem razão social)"
+    },
+    {
+      "nome": "neighborhoods_2022",
+      "url": "https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/neighborhoods_2022.parquet",
+      "arquivo": "geobr/neighborhoods_2022.parquet",
+      "tamanho": 41527531,
+      "last_modified": "2026-09-15T14:15:16Z",
+      "sha256": "d76928f4c4c9a5af52d14e87553ce36d3517a7ca600ae615630b7955a61f5bed",
+      "etapas": [
+        "geocode"
+      ],
+      "para_que": "polígonos dos bairros do IBGE (Censo 2022): o ponto caiu no bairro informado?"
+    },
+    {
+      "nome": "schools_2025",
+      "url": "https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/schools_2025.parquet",
+      "arquivo": "geobr/schools_2025.parquet",
+      "tamanho": 18648631,
+      "last_modified": "2026-05-18T02:05:34Z",
+      "sha256": "a93955761e95071a5e83f50e3edeec69c644470927dbedaac86f224eb5de85dc",
+      "etapas": [
+        "nota"
+      ],
+      "para_que": "escolas do INEP (Catálogo de Escolas e Censo Escolar 2025) com coordenada: escolas ativas a 1 km"
+    },
+    {
+      "nome": "statsgrid_2022",
+      "url": "https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/statsgrid_2022.parquet",
+      "arquivo": "geobr/statsgrid_2022.parquet",
+      "tamanho": 619057914,
+      "last_modified": "2026-05-18T02:14:27Z",
+      "sha256": "457303b98a4689dc67b2611da2f301aefde82eeaccfd24dd8ee4144f7862b287",
+      "etapas": [
+        "nota"
+      ],
+      "para_que": "grade estatística 2022 (células de 200 m na área urbana, 1 km na rural, com moradores): a referência da nota"
+    }
+  ]
+}

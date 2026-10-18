@@ -1,7 +1,8 @@
 # Luneta de Leilões · onde estamos e pendências
 
 Este é o arquivo central do projeto: **onde estamos, que dados temos, o que falta e o próximo passo**. Atualizado a cada
-entrega (última atualização: 17/10/2026, correções integradas da rodada 3: venda direta, região única com ITBI, PDF).
+entrega (última atualização: 18/10/2026, rodada 4, frente A2: nota de localização de 0 a 100, com os dados, o servidor e
+o contrato do site; a tela é da frente C).
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
@@ -569,6 +570,145 @@ Sim, mas em duas etapas, e a primeira é a precisão do ponto:
    promessa ("não é garantia"), dados de crime por bairro são irregulares e sujeitos a viés, e cada fonte pede atribuição.
 - [ ] **Decisão sua:** fazer o ranking (e se entra na Luneta ou no Telescópio). Ordem sugerida: geocodificação → acesso e
   serviços (OSM) → renda (IBGE) → preço (ITBI) → riscos.
+
+### Ranking de localização (rodada 4): o que já está pronto
+
+**A1 · posição do imóvel pelo endereço (18/10/2026).** Era o primeiro passo da resposta acima: o ponto deixa de ser a
+sede do município. Feito sem Nominatim, com o **geocodebr (IPEA, MIT) sobre o CNEFE 2022 do IBGE**, que roda neste
+contêiner (os releases do GitHub abrem daqui) e no Actions. Detalhes em `base/fontes/localizacao/README.md`; números em
+`base/saida/localizacao/medicao-geocode.md`.
+
+| Precisão do ponto | Imóveis | % | No site | Nota de localização (decisão 2) |
+|---|---|---|---|---|
+| número (exato, interpolado ou quadra e lote; até 150 m) | 10.481 | 49,4% | `exata` | normal |
+| rua (até 500 m) | 3.211 | 15,1% | `rua` | normal |
+| bairro (centro da localidade, até 2,5 km) | 4.655 | 21,9% | `bairro` | aproximada, com faixa |
+| cidade (sede do município) | 2.883 | 13,6% | `cidade` | sem nota |
+
+- Número ou rua: **64,5%** (a verificação previa 59,0% só com as regras de rebaixamento; os degraus novos somaram o resto).
+  Por porte: 44,5% nas cidades com menos de 20 mil moradores, 77,4% nas de mais de 500 mil.
+- **Regras de segurança** (C2 a C5 da verificação): empate longe, casamento sem bairro com nome genérico ("Rua 06") ou
+  longe do bairro, nome parecido conferido palavra a palavra, ponto fora do município ou a mais de 1 km do bairro do
+  IBGE → rebaixa; rural → sem nota; rodovia com km → no máximo rua.
+- **Dois erros achados e corrigidos na validação:** (1) o geocodebr 0.2.0 põe o número além do fim da rua perto do meio
+  dela com desvio de 6 m: o ponto é refeito entre os vizinhos do CNEFE (1,4 mil imóveis saíram de "número");
+  (2) o `raio_km` da malha do Rio de Janeiro era 19 km, e Santa Cruz fica a 50 km do Centro: `base/geo/raios-cnefe.csv`
+  corrige 24 municípios, também na exportação.
+- **No banco e no site:** `npm run base:geocode -- --arquivo base/saida/localizacao/geocode.json` grava lat, lon e
+  precisão (e `extras.geo` com desvio, setor censitário, motivo e degrau), sem piorar o ponto que a fonte trouxe; a
+  próxima coleta mantém o ponto enquanto o endereço for o mesmo. O instantâneo do site (`base/saida/site/`) já foi
+  regerado com os pontos novos.
+- **Atualização:** a cada lista nova da Caixa, rodar `geocodificar.py` (cerca de 90 s) e `base:geocode`; ou o workflow
+  `base-localizacao.yml` com `etapa=geocode`, que publica o geocode.json no branch `coletas-dados`.
+
+Pendências da A1:
+- [ ] **Quem integra:** o banco (`base/dados/luneta.db`) não vai para o git. No banco principal, rodar
+  `npm run base:geocode -- --arquivo base/saida/localizacao/geocode.json` antes do próximo `base:exportar -- --site`;
+  senão o instantâneo volta para a sede.
+- [ ] **Site (frente C):** o mapa diz "Posição informada pela fonte" para toda precisão `exata`. Agora `exata` também é o
+  número achado no CNEFE: trocar o texto (por exemplo, "Posição pelo número do endereço (IBGE, CNEFE 2022)") ou exportar
+  a origem do ponto.
+- [ ] **Decisão sua:** bairro muito grande (desvio acima de 2,5 km, como Santa Cruz e Campo Grande no Rio) fica "cidade"
+  quando a rua não casa (cerca de 1,1 mil imóveis). O centro do bairro está mais perto que a sede; dá para mostrá-lo como
+  "bairro aproximado" no mapa sem dar nota.
+- [ ] **Conferir à mão** (Street View) os suspeitos listados na medição (10 na amostra de 120) e, depois, uma amostra
+  maior: é a única validação do ponto exato.
+- [ ] **CEP das fichas da Caixa** (item 4 da rodada): com ele entram os níveis com CEP do geocodebr; rodar de novo.
+- [ ] **DF:** "Quadra 312" sem o tipo (QR, QS...) não casa com o CNEFE; quadras com conjunto casam.
+- [ ] **Fora do código:** avisar o IPEA (github.com/ipea/geocodebr) da interpolação pela média de todos os números da rua.
+- [ ] Rodar o workflow uma vez no Actions (`gh workflow run base-localizacao.yml --ref <branch> -f etapa=geocode`) para
+  confirmar o caminho de lá.
+
+**A2 · nota de localização (18/10/2026).** Uma nota de 0 a 100 para o entorno de cada imóvel, comparado com os
+**moradores da própria cidade** (quadrados de 200 m da grade do IBGE com moradores, pesados pela população): "melhor
+localizado que 78% dos moradores de São Gonçalo". Seis partes, cada uma com a sua nota: serviços do dia a dia 25%,
+infraestrutura da rua 25%, transporte 20%, renda do entorno 20%, comércio e movimento 5%, lazer 5%. O método completo,
+em português simples para a página pública, está em `base/fontes/localizacao/README.md`; os números em
+`base/saida/localizacao/medicao-nota.md`.
+
+| Situação | Imóveis | % | O que a tela mostra |
+|---|---|---|---|
+| nota calculada (ponto no número ou na rua) | 13.293 | 62,6% | a nota e as 6 partes |
+| nota aproximada (só o bairro) | 4.388 | 20,7% | uma faixa e o meio dela |
+| sem nota: endereço só na cidade | 2.834 | 13,3% | o motivo |
+| sem nota: cidade pequena (menos de 20 mil moradores ou 50 quadrados) | 666 | 3,1% | os números do entorno e a posição em terços |
+| sem nota: rural ou cidade fora da base | 49 | 0,2% | o motivo |
+
+- **Dados:** CNEFE 2022 (domicílios e estabelecimentos; mercado, farmácia e padaria pelo nome, que nunca é publicado),
+  Censo 2022 por setor (renda mediana confirmada no dicionário do IBGE, pavimentação, calçada, iluminação, esgoto, ponto
+  de ônibus), Inep (escolas), CNES (saúde), OpenStreetMap (estações, pontos de ônibus, parques e praças, só pelo
+  Actions) e o BATER (áreas de risco, só alerta). Atribuições e licenças em `base/FONTES.md`.
+- **Distribuição:** imóveis com nota calculada: mediana 37 (p10 9, p90 78). Os imóveis da Caixa ficam mais na periferia
+  do que o morador típico; nas células da cidade a média é 50 por construção.
+- **Conferência com o preço (ITBI de 5 capitais, 5.108 ruas e tipos):** Spearman mediano de **0,32** entre a nota e o
+  preço pago por m² na rua (SP apartamentos 0,55). Comércio puxava contra o preço; os pesos da decisão (30/20/20/15/10/5)
+  viraram 25/20/20/25/5/5 (mediana 0,24 → 0,32). Isso não valida o interior.
+- **Arquivos do site** (commitados): `base/saida/site/localizacao.json.gz` (616 KB), `localizacao-osm.json.gz` (216 KB,
+  ODbL) e `localizacao-cidades.json.gz` (50 KB). O servidor (`src/lib/catalogo/localizacao.ts`) monta a
+  `LocalizacaoImovel` da página e a `notaLocal` da lista; ordem "Melhor localização" e filtro `notaLocalMin` na URL.
+- **Plano:** a nota é da Luneta. No Lente o servidor não manda a nota, o preço da região nem as buscas nos portais
+  (`travas` lista o que falta; a tela da trava é da frente D). A /assinante tem notas fictícias coerentes, marcadas como
+  exemplo.
+- **Atualização:** `gh workflow run base-localizacao.yml --ref <branch> -f etapa=tudo` roda geocode, OSM, IBGE e nota (cerca
+  de 40 min) e publica em `coletas-dados/localizacao/<run_id>/`; aqui, `pois.py` + `nota.py` levam 10 min. Rodado no
+  Actions em 18/10: `osm` (execução 39088496433, 14 min, 246 mil pontos), `ibge` (39090046510) e `nota` (39091626698, 10
+  min; os arquivos saíram iguais byte a byte aos gerados aqui). A etapa `geocode` e o `tudo` ainda não rodaram lá.
+
+Pendências da A2:
+- [ ] **Site (frente C):** mostrar a nota (seção, (i), filtro, ordem, cartão, PDF) e a página "Como a nota é calculada" a
+  partir do README; a ordem "Melhor localização" ainda não está no menu (`OrdenarPor.tsx`); citar "© contribuidores do
+  OpenStreetMap" com o link sempre que a nota aparecer. Nas pontas, evitar "melhor que 100%" (33 imóveis arredondam para
+  100) e "melhor que 0%": por exemplo, "entre os mais bem localizados da cidade".
+- [ ] **Planos (frente D):** a tela da trava no Lente para `localizacao`, `regiao`, `portais`, `simulador` e `relatorio`
+  (o servidor já não manda os dados) e os filtros avançados.
+- [ ] **Quem integra:** depois do `base:geocode` e do exportar no banco principal, rodar `pois.py` e `nota.py` (ou copiar
+  os `localizacao*.json.gz` do Actions); imóvel novo fica "pendente" até a próxima rodada.
+- [ ] **v1.1:** setores de risco do SGB (alto e muito alto) quando a camada e a licença forem confirmadas no Actions; o CEP
+  das fichas da Caixa (mais imóveis no número); a conferência à mão no mapa (Street View) de uma amostra de notas e dos
+  pontos de ônibus do OSM nas cidades com cobertura baixa.
+- [ ] **Decisão sua:** os pesos (hoje 25/20/20/25/5/5, depois do ajuste pelo ITBI) e se a nota da cidade pequena deve
+  usar a região imediata (hoje: terços na própria cidade, para não punir a cidade pequena contra o polo).
+- [ ] **Licença (confirmar com o jurídico):** a nota final usa as partes de transporte e lazer, que vêm do OSM. Ela foi
+  tratada como "produced work" (atribuição na tela); as colunas derivadas do OSM estão no arquivo à parte, sob a ODbL.
+
+**Revisão adversarial do ranking (18/10/2026).** Código, dados, LGPD, ODbL, vazamento para o Lente e reprodutibilidade
+conferidos antes de você ver. O pipeline rodado do zero com o cache deu os mesmos arquivos byte a byte, antes e depois
+das correções (duas execuções seguidas de `nota.py` com o mesmo sha256). O que foi achado e corrigido:
+
+| Severidade | O que era | O que foi feito |
+|---|---|---|
+| Alta | **Renda e infraestrutura sumiam em cidades inteiras.** O CNEFE grava o setor da malha da coleta, e os resultados por setor do Censo usam a malha final: 6,9% dos domicílios das cidades da base não achavam o setor (96% em Nossa Senhora do Socorro/SE, 69% em Criciúma/SC, 23% em Campinas/SP). 294 imóveis com nota (203 calculadas, 163 delas em Socorro) estavam sem a parte de renda e, quase todos, sem a de infraestrutura (até 45% do peso redistribuído sem aviso) e 1.172 tinham a renda incompleta. | O domicílio sem setor recebe o setor do polígono da Malha de Setores 2022 em que cai (C6, opção a; nova entrada no manifesto com sha256, +381 MB). 99,3% recuperados; ficam 0,1% sem setor. Renda incompleta: 1.172 → 169; nota sem renda: 294 → 1. 486 notas mudaram 10 pontos ou mais. |
+| Média | **A cobertura do OSM de ônibus contava as vizinhas.** A regra dos 10% comparava os pontos da caixa da cidade (com a capital ao lado) com as quadras do município: Ceará-Mirim dava 7,8 e Belford Roxo 0,30, sem o próprio território mapeado. | Contam só os pontos dentro das células habitadas da própria cidade. Os pontos do OSM entram em 265 cidades (eram 501); Belford Roxo cai para 0,02 e passa a usar só o Censo. |
+| Média | **Risco "conferido" sem ponto.** Imóvel com endereço só na cidade, numa cidade mapeada, vinha com `coberturaRisco: true` e nenhum alerta: a tela leria "nenhuma área de risco perto". | Novo campo `riscoRaioM` no contrato (`LocalizacaoImovel`): 100 m do imóvel, até 500 m do centro do bairro, ou null quando não houve procura. A frente C usa para dizer o que foi conferido. |
+| Baixa | Distância até a área de risco medida em graus com o fator da longitude: encurtava em 8% (13% no Sul) o sentido norte-sul; uma área a 105 m ao norte dava alerta "a 97 m". | Plano local em metros, com teste. Alertas: 1.195 → 1.185. |
+| Baixa | O meio da faixa da nota aproximada arredondava o meio para o par (48,5 → 48, 49,5 → 50). | Meio para cima, como na escola, com teste. |
+| Baixa | Textos: "áreas habitadas de 200 m" na cidade pequena (a grade rural tem quadrados de 1 km); na aproximada, nada dizia que as partes foram medidas no centro do bairro. | Textos corrigidos, com teste. |
+| Baixa | `notaLocalMin=0.4` na URL virava "nota 0+" na pílula e contava como filtro. | Arredonda antes de conferir a faixa (1 a 100), com teste. |
+
+Conferido e sem problema:
+- **Geocode:** 40 imóveis sorteados em número ou rua, conferidos no CNEFE e no polígono do bairro. Nenhum caiu na rua
+  errada; 3 ficaram incertos (número que não existe no CNEFE, posto perto de outro número da mesma rua). Dos 10 em
+  bairro, um em cidade pequena (Mucurici/ES) tem a rua num distrito a 17 km do "Centro" informado. Os 398 rebaixados por
+  conflito entre a rua e o bairro ganham a nota aproximada do bairro informado: escolha da A1, mantida.
+- **LGPD:** nenhum nome, CPF ou razão social nos três `.gz`, no `coletas-dados/localizacao/` e no branch
+  `coleta-localizacao`. Só números, códigos e nomes de cidade.
+- **ODbL:** as colunas do OSM estão só no `localizacao-osm.json.gz`, com o aviso.
+- **sha256:** o cache bate com o `manifesto.json` nas 18 entradas (19 com a malha).
+- **Lente:** a API com `plano=lente&ordem=localizacao&notaLocalMin=80` devolve a mesma lista e a mesma ordem do padrão,
+  com `notaLocal: null`; a página e o RSC do imóvel no Lente não trazem a nota, o preço da região nem os portais.
+- **Desempenho:** os três `.gz` carregam em cerca de 80 ms na primeira requisição (+12 MB de memória). `nota.py` passou
+  de 3 para 6 min por causa do polígono do setor.
+- **Textos:** nada de "garantia", "segura", "risco zero" ou "sem risco".
+
+Pendências da revisão:
+- [ ] **Frente C:** usar `riscoRaioM` no texto sem alerta ("nenhuma área de risco mapeada a menos de 100 m do imóvel";
+  com `coberturaRisco` e raio null: "a cidade tem áreas mapeadas, mas sem o endereço exato não conferimos"). Na
+  aproximada, deixar claro que as partes são do centro do bairro (o motivo já diz).
+- [ ] **Decisão sua:** a regra dos 10% do OSM conta agora só o território habitado da cidade. Bairro sem morador (zona
+  industrial, avenida comercial) fica fora, e São Paulo cai de 0,62 para 0,47. Se quiser mais cidades com os pontos de
+  ônibus do OSM, dá para baixar o limite ou contar até 300 m das áreas habitadas.
+- [ ] **Decisão sua (A1):** o imóvel cuja rua fica longe do bairro informado ganha a nota aproximada do bairro (398
+  imóveis). Com o bairro "Centro" (29 deles), o "Centro" pode ser só o padrão da Caixa.
 
 ### Ler cada leilão com IA: é viável?
 

@@ -36,6 +36,7 @@ const COMPLETO: EstadoBusca = {
     comTags: ["desocupado"],
     semTags: ["ocupado", "acao-judicial"],
     selo: [3, 2],
+    notaLocalMin: 60,
   },
   ordem: "lance-asc",
   pagina: 3,
@@ -80,6 +81,20 @@ test("faixa ao contrário num link: as pontas trocam (URL, pílula e campos igua
 test("contarFiltros: faixa conta uma vez", () => {
   const f: Filtros = { lanceMin: 1, lanceMax: 2, uf: ["MG"], q: "x", financiamento: false };
   assert.equal(contarFiltros(f), 4);
-  // 12 listas + 5 faixas + quartos + vagas + datas + 4 sim/não + texto
-  assert.equal(contarFiltros(COMPLETO.filtros), 25);
+  // 12 listas + 5 faixas + quartos + vagas + nota de localização + datas + 4 sim/não + texto
+  assert.equal(contarFiltros(COMPLETO.filtros), 26);
+});
+
+test("nota de localização: notaLocalMin (1 a 100, inteiro) e a ordem \"localizacao\" na URL", () => {
+  const e = lerBusca(new URLSearchParams("notaLocalMin=70&ordem=localizacao"));
+  assert.equal(e.filtros.notaLocalMin, 70);
+  assert.equal(e.ordem, "localizacao");
+  assert.equal(escreverBusca(e).toString(), "notaLocalMin=70&ordem=localizacao");
+  assert.equal(lerBusca(new URLSearchParams("notaLocalMin=65.4")).filtros.notaLocalMin, 65);
+  // 0,4 arredondava para 0: o filtro ficava "nota 0+" na pílula e contava como filtro sem filtrar nada
+  assert.equal(lerBusca(new URLSearchParams("notaLocalMin=100.4")).filtros.notaLocalMin, 100);
+  for (const ruim of ["0", "0.4", "-5", "150", "abc", ""]) {
+    assert.equal(lerBusca(new URLSearchParams(`notaLocalMin=${ruim}`)).filtros.notaLocalMin, undefined, ruim);
+  }
+  assert.equal(contarFiltros({ notaLocalMin: 60 }), 1);
 });

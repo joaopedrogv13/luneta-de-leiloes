@@ -116,7 +116,8 @@ const conferirTagResumo = (v: unknown): v is TagResumo => {
 };
 
 /** Conferência de cada campo do ImovelResumo (e do endereço, que vem junto na lista). */
-const CAMPOS_RESUMO: Record<keyof ImovelResumo | "endereco", Conferir> = {
+/** Campos da lista. `notaLocal` não vem do imoveis.json.gz: sai dos arquivos de localização (dados.ts). */
+const CAMPOS_RESUMO: Record<Exclude<keyof ImovelResumo, "notaLocal"> | "endereco", Conferir> = {
   id: (v) => typeof v === "string" && /^[a-z0-9-]+$/i.test(v) && v.length <= 80,
   titulo: texto,
   tipo: umDe("apartamento", "casa", "terreno", "comercial", "rural", "outro"),
@@ -205,6 +206,7 @@ export async function lerLista(pasta: string = pastaPadrao()): Promise<ListaLida
       praca: c.praca[k]!, dataPraca: c.dataPraca[k]!, financiamento: c.financiamento[k]!, fgts: c.fgts[k]!,
       parcelamento: c.parcelamento[k]!, ocupacao: c.ocupacao[k]!, judicial: c.judicial[k]!, fonte: c.fonte[k]!, foto: c.foto[k]!,
       totalFotos: c.totalFotos[k]!, selo: c.selo[k]!, seloPendente: c.seloPendente[k]!, tags: atualizarRotulos(c.tags[k]!), coletadoEm: c.coletadoEm[k]!,
+      notaLocal: null,
     };
     if (ids.has(i.id)) throw new ErroInstantaneo(`id repetido: ${i.id}.`);
     ids.add(i.id);

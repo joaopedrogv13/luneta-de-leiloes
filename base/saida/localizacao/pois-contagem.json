@@ -1,0 +1,29 @@
+{
+ "gerado_em": "2026-10-18T02:22:15Z",
+ "municipios": 4247,
+ "cidades_base": 1153,
+ "osm": {
+  "arquivo": "osm-pois.csv.gz",
+  "data": "2026-10-17T20:20:51Z"
+ },
+ "contagem": {
+  "cnefe:ensino_cnefe": 231171,
+  "cnefe:estab": 10580593,
+  "cnefe:farmacia": 75426,
+  "cnefe:mercado": 429291,
+  "cnefe:padaria": 101163,
+  "cnefe:religioso": 515389,
+  "cnefe:saude_cnefe": 222637,
+  "cnes:saude": 147980,
+  "inep:escola_privada": 40499,
+  "inep:escola_publica": 117966,
+  "osm:barca": 985,
+  "osm:brt": 851,
+  "osm:onibus": 114485,
+  "osm:parque": 85407,
+  "osm:playground": 6710,
+  "osm:praca": 30402,
+  "osm:terminal": 5198,
+  "osm:trilho": 2094
+ }
+}

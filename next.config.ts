@@ -8,14 +8,20 @@ import type { NextConfig } from "next";
 const CATALOGO = ["./base/saida/site/**/*"];
 /** ITBI das prefeituras (src/lib/catalogo/itbi.ts): a página dos exemplos também mostra o preço pago da cidade. */
 const ITBI = ["./base/saida/site/itbi/*"];
+/**
+ * Nota de localização (src/lib/catalogo/localizacao.ts): localizacao.json.gz, localizacao-osm.json.gz (ODbL) e
+ * localizacao-cidades.json.gz. Já entram pelo glob do catálogo; a lista explícita deixa claro quem lê o quê e segura o
+ * rastreio se o glob do catálogo mudar. Os exemplos (/assinante) usam a nota fictícia de src/content/examples.ts.
+ */
+const LOCALIZACAO = ["./base/saida/site/localizacao.json.gz", "./base/saida/site/localizacao-osm.json.gz", "./base/saida/site/localizacao-cidades.json.gz"];
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   outputFileTracingIncludes: {
-    "/api/catalogo": CATALOGO,
-    "/previa": CATALOGO,
-    "/previa/**": CATALOGO,
+    "/api/catalogo": [...CATALOGO, ...LOCALIZACAO],
+    "/previa": [...CATALOGO, ...LOCALIZACAO],
+    "/previa/**": [...CATALOGO, ...LOCALIZACAO],
     "/assinante/imovel/**": ITBI,
   },
   images: {

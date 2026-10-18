@@ -13,8 +13,9 @@
  *   filtro só, em árvore: escolher cidades de uma UF restringe aquela UF a essas cidades, sem apagar as
  *   outras UFs escolhidas ("MG: Uberlândia; SP: todas"); o mesmo vale para bairros dentro da cidade.
  * - Faixas inclusivas; imóvel sem o dado (null) não passa numa faixa ativa.
- * - Plano Lente: tags e selo não saem (itens com `tags: []` e `selo: 0`), filtros comTags/semTags/selo e
- *   ordens "alertas"/"selo" são ignorados (a ordem cai no padrão), facetas de tag e selo vazias.
+ * - Plano Lente: tags, selo e nota de localização não saem (itens com `tags: []`, `selo: 0` e `notaLocal: null`),
+ *   filtros comTags/semTags/selo/notaLocalMin e ordens "alertas"/"selo"/"localizacao" são ignorados (a ordem cai no
+ *   padrão), facetas de tag e selo vazias.
  * - Selos desligados (prévia): filtro de selo ignorado, ordem "selo" cai no padrão, faceta de selo vazia.
  * - Faceta de tags (Luneta): toda tag que aparece nos resultados, confirmada ou em revisão. `total` =
  *   resultados com a tag CONFIRMADA (o que "exigir" daria; pode ser 0); `comRevisao` = com a tag
@@ -79,6 +80,8 @@ const B_SEM_TAGS = 1 << 21;
 const B_SELO = 1 << 22;
 /** Praça vencida há mais de 1 dia: fica fora de tudo, como na exportação (não é faceta de ninguém). */
 const B_VENCIDO = 1 << 23;
+/** Luneta: nota de localização abaixo do mínimo (ou sem nota). */
+const B_NOTA_LOCAL = 1 << 24;
 
 const UM_DIA = 24 * 3600 * 1000;
 
@@ -140,7 +143,7 @@ export interface IndiceCatalogo {
   readonly fonteDe: Uint16Array;
   readonly dia: (string | null)[];
   readonly instante: Float64Array;
-  readonly numeros: Record<CampoHistograma | "quartos" | "vagas", Float64Array>;
+  readonly numeros: Record<CampoHistograma | "quartos" | "vagas" | "notaLocal", Float64Array>;
   readonly financiamento: Int8Array;
   readonly fgts: Int8Array;
   readonly parcelamento: Int8Array;
@@ -212,6 +215,7 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
     area: new Float64Array(n),
     quartos: new Float64Array(n),
     vagas: new Float64Array(n),
+    notaLocal: new Float64Array(n),
   };
   const financiamento = new Int8Array(n);
   const fgts = new Int8Array(n);
@@ -271,6 +275,7 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
     numeros.area[k] = num(i.area);
     numeros.quartos[k] = num(i.quartos);
     numeros.vagas[k] = num(i.vagas);
+    numeros.notaLocal[k] = num(i.notaLocal);
     financiamento[k] = bool(i.financiamento);
     fgts[k] = bool(i.fgts);
     parcelamento[k] = bool(i.parcelamento);
@@ -365,6 +370,10 @@ function ordemDe(ix: IndiceCatalogo, ordem: Ordem, hoje: string): Int32Array {
       break;
     case "selo":
       cmp = (a, b) => ix.selo[b]! - ix.selo[a]! || porDesagio(a, b);
+      break;
+    case "localizacao":
+      // maior nota primeiro; sem nota por último (cmpNum põe NaN no fim)
+      cmp = (a, b) => cmpNum(v.notaLocal[a]!, v.notaLocal[b]!, true) || porDesagio(a, b);
       break;
     case "recentes": {
       const col = ix.itens.map((i) => i.coletadoEm);
@@ -502,9 +511,12 @@ export interface OpcoesBusca {
   facetas?: boolean;
 }
 
-/** Tira o que o plano não vê: no Lente, tags e selo (o conteúdo bloqueado nunca chega ao navegador). */
-export function paraPlano<T extends { tags: unknown[]; selo: number }>(item: T, plano: Plano): T {
-  return plano === "lente" ? { ...item, tags: [], selo: 0 } : item;
+/**
+ * Tira o que o plano não vê: no Lente, tags, selo e a nota de localização (o conteúdo bloqueado nunca chega ao
+ * navegador).
+ */
+export function paraPlano<T extends { tags: unknown[]; selo: number; notaLocal?: number | null }>(item: T, plano: Plano): T {
+  return plano === "lente" ? { ...item, tags: [], selo: 0, ...("notaLocal" in item ? { notaLocal: null } : {}) } : item;
 }
 
 /** Busca já validada: plano e conjunto aplicados aos filtros e à ordem. */
@@ -515,7 +527,8 @@ function efetivos(busca: Busca, selosDesligados: boolean): { f: Filtros; ordem: 
     delete f.comTags;
     delete f.semTags;
     delete f.selo;
-    if (ordem === "alertas" || ordem === "selo") ordem = ORDEM_PADRAO;
+    delete f.notaLocalMin;
+    if (ordem === "alertas" || ordem === "selo" || ordem === "localizacao") ordem = ORDEM_PADRAO;
   }
   if (selosDesligados) {
     delete f.selo;
@@ -784,6 +797,8 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
   // "pelo menos 0" não filtra (senão esconderia quem não informa quartos ou vagas)
   const quartosMin = finito(f.quartosMin) && f.quartosMin > 0 ? f.quartosMin : null;
   const vagasMin = finito(f.vagasMin) && f.vagasMin > 0 ? f.vagasMin : null;
+  // nota mínima 0 não filtra (senão esconderia quem não tem nota)
+  const notaLocalMin = finito(f.notaLocalMin) && f.notaLocalMin > 0 ? Math.min(100, f.notaLocalMin) : null;
   // dia que não existe ("2026-99-99") não filtra
   const diaValido = (d: string | undefined) => (d && !Number.isNaN(Date.parse(`${d}T12:00:00Z`)) ? d : null);
   const dataDe = diaValido(f.dataDe);
@@ -859,6 +874,7 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
     }
     if (quartosMin !== null && !(v.quartos[k]! >= quartosMin)) m |= B_QUARTOS;
     if (vagasMin !== null && !(v.vagas[k]! >= vagasMin)) m |= B_VAGAS;
+    if (notaLocalMin !== null && !(v.notaLocal[k]! >= notaLocalMin)) m |= B_NOTA_LOCAL;
     if (okModalidade && !okModalidade[ix.modalidadeDe[k]!]) m |= B_MODALIDADE;
     if (okPraca && !okPraca[ix.pracaDe[k]!]) m |= B_PRACA;
     if (dataDe !== null || dataAte !== null) {

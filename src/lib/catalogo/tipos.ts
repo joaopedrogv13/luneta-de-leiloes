@@ -23,7 +23,10 @@ export type Praca = "1" | "2" | "unica";
 export type Ocupacao = "ocupado" | "desocupado";
 export type Severidade = "grave" | "atencao" | "positivo" | "info";
 export type Confianca = "alta" | "media" | "baixa";
-/** Precisão da posição no mapa. Hoje a Caixa só tem "cidade" (sede do município, IBGE). */
+/**
+ * Precisão da posição no mapa. Vem do geocode (base/fontes/localizacao): número → "exata", rua → "rua", bairro →
+ * "bairro", o resto → "cidade" (sede do município, IBGE). A Leilões Judiciais traz o ponto da própria fonte.
+ */
 export type PrecisaoGeo = "exata" | "rua" | "cep" | "bairro" | "cidade";
 /** 0 = sem selo, 1 Promissor, 2 Na Mira, 3 Alvo. */
 export type Selo = 0 | 1 | 2 | 3;
@@ -108,6 +111,11 @@ export interface ImovelResumo {
   tags: TagResumo[];
   /** quando foi coletado (AAAA-MM-DD) */
   coletadoEm: string;
+  /**
+   * Nota de localização (0 a 100; ver LocalizacaoImovel): a calculada, ou o meio da faixa na aproximada. null sem
+   * nota (endereço só na cidade, rural, cidade pequena) e sempre no plano Lente.
+   */
+  notaLocal: number | null;
 }
 
 export type TipoLink = "anuncio" | "edital" | "matricula" | "laudo" | "avaliacao" | "leiloeiro" | "processo" | "mapa" | "outro";
@@ -232,6 +240,8 @@ export interface Filtros {
   semTags?: string[];
   /** Luneta: selos aceitos */
   selo?: Exclude<Selo, 0>[];
+  /** Luneta: nota de localização mínima (0 a 100); imóvel sem nota não passa */
+  notaLocalMin?: number;
 }
 
 export type Ordem =
@@ -243,6 +253,7 @@ export type Ordem =
   | "data" // praça mais próxima (sem data por último)
   | "alertas" // Luneta: menos alertas graves e de atenção primeiro
   | "selo" // Luneta: maior selo primeiro (desligado enquanto os selos estão pendentes)
+  | "localizacao" // Luneta: maior nota de localização primeiro, sem nota por último
   | "recentes"; // coletados por último
 
 export const ORDEM_PADRAO: Ordem = "desagio";
@@ -425,9 +436,97 @@ export interface FontePreco {
   imoveisNaBase: number | null;
 }
 
+// ---------------------------------------------------------------------------
+// Nota de localização (base/fontes/localizacao; servidor em src/lib/catalogo/localizacao.ts)
+// ---------------------------------------------------------------------------
+
+export type PrecisaoLocal = "numero" | "rua" | "bairro" | "cidade";
+export type ChaveComponenteLocal = "servicos" | "transporte" | "renda" | "infra" | "comercio" | "lazer";
+
+export interface IndicadorLocal {
+  /** "mercados_500", "escolas_1k", "onibus_500", "estacao_m", "parque_m", "renda", "pavimentacao"... */
+  chave: string;
+  /** "Mercados a até 500 m" */
+  rotulo: string;
+  /** pronto para mostrar: "12", "650 m", "R$ 2.400", "87%" (moeda com NBSP via rotulos.ts no servidor) */
+  valor: string;
+  /** o número cru (para ordenar e comparar) */
+  numero: number | null;
+  /** o comum na cidade (mediana ponderada pelos moradores): "5", "1,2 km"... null se não houver */
+  comum: string | null;
+}
+
+export interface ComponenteLocal {
+  chave: ChaveComponenteLocal;
+  /** "Serviços do dia a dia", "Transporte", "Renda do entorno", "Infraestrutura da rua", "Comércio e movimento", "Lazer" */
+  rotulo: string;
+  /** percentil 0–100 entre os moradores da cidade; null = a cidade não tem esse dado (peso redistribuído) */
+  nota: number | null;
+  /** peso efetivo em % depois de redistribuir (soma 100 nos componentes com nota) */
+  peso: number;
+  /** cidade pequena: posição em terços */
+  terco?: "baixo" | "medio" | "alto" | null;
+  indicadores: IndicadorLocal[];
+  /** ex.: > 30% dos domicílios do raio sem setor nos agregados */
+  incompleto?: boolean;
+}
+
+export interface AlertaLocal {
+  /** v1: BATER (IBGE/Cemaden, base 2010) */
+  tipo: "area_risco";
+  /** "Área de risco mapeada perto" */
+  titulo: string;
+  /** inclui "a ausência de área mapeada não quer dizer que não haja risco" */
+  texto: string;
+  /** 0 = dentro */
+  distanciaM: number | null;
+  fonte: string;
+}
+
+export interface LocalizacaoImovel {
+  situacao: "calculada" | "aproximada" | "sem_nota" | "pendente";
+  /** 0–100 (percentil final); null em sem_nota/pendente */
+  nota: number | null;
+  /** aproximada (bairro): faixa plausível */
+  faixa: [number, number] | null;
+  precisao: PrecisaoLocal | null;
+  /** incerteza do ponto (m) */
+  desvioM: number | null;
+  /** ponto usado (mais preciso que o centro da cidade) */
+  lat: number | null;
+  lon: number | null;
+  /** "São Gonçalo/RJ", 895560, 3920 */
+  referencia: { nome: string; moradores: number; celulas: number } | null;
+  /** sempre os 6, na ordem dos pesos */
+  componentes: ComponenteLocal[];
+  alertas: AlertaLocal[];
+  /** sem_nota/aproximada: frase pronta ("O endereço foi localizado só no bairro...") */
+  motivo: string | null;
+  /** a cidade tem mapeamento BATER? (false → "sem mapeamento de risco para esta cidade") */
+  coberturaRisco: boolean;
+  /**
+   * Raio (m) em que a área de risco foi procurada: 100 m do imóvel (número ou rua) ou até 500 m do centro do bairro
+   * (aproximada). null = não foi conferido: a cidade não tem mapeamento, ou o imóvel não tem ponto (endereço só na
+   * cidade). Sem alerta, a tela diz o que foi conferido ("nenhuma área mapeada a menos de 100 m do imóvel") e, com
+   * `coberturaRisco` e raio null, que a cidade tem áreas mapeadas mas o imóvel não pôde ser conferido. Nunca "sem risco".
+   */
+  riscoRaioM: number | null;
+  fontes: { nome: string; detalhe: string; licenca: string; url: string | null }[];
+  versao: number;
+  /** AAAA-MM-DD */
+  geradoEm: string;
+}
+
 export interface PaginaImovel {
   imovel: ImovelDetalhe;
   vizinhanca: Vizinhanca;
   selosDesligados: boolean;
   sobre: SobreConjunto;
+  /** nota de localização (null no Lente e em conjunto sem dado; "pendente" quando o imóvel ainda não foi calculado) */
+  localizacao: LocalizacaoImovel | null;
+  /** o que o plano atual NÃO vê (src/lib/catalogo/planos.ts): a tela mostra a chamada da Luneta no lugar */
+  travas: Recurso[];
 }
+
+/** Recursos dos planos (src/lib/catalogo/planos.ts). */
+export type Recurso = "tags" | "selos" | "favoritos" | "simulador" | "relatorio" | "regiao" | "portais" | "localizacao" | "filtrosAvancados";

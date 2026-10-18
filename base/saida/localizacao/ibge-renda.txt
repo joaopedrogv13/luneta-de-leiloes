@@ -1,0 +1,31 @@
+Conferência da V06006 (renda do responsável, Censo 2022, IBGE) em 2026-10-18T02:25:56Z
+
+ZIP: https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/Agregados_por_setores_renda_responsavel_BR_20260508_csv.zip
+  9370011 bytes
+  membro: Agregados_por_setores_renda_responsavel_BR.csv (30580873 bytes)
+  cabeçalho de Agregados_por_setores_renda_responsavel_BR.csv: "CD_SETOR";"V06001";"V06002";"V06003";"V06004";"V06005";"V06006"
+  primeira linha de dados (setor, sem pessoa): "110001505000002";"336";"928";"1.67";"2453.03";"13047638.93";"1212"
+
+Pasta: https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/
+  arquivo: Agregados_por_bairros_renda_responsavel_BR_20260508_csv.zip
+  arquivo: Agregados_por_bairros_renda_responsavel_BR_20260508_xlsx.zip
+  arquivo: Agregados_por_distritos_renda_responsavel_BR_20260508_csv.zip
+  arquivo: Agregados_por_distritos_renda_responsavel_BR_20260508_xlsx.zip
+  arquivo: Agregados_por_municipios_renda_responsavel_BR_20260508_csv.zip
+  arquivo: Agregados_por_municipios_renda_responsavel_BR_20260508_xlsx.zip
+  arquivo: Agregados_por_setores_renda_responsavel_BR_20260508_csv.zip
+  arquivo: Agregados_por_setores_renda_responsavel_BR_20260508_xlsx.zip
+  arquivo: Agregados_por_subdistritos_renda_responsavel_BR_20260508_csv.zip
+  arquivo: Agregados_por_subdistritos_renda_responsavel_BR_20260508_xlsx.zip
+  arquivo: dicionario_de_dados_renda_responsavel_20260508.xlsx
+  dicionario_de_dados_renda_responsavel_20260508.xlsx: [Dicionário Renda Responsável] Renda do Responsável | V06004 | Valor do rendimento nominal médio mensal das pessoas responsáveis com rendimentos por domicílios particulares permanentes ocupados
+  dicionario_de_dados_renda_responsavel_20260508.xlsx: [Dicionário Renda Responsável] Renda do Responsável | V06005 | Variância do rendimento nominal mensal das pessoas responsáveis com rendimentos por domicílios particulares permanentes ocupados
+  dicionario_de_dados_renda_responsavel_20260508.xlsx: [Dicionário Renda Responsável] Renda do Responsável | V06006 | Valor do rendimento nominal mediano mensal das pessoas responsáveis com rendimentos por domicílios particulares permanentes ocupados
+
+Pasta: https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/
+  arquivo: dicionario_de_dados_agregados_por_setores_censitarios_20260520.xlsx
+
+Nota metodológica: https://biblioteca.ibge.gov.br/visualizacao/livros/liv102277.pdf
+  FALHOU: HTTPError: HTTP Error 403: Forbidden
+
+RESULTADO: V06006 descrita como MEDIANA

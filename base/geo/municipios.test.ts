@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { lerCsv } from "../util/csv.ts";
 import { dentroDoBrasil } from "./coordenadas.ts";
 import { medirCasamento } from "./medir.ts";
-import { ARQUIVO_APELIDOS, CODIGO_UF, carregarTabela, montarTabela, tabelaPadrao, type Municipio } from "./municipios.ts";
+import { ARQUIVO_APELIDOS, CODIGO_UF, aplicarRaios, carregarTabela, lerRaios, montarTabela, tabelaPadrao, type Municipio } from "./municipios.ts";
 
 const tabela = tabelaPadrao();
 
@@ -141,6 +141,18 @@ test("chave ambígua na UF não casa; distrito nunca vence município", () => {
   assert.equal(t.encontrar("SP", "Vila Nova"), null, "distrito com o mesmo nome em dois municípios");
   assert.deepEqual([t.encontrar("SP", "CAPAO")?.municipio.codigo_ibge, t.encontrar("SP", "CAPAO")?.metodo], ["3500004", "distrito"]);
   assert.throws(() => montarTabela({ municipios: [m("3500001", "A")], apelidos: [{ uf: "SP", nome: "B", codigo_ibge: "9999999", tipo: "", observacao: "" }] }), /inexistente/);
+});
+
+test("raios-cnefe.csv: o raio medido no CNEFE vale quando a malha fica curta (Rio de Janeiro)", () => {
+  // malha simplificada: 19 km; Santa Cruz e Sepetiba ficam a mais de 50 km do Centro
+  assert.ok((tabela.porCodigo("3304557")?.raio_km ?? 0) >= 50, "Rio de Janeiro com o raio do CNEFE");
+  const semRaios = carregarTabela({ raios: null });
+  assert.equal(semRaios.porCodigo("3304557")?.raio_km, 19, "sem o arquivo, fica o da malha");
+  assert.equal(tabela.porCodigo("3550308")?.raio_km, semRaios.porCodigo("3550308")?.raio_km, "São Paulo não muda");
+  const m: Municipio = { codigo_ibge: "3500001", uf: "SP", nome: "A", lat: -23, lon: -46, capital: false, raio_km: 30 };
+  assert.equal(aplicarRaios([m], new Map([["3500001", 20]]))[0]?.raio_km, 30, "nunca diminui");
+  assert.equal(aplicarRaios([{ ...m, raio_km: null }], new Map([["3500001", 20]]))[0]?.raio_km, 20);
+  assert.throws(() => lerRaios([{ codigo_ibge: "123", raio_km: "5" }]), /linha 2/);
 });
 
 test("carregarTabela lê caminhos alternativos", () => {

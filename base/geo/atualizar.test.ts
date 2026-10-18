@@ -16,9 +16,10 @@ import {
   urlDaFonte,
   type EntradaAtualizacao,
 } from "./atualizar.ts";
-import { ARQUIVO_APELIDOS, ARQUIVO_MUNICIPIOS, CODIGO_UF, lerApelidos, tabelaCsv, tabelaPadrao, type Distrito, type Municipio } from "./municipios.ts";
+import { ARQUIVO_APELIDOS, ARQUIVO_MUNICIPIOS, CODIGO_UF, carregarTabela, lerApelidos, tabelaCsv, type Distrito, type Municipio } from "./municipios.ts";
 
-const atuais = tabelaPadrao().municipios;
+// o municipios.csv como está (sem a correção de raios-cnefe.csv, que é aplicada só na leitura)
+const atuais = carregarTabela({ raios: null }).municipios;
 
 /** Os municípios atuais no formato do kelvins (o que o script baixa). */
 function textoKelvins(municipios: readonly Municipio[]): string {

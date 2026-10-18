@@ -5,6 +5,10 @@
  *   inteira vem na primeira busca; cada pedaço de detalhes só quando uma página de imóvel precisa dele.
  * - "exemplos": os 6 exemplos fictícios (src/lib/catalogo/exemplos.ts).
  *
+ * A nota de localização (src/lib/catalogo/localizacao.ts) entra no resumo de cada imóvel (`notaLocal`) antes do índice
+ * e, por imóvel, em `localizacao(id)`: na prévia, dos arquivos base/saida/site/localizacao*.json.gz; nos exemplos,
+ * a nota fictícia de src/content/examples.ts.
+ *
  * SÓ SERVIDOR: lê arquivos e guarda o conjunto inteiro (com tags e selo, sem plano aplicado). O navegador
  * recebe só o que src/lib/catalogo/servidor.ts devolve, com o plano já aplicado.
  * Os arquivos entram nas funções da Vercel por `outputFileTracingIncludes` em next.config.ts.
@@ -12,9 +16,10 @@
 import "server-only";
 import { LISTINGS } from "../../content/examples";
 import { criarIndice, diaBrasilia, type IndiceCatalogo } from "./consulta";
-import { converterExemplos, resumoDe } from "./exemplos";
+import { converterExemplos, localizacaoDosExemplos, resumoDe } from "./exemplos";
 import { lerLista, lerParte, montarDetalhe, parteDoId, pastaPadrao, type DetalheParcial } from "./instantaneo";
-import type { Conjunto, ImovelDetalhe, ImovelResumo, SobreConjunto } from "./tipos";
+import { dadosLocalizacao, montarLocalizacao, notaLocalDe } from "./localizacao";
+import type { Conjunto, ImovelDetalhe, ImovelResumo, LocalizacaoImovel, SobreConjunto } from "./tipos";
 import { indiceDeRuas, type ContextoVizinhanca, type RuaDoImovel } from "./vizinhanca";
 
 export interface DadosConjunto {
@@ -32,12 +37,19 @@ export interface DadosConjunto {
   contexto(k: number): ContextoVizinhanca;
   /** Detalhe completo (sem plano aplicado), ou null se o id não existe. */
   detalhe(id: string): Promise<ImovelDetalhe | null>;
+  /**
+   * Nota de localização do imóvel (sem plano aplicado): null quando o conjunto não tem o dado; "pendente" quando o
+   * imóvel ainda não foi calculado.
+   */
+  localizacao(id: string): Promise<LocalizacaoImovel | null>;
 }
 
 const carregados = new Map<Conjunto, Promise<DadosConjunto>>();
 
 async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
-  const lista = await lerLista(pasta);
+  const [lista, loc] = await Promise.all([lerLista(pasta), dadosLocalizacao()]);
+  // a nota entra no resumo antes do índice (a ordem e o filtro por nota usam o índice)
+  for (const i of lista.itens) i.notaLocal = notaLocalDe(loc, i.id);
   const enderecos = lista.enderecos;
   const indice = criarIndice(lista.itens, { textoExtra: (_, k) => enderecos[k] });
   const posicao = new Map(lista.itens.map((i, k) => [i.id, k]));
@@ -69,6 +81,12 @@ async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
       if (!parcial) return null;
       return montarDetalhe(lista.itens[k]!, enderecos[k] ?? null, parcial);
     },
+    async localizacao(id) {
+      const k = posicao.get(id);
+      if (k === undefined) return null;
+      const i = lista.itens[k]!;
+      return montarLocalizacao(loc, id, { cidade: i.cidade, uf: i.uf });
+    },
   };
 }
 
@@ -77,6 +95,7 @@ function carregarExemplos(): DadosConjunto {
   const detalhes = converterExemplos(LISTINGS, agora);
   const itens: ImovelResumo[] = detalhes.map(resumoDe);
   const porId = new Map(detalhes.map((d) => [d.id, d]));
+  const locs = localizacaoDosExemplos(LISTINGS, agora);
   return {
     conjunto: "exemplos",
     itens,
@@ -89,6 +108,9 @@ function carregarExemplos(): DadosConjunto {
     contexto: () => ({}),
     async detalhe(id) {
       return porId.get(id) ?? null;
+    },
+    async localizacao(id) {
+      return locs.get(id) ?? null;
     },
   };
 }

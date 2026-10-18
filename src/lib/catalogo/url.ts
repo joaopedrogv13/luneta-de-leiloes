@@ -26,7 +26,7 @@ const MODALIDADES: readonly Modalidade[] = ["leilao", "venda_direta", "venda_onl
 const PRACAS = ["1", "2", "unica", NAO_INFORMADO] as const;
 const OCUPACOES = ["ocupado", "desocupado", NAO_INFORMADO] as const;
 const NATUREZAS = ["judicial", "extrajudicial", NAO_INFORMADO] as const;
-const ORDENS: readonly Ordem[] = ["desagio", "lance-asc", "lance-desc", "m2-asc", "area-desc", "data", "alertas", "selo", "recentes"];
+const ORDENS: readonly Ordem[] = ["desagio", "lance-asc", "lance-desc", "m2-asc", "area-desc", "data", "alertas", "selo", "localizacao", "recentes"];
 const UFS = new Set("AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" "));
 
 /** Faixas numéricas: chave na URL = nome do campo em Filtros. */
@@ -150,6 +150,10 @@ export function lerBusca(p: Entrada): EstadoBusca {
   if (semTags) f.semTags = semTags;
   const selo = lista(p, "selo", ["1", "2", "3"] as const);
   if (selo) f.selo = selo.map(Number) as Filtros["selo"];
+  // nota de localização mínima (Luneta): 1 a 100 depois de arredondar; 0 (ou 0,4) e fora da faixa não filtram
+  const notaLocalBruta = numero(p, "notaLocalMin");
+  const notaLocalMin = notaLocalBruta === undefined ? undefined : Math.round(notaLocalBruta);
+  if (notaLocalMin !== undefined && notaLocalMin >= 1 && notaLocalMin <= 100) f.notaLocalMin = notaLocalMin;
 
   const ordemBruta = um(p, "ordem");
   const ordem = ORDENS.includes(ordemBruta as Ordem) ? (ordemBruta as Ordem) : ORDEM_PADRAO;
@@ -176,6 +180,7 @@ export function escreverBusca(e: Partial<EstadoBusca> & { conjunto?: Conjunto })
   if (f.dataDe) p.set("dataDe", f.dataDe);
   if (f.dataAte) p.set("dataAte", f.dataAte);
   for (const c of CAMPOS_SIM_NAO) if (f[c] !== undefined) p.set(c, f[c] ? "1" : "0");
+  if (f.notaLocalMin !== undefined) p.set("notaLocalMin", String(f.notaLocalMin));
   if (e.ordem && e.ordem !== ORDEM_PADRAO) p.set("ordem", e.ordem);
   if (e.pagina && e.pagina > 1) p.set("pagina", String(e.pagina));
   if (e.vista) p.set("vista", e.vista);
@@ -195,6 +200,7 @@ export function contarFiltros(f: Filtros): number {
   }
   if (f.quartosMin !== undefined) n++;
   if (f.vagasMin !== undefined) n++;
+  if (f.notaLocalMin !== undefined) n++;
   if (f.dataDe || f.dataAte) n++;
   for (const c of CAMPOS_SIM_NAO) if (f[c] !== undefined) n++;
   if (f.q) n++;

@@ -13,7 +13,7 @@ function imovel(id: string, s: Partial<ImovelResumo> = {}): ImovelResumo {
     lanceM2: area ? Math.round(lance / area) : null, avaliacaoM2: area && avaliacao ? Math.round(avaliacao / area) : null,
     modalidade: "venda_direta", modalidadeFonte: null, praca: "unica", dataPraca: null, financiamento: true, fgts: null, parcelamento: null,
     ocupacao: null, judicial: false, fonte: { id: "caixa_csv", nome: "Caixa" }, foto: "https://x.test/f.jpg", totalFotos: 1, selo: 0,
-    seloPendente: true, tags: [], coletadoEm: "2026-10-12", ...s,
+    seloPendente: true, tags: [], coletadoEm: "2026-10-12", notaLocal: null, ...s,
   };
 }
 

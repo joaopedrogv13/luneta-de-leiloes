@@ -17,6 +17,7 @@
  */
 import { lerNumero, lerTexto, sqlBool, transacao, type Banco, type ValorSql } from "./db.ts";
 import { chaveDedup, chaveEndereco } from "./dedup/index.ts";
+import { manterGeocode } from "./geo/aplicado.ts";
 import { geocodificar } from "./geo/geocodificar.ts";
 import type {
   Conector,
@@ -377,6 +378,8 @@ export function gravarImoveis(
     `INSERT INTO preco_historico (imovel_id, coleta_id, registrado_em, evento, campos, preco, valor_avaliacao, modalidade, praca_atual, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
+  // geocode por endereço aplicado (base/geo/aplicado.ts): a coleta que regrava a linha com a sede não o apaga
+  const geoGravado = db.prepare(`SELECT lat, lon, precisao_geo, extras FROM imovel WHERE id = ?`);
   const apagarPracas = db.prepare(`DELETE FROM praca WHERE imovel_id = ?`);
   const inserirPraca = db.prepare(`INSERT INTO praca (imovel_id, numero, data, valor_minimo) VALUES (?, ?, ?, ?)`);
   const fotosAtuais = db.prepare(`SELECT id, url FROM foto WHERE imovel_id = ?`);
@@ -468,7 +471,15 @@ export function gravarImoveis(
         }
         continue;
       }
-      atualizar.run(...valoresLinha(linha), quando, quando, geradoEm, preparado.hash, existente.id);
+      let gravar = linha;
+      if (linha.precisao_geo === "cidade") {
+        const g = geoGravado.get(existente.id);
+        const mantido = g
+          ? manterGeocode(linha, { lat: lerNumero(g.lat), lon: lerNumero(g.lon), precisao_geo: lerTexto(g.precisao_geo), extras: lerTexto(g.extras) })
+          : null;
+        if (mantido) gravar = { ...linha, ...mantido };
+      }
+      atualizar.run(...valoresLinha(gravar), quando, quando, geradoEm, preparado.hash, existente.id);
       gravarFilhos(existente.id, preparado);
       const mudaram = CAMPOS_HISTORICO.filter((campo) => (existente[campo] ?? null) !== (linha[campo] ?? null));
       if (estavaRemovido) {

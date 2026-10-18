@@ -576,6 +576,51 @@ cgj.tjrj.jus.br
 
 ---
 
+# Localização: geocodificação por endereço (rodada 4, 18/10/2026)
+
+Fontes de enriquecimento (não são vitrine nem radar): transformam o endereço da Caixa em coordenada e são a base do
+ranking de localização. Pipeline, regras e medição em `base/fontes/localizacao/README.md`. Os arquivos vêm dos releases
+do GitHub do IPEA, que trocam o arquivo sem mudar a tag: o sha256 de cada um está em
+`base/fontes/localizacao/manifesto.json` e `entradas.py` para com aviso se ele mudar.
+
+| Fonte | Para quê | Onde | Versão | Licença e atribuição |
+|---|---|---|---|---|
+| CNEFE 2022 (IBGE), agregado nas 8 tabelas do geocodebr | casar rua, número, CEP e bairro | `github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/<tabela>.parquet` | v0.5.0 (`Last-Modified` 15/09/2026), 1,14 GB | dados do IBGE: "Fonte: IBGE, CNEFE 2022". O repositório não tem arquivo de licença; o IBGE é coberto pela política de dados abertos (Decretos 8.777/2016 e 9.903/2019) |
+| geocodebr 0.2.0 (IPEA) e enderecobr 0.3.0 | geocodificação e padronização do endereço | PyPI (`base/fontes/localizacao/requirements.txt`) | 0.2.0 de 01/10/2026 | MIT: "IPEA, geocodebr" |
+| CNEFE 2022 completo, Parquet do geobr | degraus de quadra e lote, quadra e número (Bauru) e rua interna | `github.com/ipea/geobr_prep_data/releases/download/v2.0.0/cnefe_2022.parquet` | 1.263.462.014 B, `Last-Modified` 15/09/2026 | "Fonte: IBGE, CNEFE 2022" (o `geobr_prep_data` não tem arquivo de licença; vale a do produtor). Nomes de estabelecimento do CNEFE nunca são publicados |
+| Bairros 2022 (IBGE, via geobr) | conferir se o ponto caiu no bairro informado | `.../geobr_prep_data/releases/download/v2.0.0/neighborhoods_2022.parquet` | 41,5 MB | "Fonte: IBGE" |
+| Censo 2022 por setor, básico (IBGE, via censobr) | moradores por município (porte da cidade na medição) e o bairro de cada setor | `github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_basico_v1.0.0.parquet` | v1.0.0, 12,4 MB | "Fonte: IBGE, Censo Demográfico 2022"; censobr é MIT |
+| Raio dos municípios medido no CNEFE | corrigir o `raio_km` da malha onde ela fica curta (24 municípios) | `base/geo/raios-cnefe.csv`, gerado por `base/fontes/localizacao/raios.py` | 18/10/2026 | derivado das tabelas do geocodebr (dados do IBGE) |
+
+Plano B (só no Actions, o IBGE não abre daqui): `ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/Censo_Demografico_2022/Arquivos_CNEFE/`.
+Fora: Nominatim e Photon (política de uso não permite lote), BrasilAPI de CEP (usa o Photon).
+
+## Nota de localização (rodada 4, 18/10/2026)
+
+Método em `base/fontes/localizacao/README.md` (texto-base da página pública "Como a nota é calculada"); medição em
+`base/saida/localizacao/medicao-nota.md`. As entradas dos releases do IPEA estão no mesmo manifesto (sha256). **Na tela e
+no PDF, citar as atribuições abaixo**; o OpenStreetMap sempre com o link de direitos autorais.
+
+| Fonte | Para quê | Onde | Versão | Licença e atribuição |
+|---|---|---|---|---|
+| IBGE, Grade Estatística 2022 (via geobr) | os moradores de referência (células de 200 m, 1 km na zona rural) | `.../geobr_prep_data/releases/download/v2.0.0/statsgrid_2022.parquet` | 619 MB, 14,1 milhões de células | "Fonte: IBGE, Grade Estatística 2022"; dados públicos (Decreto 8.777/2016) |
+| IBGE, CNEFE 2022 (via geobr) | domicílios por setor (peso da renda e do entorno) e estabelecimentos (mercado, farmácia, padaria pelo nome; comércio e serviços) | `cnefe_2022.parquet` (o mesmo do geocode) | 2022 | "Fonte: IBGE, CNEFE 2022". O nome do estabelecimento só é classificado; nunca sai (pode ser nome de pessoa: LGPD) |
+| IBGE, Censo 2022, agregados por setor: renda do responsável, entorno, domicílio (via censobr) | renda típica (V06006, mediana), pavimentação, calçada, iluminação, ponto de ônibus na face, esgoto pela rede | `.../censobr_prep_data/releases/download/v1.0.0/2022_tracts_{responsavelrenda,entorno,domicilio}_v1.0.0.parquet` | v1.0.0 | "Fonte: IBGE, Censo Demográfico 2022, agregados por setor"; valores de 2022 |
+| IBGE, Malha de Setores Censitários 2022, simplificada (via geobr) | o setor dos domicílios do CNEFE cujo código não está nos agregados (o CNEFE grava o setor da malha da coleta: 6,9% dos domicílios das cidades da base, 96% em Nossa Senhora do Socorro/SE); o domicílio recebe o setor do polígono em que cai (C6, opção a) | `.../geobr_prep_data/releases/download/v2.0.0/censustracts_2022_simplified.parquet` | 381 MB, 468.097 setores (todos nos agregados); sha256 no manifesto | "Fonte: IBGE, Malha de Setores Censitários 2022"; dados públicos (Decreto 8.777/2016) |
+| IBGE, dicionário da renda do responsável | confirmar que a V06006 é a mediana (C6) | `ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/dicionario_de_dados_renda_responsavel_20260508.xlsx`, lido pela etapa `ibge` do Actions | 08/05/2026 | conferência em `base/saida/localizacao/ibge-renda.json` e `.txt` |
+| IBGE e Cemaden, População em Áreas de Risco no Brasil (BATER, via geobr) | alerta de área de risco mapeada perto (sem teto na nota, C10) | `.../geobr_prep_data/releases/download/v2.0.0/disasterriskareas_2010.parquet` | 2018, base do Censo 2010; 8.309 polígonos em 872 municípios | "Fonte: IBGE e Cemaden, População em Áreas de Risco no Brasil (2018)". "Sem mapeamento" nunca vira "sem risco" |
+| Inep, Censo Escolar e Catálogo de Escolas (via geobr) | escolas em atividade a 1 km (públicas e privadas) | `.../geobr_prep_data/releases/download/v2.0.0/schools_2025.parquet` | 2025 | **CC BY 4.0** (Portaria Inep 496/2021): "Fonte: Inep, Censo Escolar e Catálogo de Escolas" |
+| Ministério da Saúde, CNES (via geobr) | unidades de saúde de atenção a 1 km (C7: ativas, sem consultório isolado, laboratório nem farmácia) | `.../geobr_prep_data/releases/download/v2.0.0/healthfacilities_202604.parquet` | abril de 2026 | registro público (Decreto 9.903/2019): "Fonte: Ministério da Saúde, CNES". Só se leem tipo, motivo de desativação, município e coordenada; o arquivo traz CPF e razão social de pessoa física, nunca lidos nem publicados |
+| OpenStreetMap (Geofabrik, `brazil-latest.osm.pbf`) | estações de metrô, trem, VLT, BRT, barcas e terminais; pontos de ônibus; parques, praças e parquinhos | só no Actions (etapa `osm`); extrato publicado em `coletas-dados/localizacao/<run_id>/osm-pois.csv.gz` | dados de 17/10/2026 | **ODbL 1.0**, "© contribuidores do OpenStreetMap" com link para `https://www.openstreetmap.org/copyright`. O extrato e as colunas derivadas (`base/saida/site/localizacao-osm.json.gz`) são banco derivado e saem sob a ODbL, com o aviso no arquivo (C9); o resto da nota fica em arquivos à parte |
+| IPEA, geobr e censobr | redistribuem os arquivos acima em Parquet | GitHub releases | pacotes MIT | "IPEA, geobr; IPEA, censobr". Os repositórios de dados não têm arquivo de licença: vale a do produtor (IBGE, Inep, Ministério da Saúde) |
+| ITBI das prefeituras (seção do ITBI acima) | só para conferir os pesos (Spearman nas 5 capitais); fora da nota | `base/saida/site/itbi/*.json.gz` | 12 meses até set/2026 | as licenças da seção do ITBI |
+
+Fora da v1: SGB (setorização de risco geológico: camada e licença por confirmar; v1.1), dados de crime (sub-registro e LGPD,
+C13), favelas e comunidades urbanas (estigma, C14), Atlas da ANA (escala de 1:1.000.000) e banco e lotérica pelo nome do
+CNEFE (cerca de 10 certos em 25).
+
+---
+
 # Anexo: crítica de completude do catálogo de fontes da opção 1
 
 Data: 12/10/2026.

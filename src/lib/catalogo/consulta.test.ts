@@ -44,6 +44,7 @@ function imovel(id: string, s: Partial<ImovelResumo> = {}): ImovelResumo {
     seloPendente: false,
     tags: [],
     coletadoEm: "2026-10-12",
+    notaLocal: null,
   };
   return { ...base, ...s };
 }

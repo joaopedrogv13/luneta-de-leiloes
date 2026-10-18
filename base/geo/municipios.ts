@@ -11,6 +11,9 @@
  * - distritos.csv: distritos do IBGE com nome diferente do município (paulofreitas/geodata-br,
  *   PDDL), para quando a fonte escreve o distrito no lugar da cidade ("ALEXANDRA"/PR → Paranaguá).
  * - apelidos.csv: grafias e nomes antigos curados à mão ("ASSU"/RN → Açu).
+ * - raios-cnefe.csv: raio medido no CNEFE 2022 onde a malha simplificada fica curta (Rio de Janeiro: 19 km na
+ *   malha, 54 km até as ruas de Santa Cruz). Vale o maior dos dois. Gerado por base/fontes/localizacao/raios.py;
+ *   fica separado de municipios.csv para o atualizar.ts (que recalcula raio_km pela malha) não apagar a correção.
  *
  * Ordem de casamento (para em quem casar primeiro; chave ambígua na UF nunca casa):
  *   nome exato → apelido → grafia (chave solta, chave fonética) → distrito → DF (todo o DF é
@@ -31,6 +34,7 @@ import { chaveCompacta, chaveFonetica, chaveNome, distanciaEdicao, leiturasAbrev
 export const ARQUIVO_MUNICIPIOS = fileURLToPath(new URL("./municipios.csv", import.meta.url));
 export const ARQUIVO_DISTRITOS = fileURLToPath(new URL("./distritos.csv", import.meta.url));
 export const ARQUIVO_APELIDOS = fileURLToPath(new URL("./apelidos.csv", import.meta.url));
+export const ARQUIVO_RAIOS = fileURLToPath(new URL("./raios-cnefe.csv", import.meta.url));
 
 /** Código IBGE de Brasília: o DF tem um município só, e as regiões administrativas caem nele. */
 export const CODIGO_BRASILIA = "5300108";
@@ -277,6 +281,25 @@ export function lerMunicipios(linhas: ReadonlyArray<Record<string, string>>): Mu
   });
 }
 
+/** raios-cnefe.csv → raio (km) por código IBGE (lança na primeira linha ruim). */
+export function lerRaios(linhas: ReadonlyArray<Record<string, string>>): Map<string, number> {
+  const raios = new Map<string, number>();
+  linhas.forEach((l, i) => {
+    const raio = Number(l.raio_km);
+    if (!/^\d{7}$/.test(l.codigo_ibge ?? "") || !Number.isFinite(raio) || raio <= 0) throw new Error(`raios-cnefe.csv, linha ${i + 2}: registro inválido`);
+    raios.set(l.codigo_ibge as string, raio);
+  });
+  return raios;
+}
+
+/** O maior raio entre o da malha (municipios.csv) e o medido no CNEFE (raios-cnefe.csv). */
+export function aplicarRaios(municipios: Municipio[], raios: ReadonlyMap<string, number>): Municipio[] {
+  return municipios.map((m) => {
+    const r = raios.get(m.codigo_ibge);
+    return r !== undefined && r > (m.raio_km ?? 0) ? { ...m, raio_km: r } : m;
+  });
+}
+
 /** Converte linhas de apelidos.csv, conferindo cada campo (lança na primeira linha ruim). */
 export function lerApelidos(linhas: ReadonlyArray<Record<string, string>>): Apelido[] {
   return linhas.map((l, i) => {
@@ -286,8 +309,9 @@ export function lerApelidos(linhas: ReadonlyArray<Record<string, string>>): Apel
   });
 }
 
-export function carregarTabela(caminhos: { municipios?: string; distritos?: string; apelidos?: string } = {}): TabelaMunicipios {
-  const municipios = lerMunicipios(lerTabelaCsv(caminhos.municipios ?? ARQUIVO_MUNICIPIOS));
+export function carregarTabela(caminhos: { municipios?: string; distritos?: string; apelidos?: string; raios?: string | null } = {}): TabelaMunicipios {
+  const raios = caminhos.raios === null ? new Map<string, number>() : lerRaios(lerTabelaCsv(caminhos.raios ?? ARQUIVO_RAIOS));
+  const municipios = aplicarRaios(lerMunicipios(lerTabelaCsv(caminhos.municipios ?? ARQUIVO_MUNICIPIOS)), raios);
   const distritos = lerTabelaCsv(caminhos.distritos ?? ARQUIVO_DISTRITOS).map((l) => ({
     codigo_distrito: l.codigo_distrito ?? "",
     codigo_ibge: l.codigo_ibge ?? "",

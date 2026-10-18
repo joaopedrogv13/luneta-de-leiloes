@@ -1,16 +1,18 @@
 /**
  * Catálogo no servidor: o que as páginas (/previa, /assinante e as páginas de imóvel) e a API
- * (/api/catalogo) chamam. Aplica o plano antes de devolver: no Lente, nada de tags, selo nem a
- * explicação do selo sai daqui (o conteúdo bloqueado nunca chega ao navegador).
+ * (/api/catalogo) chamam. Aplica o plano antes de devolver (src/lib/catalogo/planos.ts): no Lente, nada de tags,
+ * selo, explicação do selo, nota de localização, preço da região (leilões e ITBI) nem buscas nos portais sai daqui
+ * (o conteúdo bloqueado nunca chega ao navegador); `travas` diz o que o plano não vê.
  *
  *   const busca = buscaDaUrl("previa", await searchParams);
  *   const resultado = await buscar(busca);                     // primeira pintura da lista
  *   const pagina = await paginaImovel("previa", id, plano);    // null → notFound()
  */
 import "server-only";
-import { buscar as buscarNoIndice, paraPlano, POR_PAGINA_MAXIMO } from "./consulta";
+import { buscar as buscarNoIndice, POR_PAGINA_MAXIMO } from "./consulta";
 import { dadosDoConjunto } from "./dados";
 import { coberturaPrecos, contarPorCidade, itbiDaCidade, lerItbi, referenciasItbi, type DadosItbi } from "./itbi";
+import { aplicarPlanoPagina, pode } from "./planos";
 import type { Busca, Conjunto, ImovelResumo, PaginaImovel, Plano, ResultadoBusca, SobreConjunto } from "./tipos";
 import { lerBusca } from "./url";
 import { vizinhanca } from "./vizinhanca";
@@ -73,33 +75,41 @@ function contagemPorCidade(itens: readonly ImovelResumo[]): Map<string, number> 
 }
 
 /**
- * Página do imóvel (detalhe, preço do m² na região, parecidos, buscas externas e cobertura de preços), ou null
- * se o id não existe. Referências: primeiro as da base (rua, bairro, cidade, UF; fonte "leiloes"), depois as do
- * ITBI da cidade (rua, bairro, cidade; fonte "itbi"). Nos exemplos, a cobertura sai sem a contagem da base.
+ * Página do imóvel (detalhe, preço do m² na região, parecidos, buscas externas, cobertura de preços e nota de
+ * localização), ou null se o id não existe. Referências: primeiro as da base (rua, bairro, cidade, UF; fonte
+ * "leiloes"), depois as do ITBI da cidade (rua, bairro, cidade; fonte "itbi"). Nos exemplos, a cobertura sai sem a
+ * contagem da base.
+ *
+ * Plano (planos.ts): no Lente, sem tags, selo, explicação do selo, nota de localização (`localizacao: null`), preço
+ * da região (`referencias: []`, e o ITBI nem é calculado) e buscas nos portais (`buscasExternas: []`). A cobertura de
+ * preços (de quais cidades a Luneta tem o dado) e os parecidos continuam: são do Lente. `travas` lista o que falta.
  */
 export async function paginaImovel(conjunto: Conjunto, id: string, plano: Plano): Promise<PaginaImovel | null> {
   const d = await dadosDoConjunto(conjunto);
   const k = d.posicao.get(id);
   if (k === undefined) return null;
-  const [detalhe, itbi] = await Promise.all([d.detalhe(id), dadosItbi()]);
+  const veRegiao = pode(plano, "regiao");
+  const veLocal = pode(plano, "localizacao");
+  const [detalhe, itbi, localizacao] = await Promise.all([d.detalhe(id), dadosItbi(), veLocal ? d.localizacao(id) : Promise.resolve(null)]);
   if (!detalhe) return null;
   const item = d.itens[k]!;
   const contexto = d.contexto(k);
   const viz = vizinhanca(item, d.itens, new Date(), contexto);
   const previa = conjunto === "previa";
   // ITBI também nos exemplos: o imóvel é fictício, mas o bairro e a cidade são reais (e a tela diz "Exemplo fictício")
-  const precos = referenciasItbi(itbiDaCidade(itbi, item), item, contexto.rua ?? null);
-  return {
-    imovel: plano === "lente" ? { ...detalhe, tags: [], selo: 0, porQueSelo: "" } : detalhe,
-    vizinhanca: {
-      ...viz,
-      referencias: [...viz.referencias, ...precos],
-      parecidos: viz.parecidos.map((p) => paraPlano(p, plano)),
-      cobertura: coberturaPrecos(itbi, item, previa ? contagemPorCidade(d.itens) : null),
+  const precos = veRegiao ? referenciasItbi(itbiDaCidade(itbi, item), item, contexto.rua ?? null) : [];
+  // o que o plano não vê sai aqui (planos.ts › aplicarPlanoPagina, testado em planos.test.ts)
+  return aplicarPlanoPagina(
+    {
+      imovel: detalhe,
+      vizinhanca: { ...viz, referencias: [...viz.referencias, ...precos], cobertura: coberturaPrecos(itbi, item, previa ? contagemPorCidade(d.itens) : null) },
+      selosDesligados: d.selosDesligados,
+      sobre: d.sobre,
+      localizacao,
+      travas: [],
     },
-    selosDesligados: d.selosDesligados,
-    sobre: d.sobre,
-  };
+    plano,
+  );
 }
 
 /** Quando e de que fontes o conjunto foi gerado (rodapé, faixa da prévia). */

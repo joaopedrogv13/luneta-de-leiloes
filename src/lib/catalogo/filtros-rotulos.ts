@@ -116,7 +116,7 @@ export type GrupoFiltro =
   | "lance" | "avaliacao" | "desagio" | "lanceM2" | "area" | "quartos" | "vagas"
   | "modalidade" | "praca" | "data"
   | "financiamento" | "fgts" | "parcelamento" | "ocupacao" | "natureza" | "fonte" | "comFoto"
-  | "semTags" | "comTags" | "selo";
+  | "semTags" | "comTags" | "selo" | "notaLocal";
 
 /** Chaves de Filtros que cada grupo ocupa. */
 export const CHAVES_DO_GRUPO: Record<GrupoFiltro, readonly (keyof Filtros)[]> = {
@@ -145,6 +145,7 @@ export const CHAVES_DO_GRUPO: Record<GrupoFiltro, readonly (keyof Filtros)[]> = 
   semTags: ["semTags"],
   comTags: ["comTags"],
   selo: ["selo"],
+  notaLocal: ["notaLocalMin"],
 };
 
 /**
@@ -470,6 +471,7 @@ export function pilulas(f: Filtros, nomes?: NomesDasFacetas): Pilula[] {
   faixa("area", "Área", f.areaMin, f.areaMax, "m2");
   if (f.quartosMin !== undefined) add("quartos", textoMinimo(f.quartosMin, "quarto", "quartos"));
   if (f.vagasMin !== undefined) add("vagas", textoMinimo(f.vagasMin, "vaga", "vagas"));
+  if (f.notaLocalMin !== undefined) add("notaLocal", `Localização: nota ${numero(f.notaLocalMin)}+`);
 
   if (f.modalidade?.length) add("modalidade", juntar(f.modalidade.map((m: Modalidade) => MODALIDADE_ROTULO[m] ?? m)));
   if (f.praca?.length) add("praca", `Praça: ${f.praca.map((x) => PRACA_CURTA[x] ?? x).join(", ")}`);
@@ -564,7 +566,7 @@ export function removerGrupos(f: Filtros, grupos: readonly GrupoFiltro[]) {
 
 /** Grupos que o servidor ignora: no Lente, tags e selo; com os selos desligados (prévia), o selo. */
 export function gruposIgnorados(plano: Plano, selosDesligados: boolean): GrupoFiltro[] {
-  if (plano === "lente") return ["semTags", "comTags", "selo"];
+  if (plano === "lente") return ["semTags", "comTags", "selo", "notaLocal"];
   return selosDesligados ? ["selo"] : [];
 }
 
@@ -579,7 +581,7 @@ export function filtrosEfetivos(f: Filtros, plano: Plano, selosDesligados: boole
 
 /** A ordem que vale de fato: as da Luneta caem para a padrão no Lente; "Melhor selo", com os selos desligados. */
 export function ordemEfetiva(o: Ordem, plano: Plano, selosDesligados: boolean): Ordem {
-  if (plano === "lente" && (o === "alertas" || o === "selo")) return ORDEM_PADRAO;
+  if (plano === "lente" && (o === "alertas" || o === "selo" || o === "localizacao")) return ORDEM_PADRAO;
   if (selosDesligados && o === "selo") return ORDEM_PADRAO;
   return o;
 }

@@ -36,7 +36,7 @@ function imovel(s: Partial<ImovelResumo> = {}): ImovelResumo {
     precisaoGeo: "cidade", area: 50, areaTerreno: null, quartos: 2, vagas: 1, avaliacao: 300000, lance: 200000, desagio: 33,
     lanceM2: 4000, avaliacaoM2: 6000, modalidade: "venda_direta", modalidadeFonte: null, praca: "unica", dataPraca: null,
     financiamento: true, fgts: null, parcelamento: null, ocupacao: null, judicial: false, fonte: { id: "caixa_csv", nome: "Caixa" },
-    foto: null, totalFotos: 0, selo: 0, seloPendente: true, tags: [], coletadoEm: "2026-10-14", ...s,
+    foto: null, totalFotos: 0, selo: 0, seloPendente: true, tags: [], coletadoEm: "2026-10-14", notaLocal: null, ...s,
   };
 }
 

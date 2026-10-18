@@ -64,6 +64,7 @@ const casa: ImovelDetalhe = {
   selo: 0,
   seloPendente: true,
   coletadoEm: "2026-10-12",
+  notaLocal: null,
   tags: [
     { slug: "desagio-alto", rotulo: "Deságio alto", severidade: "positivo", emRevisao: false, confianca: "alta", origem: "campo:preco", evidencia: null },
     { slug: "ocupado", rotulo: "Ocupado", severidade: "grave", emRevisao: true, confianca: "baixa", origem: "descricao", evidencia: "…ocupado…" },

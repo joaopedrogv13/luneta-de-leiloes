@@ -1,0 +1,1117 @@
+{
+ "descricao": "Endereços do instantâneo do site (base/saida/site/imoveis.json.gz) com o que endereco.analisar deve devolver. Só as chaves de `esperado` são conferidas; `variantes_contem` confere que as formas estão entre as variantes. Endereço não é dado pessoal e todos já estão publicados no instantâneo. Rode: python base/fontes/localizacao/testar.py",
+ "casos": [
+  {
+   "grupo": "comum",
+   "endereco": "Rua Expedicionario Benoni Falcao Gouveia, N. 338, Lt 28, Qd 08",
+   "bairro": "Tribobo",
+   "tipo": "casa",
+   "uf": "RJ",
+   "esperado": {
+    "logradouro": "Rua Expedicionario Benoni Falcao Gouveia",
+    "numero": 338,
+    "quadra": "8",
+    "lote": "28",
+    "rural": false
+   }
+  },
+  {
+   "grupo": "comum",
+   "endereco": "Rua Viver Areia Branca, N. 65, Apto 004, Bl 13",
+   "bairro": "Areia Branca",
+   "tipo": "apartamento",
+   "uf": "BA",
+   "esperado": {
+    "logradouro": "Rua Viver Areia Branca",
+    "numero": 65,
+    "quadra": null,
+    "lote": null,
+    "variantes": []
+   }
+  },
+  {
+   "grupo": "comum",
+   "endereco": "Rua Laurindo Rabelo, N. 175, Apto 202, Lt 16 Qd 95",
+   "bairro": "Bom Retiro",
+   "tipo": "apartamento",
+   "uf": "RJ",
+   "esperado": {
+    "logradouro": "Rua Laurindo Rabelo",
+    "numero": 175,
+    "quadra": "95",
+    "lote": "16"
+   }
+  },
+  {
+   "grupo": "comum",
+   "endereco": "Rua Aurora Fluminense, N. 46, Apto 103, Lt 25 Qd 03",
+   "bairro": "Taquara",
+   "tipo": "apartamento",
+   "uf": "RJ",
+   "esperado": {
+    "logradouro": "Rua Aurora Fluminense",
+    "numero": 46,
+    "quadra": "3",
+    "lote": "25"
+   }
+  },
+  {
+   "grupo": "comum",
+   "endereco": "Rua Gertrudes Moro Rossin, N. 397, Apto 44, 4 Pav Tr 24",
+   "bairro": "Jardim Rossin",
+   "tipo": "apartamento",
+   "uf": "SP",
+   "esperado": {
+    "logradouro": "Rua Gertrudes Moro Rossin",
+    "numero": 397,
+    "quadra": null,
+    "lote": null
+   }
+  },
+  {
+   "grupo": "comum",
+   "endereco": "Avenida Jacaranda, N. 1391-S, Qd 21 - Lt 22",
+   "bairro": "Jardim Cerrado",
+   "tipo": "casa",
+   "uf": "MT",
+   "esperado": {
+    "logradouro": "Avenida Jacaranda",
+    "numero": 1391,
+    "quadra": "21",
+    "lote": "22"
+   }
+  },
+  {
+   "grupo": "lt_qd",
+   "endereco": "R Roseli Maria de Lira Silva, N. 63, Lt 16, Qd 43",
+   "bairro": "Euno Andrade da Silva",
+   "tipo": "casa",
+   "uf": "PE",
+   "esperado": {
+    "logradouro": "R Roseli Maria de Lira Silva",
+    "numero": 63,
+    "quadra": "43",
+    "lote": "16"
+   }
+  },
+  {
+   "grupo": "lt_qd",
+   "endereco": "Rua Julio de Castilhos, N. 514, Lt 03, Qd 45",
+   "bairro": "Centro",
+   "tipo": "casa",
+   "uf": "RS",
+   "esperado": {
+    "logradouro": "Rua Julio de Castilhos",
+    "numero": 514,
+    "quadra": "45",
+    "lote": "3"
+   }
+  },
+  {
+   "grupo": "lt_qd",
+   "endereco": "Rua Ivaldo Bezerra da Silva, N. 52, Lt 13, Qd 20,",
+   "bairro": "Euno Andrade da Silva",
+   "tipo": "casa",
+   "uf": "PE",
+   "esperado": {
+    "logradouro": "Rua Ivaldo Bezerra da Silva",
+    "numero": 52,
+    "quadra": "20",
+    "lote": "13"
+   }
+  },
+  {
+   "grupo": "sn",
+   "endereco": "Rua Matheus Ribeiro, N. S/N, Apto 405, Bl 16",
+   "bairro": "Cohab",
+   "tipo": "apartamento",
+   "uf": "RS",
+   "esperado": {
+    "logradouro": "Rua Matheus Ribeiro",
+    "numero": null,
+    "numero_bruto": "S/N"
+   }
+  },
+  {
+   "grupo": "sn",
+   "endereco": "Rua Eunapolis, N. Sn, Apto 403, Bl 01",
+   "bairro": "Papagaio",
+   "tipo": "apartamento",
+   "uf": "BA",
+   "esperado": {
+    "logradouro": "Rua Eunapolis",
+    "numero": null
+   }
+  },
+  {
+   "grupo": "sn",
+   "endereco": "Rua 18, N. .sn, Apto 201",
+   "bairro": "x",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 18",
+    "numero": null,
+    "variantes_contem": [
+     "RUA DEZOITO"
+    ]
+   }
+  },
+  {
+   "grupo": "sn",
+   "endereco": "Rua Eugenio Branco, N. 0, 0,",
+   "bairro": "Dos Estados",
+   "tipo": "terreno",
+   "uf": "PR",
+   "esperado": {
+    "logradouro": "Rua Eugenio Branco",
+    "numero": null
+   }
+  },
+  {
+   "grupo": "goias_quadra",
+   "endereco": "Quadra 249, N. Sn, Lt 11B Rua 86",
+   "bairro": "Parque Estrela Dalva Xvii",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 86",
+    "numero": null,
+    "quadra": "249",
+    "lote": "11B",
+    "padrao": "quadra_primeiro",
+    "variantes_contem": [
+     "RUA OITENTA E SEIS",
+     "QUADRA 249"
+    ]
+   }
+  },
+  {
+   "grupo": "goias_quadra",
+   "endereco": "Quadra 56, N. Sn, Lt 31A Rua 21",
+   "bairro": "Jardim Ana Beatriz II",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 21",
+    "quadra": "56",
+    "lote": "31A",
+    "variantes_contem": [
+     "RUA VINTE E UM"
+    ]
+   }
+  },
+  {
+   "grupo": "goias_quadra",
+   "endereco": "Quadra 29, N. Sn, Lt 02-A Rua Maria Vasco",
+   "bairro": "Parque Estrela Dalva XII",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua Maria Vasco",
+    "quadra": "29",
+    "lote": "2A"
+   }
+  },
+  {
+   "grupo": "goias_quadra",
+   "endereco": "Quadra 02, N. Sn, Apto 202, Bl 32 Ch 07 Rua Esperanca",
+   "bairro": "Chacaras Brasil A",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua Esperanca",
+    "quadra": "2",
+    "lote": null,
+    "rural": false
+   }
+  },
+  {
+   "grupo": "goias_quadra",
+   "endereco": "Qd 26, N. Sn, Apto 104, Ch 13 Bl B Rua Paraiba",
+   "bairro": "Setor de Chacaras Anhanguera C",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua Paraiba",
+    "quadra": "26",
+    "rural": false
+   }
+  },
+  {
+   "grupo": "goias_quadra",
+   "endereco": "Qd 375, N. Sn, Cs 02 Rua 197 Lt 03",
+   "bairro": "Parque Estrela Dalva IX",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 197",
+    "quadra": "375",
+    "lote": "3",
+    "variantes_contem": [
+     "RUA CENTO E NOVENTA E SETE"
+    ]
+   }
+  },
+  {
+   "grupo": "goias_quadra",
+   "endereco": "Quadra 5, N. Sn, Apto 101, Bl C, Vaga 09, Lt 12, Rua 14-A",
+   "bairro": "Mansoes Imperatriz",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 14-A",
+    "quadra": "5",
+    "lote": "12"
+   }
+  },
+  {
+   "grupo": "goias_quadra",
+   "endereco": "Quadra 37, N. Sn, Lt 4B, Rua 11",
+   "bairro": "Jardim Ana Beatriz I",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 11",
+    "quadra": "37",
+    "lote": "4B",
+    "variantes_contem": [
+     "RUA ONZE"
+    ]
+   }
+  },
+  {
+   "grupo": "goias_quadra",
+   "endereco": "Quadra 243, Lote 16, Avenida 37",
+   "bairro": "Parque Estrela Dalva Xvi",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Avenida 37",
+    "quadra": "243",
+    "lote": "16",
+    "variantes_contem": [
+     "AVENIDA TRINTA E SETE"
+    ]
+   }
+  },
+  {
+   "grupo": "goias_quadra",
+   "endereco": "Quadra 66 (Rua 06), N. S/N",
+   "bairro": "Cidade Jardim",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Quadra 66",
+    "quadra": "66",
+    "variantes_contem": [
+     "RUA 06",
+     "RUA SEIS"
+    ]
+   }
+  },
+  {
+   "grupo": "quadra_quadra",
+   "endereco": "Quadra Quadra 41, N. Sn, Lt 15-B Rua Dr João Maurício de Medeir",
+   "bairro": "Parque Estrela Dalva XII",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua Dr João Maurício de Medeir",
+    "quadra": "41",
+    "lote": "15B"
+   }
+  },
+  {
+   "grupo": "quadra_quadra",
+   "endereco": "Quadra Quadra 51, N. Sn, Apto 101, Qd. 51LT. 12 - Rua 42",
+   "bairro": "Parque Estrela Dalva IX",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 42",
+    "quadra": "51",
+    "lote": "12"
+   }
+  },
+  {
+   "grupo": "lote_primeiro",
+   "endereco": "Lote 15 Quadra 43 Rua 17, N. S/N, Apto 204, Res Califórnia",
+   "bairro": "Parque Napolis A",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 17",
+    "quadra": "43",
+    "lote": "15",
+    "padrao": "lote_primeiro"
+   }
+  },
+  {
+   "grupo": "lote_primeiro",
+   "endereco": "Lote 42, Quadra 04, Rua 04, N. Sn, Apto 02, 1º Pavimento, Vaga Nº 02",
+   "bairro": "Parque Nova Friburgo A",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 04",
+    "quadra": "4",
+    "lote": "42"
+   }
+  },
+  {
+   "grupo": "lote_primeiro",
+   "endereco": "Lote 05 Quadra 03 Rua Presidente Jk, Apto 102, Bl A",
+   "bairro": "Chacaras Benvinda",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua Presidente Jk",
+    "quadra": "3",
+    "lote": "5",
+    "rural": false
+   }
+  },
+  {
+   "grupo": "lote_primeiro",
+   "endereco": "Lote 13 Quadra 79 Conjunto A, N. Sn, Apto 402, Bl B Vg 104",
+   "bairro": "Parque da Barragem Setor 06",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": null,
+    "quadra": "79",
+    "lote": "13"
+   }
+  },
+  {
+   "grupo": "lote_primeiro",
+   "endereco": "Lt AV-3-A3, N. Sn",
+   "bairro": "Parque da Barragem Setor 10",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": null
+   }
+  },
+  {
+   "grupo": "qd_no_logradouro",
+   "endereco": "Rua 86 Qd 221 Lt 08 B, N. Sn",
+   "bairro": "Parque Estrela Dalva Xvii",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 86",
+    "quadra": "221",
+    "lote": "8B",
+    "padrao": "complemento_no_logradouro"
+   }
+  },
+  {
+   "grupo": "qd_no_logradouro",
+   "endereco": "Rua 11 Qd 39 Lt 16 A, N. Sn,",
+   "bairro": "Jardim Ana Beatriz I",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 11",
+    "quadra": "39",
+    "lote": "16A"
+   }
+  },
+  {
+   "grupo": "qd_no_logradouro",
+   "endereco": "Rua Rio Grande do Norte Qd 26 Ch 01, Apto 201, Bl F",
+   "bairro": "Setor de Chacaras Anhanguera C",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua Rio Grande do Norte",
+    "quadra": "26",
+    "rural": false
+   }
+  },
+  {
+   "grupo": "qd_no_logradouro",
+   "endereco": "Rua Oswaldo da Cruz Quadra 4 Chacara 17, N. Sn, Apto 101, Bl L",
+   "bairro": "Mansoes Recreio Mossoro",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua Oswaldo da Cruz",
+    "quadra": "4",
+    "rural": false
+   }
+  },
+  {
+   "grupo": "qd_no_logradouro",
+   "endereco": "Rua Urucuia Quadra, N. 1265",
+   "bairro": "Jardim Catarina",
+   "tipo": "casa",
+   "uf": "RJ",
+   "esperado": {
+    "logradouro": "Rua Urucuia",
+    "numero": 1265
+   }
+  },
+  {
+   "grupo": "df",
+   "endereco": "Qnp 30, N. S/N, Conj Q Lt 06",
+   "bairro": "Ceilandia",
+   "tipo": "casa",
+   "uf": "DF",
+   "esperado": {
+    "logradouro": "QNP 30 CONJUNTO Q",
+    "lote": "6",
+    "conjunto": "Q",
+    "padrao": "df",
+    "variantes_contem": [
+     "QNP 30"
+    ]
+   }
+  },
+  {
+   "grupo": "df",
+   "endereco": "Quadra Qr 314, N. Sn, Conjunto 5 Lote 15",
+   "bairro": "Samambaia Sul",
+   "tipo": "casa",
+   "uf": "DF",
+   "esperado": {
+    "logradouro": "QR 314 CONJUNTO 5",
+    "lote": "15",
+    "conjunto": "5"
+   }
+  },
+  {
+   "grupo": "df",
+   "endereco": "Quadra Qr 414, N. Sn, Apto 305, Lt 01 Cjto 10A",
+   "bairro": "Samambaia Norte",
+   "tipo": "apartamento",
+   "uf": "DF",
+   "esperado": {
+    "logradouro": "QR 414 CONJUNTO 10A",
+    "lote": "1",
+    "variantes_contem": [
+     "QR 414 CONJUNTO 10 A",
+     "QR 414"
+    ]
+   }
+  },
+  {
+   "grupo": "df",
+   "endereco": "QNN-03, N. S/N, Conjunto P, Lt 10",
+   "bairro": "Ceilandia Norte",
+   "tipo": "casa",
+   "uf": "DF",
+   "esperado": {
+    "logradouro": "QNN 3 CONJUNTO P",
+    "lote": "10"
+   }
+  },
+  {
+   "grupo": "df",
+   "endereco": "QR-01, Lt 07, Casa 07, Cj A",
+   "bairro": "Candangolandia",
+   "tipo": "casa",
+   "uf": "DF",
+   "esperado": {
+    "logradouro": "QR 1 CONJUNTO A",
+    "lote": "7",
+    "conjunto": "A"
+   }
+  },
+  {
+   "grupo": "df",
+   "endereco": "Csb 2, N. 00, Lts 1 a 4, Tr B, Sl 323",
+   "bairro": "Taguatinga Sul",
+   "tipo": "comercial",
+   "uf": "DF",
+   "esperado": {
+    "logradouro": "CSB 2",
+    "numero": null,
+    "lote": null,
+    "variantes": []
+   }
+  },
+  {
+   "grupo": "df",
+   "endereco": "Rua 400, N. Sn, Apto 301, Bl L Lt 403 Res Porto Pilar Raxiii",
+   "bairro": "Setor Meireles (Santa Maria)",
+   "tipo": "apartamento",
+   "uf": "DF",
+   "esperado": {
+    "logradouro": "Rua 400",
+    "lote": "403"
+   }
+  },
+  {
+   "grupo": "antiga",
+   "endereco": "Rua Compositor Tunai (Antiga Rua Projetada 1), N. 115, Apto 106, Bl 04",
+   "bairro": "Santa Cruz",
+   "tipo": "apartamento",
+   "uf": "RJ",
+   "esperado": {
+    "logradouro": "Rua Compositor Tunai",
+    "numero": 115,
+    "nome_antigo": "Rua Projetada 1",
+    "variantes_contem": [
+     "RUA PROJETADA 1"
+    ]
+   }
+  },
+  {
+   "grupo": "antiga",
+   "endereco": "Estrada Antonio Soares (Antiga Cabucu-Queimados), N. 757, Apto 408, Bl 03",
+   "bairro": "Vila Sao Joao",
+   "tipo": "apartamento",
+   "uf": "RJ",
+   "esperado": {
+    "logradouro": "Estrada Antonio Soares",
+    "nome_antigo": "Estrada Cabucu-Queimados"
+   }
+  },
+  {
+   "grupo": "antiga",
+   "endereco": "Rua General Savari (Antiga Rua 31), N. 348, Lt 05 Qd 100",
+   "bairro": "Bom Retiro",
+   "tipo": "casa",
+   "uf": "RJ",
+   "esperado": {
+    "logradouro": "Rua General Savari",
+    "numero": 348,
+    "nome_antigo": "Rua 31",
+    "quadra": "100",
+    "lote": "5",
+    "variantes_contem": [
+     "RUA TRINTA E UM"
+    ]
+   }
+  },
+  {
+   "grupo": "antiga",
+   "endereco": "Basílio Licks de Jesus Antiga Rua Dianopolis, N. 245",
+   "bairro": "Moinho",
+   "tipo": "casa",
+   "uf": "RN",
+   "esperado": {
+    "logradouro": "Basílio Licks de Jesus",
+    "nome_antigo": "Rua Dianopolis"
+   }
+  },
+  {
+   "grupo": "antiga",
+   "endereco": "Avenida Buritis Quadra 201(ANT Rua 6), N. Sn, Apto 648, Lt 01",
+   "bairro": "Recanto das Emas",
+   "tipo": "apartamento",
+   "uf": "DF",
+   "esperado": {
+    "logradouro": "Avenida Buritis",
+    "quadra": "201",
+    "lote": "1",
+    "nome_antigo": "Rua 6"
+   }
+  },
+  {
+   "grupo": "parenteses",
+   "endereco": "Rua Projetada 10 ( R Maria Alice dos Santos ), N. 300",
+   "bairro": "Aabb",
+   "tipo": "casa",
+   "uf": "PE",
+   "esperado": {
+    "logradouro": "Rua Projetada 10",
+    "numero": 300,
+    "nome_antigo": null,
+    "variantes_contem": [
+     "R MARIA ALICE DOS SANTOS"
+    ]
+   }
+  },
+  {
+   "grupo": "parenteses",
+   "endereco": "Rua Existente (Atual Rua B do Eldorado), N. 203",
+   "bairro": "Caldas",
+   "tipo": "casa",
+   "uf": "MG",
+   "esperado": {
+    "logradouro": "Rua Existente",
+    "variantes_contem": [
+     "RUA B DO ELDORADO"
+    ]
+   }
+  },
+  {
+   "grupo": "parenteses",
+   "endereco": "Rua Vovó Antonia Carvalho (Rua 31), N. 6751, Apto 305, Bloco 04, Condominio Topázio",
+   "bairro": "Vale do Gaviao",
+   "tipo": "apartamento",
+   "uf": "PI",
+   "esperado": {
+    "logradouro": "Rua Vovó Antonia Carvalho",
+    "numero": 6751,
+    "variantes_contem": [
+     "RUA 31"
+    ]
+   }
+  },
+  {
+   "grupo": "rua_numero",
+   "endereco": "Rua 13, N. Sn, Apto 202, Lt 02, QD13",
+   "bairro": "Jardim Oriente",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 13",
+    "quadra": "13",
+    "lote": "2",
+    "variantes_contem": [
+     "RUA TREZE"
+    ]
+   }
+  },
+  {
+   "grupo": "rua_numero",
+   "endereco": "Rua 1, N. Sn, Qd 35, Lt 15",
+   "bairro": "Jardim Europa",
+   "tipo": "terreno",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua 1",
+    "quadra": "35",
+    "lote": "15",
+    "variantes_contem": [
+     "RUA UM"
+    ]
+   }
+  },
+  {
+   "grupo": "rua_numero",
+   "endereco": "Rua Nº 06, N. Sn, Apto 637, Lt 01 Subcentro Urbano 400 600",
+   "bairro": "Recanto das Emas",
+   "tipo": "apartamento",
+   "uf": "DF",
+   "esperado": {
+    "logradouro": "Rua 06",
+    "lote": "1"
+   }
+  },
+  {
+   "grupo": "rua_numero",
+   "endereco": "Rua Treze de Maio, N. 10",
+   "bairro": "Centro",
+   "tipo": "casa",
+   "uf": "SP",
+   "esperado": {
+    "logradouro": "Rua Treze de Maio",
+    "numero": 10,
+    "variantes": []
+   }
+  },
+  {
+   "grupo": "rua_numero",
+   "endereco": "Rua 2 de Julho, N. 924, Apto 401, Bloco 15",
+   "bairro": "Areia Branca",
+   "tipo": "apartamento",
+   "uf": "BA",
+   "esperado": {
+    "logradouro": "Rua 2 de Julho",
+    "numero": 924
+   }
+  },
+  {
+   "grupo": "rua_romano",
+   "endereco": "Rua Iv, N. Sn, Lt 24, Qd 06",
+   "bairro": "Lot Girassol Residen",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua Iv",
+    "quadra": "6",
+    "lote": "24",
+    "variantes_contem": [
+     "RUA 4",
+     "RUA QUATRO"
+    ]
+   }
+  },
+  {
+   "grupo": "rua_romano",
+   "endereco": "Rua Ii, N. 85,",
+   "bairro": "Tranqueira",
+   "tipo": "casa",
+   "uf": "PI",
+   "esperado": {
+    "logradouro": "Rua Ii",
+    "numero": 85,
+    "variantes_contem": [
+     "RUA 2",
+     "RUA DOIS"
+    ]
+   }
+  },
+  {
+   "grupo": "repetido",
+   "endereco": "Rua Ii, N. 51, 51,",
+   "bairro": "Boca de Barro",
+   "tipo": "casa",
+   "uf": "PI",
+   "esperado": {
+    "logradouro": "Rua Ii",
+    "numero": 51,
+    "complementos": []
+   }
+  },
+  {
+   "grupo": "repetido",
+   "endereco": "Rua Francisco Pinto de Mesquita, N. 482, 482",
+   "bairro": "Cidade Nova",
+   "tipo": "casa",
+   "uf": "PI",
+   "esperado": {
+    "numero": 482,
+    "complementos": []
+   }
+  },
+  {
+   "grupo": "repetido",
+   "endereco": "Rua Amélia Pontedura Totti, N. 508, 508 11",
+   "bairro": "Jardim das Palmeiras",
+   "tipo": "casa",
+   "uf": "SP",
+   "esperado": {
+    "numero": 508,
+    "complementos": [
+     "11"
+    ]
+   }
+  },
+  {
+   "grupo": "apto_bl",
+   "endereco": "Rua Braz Cubas, N. 435, Apto 404, Bl 04",
+   "bairro": "Pavuna",
+   "tipo": "apartamento",
+   "uf": "RJ",
+   "esperado": {
+    "logradouro": "Rua Braz Cubas",
+    "numero": 435,
+    "complementos": [
+     "Apto 404",
+     "Bl 04"
+    ]
+   }
+  },
+  {
+   "grupo": "torre",
+   "endereco": "Av Eduardo Andrea Matarazzo, N. 4875, Apto 14, Bl D, Torre 01",
+   "bairro": "Ipiranga",
+   "tipo": "apartamento",
+   "uf": "SP",
+   "esperado": {
+    "logradouro": "Av Eduardo Andrea Matarazzo",
+    "numero": 4875
+   }
+  },
+  {
+   "grupo": "subcond",
+   "endereco": "Rua Ana Espinola Navarro, N. 400, Apto 410, Bl A21 Subcondomínio A",
+   "bairro": "Ernani Satiro",
+   "tipo": "apartamento",
+   "uf": "PB",
+   "esperado": {
+    "logradouro": "Rua Ana Espinola Navarro",
+    "numero": 400
+   }
+  },
+  {
+   "grupo": "rodovia_km",
+   "endereco": "BR 104 Km 32, N. 1010, Lj 338,",
+   "bairro": "Centro",
+   "tipo": "comercial",
+   "uf": "PE",
+   "esperado": {
+    "logradouro": "BR 104",
+    "numero": 1010,
+    "rodovia_km": true
+   }
+  },
+  {
+   "grupo": "rodovia_km",
+   "endereco": "Rodovia Alça Viária PA-150 Km 45, N. Sn, Lote 15",
+   "bairro": "Sao Joao",
+   "tipo": "terreno",
+   "uf": "PA",
+   "esperado": {
+    "logradouro": "Rodovia Alça Viária PA-150",
+    "lote": "15",
+    "rodovia_km": true
+   }
+  },
+  {
+   "grupo": "rodovia_km",
+   "endereco": "Estrada Carlos Braga Km 08, N. Sn, Rua Lago do Guedes Lt 27 D 38",
+   "bairro": "Nova Amazonas I",
+   "tipo": "casa",
+   "uf": "AM",
+   "esperado": {
+    "logradouro": "Estrada Carlos Braga",
+    "rodovia_km": true,
+    "variantes_contem": [
+     "RUA LAGO DO GUEDES"
+    ]
+   }
+  },
+  {
+   "grupo": "rodovia_km",
+   "endereco": "Rua Paricatuba, N. Sn, Lt 22 Qd 13 Km 08",
+   "bairro": "Lot Nova Amazonas I",
+   "tipo": "casa",
+   "uf": "AM",
+   "esperado": {
+    "logradouro": "Rua Paricatuba",
+    "quadra": "13",
+    "lote": "22",
+    "rodovia_km": false
+   }
+  },
+  {
+   "grupo": "rodovia_km",
+   "endereco": "Rodovia RJ-104, N. Sn, Apto 101, Bl 06, Lts 01 a 21, Qd 24",
+   "bairro": "Marambaia (Manilha)",
+   "tipo": "comercial",
+   "uf": "RJ",
+   "esperado": {
+    "logradouro": "Rodovia RJ-104",
+    "quadra": "24",
+    "lote": null,
+    "rodovia_km": false
+   }
+  },
+  {
+   "grupo": "rural",
+   "endereco": "Uma Parte de Terra no Sitio Muquem, N. Sn,",
+   "bairro": "Zona Rural",
+   "tipo": "terreno",
+   "uf": "CE",
+   "esperado": {
+    "rural": true
+   }
+  },
+  {
+   "grupo": "rural",
+   "endereco": "Rodovia AM-010, Km 13",
+   "bairro": "Area Rural de Itacoatiara",
+   "tipo": "casa",
+   "uf": "AM",
+   "esperado": {
+    "logradouro": "Rodovia AM-010",
+    "rural": true,
+    "rodovia_km": true
+   }
+  },
+  {
+   "grupo": "rural",
+   "endereco": "Chacara 10, Gleba e Casa 08 Modelo A",
+   "bairro": "Chacaras Araguaia",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "rural": true
+   }
+  },
+  {
+   "grupo": "rural",
+   "endereco": "Estrada da Floresta",
+   "bairro": "Floresta Sul",
+   "tipo": "rural",
+   "uf": "AC",
+   "esperado": {
+    "logradouro": "Estrada da Floresta",
+    "rural": true
+   }
+  },
+  {
+   "grupo": "rural",
+   "endereco": "Fazenda Alto da Boa Esperança, N. 00, Gleba 02",
+   "bairro": "Area Rural de Arenopolis",
+   "tipo": "rural",
+   "uf": "GO",
+   "esperado": {
+    "rural": true
+   }
+  },
+  {
+   "grupo": "nao_rural",
+   "endereco": "Rua Araguaia, N. Sn, Apto 204, Bl 34, Gleba GA5",
+   "bairro": "Fazenda Saia Velha",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Rua Araguaia",
+    "rural": false
+   }
+  },
+  {
+   "grupo": "nao_rural",
+   "endereco": "Avenida Natal, N. 55, Lt 13 Gleba 01",
+   "bairro": "Itapetinga",
+   "tipo": "casa",
+   "uf": "RN",
+   "esperado": {
+    "logradouro": "Avenida Natal",
+    "numero": 55,
+    "lote": "13",
+    "rural": false
+   }
+  },
+  {
+   "grupo": "nao_rural",
+   "endereco": "Quadra 31, N. Sn, Apto 101, Chacara 619 Qd 31",
+   "bairro": "Chacaras Quedas do Descoberto",
+   "tipo": "apartamento",
+   "uf": "GO",
+   "esperado": {
+    "quadra": "31",
+    "rural": false
+   }
+  },
+  {
+   "grupo": "bauru",
+   "endereco": "Rua Fortunato Resta Quadra, N. 8-45",
+   "bairro": "Vila Giunta",
+   "tipo": "casa",
+   "uf": "SP",
+   "esperado": {
+    "logradouro": "Rua Fortunato Resta",
+    "numero": 45,
+    "quadra": "8",
+    "quadra_numero": [
+     "8",
+     45
+    ]
+   }
+  },
+  {
+   "grupo": "bauru",
+   "endereco": "Rua Pedro Lipe, N. 4-51, Apto 12, Bl 05",
+   "bairro": "Nucleo Habitacional Mary Dota",
+   "tipo": "apartamento",
+   "uf": "SP",
+   "esperado": {
+    "logradouro": "Rua Pedro Lipe",
+    "quadra_numero": [
+     "4",
+     51
+    ]
+   }
+  },
+  {
+   "grupo": "abrev",
+   "endereco": "R Manuel Francisco Guerreiro, N. 640, Qd 126 Parte do Lt 7 e Parte do Lt 5",
+   "bairro": "Centro",
+   "tipo": "casa",
+   "uf": "RS",
+   "esperado": {
+    "logradouro": "R Manuel Francisco Guerreiro",
+    "numero": 640,
+    "quadra": "126",
+    "lote": "7"
+   }
+  },
+  {
+   "grupo": "abrev",
+   "endereco": "Av Miguel Skeff, N. 97-B,",
+   "bairro": "Diadema",
+   "tipo": "casa",
+   "uf": "CE",
+   "esperado": {
+    "logradouro": "Av Miguel Skeff",
+    "numero": 97
+   }
+  },
+  {
+   "grupo": "sem_n",
+   "endereco": "Rua Heráclito Dias de Carvalho S/N Qd D Casa 01",
+   "bairro": "Sobradinho",
+   "tipo": "comercial",
+   "uf": "BA",
+   "esperado": {
+    "logradouro": "Rua Heráclito Dias de Carvalho",
+    "numero": null,
+    "quadra": "D",
+    "padrao": "sem_n"
+   }
+  },
+  {
+   "grupo": "sem_n",
+   "endereco": "Rua 3, Lote 9 Quadra 13 Casa 4 - Papucaia",
+   "bairro": "Centro (Papucaia)",
+   "tipo": "casa",
+   "uf": "RJ",
+   "esperado": {
+    "logradouro": "Rua 3",
+    "quadra": "13",
+    "lote": "9"
+   }
+  },
+  {
+   "grupo": "sem_n",
+   "endereco": "Quadra 06 Lt 06, Desmembrado da Av. S. Joao, Nº 36",
+   "bairro": "Centro",
+   "tipo": "casa",
+   "uf": "RN",
+   "esperado": {
+    "quadra": "6",
+    "lote": "6",
+    "numero": 36
+   }
+  },
+  {
+   "grupo": "numero_no_lugar_errado",
+   "endereco": "Quadra 7, N. Lt 11",
+   "bairro": "Cidade Ocidental",
+   "tipo": "casa",
+   "uf": "GO",
+   "esperado": {
+    "logradouro": "Quadra 7",
+    "quadra": "7",
+    "lote": "11",
+    "numero": null
+   }
+  },
+  {
+   "grupo": "lts_faixa",
+   "endereco": "Rua 1, N. Sn, Lts 39 40 Qd 12",
+   "bairro": "Boi Morto",
+   "tipo": "terreno",
+   "uf": "CE",
+   "esperado": {
+    "logradouro": "Rua 1",
+    "quadra": "12",
+    "lote": null
+   }
+  },
+  {
+   "grupo": "lts_faixa",
+   "endereco": "Rua B, N. 00, Qd C, Lts 38 a 48",
+   "bairro": "Nossa Sra da Saude",
+   "tipo": "terreno",
+   "uf": "CE",
+   "esperado": {
+    "logradouro": "Rua B",
+    "quadra": "C",
+    "lote": null
+   }
+  },
+  {
+   "grupo": "vazio",
+   "endereco": "",
+   "bairro": null,
+   "tipo": "outro",
+   "uf": "SP",
+   "esperado": {
+    "logradouro": null,
+    "numero": null,
+    "padrao": "vazio"
+   }
+  }
+ ]
+}

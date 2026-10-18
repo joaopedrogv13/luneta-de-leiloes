@@ -21,6 +21,7 @@ const DESCRICAO: Record<Ordem, string> = {
   recentes: "Coletados por último primeiro",
   alertas: "Menos tags graves e de atenção primeiro",
   selo: "Alvo, Na Mira e Promissor primeiro",
+  localizacao: "Maior nota de localização primeiro; sem nota por último",
 };
 
 export const SELOS_EM_ANALISE = "Selos em análise: critérios em definição";

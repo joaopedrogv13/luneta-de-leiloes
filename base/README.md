@@ -36,7 +36,22 @@ npm run base:status                                        # contagens, fotos, g
 npm run base:exportar                                      # JSON completo em base/dados/exportacao/imoveis.json
 npm run base:exportar -- --site                            # instantâneo do site em base/saida/ (amostra, estatísticas e catálogo em site/)
 npm run base:fichas -- --arquivo fichas.json               # aplica fichas da Caixa lidas em outro lugar (ver abaixo)
+npm run base:geocode -- --arquivo base/saida/localizacao/geocode.json   # ponto pelo endereço (base/fontes/localizacao)
 ```
+
+**Ponto pelo endereço.** A coleta põe o imóvel da Caixa na sede do município; `base/fontes/localizacao/geocodificar.py`
+(Python: geocodebr do IPEA sobre o CNEFE 2022 do IBGE) acha o número, a rua ou o bairro e grava
+`base/saida/localizacao/geocode.json`; `npm run base:geocode` leva ao banco (`precisao_geo` exata, rua, bairro ou
+cidade; desvio, setor e motivo em `extras.geo`) sem piorar o ponto que a fonte trouxe, e a coleta seguinte mantém o ponto
+enquanto o endereço for o mesmo. Em 18/10/2026: 49,4% no número, 15,1% na rua, 21,9% no bairro, 13,6% na sede. Ver
+`base/fontes/localizacao/README.md`.
+
+**Nota de localização.** Depois do geocode e do exportar, `base/fontes/localizacao/pois.py` e `nota.py` (Python) calculam
+a nota de 0 a 100 de cada imóvel entre os moradores da cidade e gravam `base/saida/site/localizacao.json.gz`,
+`localizacao-osm.json.gz` (colunas do OpenStreetMap, ODbL) e `localizacao-cidades.json.gz`, que o site lê
+(`src/lib/catalogo/localizacao.ts`). O exportar não mexe nesses arquivos. O OSM só vem do Actions (etapa `osm` do
+`base-localizacao.yml`). Método, fontes e a validação com o ITBI no README da pasta e em
+`base/saida/localizacao/medicao-nota.md`.
 
 **Fichas da Caixa lidas fora daqui.** A ficha (`detalhe-imovel.asp`) tem matrícula, comarca, ofício, inscrição imobiliária
 e averbação dos leilões negativos, que o CSV não traz. A rede deste ambiente não chega à Caixa, e servidores fora do
