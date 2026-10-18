@@ -1,0 +1,9 @@
+[02:25:53] ibge: openpyxl e pypdf
+  tentativa 1 de https://biblioteca.ibge.gov.br/visualizacao/livros/liv102277.pdf falhou: HTTPError: HTTP Error 403: Forbidden
+  tentativa 2 de https://biblioteca.ibge.gov.br/visualizacao/livros/liv102277.pdf falhou: HTTPError: HTTP Error 403: Forbidden
+  tentativa 3 de https://biblioteca.ibge.gov.br/visualizacao/livros/liv102277.pdf falhou: HTTPError: HTTP Error 403: Forbidden
+  FALHOU: HTTPError: HTTP Error 403: Forbidden
+
+RESULTADO: V06006 descrita como MEDIANA
+[02:26:34] ibge: ok
+[02:26:34] fim: 0 etapa(s) com falha

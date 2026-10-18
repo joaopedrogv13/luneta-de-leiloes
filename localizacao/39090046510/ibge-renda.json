@@ -1,0 +1,36 @@
+{
+ "conferido_em": "2026-10-18",
+ "fonte": "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/Agregados_por_setores_renda_responsavel_BR_20260508_csv.zip",
+ "cabecalho": [
+  "CD_SETOR",
+  "V06001",
+  "V06002",
+  "V06003",
+  "V06004",
+  "V06005",
+  "V06006"
+ ],
+ "v06006_no_cabecalho": true,
+ "v06006": {
+  "descricao": "[Dicionário Renda Responsável] Renda do Responsável | V06006 | Valor do rendimento nominal mediano mensal das pessoas responsáveis com rendimentos por domicílios particulares permanentes ocupados",
+  "arquivo": "dicionario_de_dados_renda_responsavel_20260508.xlsx",
+  "mediana": true
+ },
+ "achados": [
+  {
+   "variavel": "V06004",
+   "arquivo": "dicionario_de_dados_renda_responsavel_20260508.xlsx",
+   "linha": "[Dicionário Renda Responsável] Renda do Responsável | V06004 | Valor do rendimento nominal médio mensal das pessoas responsáveis com rendimentos por domicílios particulares permanentes ocupados"
+  },
+  {
+   "variavel": "V06005",
+   "arquivo": "dicionario_de_dados_renda_responsavel_20260508.xlsx",
+   "linha": "[Dicionário Renda Responsável] Renda do Responsável | V06005 | Variância do rendimento nominal mensal das pessoas responsáveis com rendimentos por domicílios particulares permanentes ocupados"
+  },
+  {
+   "variavel": "V06006",
+   "arquivo": "dicionario_de_dados_renda_responsavel_20260508.xlsx",
+   "linha": "[Dicionário Renda Responsável] Renda do Responsável | V06006 | Valor do rendimento nominal mediano mensal das pessoas responsáveis com rendimentos por domicílios particulares permanentes ocupados"
+  }
+ ]
+}
