@@ -158,3 +158,24 @@ export function linkGoogleMaps(i: { endereco: string | null; bairro: string | nu
 export function quartosTexto(n: number): string {
   return `${n} ${n === 1 ? "quarto" : "quartos"}`;
 }
+
+/**
+ * As partes de quartos da busca ("2 quartos", "3+ qts"). O filtro de quartos é da Luneta: no Lente o servidor ignora
+ * essa parte da busca e a tela avisa, como faz com o botão "Quartos" (revisão final da rodada 4, R4-VAZ-06).
+ */
+export function quartosDaBusca(texto: string): { n: number; minimo: boolean }[] {
+  return interpretarBusca(texto).flatMap((c) => (c.tipo === "quartos" ? [{ n: c.n, minimo: c.minimo }] : []));
+}
+
+/** "2+ quartos", "1 quarto": a parte de quartos da busca, para o aviso. */
+export function rotuloQuartosDaBusca(c: { n: number; minimo: boolean }): string {
+  return c.minimo ? `${c.n}+ quartos` : quartosTexto(c.n);
+}
+
+/** O texto da busca sem as partes de quartos ("ap 2 quartos centro" → "ap centro"), para "Tirar da busca". */
+export function semQuartos(texto: string): string {
+  return texto
+    .replace(/(^|\s)\d+\s*\+?\s*(?:quartos?|qtos?|qts?|dorms?|dormit[oó]rios?)(?=$|[\s.,;!?])/giu, "$1")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s,.;]+|[\s,.;]+$/g, "");
+}

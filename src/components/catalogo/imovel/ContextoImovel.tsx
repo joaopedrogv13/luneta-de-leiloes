@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { UpgradeModal } from "@/components/assinante/UpgradeModal";
+import { ProvedorPedirLuneta, type PedirLuneta } from "@/components/catalogo/planos/convite";
 import { useFavoritos } from "@/components/catalogo/useFavoritos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
-import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
+import { TOAST_FAVORITADO } from "@/lib/catalogo/produto";
+import type { Conjunto, Plano, Recurso } from "@/lib/catalogo/tipos";
 import { IconeCheck } from "./icones";
 import { guardarAncora, restaurarAncora } from "./rolagem";
 
@@ -14,8 +16,8 @@ interface ValorContexto {
   plano: Plano;
   /** id do imóvel da página */
   id: string;
-  /** abre o convite à Luneta (plano Lente); o foco volta para quem abriu */
-  pedirLuneta: (abridor: HTMLElement | null) => void;
+  /** abre o convite à Luneta (plano Lente), com o texto do recurso; o foco volta para quem abriu */
+  pedirLuneta: PedirLuneta;
   /** aviso curto no rodapé da tela ("Link copiado") */
   avisar: (texto: string) => void;
   ehFavorito: (id: string) => boolean;
@@ -43,6 +45,7 @@ export function ProvedorImovel({ conjunto, plano, id, children }: { conjunto: Co
   const router = useRouter();
   const { ehFavorito, alternar } = useFavoritos(conjunto);
   const [convite, setConvite] = useState(false);
+  const [recurso, setRecurso] = useState<Recurso | null>(null);
   const abridor = useRef<HTMLElement | null>(null);
   const focarDepois = useRef<string | null>(null);
   const [aviso, setAviso] = useState<{ texto: string; n: number } | null>(null);
@@ -55,15 +58,16 @@ export function ProvedorImovel({ conjunto, plano, id, children }: { conjunto: Co
   }, []);
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
-  const pedirLuneta = useCallback((el: HTMLElement | null) => {
+  const pedirLuneta = useCallback<PedirLuneta>((el, r) => {
     abridor.current = el;
+    setRecurso(r ?? null);
     setConvite(true);
   }, []);
 
   const alternarFavorito = useCallback(
     (idImovel: string) => {
       const virou = alternar(idImovel);
-      avisar(virou ? "Favoritado. Você será avisado por e-mail quando a praça mudar (demonstração)." : "Removido dos favoritos.");
+      avisar(virou ? TOAST_FAVORITADO : "Removido dos favoritos.");
     },
     [alternar, avisar],
   );
@@ -82,16 +86,28 @@ export function ProvedorImovel({ conjunto, plano, id, children }: { conjunto: Co
   }, [plano]);
 
   useEffect(() => {
-    if (plano !== "luneta" || !focarDepois.current) return;
+    // ainda no Lente (um plano acima da Luneta também vê tudo: não compara com "luneta")
+    if (plano === "lente" || !focarDepois.current) return;
     const secao = focarDepois.current;
     focarDepois.current = null;
-    requestAnimationFrame(() => {
+    // o simulador chega num pedaço de JavaScript à parte (next/dynamic): o título dele pode aparecer uns quadros depois
+    let tentativas = 0;
+    let espera = 0;
+    const focar = () => {
       const alvo =
         document.getElementById(`${secao}-titulo`) ?? document.querySelector<HTMLElement>(`[data-secao-imovel="${CSS.escape(secao)}"] :is(h2, h3)`);
-      if (!alvo) return;
+      if (!alvo) {
+        if (++tentativas < 40) espera = window.setTimeout(focar, 100);
+        return;
+      }
       if (!alvo.hasAttribute("tabindex")) alvo.setAttribute("tabindex", "-1");
       alvo.focus({ preventScroll: true });
-    });
+    };
+    const quadro = requestAnimationFrame(focar);
+    return () => {
+      cancelAnimationFrame(quadro);
+      window.clearTimeout(espera);
+    };
   }, [plano]);
 
   const valor = useMemo<ValorContexto>(
@@ -101,8 +117,9 @@ export function ProvedorImovel({ conjunto, plano, id, children }: { conjunto: Co
 
   return (
     <Contexto.Provider value={valor}>
-      {children}
-      <UpgradeModal open={convite} openerRef={abridor} onClose={() => setConvite(false)} onUpgrade={assinar} />
+      {/* os RecursoLuneta da página (chamadas no lugar do simulador, da região, da nota) abrem a mesma janela */}
+      <ProvedorPedirLuneta value={pedirLuneta}>{children}</ProvedorPedirLuneta>
+      <UpgradeModal open={convite} recurso={recurso} openerRef={abridor} onClose={() => setConvite(false)} onUpgrade={assinar} />
       {/* sempre no DOM (vazio sem aviso): a região viva precisa existir antes da mensagem para ser anunciada */}
       <div
         role="status"

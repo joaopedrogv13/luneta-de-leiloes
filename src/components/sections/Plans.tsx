@@ -15,7 +15,8 @@ export function Plans({ children }: { children?: ReactNode }) {
         {children}
         <p className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-nevoa">
           Quer ver como fica depois de assinar?
-          <Link href={SUBSCRIBER_AREA.href} className="font-semibold text-latao-texto underline underline-offset-4 hover:text-luar">
+          {/* alvo de 44 px de altura, como os outros links soltos do site (UX-14) */}
+          <Link href={SUBSCRIBER_AREA.href} className="inline-flex min-h-11 items-center font-semibold text-latao-texto underline underline-offset-4 hover:text-luar">
             Abrir a {SUBSCRIBER_AREA.label.toLowerCase()} (demonstração) →
           </Link>
         </p>

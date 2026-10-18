@@ -2,10 +2,12 @@ import { conteudoTag, origemTag, partesEvidencia, SEVERIDADE_ORDEM } from "@/com
 import { AVISO_CLASSIFICACAO } from "@/content/avisos";
 import { SITE } from "@/content/site";
 import { MODALIDADE_ROTULO, numero, SELO_ROTULO, SEVERIDADE_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
+import { pode } from "@/lib/catalogo/planos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
 import {
   cidadePequena,
   fraseFaixa,
+  pontoMedido,
   frasePercentil,
   NOTA_NAO_GARANTIA,
   notaNaEscala,
@@ -41,8 +43,8 @@ import { MedidaCapa } from "./MedidaCapa";
 import { IconeGravidade, MarcaLente } from "./icones";
 import { Folha, Secao } from "./partes";
 import s from "./relatorio.module.css";
-import { CarimboData, CustosRelatorio, MatrizRelatorio, PremissasRelatorio, ProvedorRelatorio, ResultadoSimulacao } from "./Simulacao";
-import { precoPorArea } from "@/components/catalogo/imovel/formato";
+import { CarimboData, CustosRelatorio, MatrizRelatorio, PremissasRelatorio, ProvedorRelatorio, ResultadoSimulacao } from "./SimulacaoAdiada";
+import { LICENCA_A_CONFIRMAR, precoPorArea } from "@/components/catalogo/imovel/formato";
 
 const TOM: Record<TagDetalhe["severidade"], string> = { grave: s.grave, atencao: s.aten, positivo: s.pos, info: s.info };
 
@@ -111,7 +113,7 @@ export function Relatorio({
                 <div className={s.tipoDoc}>
                   <p>Relatório de simulação</p>
                   <p>
-                    <CarimboData />
+                    <CarimboData reservar />
                   </p>
                 </div>
               </div>
@@ -298,7 +300,9 @@ function LinhaRecorte({ l, area }: { l: LinhaRegiaoRel; area: number | null }) {
  * motivo; ITBI: só os recortes que a prefeitura cobre.
  */
 function TabelaRegiao({ recortes, linhas, itbi, area }: { recortes?: RecorteRel[]; linhas?: LinhaRegiaoRel[]; itbi: boolean; area: number | null }) {
-  const titulo = itbi ? "Preço pago em transações reais (ITBI da prefeitura)" : "Média de avaliação dos imóveis do mesmo tipo em leilão";
+  // o valor do ITBI não é sempre o preço pago (base de cálculo em Porto Alegre e Fortaleza, avaliação no Recife): o
+  // que ele é na cidade vem nas fontes, no fim do relatório (R4-VAZ-04)
+  const titulo = itbi ? "Valor das compras registradas na prefeitura (ITBI)" : "Média de avaliação dos imóveis do mesmo tipo em leilão";
   return (
     <div className={s.inteira}>
       <p className={s.tituloTabela} aria-hidden="true">
@@ -313,7 +317,7 @@ function TabelaRegiao({ recortes, linhas, itbi, area }: { recortes?: RecorteRel[
             <tr>
               <th scope="col">Recorte</th>
               <th scope="col" className={s.num}>
-                {itbi ? "Preço médio pago" : "Média de avaliação"}
+                {itbi ? "Valor médio" : "Média de avaliação"}
               </th>
               <th scope="col" className={s.num}>
                 {itbi ? "Transações" : "Imóveis"}
@@ -354,11 +358,11 @@ function notaItbi(pagina: PaginaImovel, temTabela: boolean): string | null {
   const cidade = `${i.cidade}/${i.uf}`;
   // campo novo do contrato (CoberturaPrecos.semComparacao, frente de dados), lido sem depender dele
   const motivo = (cob as { semComparacao?: string | null }).semComparacao || null;
-  if (temTabela) return `${cidade}: preço pago nas compras registradas na prefeitura (ITBI), na tabela acima.`;
-  if (motivo) return `${cidade}: a Luneta tem o preço de transações reais (ITBI) desta cidade, mas este imóvel fica fora da comparação. ${motivo}`;
+  if (temTabela) return `${cidade}: valor das compras registradas na prefeitura (ITBI), na tabela acima.`;
+  if (motivo) return `${cidade}: a Luneta tem as compras registradas (ITBI) desta cidade, mas este imóvel fica fora da comparação. ${motivo}`;
   if (cob.cidadeTemItbi)
-    return `${cidade}: a Luneta tem o preço de transações reais (ITBI) desta cidade, mas a prefeitura não registra compras suficientes de imóveis do mesmo tipo perto deste para comparar.`;
-  return `${cidade}: a Luneta ainda não tem o preço de transações reais (ITBI) desta cidade.`;
+    return `${cidade}: a Luneta tem as compras registradas (ITBI) desta cidade, mas a prefeitura não registra compras suficientes de imóveis do mesmo tipo perto deste para comparar.`;
+  return `${cidade}: a Luneta ainda não tem as compras registradas (ITBI) desta cidade.`;
 }
 
 function Regiao({ pagina }: { pagina: PaginaImovel }) {
@@ -414,11 +418,11 @@ function ItbiFonte({ pagina }: { pagina: PaginaImovel }) {
   const f = pagina.vizinhanca.cobertura?.fontes.find((x) => x.tipo === "itbi" && x.nome === `${i.cidade}/${i.uf}`);
   return (
     <div>
-      <dt>Transações reais (ITBI)</dt>
+      <dt>Compras registradas (ITBI)</dt>
       <dd>
         {i.cidade}/{i.uf}, dados da prefeitura
         {f?.detalhe ? `: ${f.detalhe}` : ""}
-        {f?.licenca ? ` · licença ${f.licenca}` : ""}
+        {f?.licenca ? ` · licença ${f.licenca}` : ` · ${LICENCA_A_CONFIRMAR}`}
         {f?.url ? ` · ${f.url}` : ""}
       </dd>
     </div>
@@ -429,19 +433,19 @@ function ItbiFonte({ pagina }: { pagina: PaginaImovel }) {
 // 06 Localização (nota de localização; Luneta)
 // ---------------------------------------------------------------------------
 
-/** Os números principais de uma parte, com o comum na cidade: "Mercados a até 500 m: 8 (comum 10)". */
-function numerosDaParte(c: ComponenteLocal, max = 3) {
-  return c.indicadores
-    .slice(0, max)
-    .map((x) => `${x.rotulo}: ${x.valor}${x.comum !== null ? ` (comum ${x.comum})` : ""}`)
-    .join("; ");
+/**
+ * Os números de uma parte, com o comum na cidade: "Mercados a até 500 m: 8 (comum 10)". Todos: cortar em 3 escondia
+ * escolas e saúde dos serviços e o esgoto da infraestrutura, que entram na nota (revisão final da rodada 4, M17).
+ */
+function numerosDaParte(c: ComponenteLocal) {
+  return c.indicadores.map((x) => `${x.rotulo}: ${x.valor}${x.comum !== null ? ` (comum ${x.comum})` : ""}`).join("; ");
 }
 
 function LocalizacaoRel({ pagina, plano }: { pagina: PaginaImovel; plano: Plano }) {
   const i = pagina.imovel;
   const loc = pagina.localizacao;
   const exemplo = ehExemploRel(i);
-  if (plano === "lente" || pagina.travas.includes("localizacao")) {
+  if (!pode(plano, "localizacao") || pagina.travas.includes("localizacao")) {
     return (
       <Secao numero="06" titulo="Localização" id="localizacao">
         <p className={s.p}>A nota de localização é do plano Luneta e não entra neste relatório.</p>
@@ -482,7 +486,7 @@ function LocalizacaoRel({ pagina, plano }: { pagina: PaginaImovel; plano: Plano 
               </p>
               <p className={s.pequeno}>
                 {selo?.rotulo}
-                {aproximada ? `. O meio da faixa (${notaNaEscala(loc.nota!)}) vale para ordenar e filtrar; as partes foram medidas no centro do bairro.` : "."}
+                {aproximada ? `. O meio da faixa (${notaNaEscala(loc.nota!)}) vale para ordenar e filtrar; as partes foram medidas ${pontoMedido(loc).no}.` : "."}
                 {exemplo ? " Exemplo fictício: a nota e os números foram inventados." : ""}
               </p>
             </div>
@@ -519,7 +523,8 @@ function LocalizacaoRel({ pagina, plano }: { pagina: PaginaImovel; plano: Plano 
                     Peso
                   </th>
                 )}
-                <th scope="col">{aproximada ? "Números no centro do bairro" : "Números em volta"}</th>
+                {/* pela precisão do ponto, não pela situação: a cidade pequena no bairro também é o centro do bairro (M13) */}
+                <th scope="col">{pontoMedido(loc).exato || exemplo ? "Números em volta" : `Números em volta ${pontoMedido(loc).do}`}</th>
               </tr>
             </thead>
             <tbody>
@@ -610,7 +615,7 @@ function LinhaAlerta({ t }: { t: TagDetalhe }) {
 
 function Alertas({ pagina, plano }: { pagina: PaginaImovel; plano: Plano }) {
   const i = pagina.imovel;
-  if (plano === "lente") {
+  if (!pode(plano, "tags")) {
     return (
       <Secao numero="07" titulo="Principais alertas" id="alertas">
         <p className={s.p}>

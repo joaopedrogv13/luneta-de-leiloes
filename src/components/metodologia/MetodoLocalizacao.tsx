@@ -16,14 +16,18 @@ import { VoltarImovel } from "./VoltarImovel";
  */
 
 const ORDEM_PARTES: ChaveComponenteLocal[] = ["servicos", "infra", "transporte", "renda", "comercio", "lazer"];
-/** Tons das partes na barra dos pesos (latão em degraus: a cor não carrega significado; o rótulo diz tudo). */
+/**
+ * Tons das partes na barra dos pesos (latão em degraus: a cor não carrega significado; o rótulo diz tudo), com a cor do
+ * texto de cada um. No tema escuro, os quatro tons mais escuros levam o texto claro (o quase preto ficava em 3,8:1 e
+ * 2,7:1; revisão final da rodada 4, UX-06), e o do transporte escurece um pouco para o claro passar com folga (5,6:1).
+ */
 const TOM_PARTE: Record<ChaveComponenteLocal, string> = {
   servicos: "bg-latao",
   infra: "bg-latao/80",
-  transporte: "bg-latao/60",
-  renda: "bg-latao/45",
-  comercio: "bg-nevoa/45",
-  lazer: "bg-nevoa/30",
+  transporte: "bg-latao/60 [[data-theme=dark]_&]:bg-latao/50 [[data-theme=dark]_&]:text-luar",
+  renda: "bg-latao/45 [[data-theme=dark]_&]:text-luar",
+  comercio: "bg-nevoa/45 [[data-theme=dark]_&]:text-luar",
+  lazer: "bg-nevoa/30 [[data-theme=dark]_&]:text-luar",
 };
 
 /** Nome curto de cada parte, dentro da barra dos pesos. */
@@ -108,11 +112,11 @@ const FAQ: { p: string; r: ReactNode }[] = [
   },
   {
     p: "O ponto no mapa é o imóvel exato?",
-    r: "Quando o endereço foi achado no número, o ponto fica a poucos metros dele (a página mostra a margem, como “±10 m”). Na rua, fica no meio dos endereços da rua; no bairro, no centro do bairro. Um casamento de endereço errado pode acontecer: confira no mapa antes de decidir.",
+    r: "Quando o endereço foi achado no número, o ponto fica em geral a menos de 100 m dele; a página mostra a margem de cada um (como “±40 m”). Na rua, fica no meio dos endereços da rua; no bairro, no centro do bairro. Pode acontecer de o endereço ser achado no lugar errado: confira no mapa antes de decidir.",
   },
   {
     p: "Com que frequência a nota muda?",
-    r: "Ela é recalculada quando a base de imóveis é atualizada. Os dados do entorno mudam devagar (Censo e cadastro de endereços de 2022, escolas de 2025, saúde de 2026, mapa aberto da semana do cálculo). Imóvel que entrou depois do último cálculo aparece como “ainda não calculada”.",
+    r: "Ela é recalculada de tempos em tempos (a data do último cálculo está no topo desta página). Os dados do entorno mudam devagar (Censo e cadastro de endereços de 2022, escolas de 2025, saúde de 2026, mapa aberto da semana do cálculo). Imóvel que entrou depois do último cálculo aparece como “ainda não calculada”.",
   },
   {
     p: "A nota substitui a visita ao local?",
@@ -142,7 +146,7 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
               <Suspense fallback={null}>
                 <VoltarImovel className={`inline-flex min-h-11 items-center ${LINK} no-underline`} />
               </Suspense>
-              <Link href="/" className="inline-flex min-h-11 items-center font-medium text-nevoa no-underline hover:text-luar">
+              <Link href="/" prefetch={false} className="inline-flex min-h-11 items-center font-medium text-nevoa no-underline hover:text-luar">
                 Página inicial
               </Link>
             </div>
@@ -156,7 +160,9 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
             </p>
             {r && (
               <p className="mt-6 text-[14px] text-nevoa">
-                Calculada para <span className="font-semibold text-luar tabular-nums">{n(total)}</span> imóveis em{" "}
+                {/* quem tem nota, de fato: os sem nota (endereço só na cidade, cidade pequena, rural) não contam (M12) */}
+                Nota para <span className="font-semibold text-luar tabular-nums">{n(r.porSituacao.calculada + r.porSituacao.aproximada)}</span> dos{" "}
+                <span className="font-semibold text-luar tabular-nums">{n(total)}</span> imóveis ({n(r.porSituacao.aproximada)} aproximadas), em{" "}
                 <span className="font-semibold text-luar tabular-nums">{n(r.cidades.total)}</span> cidades · cálculo de {dataBr(r.geradoEm)}.
               </p>
             )}
@@ -268,7 +274,7 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
         lead={
           <p>
             Os leilões publicam o endereço em texto; a Caixa não publica a coordenada. Transformamos o endereço em ponto no mapa com o cadastro de endereços
-            do Censo (CNEFE 2022, do IBGE), pela ferramenta geocodebr do IPEA. Regras extras evitam confiar num casamento arriscado: nome de rua parecido,
+            do Censo (CNEFE 2022, do IBGE), pela ferramenta geocodebr do IPEA. Regras extras evitam confiar num endereço achado no lugar errado: nome de rua parecido,
             rua com o mesmo nome em outro bairro, número fora da rua.
           </p>
         }
@@ -303,7 +309,7 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
           ))}
         </ul>
         <p className="mt-6 max-w-[72ch] text-[14.5px] leading-relaxed text-nevoa">
-          A página do imóvel mostra a precisão num selo (“Endereço localizado no número (±10 m)”) e a margem do ponto. Para imóvel rural, a nota não se aplica: ela
+          A página do imóvel mostra a precisão num selo (“Endereço localizado no número (±40 m)”) e a margem do ponto. Para imóvel rural, a nota não se aplica: ela
           mede a vida a pé na cidade.
         </p>
       </Bloco>
@@ -400,9 +406,9 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
           <Cartao>
             <h3 className="text-[16px] font-semibold text-luar">Por que esses pesos</h3>
             <p className="mt-2 text-[15px] leading-relaxed text-nevoa">
-              Serviços e infraestrutura da rua pesam mais porque contam no dia a dia e acompanham o valor do lugar. Comércio e lazer pesam pouco: muito
-              comércio pequeno aparece também em bairros densos e populares. Os pesos foram ajustados depois de conferidos com o preço pago nas compras de 5
-              capitais (veja “Como conferimos”).
+              Infraestrutura da rua pesa mais porque acompanha o preço em 7 das 8 comparações; serviços pesam pelo dia a dia de quem mora, mesmo sem
+              acompanhar o preço; comércio pesa pouco porque puxou contra o preço (muito comércio pequeno aparece também em bairros densos e populares). Os
+              pesos foram ajustados depois de conferidos com o valor das compras registradas (ITBI) em 5 capitais (veja “Como conferimos”).
             </p>
           </Cartao>
         </div>
@@ -416,15 +422,15 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
         lead={
           <p>
             A cidade é dividida em quadrados de 200 m (1 km na zona rural), com o número de moradores de cada um (Grade Estatística do Censo 2022, IBGE). Cada
-            quadrado com gente morando é medido do mesmo jeito que o imóvel. A nota é a posição do imóvel entre esses quadrados, pesados pelos moradores.
+            quadrado com gente morando é medido do mesmo jeito que o imóvel. A nota é a posição do imóvel entre esses quadrados, ponderados pelos moradores.
           </p>
         }
       >
         <ol className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[
             ["Os números em volta", "Quantos mercados a 500 m, a que distância fica a estação, que parte das casas está em rua com calçada... para o imóvel e para cada quadrado habitado da cidade."],
-            ["Cada número vira um acesso", "Uma escala de 0 a 1: contagens saturam no comum da cidade, distâncias perdem valor aos poucos e porcentagens valem por elas mesmas."],
-            ["A nota de cada parte", "A posição do imóvel entre os moradores da cidade: serviços 70 quer dizer mais serviços que o entorno de 70% deles. Empate conta pela metade."],
+            ["Cada número vira uma nota de 0 a 1", "Uma escala de 0 a 1: contagens saturam no comum da cidade, distâncias perdem valor aos poucos e porcentagens valem por elas mesmas."],
+            ["A nota de cada parte", "A posição do imóvel entre os moradores da cidade: serviços 70 quer dizer mais serviços que o entorno de 70% deles. Em caso de empate, o imóvel fica no meio do grupo."],
             ["A nota final", "A média das partes pelos pesos e, de novo, a posição dessa média entre os moradores. Por isso a nota média da cidade é 50."],
           ].map(([t, d], k) => (
             <li key={t}>
@@ -478,8 +484,9 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
           <ul className="mt-3 flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-relaxed text-nevoa marker:text-latao-texto">
             <li>Sem estação, barca nem terminal de ônibus mapeado: a distância à estação sai do transporte.</li>
             <li>
-              Pontos de ônibus do mapa aberto (OpenStreetMap) só entram onde o mapa da cidade está razoavelmente completo
-              {r ? ` (${n(r.cidades.comOnibusOsm)} das ${n(r.cidades.total)} cidades)` : ""}; nas outras, vale o ponto de ônibus na quadra, do Censo.
+              Pontos de ônibus do mapa aberto (OpenStreetMap) só entram quando o mapa da cidade tem pelo menos 10% dos pontos que o Censo registra e o
+              morador típico tem pelo menos um ponto mapeado a 500 m{r ? ` (${n(r.cidades.comOnibusOsm)} das ${n(r.cidades.total)} cidades)` : ""}; nas
+              outras, vale o ponto de ônibus na quadra, do Censo.
             </li>
             <li>Sem parque, praça ou parquinho mapeado, o lazer sai{r ? ` (${n(r.cidades.semLazer)} cidades)` : ""}.</li>
             <li>Ponto sem nenhuma casa a 1 km (área industrial, loteamento novo): renda e infraestrutura saem para aquele ponto.</li>
@@ -493,21 +500,22 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
           <Cartao className="bg-noite!">
             <h3 className="font-display text-[19px] font-bold text-luar">Cidade pequena</h3>
             <p className="mt-2 text-[15px] leading-relaxed text-nevoa">
-              Com menos de {n(r?.regras.pequenaMoradores ?? 20000)} moradores, ou menos de {n(r?.regras.pequenaCelulas ?? 50)} quadrados habitados, uma nota de 0 a
-              100 entre tão poucas áreas enganaria. Mostramos os números do entorno (“mercado a 400 m; 2 escolas a 1 km”) e a posição em terços: acima da maioria,
+              Com menos de {n(r?.regras.pequenaMoradores ?? 20000)} moradores, ou menos de {n(r?.regras.pequenaCelulas ?? 50)} quadrados habitados, poucas casas
+              mudariam muito a posição de 0 a 100, e a nota enganaria. Mostramos os números do entorno (“mercado a 400 m; 2 escolas a 1 km”) e a posição em terços: acima da maioria,
               no meio ou abaixo da maioria da cidade.
             </p>
             {r && (
               <p className="mt-4 text-[14px] text-nevoa tabular-nums">
-                <span className="font-display text-[26px] font-bold text-luar">{n(r.cidades.pequenas)}</span> cidades · {n(r.cidades.imoveisPequenas)} imóveis
+                <span className="font-display text-[26px] font-bold text-luar">{n(r.cidades.pequenas)}</span> cidades · {n(r.cidades.imoveisPequenas)} imóveis com ponto
               </p>
             )}
           </Cartao>
           <Cartao className="bg-noite!">
             <h3 className="font-display text-[19px] font-bold text-luar">Endereço só no bairro</h3>
             <p className="mt-2 text-[15px] leading-relaxed text-nevoa">
-              Sem a rua, o ponto é o centro do bairro. A nota vira uma faixa: das áreas habitadas menos bem localizadas às mais bem localizadas em volta do
-              centro (num raio de 300 m a 2,5 km). Na tela, aparece com “~” (“~59”); o meio da faixa vale para ordenar e filtrar.
+              Sem a rua, o ponto é o centro do bairro. A nota vira a faixa do meio: metade das áreas habitadas em volta do centro (num raio de 300 m a 2,5 km)
+              tem nota dentro dela; um quarto fica abaixo e um quarto acima. Na tela, aparece com “~” (“~59”); o meio da faixa vale para ordenar e filtrar.
+              Quando a rua é achada mas os endereços dela se espalham demais, o ponto é o meio da rua, e a nota também sai aproximada.
             </p>
             <ReguaNota nota={59} faixa={[48, 70]} rotulo="~59 (48 a 70)" className="mt-3" />
             {r && (
@@ -551,8 +559,9 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
             <div>
               <h3 className="text-[16px] font-semibold text-luar">Quando aparece o alerta</h3>
               <p className="mt-2 text-[15px] leading-relaxed text-luar/90">
-                Quando o imóvel fica dentro ou a menos de {n(r?.regras.riscoPertoM ?? 100)} m de uma área de risco mapeada. Com o endereço só no bairro, a procura
-                é em volta do centro do bairro (até {n(r?.regras.riscoAproxMaxM ?? 500)} m), e o alerta diz isso.
+                Quando o ponto do endereço fica dentro ou perto de uma área de risco mapeada. “Perto” é a margem do ponto, de {n(r?.regras.riscoPertoM ?? 100)} m
+                a {n(r?.regras.riscoAproxMaxM ?? 500)} m: no número, em geral {n(r?.regras.riscoPertoM ?? 100)} m; na rua e no bairro, a incerteza do ponto. Fora
+                do número exato, o alerta fala do ponto do endereço, não do imóvel.
               </p>
             </div>
           </div>
@@ -601,9 +610,9 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
         titulo="Como conferimos: as compras de verdade"
         lead={
           <p>
-            Em {v.cidades.slice(0, -1).join(", ")} e {v.cidades[v.cidades.length - 1]}, as prefeituras publicam o preço pago em cada compra de imóvel (ITBI).
-            Calculamos a nota no ponto de cada rua com pelo menos 5 compras ({numero(v.pares)} pares de rua e tipo) e comparamos a ordem das notas com a ordem
-            do preço por m² pago. Quanto mais perto de 1, mais as duas ordens andam juntas; 0 é sem relação.
+            Em {v.cidades.slice(0, -1).join(", ")} e {v.cidades[v.cidades.length - 1]}, as prefeituras publicam o valor de cada compra de imóvel registrada
+            para o ITBI (o preço declarado em São Paulo e no Rio; a base de cálculo ou a avaliação da prefeitura nas outras). Calculamos a nota no ponto de cada
+            rua com pelo menos 5 compras ({numero(v.pares)} pares de rua e tipo) e comparamos a ordem das notas com a ordem do valor por m². Quanto mais perto de 1, mais as duas ordens andam juntas; 0 é sem relação.
           </p>
         }
       >
@@ -629,7 +638,7 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
                 ))}
             </ul>
             <p className="mt-5 text-[14px] leading-relaxed text-nevoa">
-              A renda acompanha o preço por definição; dar mais peso a ela transformaria a nota numa medida de renda. Comércio e serviços ficaram perto de zero
+              A renda acompanha o preço de perto; dar mais peso a ela transformaria a nota numa medida de renda. Comércio e serviços ficaram perto de zero
               ou contra o preço: muito comércio pequeno aparece também nos bairros densos e populares.
             </p>
           </Cartao>
@@ -643,21 +652,29 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
                 {v.antes.mediana.toFixed(2).replace(".", ",")} e {v.antes.negativos} recortes ficavam negativos. Comércio caiu para {pesos.comercio}, serviços para{" "}
                 {pesos.servicos} e infraestrutura subiu para {pesos.infra}.
               </p>
-              <ul className="mt-4 divide-y divide-nevoa/12 text-[14px]">
+              {/* os 8 recortes, não só alguns (M15) */}
+              <p className="mt-4 text-[13px] font-semibold text-luar">Os {v.recortes} recortes</p>
+              <ul className="mt-1 divide-y divide-nevoa/12 text-[14px]">
                 {v.exemplos.map((e) => (
                   <li key={`${e.cidade}-${e.tipo}`} className="flex items-baseline justify-between gap-3 py-1.5">
                     <span className="text-nevoa">
                       {e.cidade}, {e.tipo} <span className="text-[12.5px]">({numero(e.ruas)} ruas)</span>
+                      {"areaComComum" in e && e.areaComComum ? <span aria-hidden="true">*</span> : null}
                     </span>
                     <span className="font-semibold text-luar tabular-nums">{e.rho.toFixed(2).replace(".", ",").replace("-", "−")}</span>
                   </li>
                 ))}
               </ul>
+              <p className="mt-2 text-[12.5px] leading-snug text-nevoa">
+                * Em São Paulo e em Fortaleza, a área dos apartamentos no ITBI inclui a parte comum do prédio: o valor por m² sai mais baixo, e a ordem entre as
+                ruas pode mudar. Por isso a página do imóvel não compara esses apartamentos com o ITBI; aqui, o recorte fica como referência.
+              </p>
             </Cartao>
             <Cartao>
               <h3 className="text-[16px] font-semibold text-luar">O que isso não valida</h3>
               <p className="mt-2 text-[15px] leading-relaxed text-nevoa">
-                Só essas 5 capitais publicam as compras; nas cidades médias e pequenas não há com o que comparar. E acompanhar o preço não é o objetivo: a nota
+                Só nessas 5 capitais já temos as compras registradas (Belo Horizonte está para entrar); nas cidades médias e pequenas não há com o que
+                comparar. E acompanhar o preço não é o objetivo: a nota
                 mede o entorno para morar, e um bairro caro pode ter poucos serviços a pé. Medição de {dataBr(v.medidoEm)}.
               </p>
             </Cartao>
@@ -676,8 +693,9 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
                 pode estar diferente. A renda está em reais de 2022, sem correção.
               </li>
               <li>
-                <span className="font-medium text-luar">Mapa aberto desigual.</span> O OpenStreetMap é ótimo em algumas cidades e quase vazio em outras. A regra
-                dos 10% evita usar o mapa onde ele está vazio, mas não o corrige.
+                <span className="font-medium text-luar">Mapa aberto desigual.</span> O OpenStreetMap é ótimo em algumas cidades e quase vazio em outras. As regras
+                dos pontos de ônibus (10% dos pontos do Censo e pelo menos um ponto perto do morador típico) evitam usar o mapa onde ele está vazio, mas não o
+                corrigem.
               </li>
               <li>
                 <span className="font-medium text-luar">Interior.</span> Cidades pequenas acham menos endereços no número e ficam mais vezes sem nota; a
@@ -699,8 +717,8 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
           <Cartao className="bg-noite!">
             <h3 className="text-[16px] font-semibold text-luar">Atualização</h3>
             <p className="mt-3 text-[15px] leading-relaxed text-nevoa">
-              A posição dos imóveis e a nota são recalculadas quando a base de imóveis é atualizada. Imóvel que entrou depois do último cálculo aparece como
-              “ainda não calculada” até o próximo.
+              A posição dos imóveis e a nota são recalculadas de tempos em tempos (o cálculo atual está abaixo). Imóvel que entrou depois do último cálculo
+              aparece como “ainda não calculada” até o próximo.
             </p>
             <dl className="mt-4 divide-y divide-nevoa/12 text-[14.5px]">
               {[
@@ -784,10 +802,10 @@ export function MetodoLocalizacao({ r }: { r: ResumoBaseLocal | null }) {
           <Suspense fallback={null}>
             <VoltarImovel className="btn-primary" rotulo="Voltar ao imóvel" />
           </Suspense>
-          <Link href="/assinante" className="btn-outline">
+          <Link href="/assinante" prefetch={false} className="btn-outline">
             Ver a nota nos exemplos
           </Link>
-          <Link href="/#planos" className="inline-flex min-h-11 items-center font-semibold text-latao-texto no-underline hover:text-luar">
+          <Link href="/#planos" prefetch={false} className="inline-flex min-h-11 items-center font-semibold text-latao-texto no-underline hover:text-luar">
             Conhecer os planos
           </Link>
         </div>

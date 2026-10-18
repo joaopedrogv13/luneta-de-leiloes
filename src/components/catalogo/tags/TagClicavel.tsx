@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, type MouseEvent } from "react";
+import { useEffect, useRef } from "react";
 import { SeverityIcon } from "@/components/niveis/severity";
 import { Popover } from "@/components/catalogo/ui/Popover";
 import { SEVERIDADE_ROTULO } from "@/lib/catalogo/rotulos";
 import type { Severidade, TagDetalhe, TagResumo } from "@/lib/catalogo/tipos";
-import { IconeCadeado } from "../cartoes/icones";
 import { InfoTag } from "./InfoTag";
 
 export type TamanhoTag = "sm" | "md";
@@ -128,72 +127,5 @@ function PainelTag({ tag, fechar, hrefEvidencia }: { tag: TagResumo | TagDetalhe
         }}
       />
     </div>
-  );
-}
-
-/** Larguras dos marcadores do Lente: as mesmas em todo cartão (não entregam quantas tags há, nem quais). */
-const LARGURAS_BLOQUEADAS = ["w-[74px]", "w-[104px]", "w-[62px]", "w-[88px]", "w-[70px]"] as const;
-
-/**
- * Plano Lente: uma pílula neutra e desfocada, sem rótulo real (o conteúdo nem chega ao navegador),
- * que abre o convite à Luneta.
- */
-export function TagBloqueada({
-  onUpsell,
-  tamanho = "sm",
-  largura = "w-[84px]",
-}: {
-  onUpsell: (opener: HTMLElement) => void;
-  tamanho?: TamanhoTag;
-  /** classe de largura do marcador */
-  largura?: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-haspopup="dialog"
-      aria-label="Tag de risco: recurso do plano Luneta"
-      onClick={(ev: MouseEvent<HTMLButtonElement>) => onUpsell(ev.currentTarget)}
-      className={`relative z-10 inline-flex cursor-pointer items-center rounded-full ${tamanho === "md" ? "h-[33px]" : "h-[26px]"} ${largura}`}
-    >
-      <span aria-hidden="true" className="absolute inset-0 rounded-full border border-nevoa/45 bg-nevoa/12 blur-[2.5px]" />
-    </button>
-  );
-}
-
-/**
- * Plano Lente: o lugar das tags num botão só (um alvo no teclado, não três): marcadores neutros
- * desfocados e o rótulo "Tags de risco · Luneta" com cadeado. Abre o convite à Luneta.
- */
-export function TagsBloqueadas({
-  onUpsell,
-  tamanho = "sm",
-  className = "",
-}: {
-  onUpsell: (opener: HTMLElement) => void;
-  tamanho?: TamanhoTag;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-haspopup="dialog"
-      onClick={(ev: MouseEvent<HTMLButtonElement>) => onUpsell(ev.currentTarget)}
-      // 44 px de altura no toque (a fileira de tags borradas tem 26 a 33 px)
-      className={`group/bloq relative z-10 flex min-h-11 w-full max-w-[26rem] cursor-pointer items-center overflow-hidden rounded-full py-1 text-left pointer-fine:min-h-0 ${className}`}
-    >
-      <span aria-hidden="true" className="flex gap-1.5 blur-[3px] transition-[filter] duration-200 group-hover/bloq:blur-[4px] motion-reduce:transition-none">
-        {LARGURAS_BLOQUEADAS.map((w) => (
-          <span key={w} className={`block shrink-0 rounded-full border border-nevoa/45 bg-nevoa/12 ${tamanho === "md" ? "h-[33px]" : "h-[26px]"} ${w}`} />
-        ))}
-      </span>
-      <span className="absolute inset-0 flex items-center justify-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-latao/40 bg-tinta/90 px-2.5 py-1.5 text-[11px] leading-none font-semibold tracking-[0.06em] text-latao-texto uppercase shadow-sm transition-colors group-hover/bloq:border-latao">
-          <IconeCadeado size={12} />
-          <span aria-hidden="true">Tags de risco · Luneta</span>
-          <span className="sr-only">Tags de risco: recurso do plano Luneta. Conhecer o plano</span>
-        </span>
-      </span>
-    </button>
   );
 }

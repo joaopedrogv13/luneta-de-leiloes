@@ -175,6 +175,62 @@ test("plano Lente: sem tags nem selo em nada, filtros e ordens de tag/selo ignor
   assert.equal(paraPlano(ITENS[0]!, "luneta"), ITENS[0]);
 });
 
+test("plano Lente: os filtros avançados (fora dos 6 prometidos) e as ordens da Luneta são ignorados no servidor", () => {
+  const todos = ids({});
+  // cada filtro avançado sozinho filtra na Luneta e não filtra nada no Lente
+  const avancados: Filtros[] = [
+    { areaMin: 100 },
+    { areaMax: 70 },
+    { lanceM2Max: 2000 },
+    { quartosMin: 3 },
+    { vagasMin: 2 },
+    { modalidade: ["leilao"] },
+    { praca: ["2"] },
+    { financiamento: true },
+    { fgts: true },
+    { parcelamento: true },
+    { ocupacao: ["desocupado"] },
+    { natureza: ["judicial"] },
+    { fonte: ["leiloesjudiciais_api"] },
+    { comFoto: false },
+  ];
+  for (const f of avancados) {
+    const nome = JSON.stringify(f);
+    assert.ok(ids(f).length < todos.length, `${nome} filtra na Luneta`);
+    assert.deepEqual(ids(f, { plano: "lente" }), todos, `${nome} não filtra no Lente`);
+  }
+  // os 6 prometidos valem no Lente igual à Luneta
+  const doLente: Filtros[] = [{ uf: ["SP"] }, { cidade: ["MG|Uberlândia"] }, { tipo: ["casa"] }, { lanceMax: 200000 }, { avaliacaoMin: 250000 }, { desagioMin: 30 }, { q: "morumbi" }];
+  for (const f of doLente) assert.deepEqual(ids(f, { plano: "lente" }), ids(f), JSON.stringify(f));
+  // misturados: só os do Lente valem
+  assert.deepEqual(ids({ uf: ["SP"], quartosMin: 3, comFoto: true }, { plano: "lente" }), ids({ uf: ["SP"] }));
+  // "2 quartos" escrito na busca é o mesmo filtro de quartos: no Lente, só o resto da busca vale (R4-VAZ-06)
+  assert.deepEqual(ids({ q: "ap 2 quartos" }, { plano: "lente" }), ids({ tipo: ["apartamento"] }, { plano: "lente" }), "o \"ap\" continua apartamento");
+  assert.deepEqual(ids({ q: "2+ quartos" }, { plano: "lente" }), todos, "só quartos na busca: nada filtra no Lente");
+  assert.ok(ids({ q: "2+ quartos" }).length < todos.length, "na Luneta, filtra");
+
+  // ordens: área e R$/m² são do Lente; alertas, selo e localização caem na padrão
+  const ordem = (o: Ordem, plano: Busca["plano"]) => buscar(IX, busca({}, { ordem: o, plano }), { agora: AGORA }).itens.map((i) => i.id);
+  for (const o of ["area-desc", "m2-asc", "lance-asc", "recentes"] as const) assert.deepEqual(ordem(o, "lente"), ordem(o, "luneta"), o);
+  for (const o of ["alertas", "selo", "localizacao"] as const) assert.deepEqual(ordem(o, "lente"), ordem("desagio", "lente"), o);
+});
+
+test("plano Lente: as facetas dos filtros avançados não saem; as do Lente, sim", () => {
+  const lente = buscar(IX, busca({}, { plano: "lente" }), { agora: AGORA });
+  const luneta = buscar(IX, busca(), { agora: AGORA });
+  for (const k of ["modalidade", "praca", "ocupacao", "natureza", "fonte", "tags", "selo"] as const) {
+    assert.ok(luneta.facetas[k].length > 0, `${k} na Luneta`);
+    assert.deepEqual(lente.facetas[k], [], `${k} vazia no Lente`);
+  }
+  assert.deepEqual([lente.facetas.lanceM2, lente.facetas.area], [null, null]);
+  assert.deepEqual([lente.facetas.financiamento, lente.facetas.fgts, lente.facetas.parcelamento, lente.facetas.comFoto], [0, 0, 0, 0]);
+  assert.deepEqual(lente.facetas.notaLocal, []);
+  // as do Lente continuam iguais às da Luneta
+  for (const k of ["uf", "cidade", "bairro", "tipo"] as const) assert.deepEqual(lente.facetas[k], luneta.facetas[k], k);
+  for (const k of ["lance", "avaliacao", "desagio"] as const) assert.deepEqual(lente.facetas[k], luneta.facetas[k], k);
+  assert.equal(lente.facetas.comData, luneta.facetas.comData);
+});
+
 test("facetas: cada uma conta com os OUTROS filtros; zero só aparece se escolhido", () => {
   const r = buscar(IX, busca({ uf: ["MG"], tipo: ["casa"] }), { agora: AGORA });
   assert.equal(r.total, 1);

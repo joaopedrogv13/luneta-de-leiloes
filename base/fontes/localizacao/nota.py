@@ -23,8 +23,9 @@ Passo a passo (o README desta pasta explica em português simples; a página "Co
 4. **Percentil ponderado** (C11): a nota do componente é a posição do imóvel entre as células da cidade, pesadas pelos
    moradores: P = 100 × (moradores abaixo + metade dos moradores empatados) / moradores. Empate usa o ranking médio
    (sem isso, meia cidade sem estação ganharia 0).
-5. **Pesos redistribuídos.** Indicador que a cidade não tem (nenhuma estação, nenhum ponto de ônibus no OSM, nenhum
-   parque mapeado) sai do componente; componente sem nenhum indicador sai da nota e o peso dele vai para os outros, na
+5. **Pesos redistribuídos.** Indicador que a cidade não tem (nenhuma estação, nenhum parque mapeado, ou pontos de ônibus
+   no OSM com o mapa incompleto: menos de 10% dos pontos do Censo, ou o morador típico sem nenhum ponto mapeado a 500 m)
+   sai do componente; componente sem nenhum indicador sai da nota e o peso dele vai para os outros, na
    proporção, com o motivo gravado. Ponto sem domicílio a 1 km fica sem renda e sem infraestrutura (idem).
 6. **Nota bruta** = média dos componentes pelos pesos efetivos. **Nota final** = percentil da nota bruta do imóvel entre
    as notas brutas das células da cidade (0 a 100): "melhor localizado que X% dos moradores".
@@ -34,7 +35,8 @@ Passo a passo (o README desta pasta explica em português simples; a página "Co
 8. **Cidade pequena** (menos de 20 mil moradores na grade ou menos de 50 células habitadas): sem nota de 0 a 100; os
    indicadores absolutos e a posição em terços.
 9. **Área de risco (C10):** BATER (IBGE e Cemaden, 2018, base de 2010) só como alerta, sem teto: o ponto cai dentro ou
-   a menos de 100 m de uma área mapeada (no aproximado, a menos de 500 m do centro do bairro). `coberturaRisco` diz se a cidade
+   perto de uma área mapeada. "Perto" é a incerteza do ponto, entre 100 e 500 m, em qualquer precisão (número, rua ou
+   bairro): a rua com ±230 m de incerteza não pode dizer "nenhuma área a menos de 100 m" (revisão final da rodada 4, M2). `coberturaRisco` diz se a cidade
    tem mapeamento; "sem mapeamento" nunca vira "sem risco".
 
 Saídas (em colunas, como o imoveis.json.gz):
@@ -93,6 +95,11 @@ SUBMETRICAS = {
 }
 DECAIMENTO_M = {"estacao_m": 800.0, "parque_m": 400.0}
 COBERTURA_OSM_ONIBUS = 0.10
+#: Os pontos de ônibus do OSM só entram se o morador típico da cidade (mediana pelos moradores) tiver pelo menos este
+#: número de pontos mapeados a 500 m. Com a regra dos 10% sozinha, 124 das 265 cidades entravam com o "comum" igual a 0
+#: (Goiânia, São Gonçalo, Duque de Caxias...): o mapa quase vazio dava "0 pontos de ônibus" numa cidade metropolitana
+#: (revisão final da rodada 4, M1).
+ONIBUS_OSM_COMUM_MIN = 1
 CIDADE_PEQUENA_MORADORES = 20_000
 CIDADE_PEQUENA_CELULAS = 50
 FAIXA_RAIO_MIN_M = 300
@@ -206,6 +213,11 @@ def pesos_efetivos(disponiveis: list[str]) -> dict[str, int]:
     return inteiros
 
 
+def raio_risco(desvio: float | None) -> float:
+    """Até onde procurar a área de risco (m): a incerteza do ponto, entre 100 e 500 m, em qualquer precisão (M2)."""
+    return min(RISCO_APROX_MAX_M, max(RISCO_PERTO_M, float(desvio or RISCO_PERTO_M)))
+
+
 def terco(p: float | None) -> str | None:
     if p is None or not math.isfinite(p):
         return None
@@ -246,7 +258,7 @@ def ler_imoveis() -> list[dict]:
         saida.append({
             "id": i, "uf": c["uf"][k], "cidade": c["cidade"][k], "tipo": c["tipo"][k], "lat": c["lat"][k], "lon": c["lon"][k],
             "precisao": precisao, "desvio": g.get("desvio_m") if g.get("precisao") == precisao else None,
-            "motivo_geo": g.get("motivo"),
+            "motivo_geo": g.get("motivo"), "setor": g.get("setor") if g.get("precisao") == precisao else None,
         })
     return saida
 
@@ -385,7 +397,10 @@ def calcular(cidades: list[dict], imoveis: list[dict], codigos: dict[str, int | 
         cel_lat, cel_lon, cel_pop = celulas["lat"][ic], celulas["lon"][ic], celulas["pop"][ic]
         ks = por_cidade_imoveis.get(code, [])
         im = [imoveis[k] for k in ks]
-        com_ponto = [i for i in im if i["lat"] is not None and i["precisao"] in ("numero", "rua", "bairro")]
+        # o setor do Censo do ponto é de outro município (a rua achada no CNEFE é da cidade vizinha): fica "cidade", sem
+        # nota (2 imóveis em Monte Mor/SP com o ponto em Hortolândia; revisão final da rodada 4, M3)
+        fora_do_municipio = {i["id"] for i in im if i.get("setor") and str(i["setor"])[:7] != str(code)}
+        com_ponto = [i for i in im if i["lat"] is not None and i["precisao"] in ("numero", "rua", "bairro") and i["id"] not in fora_do_municipio]
         extra = ruas.get(code, [])
         lat = np.concatenate([cel_lat, [i["lat"] for i in com_ponto], [r["lat"] for r in extra]]).astype(np.float64)
         lon = np.concatenate([cel_lon, [i["lon"] for i in com_ponto], [r["lon"] for r in extra]]).astype(np.float64)
@@ -398,10 +413,11 @@ def calcular(cidades: list[dict], imoveis: list[dict], codigos: dict[str, int | 
         fora: dict[str, str] = {}
         incluir: dict[str, list[str]] = {}
         cob_onibus = r.cobertura["onibus_osm"] / r.cobertura["faces_onibus"] if r.cobertura["faces_onibus"] > 0 else (1.0 if r.cobertura["onibus_osm"] else 0.0)
+        comum_onibus = mediana_ponderada(r.valores["onibus_500"][:nc], cel_pop) if "onibus_500" in r.valores else None
         for comp, subs in SUBMETRICAS.items():
             ok = []
             for s in subs:
-                if s == "onibus_500" and (not tem_osm or cob_onibus < COBERTURA_OSM_ONIBUS):
+                if s == "onibus_500" and (not tem_osm or cob_onibus < COBERTURA_OSM_ONIBUS or (comum_onibus or 0) < ONIBUS_OSM_COMUM_MIN):
                     continue
                 if s in ("estacao_m", "parque_m") and not (tem_osm and r.tem.get(s)):
                     continue
@@ -456,7 +472,7 @@ def calcular(cidades: list[dict], imoveis: list[dict], codigos: dict[str, int | 
         tree_cel = cKDTree(proj.xy(cel_lat, cel_lon)) if nc else None
         for j, i in enumerate(com_ponto):
             k = nc + j
-            reg = {"cidade": code, "precisao": i["precisao"], "lat": i["lat"], "lon": i["lon"], "desvio": i["desvio"],
+            reg = {"cidade": code, "precisao": i["precisao"], "lat": i["lat"], "lon": i["lon"], "desvio": i["desvio"], "geo": i["motivo_geo"],
                    "comp": {cc: (None if not math.isfinite(notas_comp[cc][k]) else float(notas_comp[cc][k])) for cc in COMPONENTES},
                    "ind": {s: (float(r.valores[s][k]) if s in r.valores and math.isfinite(r.valores[s][k]) else None) for s in met.INDICADORES},
                    "perda": float(r.perda_renda[k]) if math.isfinite(r.perda_renda[k]) else None,
@@ -485,13 +501,13 @@ def calcular(cidades: list[dict], imoveis: list[dict], codigos: dict[str, int | 
             if reg["nota"] is None and reg["situacao"] == "calculada":
                 reg.update(situacao="sem_nota", motivo="sem_ponto")
             # risco
-            maximo = RISCO_PERTO_M if i["precisao"] in ("numero", "rua") else min(RISCO_APROX_MAX_M, max(RISCO_PERTO_M, float(i["desvio"] or RISCO_PERTO_M)))
+            maximo = raio_risco(i["desvio"])
             reg["risco_m"] = distancia_risco(arv, geos, i["lat"], i["lon"], maximo) if code in munis_bater else None
             res_imoveis[i["id"]] = reg
         for i in im:
             if i["id"] in res_imoveis:
                 continue
-            res_imoveis[i["id"]] = {"cidade": code, "precisao": i["precisao"], "lat": None, "lon": None, "desvio": None, "comp": {}, "ind": {},
+            res_imoveis[i["id"]] = {"cidade": code, "precisao": "cidade" if i["id"] in fora_do_municipio else i["precisao"], "lat": None, "lon": None, "desvio": None, "comp": {}, "ind": {},
                                     "perda": None, "bruta": None, "nota": None, "faixa": None, "situacao": "sem_nota",
                                     "motivo": "rural" if i["motivo_geo"] == "rural" else "cidade", "risco_m": None}
         # --- validação (ruas do ITBI)
@@ -574,6 +590,9 @@ def gravar(res: dict, imoveis: list[dict], usar_v06006: bool, data_osm: str | No
             osm[s].append(valor_indicador(s, x["ind"].get(s)))
         col["incompleto_renda"].append(1 if (x["perda"] or 0) > PERDA_INCOMPLETO else 0)
         col["risco_m"].append(arred(x["risco_m"], 10) if x["risco_m"] is not None else None)
+        # bairro "rebaixado": a rua foi achada, mas os endereços dela se espalham demais (o ponto é o meio da rua, não o
+        # centro do bairro; a tela diz isso; M3)
+        col["rua_espalhada"].append(1 if x["precisao"] == "bairro" and x.get("geo") == "desvio_alto" else None)
     principal = {
         "formato": "luneta-localizacao", "versao": VERSAO, "gerado_em": hoje,
         "pesos": PESOS, "situacoes": SITUACOES, "motivos": MOTIVOS, "precisoes": PRECISOES,
@@ -581,7 +600,7 @@ def gravar(res: dict, imoveis: list[dict], usar_v06006: bool, data_osm: str | No
         "regras": {"raio_comercio_m": met.RAIO_COMERCIO_M, "raio_servico_m": met.RAIO_SERVICO_M, "raio_entorno_m": met.RAIO_ENTORNO_M,
                    "decaimento_m": DECAIMENTO_M, "cidade_pequena_moradores": CIDADE_PEQUENA_MORADORES, "cidade_pequena_celulas": CIDADE_PEQUENA_CELULAS,
                    "risco_perto_m": RISCO_PERTO_M, "risco_aprox_max_m": RISCO_APROX_MAX_M, "perda_incompleto": PERDA_INCOMPLETO,
-                   "cobertura_osm_onibus": COBERTURA_OSM_ONIBUS},
+                   "cobertura_osm_onibus": COBERTURA_OSM_ONIBUS, "onibus_osm_comum_min": ONIBUS_OSM_COMUM_MIN},
         "fontes": FONTES, "nota_osm": "A nota final usa também os componentes de transporte e lazer, derivados do OpenStreetMap (© contribuidores do OpenStreetMap, ODbL); as colunas do OSM estão em localizacao-osm.json.gz.",
         "colunas": dict(col),
     }

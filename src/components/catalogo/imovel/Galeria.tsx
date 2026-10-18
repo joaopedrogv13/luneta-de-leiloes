@@ -223,8 +223,14 @@ export function Galeria({ fotos, tipo, titulo, semFotoTexto }: { fotos: string[]
       <div
         role="img"
         aria-label={texto}
-        // sem foto: no celular uma faixa mais baixa (16:9); no tablet, 4:3 ao lado do título
-        className="relative isolate -mx-4 aspect-[16/9] overflow-hidden sm:mx-0 sm:aspect-[16/10] sm:rounded-3xl sm:border sm:border-nevoa/15 md:max-lg:aspect-[4/3] lg:aspect-auto lg:h-[clamp(240px,38vh,380px)] baixa:max-h-[62vh]"
+        // sem foto na fonte (o servidor já sabe): no celular uma faixa mais baixa (16:9); no tablet, 4:3 ao lado do título.
+        // As fotos que falharam no navegador ficam na MESMA caixa da galeria: encolher depois da primeira pintura
+        // empurrava o título 180 px para cima (CLS; revisão final da rodada 4, UX-13).
+        className={
+          todasFalharam
+            ? "relative isolate -mx-4 aspect-[4/3] overflow-hidden sm:mx-0 sm:aspect-[16/10] sm:rounded-3xl sm:border sm:border-nevoa/15 md:max-lg:aspect-[4/3] lg:aspect-auto lg:h-[clamp(320px,58vh,560px)] baixa:max-h-[62vh]"
+            : "relative isolate -mx-4 aspect-[16/9] overflow-hidden sm:mx-0 sm:aspect-[16/10] sm:rounded-3xl sm:border sm:border-nevoa/15 md:max-lg:aspect-[4/3] lg:aspect-auto lg:h-[clamp(240px,38vh,380px)] baixa:max-h-[62vh]"
+        }
         style={{ background: FUNDO }}
       >
         <Desenho tipo={tipo} />

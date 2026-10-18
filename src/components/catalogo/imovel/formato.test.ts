@@ -229,9 +229,17 @@ test("frase da comparação: abaixo, acima, igual e \"vezes\" a partir do dobro"
   assert.equal(predicadoComparacao(compararComMedia(112, 100)!, alvoDaReferencia({ escopo: "cidade" })), "está 12% acima da média da cidade");
   assert.equal(predicadoComparacao(compararComMedia(100.4, 100)!, bairro), "está praticamente igual à média do bairro");
   assert.equal(predicadoComparacao(compararComMedia(240, 100)!, alvoDaReferencia({ escopo: "uf" })), "é 2,4 vezes a média do estado");
-  const itbi = alvoDaReferencia({ escopo: "rua", fonte: "itbi" });
-  assert.equal(predicadoComparacao(compararComMedia(80, 100)!, itbi), "está 20% abaixo do preço médio pago na rua");
-  assert.equal(predicadoComparacao(compararComMedia(100, 100)!, itbi), "está praticamente igual ao preço médio pago na rua");
+  // o nome do número do ITBI depende da cidade (R4-VAZ-04): declarado (SP, Rio), base de cálculo (POA, Fortaleza),
+  // avaliação da prefeitura (Recife); sem a informação, "valor médio registrado"
+  const itbi = alvoDaReferencia({ escopo: "rua", fonte: "itbi", valorItbi: "declarado" });
+  assert.equal(predicadoComparacao(compararComMedia(80, 100)!, itbi), "está 20% abaixo do preço médio declarado na rua");
+  assert.equal(predicadoComparacao(compararComMedia(100, 100)!, itbi), "está praticamente igual ao preço médio declarado na rua");
+  const base = alvoDaReferencia({ escopo: "bairro", fonte: "itbi", valorItbi: "base_calculo" });
+  assert.equal(predicadoComparacao(compararComMedia(80, 100)!, base), "está 20% abaixo da base de cálculo média do ITBI no bairro");
+  assert.equal(predicadoComparacao(compararComMedia(100, 100)!, base), "está praticamente igual à base de cálculo média do ITBI no bairro");
+  const recife = alvoDaReferencia({ escopo: "cidade", fonte: "itbi", valorItbi: "avaliacao_prefeitura" });
+  assert.equal(predicadoComparacao(compararComMedia(120, 100)!, recife), "está 20% acima da avaliação média da prefeitura para o ITBI na cidade");
+  assert.equal(alvoDaReferencia({ escopo: "rua", fonte: "itbi" }).nome, "valor médio registrado no ITBI na rua");
   assert.equal(diferencaCurta(compararComMedia(69, 100)!), "31% abaixo");
   assert.equal(diferencaCurta(compararComMedia(101, 100)!), "igual");
   assert.equal(diferencaCurta(compararComMedia(1300, 100)!), "13 vezes");
@@ -265,7 +273,11 @@ test("referência da frase: o preço pago (ITBI) com compras suficientes; senão
   assert.equal(referenciaPrincipal([ref({ amostra: 14 })])?.escopo, "bairro");
   assert.deepEqual(referenciasItbi([cidade, itbiBairro, rua]), [itbiBairro]);
   // a descrição diz de onde vem o número
-  assert.equal(descricaoReferencia(itbi("bairro", 10)), `preço médio pago em 10 compras registradas na prefeitura (ITBI) no bairro ${itbi("bairro", 10).nome}`);
+  assert.equal(descricaoReferencia(itbi("bairro", 10)), `valor médio registrado em 10 compras registradas na prefeitura (ITBI) no bairro ${itbi("bairro", 10).nome}`);
+  assert.equal(
+    descricaoReferencia({ ...itbi("bairro", 10), valorItbi: "base_calculo" }),
+    `base de cálculo média em 10 compras registradas na prefeitura (ITBI) no bairro ${itbi("bairro", 10).nome}`,
+  );
   assert.match(descricaoReferencia(bairro), /^avaliação média de 14 .* em leilão no bairro /);
 });
 

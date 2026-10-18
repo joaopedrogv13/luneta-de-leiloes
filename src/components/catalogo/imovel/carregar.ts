@@ -1,7 +1,7 @@
 import "server-only";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { paginaImovel } from "@/lib/catalogo/servidor";
+import { existeImovel, paginaImovel } from "@/lib/catalogo/servidor";
 import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
 
 /**
@@ -29,7 +29,8 @@ export async function garantirImovel(conjunto: Conjunto, params: Promise<{ id: s
   const { id } = await params;
   let existe = true;
   try {
-    existe = (await carregarImovel(conjunto, lerId(id), "luneta")) !== null;
+    // só a existência: nada do plano (a página da Luneta não é montada num pedido do Lente)
+    existe = await existeImovel(conjunto, lerId(id));
   } catch {
     // a página mostra o erro
   }

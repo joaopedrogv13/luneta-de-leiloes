@@ -19,6 +19,7 @@ import {
   notaGrande,
   ondeRisco,
   resumoTercos,
+  tercosEmFrase,
   rotaMetodoLocal,
   SEM_DADO_COMPONENTE,
   seloPrecisao,
@@ -49,13 +50,17 @@ test("cidade com artigo na frase", () => {
   assert.equal(daCidade("Rio de Janeiro/RJ"), "do Rio de Janeiro/RJ");
   assert.equal(daCidade("Recife/PE"), "do Recife/PE");
   assert.equal(daCidade("Porto Alegre/RS"), "de Porto Alegre/RS");
+  // o uso comum (M18)
+  assert.equal(daCidade("Serra/ES"), "da Serra/ES");
+  assert.equal(daCidade("Praia Grande/SP"), "da Praia Grande/SP");
+  assert.equal(daCidade("Guarujá/SP"), "do Guarujá/SP");
   assert.equal(frasePercentil(55, "Rio de Janeiro/RJ"), "Melhor localizado que 55% dos moradores do Rio de Janeiro/RJ");
 });
 
-test("faixa da nota aproximada", () => {
-  assert.equal(fraseFaixa([41, 76], "Santos/SP"), "Melhor localizado que 41% a 76% dos moradores de Santos/SP");
-  assert.equal(fraseFaixa([76, 41], "Santos/SP"), "Melhor localizado que 41% a 76% dos moradores de Santos/SP");
-  assert.equal(fraseFaixa([0, 100], "Santos/SP"), "Melhor localizado que 1% a 99% dos moradores de Santos/SP");
+test("faixa da nota aproximada: a faixa do meio, nunca o intervalo inteiro (M4)", () => {
+  assert.equal(fraseFaixa([41, 76], "Santos/SP"), "Nota provável entre 41 e 76 (faixa do meio), comparada com os moradores de Santos/SP");
+  assert.equal(fraseFaixa([76, 41], "Santos/SP"), "Nota provável entre 41 e 76 (faixa do meio), comparada com os moradores de Santos/SP");
+  assert.equal(fraseFaixa([0, 100], "Santos/SP"), "Nota provável entre 1 e 99 (faixa do meio), comparada com os moradores de Santos/SP");
   assert.equal(fraseFaixa([50, 50], "Santos/SP"), "Melhor localizado que 50% dos moradores de Santos/SP");
   assert.doesNotMatch(fraseFaixa([0, 100], "Santos/SP"), proibidos);
 });
@@ -85,6 +90,13 @@ test("selo da precisão", () => {
   const bairro = seloPrecisao({ precisao: "bairro", desvioM: 870, situacao: "aproximada", faixa: [41, 76] })!;
   assert.equal(bairro.rotulo, "Só no bairro: nota aproximada");
   assert.match(bairro.explicacao, /entre 41 e 76/);
+  assert.match(bairro.explicacao, /faixa do meio/);
+  assert.doesNotMatch(bairro.explicacao, /menos bem localizadas às mais bem/, "a faixa não é o intervalo inteiro (M4)");
+  // a rua achada, mas espalhada: o meio da rua, nunca "centro do bairro" (M3)
+  const espalhada = seloPrecisao({ precisao: "bairro", desvioM: 1545, situacao: "aproximada", faixa: [41, 76], pontoRuaEspalhada: true })!;
+  assert.equal(espalhada.rotulo, "Rua espalhada: nota aproximada");
+  assert.match(espalhada.explicacao, /se espalham por cerca de 1,5\u00a0km/);
+  assert.doesNotMatch(espalhada.explicacao, /centro do bairro/);
   assert.equal(seloPrecisao({ precisao: "cidade", desvioM: null, situacao: "sem_nota", faixa: null })!.nivel, "sem");
   assert.equal(seloPrecisao({ precisao: "numero", desvioM: null, situacao: "calculada", faixa: null }, true)!.rotulo, "Exemplo fictício");
 });
@@ -93,10 +105,18 @@ test("cidade pequena: terços, sem número de 0 a 100", () => {
   const c = (terco: "baixo" | "medio" | "alto" | null) => ({ terco });
   assert.equal(cidadePequena({ componentes: [{ ...c("alto"), chave: "servicos", rotulo: "", nota: null, peso: 25, indicadores: [] }] }), true);
   assert.equal(cidadePequena({ componentes: [{ chave: "servicos", rotulo: "", nota: 40, peso: 25, indicadores: [] }] }), false);
-  assert.equal(resumoTercos([c("alto"), c("medio"), c("alto"), c("alto"), c("alto"), c("alto")], "Cocal do Sul/SC"), "Em 5 das 6 partes, o entorno fica acima da maioria de Cocal do Sul/SC.");
-  assert.equal(resumoTercos([c("alto"), c("alto")], "Cocal do Sul/SC"), "Em todas as 2 partes, o entorno fica acima da maioria de Cocal do Sul/SC.");
-  assert.equal(resumoTercos([c("baixo"), c("baixo"), c("medio")], "Patos/PB"), "Em 2 das 3 partes, o entorno fica abaixo da maioria de Patos/PB.");
-  assert.equal(resumoTercos([c("medio"), c("medio")], "Patos/PB"), "Em todas as partes medidas, o entorno fica no meio de Patos/PB.");
+  // as três contagens, sempre (M5): nada de escolher um lado no empate
+  assert.equal(
+    resumoTercos([c("alto"), c("medio"), c("alto"), c("alto"), c("alto"), c("alto")], "Cocal do Sul/SC"),
+    "Comparado com o resto de Cocal do Sul/SC, das 6 partes: 5 partes acima da maioria e 1 no meio.",
+  );
+  assert.equal(resumoTercos([c("alto"), c("alto")], "Cocal do Sul/SC"), "Comparado com o resto de Cocal do Sul/SC, das 2 partes: 2 partes acima da maioria.");
+  assert.equal(resumoTercos([c("baixo"), c("baixo"), c("medio")], "Patos/PB"), "Comparado com o resto de Patos/PB, das 3 partes: 1 parte no meio e 2 abaixo da maioria.");
+  assert.equal(resumoTercos([c("medio"), c("medio")], "Patos/PB"), "Comparado com o resto de Patos/PB, das 2 partes: 2 partes no meio.");
+  // Canitar: 1 acima, 3 no meio, 2 abaixo; Demerval Lobão: 3 e 3 (o empate não vira "acima")
+  const canitar = [c("alto"), c("medio"), c("medio"), c("medio"), c("baixo"), c("baixo")];
+  assert.equal(tercosEmFrase(canitar), "1 parte acima da maioria, 3 no meio e 2 abaixo");
+  assert.equal(tercosEmFrase([c("alto"), c("alto"), c("alto"), c("baixo"), c("baixo"), c("baixo")]), "3 partes acima da maioria e 3 abaixo");
   assert.match(resumoTercos([c(null)], "Patos/PB"), /Não há dados/);
   assert.equal(valorComponente({ nota: null, terco: "alto" }), "acima da maioria da cidade");
   assert.equal(valorComponente({ nota: null, terco: "baixo" }), "abaixo da maioria da cidade");
@@ -122,6 +142,17 @@ test("componente sem dado e indicadores com o comum na cidade", () => {
 });
 
 test("área de risco: sem alerta nunca vira 'sem risco'", () => {
+  // a rua: "do ponto da rua do endereço", nunca "do imóvel" (M2)
+  const rua = textoRiscoSemAlerta({ coberturaRisco: true, riscoRaioM: 230, precisao: "rua" });
+  assert.equal(rua.titulo, "Nenhuma área de risco mapeada a menos de 230 m do ponto da rua do endereço");
+  const espalhada = textoRiscoSemAlerta({ coberturaRisco: true, riscoRaioM: 500, precisao: "bairro", pontoRuaEspalhada: true });
+  assert.equal(espalhada.titulo, "Nenhuma área de risco mapeada a menos de 500 m do meio da rua do endereço");
+  // cidade fora da base e imóvel rural: "não conferida", não "sem mapeamento" (M16)
+  const fora = textoRiscoSemAlerta({ coberturaRisco: false, riscoRaioM: null, precisao: "cidade", referencia: null, situacao: "sem_nota", motivo: "A cidade deste imóvel não foi encontrada" });
+  assert.match(fora.texto, /a cidade deste imóvel não foi encontrada nas bases/);
+  assert.doesNotMatch(fora.texto, /não tem mapeamento/);
+  const rural = textoRiscoSemAlerta({ coberturaRisco: true, riscoRaioM: null, precisao: "cidade", referencia: { nome: "Atibaia/SP", moradores: 1, celulas: 1 }, situacao: "sem_nota", motivo: "Imóvel rural: a nota mede..." });
+  assert.match(rural.texto, /^Imóvel rural: não conferimos a área de risco/);
   const sem = textoRiscoSemAlerta({ coberturaRisco: false, riscoRaioM: null, precisao: "numero" });
   assert.match(sem.texto, /Esta cidade não tem mapeamento de risco nessa base/);
   assert.match(sem.texto, /isso não quer dizer que não haja risco/);
@@ -133,8 +164,10 @@ test("área de risco: sem alerta nunca vira 'sem risco'", () => {
   const naoConferido = textoRiscoSemAlerta({ coberturaRisco: true, riscoRaioM: null, precisao: "cidade" });
   assert.match(naoConferido.titulo, /não deu para conferir/);
   for (const t of [sem, perto, bairro, naoConferido]) assert.doesNotMatch(`${t.titulo} ${t.texto}`, /sem risco|risco zero/i);
-  assert.equal(ondeRisco(0, false), "dentro de área de risco mapeada");
-  assert.equal(ondeRisco(260, true), "área de risco mapeada a cerca de 260 m do centro do bairro");
+  assert.equal(ondeRisco(0, { precisao: "numero" }), "dentro de área de risco mapeada");
+  assert.equal(ondeRisco(260, { precisao: "bairro" }), "área de risco mapeada a cerca de 260 m do centro do bairro");
+  assert.equal(ondeRisco(0, { precisao: "rua" }), "ponto da rua do endereço dentro de área de risco mapeada");
+  assert.equal(ondeRisco(120, { precisao: "rua" }), "área de risco mapeada a cerca de 120 m do ponto da rua do endereço");
 });
 
 test("linha do resumo lateral e motivo curto", () => {
@@ -150,7 +183,7 @@ test("linha do resumo lateral e motivo curto", () => {
     { chave: "servicos" as const, rotulo: "", nota: null, peso: 25, indicadores: [], terco: "alto" as const },
     { chave: "infra" as const, rotulo: "", nota: null, peso: 25, indicadores: [], terco: "medio" as const },
   ];
-  assert.equal(linhaResumoNota({ ...base, situacao: "sem_nota", precisao: "rua", nota: null, componentes: pequena }), "Cidade pequena: acima da maioria em 1 de 2 partes");
+  assert.equal(linhaResumoNota({ ...base, situacao: "sem_nota", precisao: "rua", nota: null, componentes: pequena }), "Cidade pequena: 1 parte acima da maioria e 1 no meio");
   assert.equal(motivoCurto({ situacao: "sem_nota", precisao: "rua", motivo: "x", componentes: pequena }), "cidade pequena");
   for (let n = 0; n <= 100; n++) assert.doesNotMatch(linhaResumoNota({ ...base, situacao: "calculada", precisao: "numero", nota: n }), proibidos);
 });

@@ -1,13 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LUNETA_PRICE } from "@/components/assinante/shared";
 import { RichText } from "@/components/ui/RichText";
-import { IconeAneis } from "../ui/icones";
+import { FAVORITOS_ROTULO } from "@/lib/catalogo/produto";
+import { ORDEM_ROTULO } from "@/lib/catalogo/rotulos";
+import { ORDEM_PADRAO, type Ordem } from "@/lib/catalogo/tipos";
+import { ROTA_PLANOS } from "../planos/textos";
+import { IconeAneis, IconeCadeado } from "../ui/icones";
 
 /**
- * Convite do plano Lente, no topo da lista: o que fica travado e "Assinar Luneta" (na demonstração, só
- * troca a visão para a Luneta; não há pagamento).
+ * Convite do plano Lente, no topo da lista: o que a Luneta acrescenta (a mesma lista da tabela de planos),
+ * "Comparar os planos" e "Assinar Luneta" (na demonstração, só troca a visão para a Luneta; não há pagamento).
  */
 export function AvisoLente({ onAssinar }: { onAssinar: () => void }) {
   return (
@@ -16,9 +21,12 @@ export function AvisoLente({ onAssinar }: { onAssinar: () => void }) {
         <IconeAneis tamanho={18} />
       </span>
       <div className="min-w-[220px] flex-1">
-        <p className="font-display text-[15px] leading-snug font-bold text-luar">Você está vendo como Lente: tags de risco, selos e favoritos ficam travados.</p>
+        <p className="font-display text-[15px] leading-snug font-bold text-luar">Você está vendo como Lente.</p>
         <p className="mt-0.5 text-[13px] leading-normal text-nevoa">
-          Com a Luneta você vê os riscos de cada leilão, os selos Promissor, Na Mira e Alvo, e recebe alerta quando a praça muda.
+          Na Luneta: tags de risco e selos, filtros avançados, simulador de lance, preço da região, nota de localização e {FAVORITOS_ROTULO}.{" "}
+          <Link href={ROTA_PLANOS} prefetch={false} className="font-semibold whitespace-nowrap text-latao-texto underline-offset-4 hover:text-luar hover:underline">
+            Comparar os planos
+          </Link>
         </p>
       </div>
       <button
@@ -28,6 +36,59 @@ export function AvisoLente({ onAssinar }: { onAssinar: () => void }) {
       >
         Assinar Luneta · <RichText text={`R$ ${LUNETA_PRICE}/mês`} />
       </button>
+    </div>
+  );
+}
+
+/**
+ * Um link da Luneta aberto no Lente (filtro avançado, de tags, de selo ou de nota na URL, ou a ordem por alertas, selo
+ * ou localização): o servidor ignora o que não é do plano (planos.ts), e aqui a tela diz isso, sem quebrar. "Conhecer a
+ * Luneta" abre a janela; "Tirar da busca" limpa a URL.
+ */
+export function AvisoForaDoPlano({
+  filtros,
+  ordem,
+  onConhecer,
+  onTirar,
+}: {
+  /** as pílulas dos filtros ignorados ("2+ quartos", "Área de 50 a 80 m²") */
+  filtros: string[];
+  /** a ordem ignorada (a lista está na padrão) */
+  ordem: Ordem | null;
+  onConhecer: (abridor: HTMLElement) => void;
+  onTirar: () => void;
+}) {
+  const varios = filtros.length > 1;
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-dashed border-latao/55 bg-latao/[0.05] px-4 py-3.5 sm:px-5">
+      <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full border border-latao/60 text-latao-texto max-sm:hidden">
+        <IconeCadeado tamanho={16} />
+      </span>
+      <div className="min-w-[220px] flex-1 text-[13.5px] leading-normal text-nevoa">
+        {filtros.length > 0 && (
+          <p>
+            <strong className="font-semibold text-luar">{varios ? "Estes filtros são do plano Luneta" : "Este filtro é do plano Luneta"}:</strong>{" "}
+            {filtros.join(", ")}. A lista abaixo mostra os imóveis sem {varios ? "esses filtros" : "esse filtro"}.
+          </p>
+        )}
+        {ordem && (
+          <p className={filtros.length ? "mt-1" : ""}>
+            <strong className="font-semibold text-luar">A ordem “{ORDEM_ROTULO[ordem]}” é do plano Luneta:</strong> a lista está em “{ORDEM_ROTULO[ORDEM_PADRAO]}”.
+          </p>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 max-sm:w-full">
+        <button type="button" aria-haspopup="dialog" onClick={(e) => onConhecer(e.currentTarget)} className="btn-outline !min-h-11 !px-4 !text-[13.5px] max-sm:flex-1">
+          Conhecer a Luneta
+        </button>
+        <button
+          type="button"
+          onClick={onTirar}
+          className="inline-flex min-h-11 cursor-pointer items-center rounded-full px-3 text-[13.5px] font-semibold text-luar underline-offset-4 hover:underline max-sm:flex-1 max-sm:justify-center"
+        >
+          Tirar da busca
+        </button>
+      </div>
     </div>
   );
 }

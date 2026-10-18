@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { Filtros } from "./tipos";
+import { buscar, criarIndice } from "./consulta";
+import { filtrosDoPlano, filtrosForaDoPlano, ordemDoPlano } from "./planos";
+import type { Filtros, ImovelResumo } from "./tipos";
 import { contarFiltros, escreverBusca, lerBusca, type EstadoBusca } from "./url";
 
 const COMPLETO: EstadoBusca = {
@@ -97,4 +99,47 @@ test("nota de localização: notaLocalMin (1 a 100, inteiro) e a ordem \"localiz
     assert.equal(lerBusca(new URLSearchParams(`notaLocalMin=${ruim}`)).filtros.notaLocalMin, undefined, ruim);
   }
   assert.equal(contarFiltros({ notaLocalMin: 60 }), 1);
+});
+
+test("link da Luneta aberto no Lente: a URL guarda os filtros avançados (voltam na Luneta), a busca não os usa", () => {
+  const url = "plano=lente&uf=SP&quartosMin=2&areaMin=50&modalidade=leilao&comFoto=1&semTags=ocupado&notaLocalMin=70&ordem=localizacao";
+  const e = lerBusca(new URLSearchParams(url));
+  assert.equal(e.plano, "lente");
+  assert.deepEqual(e.filtros, { uf: ["SP"], areaMin: 50, quartosMin: 2, modalidade: ["leilao"], comFoto: true, semTags: ["ocupado"], notaLocalMin: 70 });
+  assert.equal(e.ordem, "localizacao");
+  // a URL reescrita não perde nada (trocar para a Luneta traz tudo de volta)
+  assert.deepEqual(lerBusca(escreverBusca(e)), e);
+  assert.deepEqual(lerBusca(escreverBusca({ ...e, plano: "luneta" })).filtros, e.filtros);
+  // o que vale no Lente (o servidor busca só com isto; a tela avisa "este filtro é do plano Luneta")
+  assert.deepEqual(filtrosDoPlano(e.filtros, e.plano), { uf: ["SP"] });
+  assert.deepEqual(filtrosForaDoPlano(e.filtros, e.plano), ["areaMin", "quartosMin", "modalidade", "comFoto", "semTags", "notaLocalMin"]);
+  assert.equal(ordemDoPlano(e.ordem, e.plano), "desagio");
+  // e a busca de verdade: SP sem os filtros avançados
+  const ix = criarIndice([
+    { ...BASE, id: "caixa-1", uf: "SP", quartos: 1, area: 30 },
+    { ...BASE, id: "caixa-2", uf: "SP", quartos: 3, area: 90 },
+    { ...BASE, id: "caixa-3", uf: "MG", quartos: 3, area: 90 },
+  ]);
+  const b = { conjunto: "previa" as const, plano: e.plano, filtros: e.filtros, ordem: e.ordem, pagina: 1 };
+  assert.deepEqual(buscar(ix, b).itens.map((i) => i.id).sort(), ["caixa-1", "caixa-2"]);
+  assert.deepEqual(buscar(ix, { ...b, plano: "luneta", filtros: { uf: ["SP"], quartosMin: 2 } }).itens.map((i) => i.id), ["caixa-2"]);
+});
+
+/** Imóvel mínimo para a busca acima. */
+const BASE: ImovelResumo = {
+  id: "x", titulo: "Apartamento", tipo: "apartamento", uf: "SP", cidade: "São Paulo", bairro: "Centro", lat: null, lon: null, precisaoGeo: null,
+  area: 50, areaTerreno: null, quartos: 2, vagas: null, avaliacao: 200000, lance: 100000, desagio: 50, lanceM2: 2000, avaliacaoM2: 4000,
+  modalidade: "leilao", modalidadeFonte: null, praca: null, dataPraca: null, financiamento: null, fgts: null, parcelamento: null, ocupacao: null,
+  judicial: null, fonte: { id: "caixa_csv", nome: "Caixa" }, foto: "https://x.test/f.jpg", totalFotos: 1, selo: 0, seloPendente: false, tags: [],
+  coletadoEm: "2026-10-12", notaLocal: null,
+};
+
+test("plano na URL: LENTE, espaço, vazio ou desconhecido ficam no Lente; sem o parâmetro, a Luneta (R4-VAZ-07)", () => {
+  for (const q of ["plano=LENTE", "plano=Lente", "plano=lente%20", "plano=%20lente", "plano=", "plano=telescopio", "plano=lente&plano=luneta"]) {
+    assert.equal(lerBusca(new URLSearchParams(q)).plano, "lente", q);
+    assert.equal(lerBusca({ plano: new URLSearchParams(q).getAll("plano") }).plano, "lente", q + " (searchParams do Next)");
+  }
+  assert.equal(lerBusca(new URLSearchParams("plano=luneta")).plano, "luneta");
+  assert.equal(lerBusca(new URLSearchParams("uf=SP")).plano, "luneta");
+  assert.equal(lerBusca({}).plano, "luneta");
 });

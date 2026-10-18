@@ -5,59 +5,27 @@
  * por <RichText> como um placeholder visível (borda tracejada em latão). Para publicar, troque o
  * colchete pelo valor real. A lista completa está em PENDENCIAS.md.
  *
- * Este arquivo vai ao navegador (o menu, o FAQ e o formulário são componentes de cliente): só importa tipos. Os textos
+ * Este arquivo vai ao navegador (o menu, o FAQ e o formulário são componentes de cliente): importa só tipos e as regras
+ * curtas de planos.ts e produto.ts (o que o produto já tem: as frases das tags e do alerta de praça dependem disso). Os textos
  * das seções "Decida com números" e "Nota de localização" ficam em ferramentas.ts (só no servidor). O teste
  * src/content/site.test.ts confere que a tabela de planos bate com src/lib/catalogo/planos.ts.
  */
 import type { Filtros, Recurso } from "@/lib/catalogo/tipos";
-
-/** "a", "a e b", "a, b e c" */
-function lista(itens: readonly string[]): string {
-  return itens.length <= 1 ? itens.join("") : `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
-}
+// caminhos relativos: o teste (site.test.ts) importa este arquivo sem o alias "@/"
+import { FILTROS_DA_LUNETA, FILTROS_DO_LENTE, FILTROS_PROMETIDOS } from "../lib/catalogo/planos";
+import { FAVORITOS_ROTULO, PRODUTO } from "../lib/catalogo/produto";
 
 /**
- * Os filtros que a landing promete a cada plano, com as chaves de `Filtros` por trás de cada rótulo. A decisão da
- * rodada 4 (src/lib/catalogo/planos.ts, FILTROS_LENTE): o Lente tem os 6 de sempre (e a busca por texto); o resto é
- * "filtro avançado", do plano Luneta. O teste confere as chaves com FILTROS_LENTE, e o tipo `FiltroSemLugar` obriga a
- * dar lugar na landing a todo filtro novo de `Filtros`.
+ * Os filtros que a landing promete a cada plano: a lista mora em src/lib/catalogo/planos.ts (a mesma da chamada do
+ * painel e da janela da Luneta). O teste confere as chaves com FILTROS_LENTE.
  */
-export const FILTROS_PROMETIDOS = {
-  lente: [
-    { rotulo: "estado", chaves: ["uf"] },
-    { rotulo: "cidade", chaves: ["cidade", "bairro"] },
-    { rotulo: "tipo", chaves: ["tipo"] },
-    { rotulo: "faixa de preço", chaves: ["lanceMin", "lanceMax", "avaliacaoMin", "avaliacaoMax"] },
-    { rotulo: "deságio", chaves: ["desagioMin", "desagioMax"] },
-    { rotulo: "data", chaves: ["dataDe", "dataAte"] },
-  ],
-  luneta: [
-    { rotulo: "área", chaves: ["areaMin", "areaMax"] },
-    { rotulo: "quartos", chaves: ["quartosMin"] },
-    { rotulo: "vagas", chaves: ["vagasMin"] },
-    { rotulo: "R$/m²", chaves: ["lanceM2Min", "lanceM2Max"] },
-    { rotulo: "praça", chaves: ["praca"] },
-    { rotulo: "modalidade", chaves: ["modalidade", "natureza"] },
-    { rotulo: "ocupação", chaves: ["ocupacao"] },
-    { rotulo: "forma de pagamento", chaves: ["financiamento", "fgts", "parcelamento"] },
-    { rotulo: "fonte", chaves: ["fonte"] },
-    { rotulo: "foto", chaves: ["comFoto"] },
-    { rotulo: "tags de risco", chaves: ["comTags", "semTags"] },
-    { rotulo: "selo", chaves: ["selo"] },
-    { rotulo: "nota de localização", chaves: ["notaLocalMin"] },
-  ],
-} as const satisfies Record<"lente" | "luneta", readonly { rotulo: string; chaves: readonly (keyof Filtros)[] }[]>;
+export { FILTROS_PROMETIDOS };
 
 /**
  * Filtros de `Filtros` que a landing não cita (deve ser `never`; o teste confere). Um filtro novo no catálogo entra
  * em FILTROS_PROMETIDOS: no Lente (se estiver em FILTROS_LENTE) ou na Luneta.
  */
 export type FiltroSemLugar = Exclude<keyof Filtros, "q" | (typeof FILTROS_PROMETIDOS)["lente" | "luneta"][number]["chaves"][number]>;
-
-/** "estado, cidade, tipo, faixa de preço, deságio e data" */
-const FILTROS_DO_LENTE = lista(FILTROS_PROMETIDOS.lente.map((f) => f.rotulo));
-/** "área, quartos, vagas, R$/m², praça, …, tags de risco, selo e nota de localização" */
-const FILTROS_DA_LUNETA = lista(FILTROS_PROMETIDOS.luneta.map((f) => f.rotulo));
 
 export const SITE = {
   name: "Luneta de Leilões",
@@ -142,7 +110,10 @@ export const LEVELS = {
     text: "Muitos dos deságios mais altos vêm com ocupante, dívida que passa ao arrematante ou ação judicial em curso. Quase nada disso aparece no anúncio: está no edital e no processo.",
     compare: [
       { plan: "Plano Lente", text: "você vê o desconto." },
-      { plan: "Plano Luneta", text: "você vê o que ele esconde, antes do lance." },
+      {
+        plan: "Plano Luneta",
+        text: PRODUTO.leituraDoEdital ? "você vê o que ele esconde, antes do lance." : "você vê os riscos que os dados do leilão já mostram, antes do lance.",
+      },
     ],
     cta: "Visível no plano Luneta",
     /** Exemplo fictício da animação: o deságio chama atenção e a varredura revela o que ele esconde. */
@@ -190,7 +161,9 @@ export const LEVELS = {
   tags: {
     eyebrow: "Tags de risco",
     title: ["Os riscos", "escondidos", "em cada leilão."],
-    text: "Ocupante que não sai, dívida que passa para quem arremata, processo que ainda corre, matrícula com pendência. Esses riscos normalmente estão no edital e no processo, não no anúncio. A Luneta lê cada caso e marca o que encontrou em tags, inclusive nos leilões sem selo.",
+    text: PRODUTO.leituraDoEdital
+      ? "Ocupante que não sai, dívida que passa para quem arremata, processo que ainda corre, matrícula com pendência. Esses riscos normalmente estão no edital e no processo, não no anúncio. A Luneta lê cada caso e marca o que encontrou em tags, inclusive nos leilões sem selo."
+      : "Ocupante que não sai, dívida que passa para quem arremata, processo que ainda corre, matrícula com pendência. Esses riscos normalmente estão no edital e no processo, não no anúncio. Hoje a Luneta marca em tags o que os dados de cada leilão já mostram (financiamento, direito de preferência do devedor, deságio e praça); ocupação, dívidas e matrícula entram quando ela ler a página e o edital de cada leilão.",
     legend: {
       grave: "Vermelho: risco grave",
       atencao: "Amarelo: atenção",
@@ -206,7 +179,7 @@ export const LEVELS = {
     footer: "No plano Luneta, essa tag aparece em cada leilão em que for encontrada.",
   },
   disclaimer:
-    "A classificação é uma análise baseada nos dados dos editais e não substitui a avaliação de um advogado.",
+    "A classificação é uma análise baseada nos dados de cada leilão e não substitui a avaliação de um advogado.",
 } as const;
 
 export const EXAMPLES = {
@@ -219,8 +192,11 @@ export const PRACAS = {
   eyebrow: "Primeira e segunda praça",
   title: ["O mesmo imóvel pode ficar", "até 50%", "mais barato na segunda praça."],
   text: "Muitos leilões têm duas rodadas. Na primeira praça, o lance mínimo costuma partir do valor de avaliação. Se ninguém arremata, vem a segunda praça, e o mesmo imóvel pode sair por até metade desse valor.",
-  alert:
-    "Por isso, no plano Luneta, você marca seus casos favoritos e a gente avisa por e-mail assim que eles vão para a segunda praça. Você não perde o momento do lance.",
+  /** o alerta por e-mail só aparece quando existir (PRODUTO.alertaPraca); até lá, só os favoritos */
+  alert: PRODUTO.alertaPraca
+    ? "Por isso, no plano Luneta, você marca seus casos favoritos e a gente avisa por e-mail assim que eles vão para a segunda praça. Você não perde o momento do lance."
+    : "Por isso, no plano Luneta, você marca seus casos favoritos e acompanha a praça e o lance mínimo de cada um num só lugar.",
+  mostrarAlerta: PRODUTO.alertaPraca,
 } as const;
 
 export const FILTERS = {
@@ -247,8 +223,11 @@ export const STATS = {
 
 export type PlanId = "lente" | "luneta" | "telescopio";
 
-/** ✓ incluído, false não incluído, "blur" aparece desfocado (tags e selos no Lente). */
-export type PlanValue = boolean | "blur";
+/**
+ * ✓ incluído, false não incluído. (Até a rodada 4 havia "blur", desfocado, para as tags e os selos no Lente; o Lente
+ * deixou de ver qualquer coisa deles, e a tabela não promete mais o desfoque: revisão final da rodada 4, UX-04.)
+ */
+export type PlanValue = boolean;
 
 /**
  * Uma linha da tabela "Compare os planos". `grupo`: o bloco da tabela (Encontrar = Lente; Decidir e Acompanhar = Luneta;
@@ -266,6 +245,8 @@ export interface PlanFeature {
   telescopio: PlanValue;
 }
 
+const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 const FEATURES: readonly PlanFeature[] = [
   // Encontrar: o plano Lente (o que a fonte publica, reunido e fácil de achar)
   { grupo: "Encontrar", label: "Todos os leilões do Brasil", lente: true, luneta: true, telescopio: true },
@@ -281,13 +262,21 @@ const FEATURES: readonly PlanFeature[] = [
   },
   { grupo: "Encontrar", label: "Imóveis parecidos em cada página", cartao: "Imóveis parecidos", lente: true, luneta: true, telescopio: true },
   // Decidir: o que a Luneta calcula, cruza ou analisa
-  { grupo: "Decidir", label: "Tags de risco, com o trecho de onde veio cada alerta", cartao: "Tags de risco e selos", recurso: "tags", lente: "blur", luneta: true, telescopio: true },
-  { grupo: "Decidir", label: "Selos Promissor, Na Mira e Alvo", cartao: "Tags de risco e selos", recurso: "selos", lente: "blur", luneta: true, telescopio: true },
+  {
+    grupo: "Decidir",
+    label: PRODUTO.leituraDoEdital ? "Tags de risco, com o trecho de onde veio cada alerta" : "Tags de risco, com a origem de cada alerta",
+    cartao: "Tags de risco e selos",
+    recurso: "tags",
+    lente: false,
+    luneta: true,
+    telescopio: true,
+  },
+  { grupo: "Decidir", label: "Selos Promissor, Na Mira e Alvo", cartao: "Tags de risco e selos", recurso: "selos", lente: false, luneta: true, telescopio: true },
   { grupo: "Decidir", label: `Filtros avançados: ${FILTROS_DA_LUNETA}`, cartao: "Filtros avançados", recurso: "filtrosAvancados", lente: false, luneta: true, telescopio: true },
   { grupo: "Decidir", label: "Simulador de lance máximo, com cenários e prazos que você ajusta", cartao: "Simulador de lance máximo", recurso: "simulador", lente: false, luneta: true, telescopio: true },
   {
     grupo: "Decidir",
-    label: "Preço do m² na rua, no bairro e na cidade, com o preço pago em compras reais (ITBI) em 5 capitais",
+    label: "Preço do m² na rua, no bairro e na cidade, com o valor das compras registradas no ITBI em 5 capitais",
     cartao: "Preço do m² da região, com compras reais",
     recurso: "regiao",
     lente: false,
@@ -298,8 +287,11 @@ const FEATURES: readonly PlanFeature[] = [
   { grupo: "Decidir", label: "Nota de localização de 0 a 100, com cada parte explicada", cartao: "Nota de localização", recurso: "localizacao", lente: false, luneta: true, telescopio: true },
   { grupo: "Decidir", label: "Relatório em PDF do imóvel e da simulação", cartao: "Relatório em PDF", recurso: "relatorio", lente: false, luneta: true, telescopio: true },
   // Acompanhar
-  { grupo: "Acompanhar", label: "Favoritos", cartao: "Favoritos com alerta de praça", recurso: "favoritos", lente: false, luneta: true, telescopio: true },
-  { grupo: "Acompanhar", label: "Alerta por e-mail quando muda a praça", cartao: "Favoritos com alerta de praça", lente: false, luneta: true, telescopio: true },
+  { grupo: "Acompanhar", label: "Favoritos", cartao: maiuscula(FAVORITOS_ROTULO), recurso: "favoritos", lente: false, luneta: true, telescopio: true },
+  // o alerta por e-mail só entra na tabela quando existir (PRODUTO.alertaPraca)
+  ...(PRODUTO.alertaPraca
+    ? [{ grupo: "Acompanhar", label: "Alerta por e-mail quando muda a praça", cartao: maiuscula(FAVORITOS_ROTULO), lente: false, luneta: true, telescopio: true } as const]
+    : []),
   { grupo: "Acompanhar", label: "Prioridade para contato com advogado", lente: false, luneta: true, telescopio: true },
   // Equipe: o Telescópio
   {
@@ -404,11 +396,13 @@ export const FAQ = {
     },
     {
       q: "O que o plano Lente inclui?",
-      a: `A Lente é para encontrar o imóvel: todos os leilões da base, com fotos, mapa, filtros por ${FILTROS_DO_LENTE}, e a página de cada imóvel com os dados da fonte, os documentos, a matrícula, o link do leilão, um (i) que explica cada termo e os imóveis parecidos. O que a Luneta calcula ou analisa para ajudar a decidir fica no plano Luneta: tags de risco e selos, filtros avançados, simulador de lance, preço do m² da região, buscas nos portais, nota de localização, relatório em PDF e favoritos com alerta de praça. O Telescópio tem tudo da Luneta, para equipes.`,
+      a: `A Lente é para encontrar o imóvel: todos os leilões da base, com fotos, mapa, filtros por ${FILTROS_DO_LENTE}, e a página de cada imóvel com os dados da fonte, os documentos, a matrícula, o link do leilão, um (i) que explica cada termo e os imóveis parecidos. O que a Luneta calcula ou analisa para ajudar a decidir fica no plano Luneta: tags de risco e selos, filtros avançados, simulador de lance, preço do m² da região, buscas nos portais, nota de localização, relatório em PDF e ${FAVORITOS_ROTULO}. O Telescópio tem tudo da Luneta, para equipes.`,
     },
     {
       q: "Como vocês classificam o risco?",
-      a: "Lemos os dados do edital e aplicamos tags de risco por categoria: posse, preço, dívidas, jurídico, documentação, propriedade, condição e praça. A cor indica a gravidade, sempre com ícone e texto. Os selos Promissor, Na Mira e Alvo somam critérios cumulativos, e só os melhores recebem os três anéis.",
+      a: PRODUTO.leituraDoEdital
+        ? "Lemos os dados do edital e aplicamos tags de risco por categoria: posse, preço, dívidas, jurídico, documentação, propriedade, condição e praça. A cor indica a gravidade, sempre com ícone e texto. Os selos Promissor, Na Mira e Alvo somam critérios cumulativos, e só os melhores recebem os três anéis."
+        : "Lemos os dados de cada leilão e aplicamos tags de risco por categoria: posse, preço, dívidas, jurídico, documentação, propriedade, condição e praça. A cor indica a gravidade, sempre com ícone e texto. Hoje as tags vêm dos campos que a fonte publica (financiamento, direito de preferência do devedor, deságio e praça); a ocupação, as dívidas e a matrícula entram quando a Luneta ler a página e o edital de cada leilão. Os selos Promissor, Na Mira e Alvo somam critérios cumulativos, e só os melhores recebem os três anéis.",
     },
     {
       q: "O simulador diz quanto vou lucrar?",
@@ -416,7 +410,7 @@ export const FAQ = {
     },
     {
       q: "De onde vem o preço do m²?",
-      a: "De duas fontes. Em toda a base, comparamos a avaliação do imóvel com a média dos imóveis do mesmo tipo em leilão na mesma rua, no mesmo bairro, na cidade e no estado. Em São Paulo, no Rio de Janeiro, em Porto Alegre, em Fortaleza e no Recife, usamos também o preço pago nas compras registradas na prefeitura para o ITBI, nos 12 meses mais recentes que cada uma publicou. A avaliação do leilão não é preço de mercado, e o valor do ITBI é o registrado na prefeitura: use os dois como referência, não como avaliação do imóvel.",
+      a: "De duas fontes. Em toda a base, comparamos a avaliação do imóvel com a média dos imóveis do mesmo tipo em leilão na mesma rua, no mesmo bairro, na cidade e no estado. Em São Paulo, no Rio de Janeiro, em Porto Alegre, em Fortaleza e no Recife, usamos também o valor das compras registradas na prefeitura para o ITBI, nos 12 meses mais recentes que cada uma publicou: em São Paulo e no Rio, o preço declarado na compra; em Porto Alegre e em Fortaleza, a base de cálculo da prefeitura; no Recife, a avaliação da prefeitura para o imposto. A avaliação do leilão não é preço de mercado, e o valor do ITBI é o registrado na prefeitura: use os dois como referência, não como avaliação do imóvel.",
     },
     {
       q: "Como funciona a nota de localização?",
@@ -424,12 +418,17 @@ export const FAQ = {
     },
     {
       q: "A classificação, a nota e o simulador são garantia?",
-      a: "Não. As tags e os selos são uma análise automática dos dados dos editais; a nota de localização resume dados abertos do entorno; o simulador faz contas com premissas genéricas. Nada disso é garantia de resultado nem recomendação de investimento, e nada substitui a leitura do edital, a visita ao imóvel e a avaliação de um advogado. “Nenhum risco identificado” quer dizer que a análise não encontrou riscos nos dados disponíveis, não que eles não existam.",
+      a: "Não. As tags e os selos são uma análise automática dos dados de cada leilão; a nota de localização resume dados abertos do entorno; o simulador faz contas com premissas genéricas. Nada disso é garantia de resultado nem recomendação de investimento, e nada substitui a leitura do edital, a visita ao imóvel e a avaliação de um advogado. “Nenhum risco identificado” quer dizer que a análise não encontrou riscos nos dados disponíveis, não que eles não existam.",
     },
-    {
-      q: "Como recebo os alertas de mudança de praça?",
-      a: "No plano Luneta, marque o leilão como favorito. Assim que ele for para a segunda praça, você recebe um e-mail com o novo lance mínimo e a data.",
-    },
+    // só quando o alerta por e-mail existir (PRODUTO.alertaPraca)
+    ...(PRODUTO.alertaPraca
+      ? [
+          {
+            q: "Como recebo os alertas de mudança de praça?",
+            a: "No plano Luneta, marque o leilão como favorito. Assim que ele for para a segunda praça, você recebe um e-mail com o novo lance mínimo e a data.",
+          } as const,
+        ]
+      : []),
     {
       q: "Posso cancelar quando quiser?",
       a: "Sim. A assinatura pode ser cancelada quando você quiser, e você tem [7] dias para cancelar após a contratação.",
@@ -454,6 +453,6 @@ export const FINAL_CTA = {
 
 export const FOOTER = {
   legal:
-    "As tags de risco e os selos Promissor, Na Mira e Alvo são uma análise baseada nos dados públicos dos editais. A classificação não é garantia de resultado e não substitui a avaliação de um advogado. “Nenhum risco identificado” significa que nossa análise não encontrou riscos nos dados disponíveis, não que eles não existam. O simulador faz contas com premissas genéricas e não é recomendação de investimento. A nota de localização resume dados abertos do entorno e não é avaliação do imóvel nem garantia. Preços, prazos e condições dos leilões podem mudar; confira sempre o edital oficial do leiloeiro. Dados pessoais tratados conforme a LGPD.",
+    "As tags de risco e os selos Promissor, Na Mira e Alvo são uma análise baseada nos dados públicos de cada leilão. A classificação não é garantia de resultado e não substitui a avaliação de um advogado. “Nenhum risco identificado” significa que nossa análise não encontrou riscos nos dados disponíveis, não que eles não existam. O simulador faz contas com premissas genéricas e não é recomendação de investimento. A nota de localização resume dados abertos do entorno e não é avaliação do imóvel nem garantia. Preços, prazos e condições dos leilões podem mudar; confira sempre o edital oficial do leiloeiro. Dados pessoais tratados conforme a LGPD.",
   company: "[Razão social] · CNPJ [X]",
 } as const;

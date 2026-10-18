@@ -6,11 +6,13 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { createJiti } from "jiti";
-import { FILTROS_LENTE, pode, RECURSOS } from "../lib/catalogo/planos";
+import { FILTROS_AVANCADOS_CURTO, FILTROS_LENTE, pode, RECURSOS, RECURSOS_LUNETA } from "../lib/catalogo/planos";
+import { PRODUTO } from "../lib/catalogo/produto";
+import { CONVITE, CONVITE_PADRAO } from "../components/catalogo/planos/textos";
 import { PESOS_PADRAO, ROTULO_COMPONENTE } from "../lib/catalogo/localizacao";
 import { ESTADO_INICIAL } from "../lib/simulador/estado";
 import { metaComoObjetivo } from "../lib/simulador/textos";
@@ -42,7 +44,7 @@ function textos(v: unknown, saida: string[] = []): string[] {
 }
 
 const NIVEL = { lente: 0, luneta: 1, telescopio: 2 } as const;
-const tem = (v: boolean | "blur") => v === true;
+const tem = (v: boolean) => v === true;
 
 test("planos: cada linha é crescente (o que a Lente tem, a Luneta tem; o que a Luneta tem, o Telescópio tem)", () => {
   for (const f of PLANS.features) {
@@ -70,17 +72,82 @@ test("planos: o marketing bate com planos.ts (cada recurso do Luneta tem a sua l
     const linhas = PLANS.features.filter((f) => f.recurso === r);
     assert.ok(linhas.length >= 1, `a tabela de planos não cita o recurso "${r}"`);
     for (const f of linhas) {
-      // o Lente vê o recurso exatamente quando o código deixa (hoje nunca: tags e selos só desfocados)
+      // o Lente vê o recurso exatamente quando o código deixa (hoje nunca: nem desfocado, desde a revisão final da rodada 4)
       assert.equal(tem(f.lente), pode("lente", r), `${r}: a tabela diz ${String(f.lente)} para o Lente`);
       assert.equal(f.luneta, pode("luneta", r), r);
       assert.equal(f.telescopio, true, r);
-      if (!pode("lente", r)) assert.ok(f.lente === false || f.lente === "blur", r);
+      if (!pode("lente", r)) assert.equal(f.lente, false, r);
     }
   }
   // nenhuma linha cita um recurso que não existe
   for (const f of PLANS.features) if (f.recurso) assert.ok(RECURSOS.includes(f.recurso), f.recurso);
   // o cartão do Lente não lista nenhum recurso do Luneta como incluído
   assert.ok(PLANS.features.filter((f) => f.recurso && f.lente === true).length === 0);
+});
+
+test("planos: a landing não promete ao Lente nada desfocado (o Lente não vê tags nem selos, nem borrados)", () => {
+  const tudo = [...textos(SITE_TS), ...textos(POR_DENTRO), ...textos(CONVITE), ...textos(CONVITE_PADRAO)];
+  for (const t of tudo) assert.ok(!/desfocad/i.test(t), t);
+});
+
+test("planos: os filtros avançados têm uma lista só (landing, chamada do painel e janela da Luneta)", () => {
+  // a chamada curta cita os filtros em destaque da mesma lista da landing e termina com "e mais"
+  assert.match(FILTROS_AVANCADOS_CURTO, / e mais$/);
+  const citados = FILTROS_AVANCADOS_CURTO.replace(/ e mais$/, "").split(", ");
+  const daLanding: string[] = FILTROS_PROMETIDOS.luneta.map((f) => f.rotulo);
+  for (const c of citados) assert.ok(daLanding.includes(c), c);
+  assert.ok(citados.length >= 4 && citados.length <= 6, "4 a 6 filtros na chamada curta");
+  assert.ok(RECURSOS_LUNETA.filtrosAvancados.chamada.toLowerCase().includes(FILTROS_AVANCADOS_CURTO));
+  assert.ok(CONVITE.filtrosAvancados.texto.includes(FILTROS_AVANCADOS_CURTO));
+  // jargão fora: "natureza" (judicial ou extrajudicial) não aparece nos textos
+  for (const t of [RECURSOS_LUNETA.filtrosAvancados.chamada, CONVITE.filtrosAvancados.texto, FILTERS.text]) assert.ok(!/natureza/i.test(t), t);
+});
+
+test("textos: o relatório em PDF tem várias folhas A4 (nunca \"numa página A4\")", () => {
+  const tudo = [...textos(SITE_TS), ...textos(DECIDA), ...textos(CONVITE), ...textos(RECURSOS_LUNETA)];
+  for (const t of tudo) assert.ok(!/(numa|uma|em uma) página A4/i.test(t), t);
+  const travado = readFileSync(join(RAIZ, "src", "components", "catalogo", "relatorio", "RelatorioTravado.tsx"), "utf8");
+  assert.ok(!/numa página A4/.test(travado), "RelatorioTravado.tsx");
+});
+
+test("textos: o valor do ITBI não é chamado de \"preço pago\" (só SP e o Rio publicam o preço declarado)", () => {
+  const tudo = [...textos(SITE_TS), ...textos(DECIDA), ...textos(NOTA_LOCAL), ...textos(CONVITE), ...textos(RECURSOS_LUNETA)];
+  for (const t of tudo) assert.ok(!/preço (médio )?pago/i.test(t), t);
+});
+
+test("produto: as promessas sem produto ficam desligadas (leitura do edital, alerta de praça, busca por leiloeiro)", () => {
+  const tudo = [...textos(SITE_TS), ...textos(POR_DENTRO), ...textos(CONVITE), ...textos(CONVITE_PADRAO), ...textos(RECURSOS_LUNETA)];
+  if (!PRODUTO.alertaPraca) {
+    for (const t of tudo) assert.ok(!/alerta de (2ª )?praça|alerta por e-mail|avisa por e-mail|aviso quando a praça|recebe um e-mail/i.test(t), t);
+    assert.ok(!FAQ.items.some((f) => /alertas de mudança de praça/.test(f.q)));
+  }
+  // a busca do catálogo não acha leiloeiro (o campo não vem da fonte)
+  assert.ok(!/leiloeiro/i.test(POR_DENTRO.window.search));
+  if (!PRODUTO.leituraDoEdital) {
+    for (const t of tudo) assert.ok(!/trecho de onde veio cada alerta|lê cada caso|Cada leilão lido para você/i.test(t), t);
+    return;
+  }
+  // ligada: a base precisa ter de fato as tags lidas em texto (edital, ficha, processo, descrição), não só as dos
+  // campos da lista da Caixa e as de ausência ("ocupação não informada" em 100% dos imóveis em 18/10/2026)
+  const dir = join(RAIZ, "base", "saida", "site", "detalhes");
+  if (!existsSync(dir)) return;
+  let tags = 0;
+  let deTexto = 0;
+  let imoveis = 0;
+  let semOcupacao = 0;
+  for (const f of readdirSync(dir).filter((x) => x.endsWith(".json.gz"))) {
+    const d = JSON.parse(gunzipSync(readFileSync(join(dir, f))).toString("utf8")) as { detalhes: Record<string, { tags?: { slug: string; origem: string }[] }> };
+    for (const i of Object.values(d.detalhes)) {
+      imoveis++;
+      if (i.tags?.some((t) => t.slug === "ocupacao-nao-informada")) semOcupacao++;
+      for (const t of i.tags ?? []) {
+        tags++;
+        if (!t.origem.startsWith("campo") && t.origem !== "ausencia") deTexto++;
+      }
+    }
+  }
+  assert.ok(deTexto / tags >= 0.1, `só ${deTexto} de ${tags} tags vêm de texto: deixe PRODUTO.leituraDoEdital em false`);
+  assert.ok(semOcupacao / imoveis < 0.5, `${semOcupacao} de ${imoveis} imóveis sem a ocupação: deixe PRODUTO.leituraDoEdital em false`);
 });
 
 test("planos: os filtros prometidos ao Lente são FILTROS_LENTE; os avançados ficam fora dele", () => {

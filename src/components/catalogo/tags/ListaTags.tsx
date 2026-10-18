@@ -1,20 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { pode } from "@/lib/catalogo/planos";
 import type { Plano, TagDetalhe, TagResumo } from "@/lib/catalogo/tipos";
 import { ordenarTags } from "./conteudo";
-import { TagClicavel, TagsBloqueadas, TAMANHO_TAG, type TamanhoTag } from "./TagClicavel";
+import { TagClicavel, TAMANHO_TAG, type TamanhoTag } from "./TagClicavel";
 
 /**
  * Tags de um imóvel em ordem de leitura (confirmadas antes das em revisão; grave, atenção, positivo,
  * informativo), cada uma clicável. Com `limite`, mostra as primeiras e um "+N" que abre o resto ali mesmo
- * (e "Mostrar menos" fecha). No plano Lente, o lugar das tags vira o convite à Luneta.
+ * (e "Mostrar menos" fecha). No plano Lente, nada (as tags nem chegam ao navegador; o convite à Luneta fica no aviso
+ * do topo da lista e na página do imóvel).
  */
 export function ListaTags({
   tags,
   plano = "luneta",
   limite,
-  onUpsell,
   hrefEvidencia,
   tamanho = "sm",
   rotulo = "Tags de risco",
@@ -24,8 +25,6 @@ export function ListaTags({
   plano?: Plano;
   /** quantas mostrar antes do "+N"; sem limite, todas */
   limite?: number;
-  /** obrigatório no Lente: abre o modal de upgrade */
-  onUpsell?: (opener: HTMLElement) => void;
   /** cartões: link "ver por que" no pop-up (a evidência fica na página do imóvel) */
   hrefEvidencia?: string;
   tamanho?: TamanhoTag;
@@ -35,9 +34,7 @@ export function ListaTags({
 }) {
   const [aberta, setAberta] = useState(false);
 
-  if (plano === "lente") {
-    return onUpsell ? <TagsBloqueadas onUpsell={onUpsell} tamanho={tamanho} className={className} /> : null;
-  }
+  if (!pode(plano, "tags")) return null;
 
   if (tags.length === 0) {
     return <p className={`text-xs leading-snug text-nevoa ${className}`}>Nenhuma tag de risco nos dados da fonte; confira o edital.</p>;

@@ -48,10 +48,25 @@ export const CONSULTA_BARRA_COMPACTA =
 export const CONSULTA_BARRA_RECOLHE = "(max-width: 767.98px), (max-height: 620px), (pointer: coarse)";
 
 /**
- * Palpite do servidor, pelo navegador que pediu a página: celular? Chromium manda `Sec-CH-UA-Mobile`;
- * os demais, o User-Agent ("Mobi" nos celulares Android, iPhone, iPod). Tablet conta como computador.
+ * Cookie com a largura que o navegador mediu na visita anterior ("c" abaixo de md, "g" a partir dela). O palpite pelo
+ * User-Agent erra no tablet Android de 7" em pé (sem "Mobile") e na janela estreita do computador: o servidor
+ * desenhava a lista e o navegador trocava para os cards (CLS 0,52; revisão final da rodada 4, UX-12). Com o cookie,
+ * da segunda página em diante o servidor já acerta; a primeira visita sem preferência continua no palpite.
  */
-export function pareceCelular(cabecalhos: { get(nome: string): string | null }): boolean {
+export const CHAVE_TELA = "luneta-tela";
+
+/** "c" → celular, "g" → computador, outra coisa → null (sem medida). */
+export function lerTela(valor: string | null | undefined): boolean | null {
+  return valor === "c" ? true : valor === "g" ? false : null;
+}
+
+/**
+ * Palpite do servidor, pelo navegador que pediu a página: celular? A medida da visita anterior (CHAVE_TELA), se houver;
+ * senão Chromium manda `Sec-CH-UA-Mobile`; os demais, o User-Agent ("Mobi" nos celulares Android, iPhone, iPod).
+ * Tablet conta como computador.
+ */
+export function pareceCelular(cabecalhos: { get(nome: string): string | null }, tela: boolean | null = null): boolean {
+  if (tela !== null) return tela;
   const dica = cabecalhos.get("sec-ch-ua-mobile");
   if (dica === "?1") return true;
   if (dica === "?0") return false;

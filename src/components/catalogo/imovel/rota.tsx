@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SITE } from "@/content/site";
 import { local, moeda, normalizar, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
+import { lerPlano } from "@/lib/catalogo/planos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
 import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
 import { carregarImovel, garantirImovel, lerId } from "./carregar";
@@ -18,7 +19,7 @@ const carregar = carregarImovel;
 
 async function lerEntrada({ params, searchParams }: Parametros) {
   const [{ id }, sp] = await Promise.all([params, searchParams]);
-  const plano: Plano = [sp.plano].flat()[0] === "lente" ? "lente" : "luneta";
+  const plano: Plano = lerPlano(sp.plano);
   return { id: lerId(id), plano };
 }
 

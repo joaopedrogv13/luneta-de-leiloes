@@ -21,7 +21,12 @@ async function relatorioPronto(limite = 4000) {
           }),
     ),
   ]);
-  await Promise.race([carregadas, espera(limite)]);
+  // a simulação (com os ajustes salvos) chega num pedaço à parte: espera o sinal do ProvedorRelatorio
+  const simulacao = new Promise<void>((ok) => {
+    const ver = () => ("simulacaoPronta" in document.documentElement.dataset ? ok() : setTimeout(ver, 50));
+    ver();
+  });
+  await Promise.race([Promise.all([carregadas, simulacao]), espera(limite)]);
   // a conta com os ajustes salvos entra logo depois da hidratação: um respiro para ela pintar
   await espera(350);
 }

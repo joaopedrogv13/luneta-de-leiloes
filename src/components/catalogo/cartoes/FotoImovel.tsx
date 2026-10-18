@@ -9,6 +9,9 @@ import { IlustracaoTipo } from "./Ilustracao";
 /** Fotos que já falharam nesta visita: o cartão que volta (filtro, página) vai direto ao desenho, sem pedir de novo. */
 const FALHAS = new Set<string>();
 
+/** Com menos movimento a foto entra sem transição (e sem `transitionend`): a ilustração sai na hora. */
+const semMovimento = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 /**
  * Vidro escuro dos selos sobre a foto: fixo nos dois temas (a foto é que manda no fundo). Sem backdrop-blur:
  * são 2 ou 3 selos por cartão e 24 cartões por página, e o desfoque de fundo pesa na rolagem do celular;
@@ -33,7 +36,8 @@ function textoSemFoto(imovel: DadosFoto, falhou: boolean): { titulo: string; det
  * preguiçosa, sem referrer, com fade-in ao carregar. Sem foto, ou se ela falhar, entra a ilustração do tipo
  * com o motivo ("Sem foto na fonte", "A foto não carregou do site da fonte", "Exemplo fictício: sem foto";
  * `data-foto` = ausente | falhou | carregando | ok, para medir). Enquanto carrega, a ilustração fica
- * esmaecida por baixo (nunca um buraco em branco).
+ * esmaecida por baixo (nunca um buraco em branco). Quando a foto termina de aparecer, a ilustração sai do DOM: são
+ * ~40 nós de SVG por cartão, ~900 numa página, que pesavam em todo recálculo de estilo (revisão da rodada 4, UX-01).
  *
  * Selos sobrepostos (`selos`): deságio grande no canto superior esquerdo ("+12% acima da avaliação" quando
  * o lance passa da avaliação), tipo no superior direito e "+N fotos" no inferior direito. O deságio aqui é
@@ -66,6 +70,9 @@ export function FotoImovel({
   const [carregou, setCarregou] = useState<string | null>(null);
   const src = imovel.foto && imovel.foto !== falhou && !FALHAS.has(imovel.foto) ? imovel.foto : null;
   const pronta = src !== null && carregou === src;
+  // a foto já cobriu a ilustração (fim do fade-in, ou na hora com menos movimento): o desenho pode sair
+  const [coberta, setCoberta] = useState<string | null>(null);
+  const desenho = !(pronta && coberta === src);
 
   const falha = useCallback((s: string | null) => {
     if (!s) return;
@@ -77,8 +84,10 @@ export function FotoImovel({
     (img: HTMLImageElement | null) => {
       if (!img?.complete) return;
       const s = img.getAttribute("src");
-      if (img.naturalWidth > 0) setCarregou(s);
-      else falha(s);
+      if (img.naturalWidth > 0) {
+        setCarregou(s);
+        if (semMovimento()) setCoberta(s);
+      } else falha(s);
     },
     [falha],
   );
@@ -98,10 +107,12 @@ export function FotoImovel({
           "radial-gradient(120% 70% at 50% 108%, rgba(201,162,77,.16), transparent 62%), linear-gradient(180deg, rgba(var(--fog-rgb),.13), rgba(var(--fog-rgb),.03) 70%), var(--noite)",
       }}
     >
-      <IlustracaoTipo
-        tipo={imovel.tipo}
-        className={`transition-opacity duration-300 motion-reduce:transition-none ${semFoto ? "opacity-100" : "opacity-45"}`}
-      />
+      {desenho && (
+        <IlustracaoTipo
+          tipo={imovel.tipo}
+          className={`transition-opacity duration-300 motion-reduce:transition-none ${semFoto ? "opacity-100" : "opacity-45"}`}
+        />
+      )}
       {aviso && (
         <p className={`absolute inset-x-0 bottom-[8%] px-4 text-center text-[13px] leading-snug font-medium text-nevoa sm:text-xs ${enxutaNoCompacto ? "@max-xl:sr-only" : ""}`}>
           {aviso.titulo}
@@ -120,8 +131,14 @@ export function FotoImovel({
           decoding="async"
           referrerPolicy="no-referrer"
           draggable={false}
-          onLoad={() => setCarregou(src)}
+          onLoad={() => {
+            setCarregou(src);
+            if (semMovimento()) setCoberta(src);
+          }}
           onError={() => falha(src)}
+          onTransitionEnd={(e) => {
+            if (e.propertyName === "opacity" && pronta) setCoberta(src);
+          }}
           className={`absolute inset-0 size-full object-cover transition-[opacity,scale] duration-500 ease-luneta group-hover/cartao:scale-[1.035] motion-reduce:transition-none motion-reduce:group-hover/cartao:scale-100 ${
             pronta ? "opacity-100" : "opacity-0"
           }`}

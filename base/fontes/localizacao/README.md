@@ -81,9 +81,12 @@ e infraestrutura subiu de 15 para 25.
 O que a cidade não tem sai do cálculo, e o peso vai para as outras partes, na mesma proporção:
 
 - sem estação, barca nem terminal de ônibus mapeado: a distância à estação sai do transporte;
-- pontos de ônibus do OpenStreetMap só entram onde o mapa está razoavelmente completo: os pontos do mapa dentro das
-  áreas habitadas da própria cidade somam pelo menos 10% das quadras com ponto de ônibus que o Censo encontrou nela
-  (265 das 1.153 cidades). Nas outras, o transporte usa a estação e o ponto de ônibus na quadra, do Censo;
+- pontos de ônibus do OpenStreetMap só entram quando o mapa tem duas coisas: os pontos dentro das áreas habitadas da
+  própria cidade somam pelo menos 10% das quadras com ponto de ônibus que o Censo encontrou nela, e o morador típico
+  (mediana pelos moradores) tem pelo menos 1 ponto mapeado a 500 m. Com só a primeira regra, 124 das 265 cidades
+  entravam com o "comum" igual a 0 (Goiânia, São Gonçalo, Duque de Caxias): o mapa quase vazio dava "0 pontos de
+  ônibus" numa cidade metropolitana (revisão final da rodada 4). Nas outras, o transporte usa a estação e o ponto de
+  ônibus na quadra, do Censo;
 - sem parque, praça ou parquinho mapeado: o lazer sai (6 cidades);
 - ponto sem domicílio a 1 km (área industrial, loteamento novo): renda e infraestrutura saem para aquele ponto.
 
@@ -109,8 +112,10 @@ enganaria. A tela mostra os números do entorno ("mercado a 400 m; 2 escolas a 1
 
 - **Alerta, não nota.** O mapeamento de áreas de risco do IBGE e do Cemaden (População em Áreas de Risco no Brasil,
   BATER, publicado em 2018 com base no Censo de 2010) não entra na nota: só gera o alerta "Área de risco mapeada perto"
-  quando o imóvel fica dentro ou a menos de 100 m de uma área mapeada (no endereço aproximado, a menos de 500 m do
-  centro do bairro: "Área de risco mapeada no bairro").
+  quando o ponto do endereço fica dentro ou perto de uma área mapeada. "Perto" é a margem do ponto, entre 100 e 500 m,
+  em qualquer precisão (no número, quase sempre 100 m; a rua com ±230 m procura até 230 m). Fora do número exato, o
+  texto fala do ponto do endereço ("o ponto da rua do endereço fica dentro..."), nunca "o imóvel fica dentro". No
+  bairro: "Área de risco mapeada no bairro".
 - O mapeamento cobre 287 das 1.153 cidades da base. **A ausência de área mapeada não quer dizer que não haja risco**: a
   tela diz "sem mapeamento de risco para esta cidade" e nunca "sem risco".
 - Sem alerta, a tela diz só o que foi conferido (`riscoRaioM`): "nenhuma área mapeada a menos de 100 m do imóvel" ou "a
@@ -165,8 +170,9 @@ cidade (mais de 1,5 km entre eles) fica de fora.
 
 - **Datas:** Censo e CNEFE de 2022; CNES de abril de 2026; Inep de 2025; OpenStreetMap de 17/10/2026; áreas de risco de
   2018 (base 2010).
-- **Cobertura do OpenStreetMap** varia muito entre cidades (pontos de ônibus: de quase nada a mais que o Censo). A regra
-  dos 10% evita usar o mapa onde ele está vazio, mas não o corrige. A contagem usa só os pontos dentro das áreas
+- **Cobertura do OpenStreetMap** varia muito entre cidades (pontos de ônibus: de quase nada a mais que o Censo). As regras
+  dos pontos de ônibus (10% das quadras do Censo e pelo menos 1 ponto perto do morador típico) evitam usar o mapa onde
+  ele está vazio, mas não o corrigem. A contagem usa só os pontos dentro das áreas
   habitadas da cidade (antes, a caixa inteira, com as vizinhas perto da divisa, deixava passar cidade pequena ao lado de
   capital bem mapeada); bairro sem morador (zona industrial, avenida comercial) não entra na conta.
 - **Galeria e shopping** contam como um estabelecimento (o CNEFE grava uma linha para vários): pode subestimar centro

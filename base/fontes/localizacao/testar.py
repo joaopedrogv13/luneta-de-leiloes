@@ -466,6 +466,15 @@ def distancia_da_area_de_risco_em_metros():
 
 
 @teste
+def raio_do_risco_pela_margem_do_ponto():
+    import nota
+
+    # a mesma regra em qualquer precisão: a margem do ponto, entre 100 e 500 m (revisão final da rodada 4, M2)
+    igual([nota.raio_risco(x) for x in (None, 0, 10, 70, 150, 230, 1545)], [100, 100, 100, 100, 150, 230, 500])
+    igual(nota.ONIBUS_OSM_COMUM_MIN, 1)
+
+
+@teste
 def nota_arredonda_o_meio_para_cima():
     import nota
 

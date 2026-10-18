@@ -6,6 +6,7 @@
  *   /previa?uf=MG&tipo=apartamento&tipo=casa&lanceMax=300000&ordem=lance-asc&vista=cards&pagina=2
  */
 import { NAO_INFORMADO, ORDEM_PADRAO, type Conjunto, type Filtros, type Modalidade, type Ordem, type Plano, type TipoImovel } from "./tipos";
+import { lerPlano } from "./planos";
 
 export type Vista = "lista" | "cards";
 export const VISTA_PADRAO: Vista = "lista";
@@ -162,7 +163,8 @@ export function lerBusca(p: Entrada): EstadoBusca {
   const vista = vistaBruta === "lista" || vistaBruta === "cards" ? vistaBruta : null;
   const mapaBruto = um(p, "mapa");
   const mapa = mapaBruto === "1" ? true : mapaBruto === "0" ? false : null;
-  const plano: Plano = um(p, "plano") === "lente" ? "lente" : "luneta";
+  // sem o parâmetro, a Luneta (a demonstração); valor desconhecido ou mal escrito, o Lente (planos.ts)
+  const plano: Plano = lerPlano(um(p, "plano"));
   return { filtros: f, ordem, pagina, vista, mapa, plano };
 }
 

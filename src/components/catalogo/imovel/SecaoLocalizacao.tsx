@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { CartaoNota } from "@/components/catalogo/localizacao/CartaoNota";
-import { ChamadaNotaLuneta } from "@/components/catalogo/localizacao/ChamadaNotaLuneta";
+import { RecursoLuneta } from "@/components/catalogo/planos/RecursoLuneta";
+import { rotaMetodoLocal } from "@/lib/catalogo/nota-texto";
 import { local } from "@/lib/catalogo/rotulos";
 import { linkGoogleMaps } from "@/lib/catalogo/texto";
 import type { ImovelDetalhe, LocalizacaoImovel, PontoMapa } from "@/lib/catalogo/tipos";
@@ -9,8 +11,8 @@ import { MapaLocal } from "./MapaLocal";
 import { NovaAba, Secao } from "./partes";
 
 /**
- * Seção 5, "Localização". Primeiro a nota de localização (plano Luneta; no Lente, a chamada com a prévia desenhada no
- * lugar), depois o mapa mini com o ponto e o endereço. O ponto é o mais preciso que houver (o do geocode do CNEFE, que a
+ * Seção 5, "Localização". Primeiro a nota de localização (plano Luneta; no Lente, o mapa e o endereço vêm antes e a
+ * chamada curta da Luneta, RecursoLuneta "faixa", fica embaixo), depois o mapa mini com o ponto e o endereço. O ponto é o mais preciso que houver (o do geocode do CNEFE, que a
  * nota usa, ou o do resumo); com ele, "Ver o ponto no OpenStreetMap" abre a coordenada, e "Abrir no Google Maps" busca o
  * endereço publicado (sem endereço, bairro e cidade).
  */
@@ -47,7 +49,23 @@ export function SecaoLocalizacao({
   const pontoUtil = p && !exemplo && (p.precisao === "exata" || p.precisao === "rua" || p.precisao === "bairro");
 
   const nota = travada ? (
-    <ChamadaNotaLuneta id={i.id} />
+    <RecursoLuneta
+      recurso="localizacao"
+      variante="faixa"
+      texto="uma nota de 0 a 100 para o entorno deste imóvel, comparado com o resto da cidade, com cada parte explicada."
+      extra={
+        <p>
+          A nota depende de o endereço ser localizado no número, na rua ou no bairro.{" "}
+          <Link
+            href={rotaMetodoLocal(i.id, "lente")}
+            prefetch={false}
+            className="font-semibold text-latao-texto underline underline-offset-4 hover:text-luar"
+          >
+            Como a nota é calculada
+          </Link>
+        </p>
+      }
+    />
   ) : localizacao ? (
     <CartaoNota loc={localizacao} id={i.id} cidade={`${i.cidade}/${i.uf}`} exemplo={exemplo} urlMapa={url} />
   ) : null;
@@ -91,7 +109,7 @@ export function SecaoLocalizacao({
               // texto e ícone em linha (não flex): quebrando em duas linhas, o ícone fica junto da última palavra
               className="mt-1 block py-2.5 text-[14px] leading-snug font-semibold text-latao-texto underline-offset-4 hover:text-luar hover:underline pointer-fine:py-1.5"
             >
-              {p!.precisao === "bairro" ? "Ver o centro do bairro no " : "Ver o ponto no "}
+              {p!.precisao === "bairro" ? "Ver o ponto aproximado no " : "Ver o ponto no "}
               <span className="whitespace-nowrap">
                 OpenStreetMap
                 <IconeExterno tamanho={15} className="ml-1.5 inline-block align-[-2px]" />

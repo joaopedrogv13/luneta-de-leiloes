@@ -1,9 +1,11 @@
 import type { TitleParts } from "@/components/ui/Heading";
+import { PRODUTO } from "../lib/catalogo/produto";
 
 /**
  * Textos da seção "Por dentro, depois de assinar" (dentro de "A solução").
- * A mesma lista aparece em duas visões: Lente (tudo num só lugar, riscos e selos desfocados) e
- * Luneta (riscos, selos e as contas para decidir). A troca Lente → Luneta é animada por uma luneta que varre a lista.
+ * A mesma lista aparece em duas visões: Lente (tudo num só lugar; os riscos e os selos ficam fechados, e a animação
+ * os mostra borrados, como metáfora do que a Lente não vê) e Luneta (riscos, selos e as contas para decidir). As frases
+ * que dependem do que o produto já tem (leitura do edital, alerta de praça) seguem PRODUTO (src/lib/catalogo/produto.ts). A troca Lente → Luneta é animada por uma luneta que varre a lista.
  */
 
 export type PlanView = "lente" | "luneta";
@@ -42,8 +44,8 @@ export const POR_DENTRO = {
       },
     ] satisfies readonly Point[],
     note: {
-      title: "Riscos e selos desfocados",
-      text: "Na Lente você vê o desconto, mas não o que ele esconde. As contas e a nota de localização são da Luneta.",
+      title: "Riscos e selos só na Luneta",
+      text: "Na Lente você vê o desconto, mas não o que ele esconde: as tags de risco e os selos ficam fechados, e a página do imóvel mostra onde eles estariam. As contas e a nota de localização também são da Luneta.",
     },
     cta: "Ver o que a Luneta mostra",
   },
@@ -52,14 +54,20 @@ export const POR_DENTRO = {
     tab: "Luneta",
     hint: "para decidir",
     kicker: "Plano Luneta · para decidir",
-    headline: "Cada leilão lido, com os riscos à vista e as contas feitas.",
+    headline: PRODUTO.leituraDoEdital ? "Cada leilão lido, com os riscos à vista e as contas feitas." : "Cada leilão com os riscos à vista e as contas feitas.",
     text: "Tudo o que a Lente tem e mais o que ajuda a decidir: os riscos de cada leilão, os selos, o simulador de lance, o preço da região e a nota de localização.",
     points: [
-      {
-        icon: "scan",
-        title: "Cada leilão lido para você",
-        text: "Ocupação, dívidas, processo, documentação e praça, lidos nos dados da fonte, com o trecho de onde veio cada alerta.",
-      },
+      PRODUTO.leituraDoEdital
+        ? {
+            icon: "scan",
+            title: "Cada leilão lido para você",
+            text: "Ocupação, dívidas, processo, documentação e praça, lidos nos dados da fonte, com o trecho de onde veio cada alerta.",
+          }
+        : {
+            icon: "scan",
+            title: "Os dados de cada leilão, lidos para você",
+            text: "Hoje: financiamento, direito de preferência do devedor, deságio e praça, lidos nos dados da fonte, com a origem de cada alerta. Ocupação, dívidas e matrícula entram quando a Luneta ler a página e o edital de cada leilão.",
+          },
       {
         icon: "tag",
         title: "Riscos em tags, os melhores com selo",
@@ -70,11 +78,17 @@ export const POR_DENTRO = {
         title: "Lance máximo, região e entorno",
         text: "Até quanto vale dar de lance para a sua meta, o preço do m² ali perto e a nota de localização, de 0 a 100.",
       },
-      {
-        icon: "bell",
-        title: "Favoritos e alerta de 2ª praça",
-        text: "Receba um e-mail quando um favorito for para a 2ª praça, em que o lance costuma cair.",
-      },
+      PRODUTO.alertaPraca
+        ? {
+            icon: "bell",
+            title: "Favoritos e alerta de 2ª praça",
+            text: "Receba um e-mail quando um favorito for para a 2ª praça, em que o lance costuma cair.",
+          }
+        : {
+            icon: "bell",
+            title: "Favoritos",
+            text: "Marque os leilões que você acompanha e veja a praça e o lance mínimo de cada um num só lugar.",
+          },
     ] satisfies readonly Point[],
     cta: { label: "Assinar Luneta", href: "#planos" },
     ctaNote: "Cancele quando quiser.",
@@ -84,7 +98,8 @@ export const POR_DENTRO = {
   window: {
     label: "Demonstração com exemplos fictícios: a mesma lista de leilões vista pelo plano Lente e pelo plano Luneta.",
     app: "Luneta",
-    search: "Buscar cidade, bairro ou leiloeiro",
+    /** o mesmo texto da busca do catálogo (a busca não acha leiloeiro: o campo não vem da fonte) */
+    search: "Cidade, bairro, estado ou palavra",
     filtersLabel: "Filtros",
     chips: ["Brasil inteiro", "Deságio acima de 40%", "Maior deságio primeiro"],
     badge: { lente: "Plano Lente", luneta: "Plano Luneta" },
@@ -92,7 +107,7 @@ export const POR_DENTRO = {
   },
 
   disclaimer:
-    "Exemplos fictícios. A classificação é uma análise dos dados dos editais, não uma garantia, e não substitui a avaliação de um advogado.",
+    "Exemplos fictícios. A classificação é uma análise dos dados de cada leilão, não uma garantia, e não substitui a avaliação de um advogado.",
   replay: "Ver a troca de novo",
   demo: "Abrir a demonstração completa →",
 } as const;
@@ -108,5 +123,5 @@ export const plural = {
 export function announceView(view: PlanView, risks: number, opps: number) {
   return view === "luneta"
     ? `Visão do plano Luneta: ${risks} ${plural.riscos(risks)} e ${opps} ${plural.oportunidades(opps)} com selo nos exemplos.`
-    : "Visão do plano Lente: tags de risco e selos desfocados.";
+    : "Visão do plano Lente: as tags de risco e os selos ficam fechados (são do plano Luneta).";
 }

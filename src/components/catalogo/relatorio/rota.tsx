@@ -5,9 +5,11 @@ import { notFound } from "next/navigation";
 import { SITE } from "@/content/site";
 import { carregarImovel } from "@/components/catalogo/imovel/carregar";
 import { CHAVE_AJUDA_PDF } from "@/components/catalogo/imovel/preferencias";
+import { lerPlano, pode } from "@/lib/catalogo/planos";
 import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
 import { tituloDocumento } from "./dados";
 import { Relatorio } from "./Relatorio";
+import { RelatorioTravado, TITULO_RELATORIO_TRAVADO } from "./RelatorioTravado";
 
 type Parametros = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
@@ -23,7 +25,7 @@ async function lerEntrada({ params, searchParams }: Parametros) {
     /* fica o id como veio */
   }
   const primeiro = (k: string) => [sp[k]].flat()[0];
-  const plano: Plano = primeiro("plano") === "lente" ? "lente" : "luneta";
+  const plano: Plano = lerPlano(sp.plano);
   return { id, plano, imprimir: primeiro("imprimir") === "1" };
 }
 
@@ -36,14 +38,19 @@ export async function metadadosRelatorio(conjunto: Conjunto, entrada: Parametros
   const pagina = await carregar(conjunto, id, plano);
   const robots = { index: false, follow: false };
   if (!pagina) return { title: `Imóvel não encontrado | ${SITE.name}`, robots };
+  if (!pode(plano, "relatorio")) return { title: `${TITULO_RELATORIO_TRAVADO} | ${SITE.name}`, description: `Relatório do imóvel ${pagina.imovel.titulo}: plano Luneta.`, robots };
   return { title: tituloDocumento(pagina.imovel), description: `Relatório de simulação do imóvel ${pagina.imovel.titulo}.`, robots };
 }
 
-/** A página do relatório: id inexistente dá 404 (o layout da rota do imóvel já confere antes). */
+/**
+ * A página do relatório: id inexistente dá 404 (o layout da rota do imóvel já confere antes). No Lente (planos.ts), a
+ * página travada: sem simulação, região nem alertas, e sem o código do relatório.
+ */
 export async function renderizarRelatorio(conjunto: Conjunto, entrada: Parametros) {
   const [{ id, plano, imprimir }, jarra] = await Promise.all([lerEntrada(entrada), cookies()]);
   const pagina = await carregar(conjunto, id, plano);
   if (!pagina) notFound();
+  if (!pode(plano, "relatorio")) return <RelatorioTravado conjunto={conjunto} imovel={pagina.imovel} />;
   // "Como salvar o PDF" aberto na primeira visita: decidido aqui (cookie), para a primeira pintura já sair assim
   const ajudaAberta = !jarra.get(CHAVE_AJUDA_PDF);
   return <Relatorio key={pagina.imovel.id} conjunto={conjunto} plano={plano} pagina={pagina} imprimir={imprimir} ajudaAberta={ajudaAberta} />;

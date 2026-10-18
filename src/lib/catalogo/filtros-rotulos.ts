@@ -7,7 +7,8 @@
  * Exemplos de pílula: "MG", "Uberlândia/MG", "Apartamento, Casa", "Lance até R$ 300 mil",
  * "Deságio ≥ 30%", "2+ quartos", "Praça: 2ª", "Sem: Ocupado".
  */
-import { NAO_INFORMADO, ORDEM_PADRAO, type Facetas, type Filtros, type Modalidade, type Ocupacao, type Ordem, type Plano, type Praca, type Selo, type TipoImovel } from "./tipos";
+import { NAO_INFORMADO, ORDEM_PADRAO, type Facetas, type Filtros, type Modalidade, type Ocupacao, type Ordem, type Plano, type Praca, type Recurso, type Selo, type TipoImovel } from "./tipos";
+import { filtroPermitido, ordemDoPlano, recursoDoFiltro } from "./planos";
 import { MODALIDADE_ROTULO, OCUPACAO_ROTULO, SELO_ROTULO, TIPO_ROTULO, UF_NOME, area, moedaCurta, numero } from "./rotulos";
 import { escreverBusca } from "./url";
 
@@ -564,10 +565,32 @@ export function removerGrupos(f: Filtros, grupos: readonly GrupoFiltro[]) {
   return grupos.reduce((acc, g) => removerFiltro(acc, g), f);
 }
 
-/** Grupos que o servidor ignora: no Lente, tags e selo; com os selos desligados (prévia), o selo. */
+/** Todos os grupos, na ordem do painel. */
+const GRUPOS = Object.keys(CHAVES_DO_GRUPO) as GrupoFiltro[];
+
+/** O grupo é do plano? (planos.ts: no Lente, só os 6 filtros prometidos e a busca por texto) */
+export function grupoPermitido(grupo: GrupoFiltro, plano: Plano): boolean {
+  return CHAVES_DO_GRUPO[grupo].every((k) => filtroPermitido(k, plano));
+}
+
+/**
+ * Grupos que o servidor ignora: no Lente, os filtros avançados e os de tags, selo e nota (planos.ts); com os selos
+ * desligados (prévia), o selo.
+ */
 export function gruposIgnorados(plano: Plano, selosDesligados: boolean): GrupoFiltro[] {
-  if (plano === "lente") return ["semTags", "comTags", "selo", "notaLocal"];
-  return selosDesligados ? ["selo"] : [];
+  const fora = GRUPOS.filter((g) => !grupoPermitido(g, plano));
+  if (selosDesligados && !fora.includes("selo")) fora.push("selo");
+  return fora;
+}
+
+/** De que recurso é o grupo (null = do Lente): a janela da Luneta abre com o texto dele. */
+export function recursoDoGrupo(grupo: GrupoFiltro): Recurso | null {
+  return recursoDoFiltro(CHAVES_DO_GRUPO[grupo][0]!);
+}
+
+/** Os grupos ativos nos filtros que o plano não usa (a tela avisa "este filtro é do plano Luneta"). */
+export function gruposForaDoPlano(f: Filtros, plano: Plano): GrupoFiltro[] {
+  return GRUPOS.filter((g) => !grupoPermitido(g, plano) && grupoAtivo(f, g));
 }
 
 /**
@@ -579,11 +602,11 @@ export function filtrosEfetivos(f: Filtros, plano: Plano, selosDesligados: boole
   return ignorados.some((g) => grupoAtivo(f, g)) ? removerGrupos(f, ignorados) : f;
 }
 
-/** A ordem que vale de fato: as da Luneta caem para a padrão no Lente; "Melhor selo", com os selos desligados. */
+/** A ordem que vale de fato: as da Luneta caem para a padrão no Lente (planos.ts); "Melhor selo", com os selos desligados. */
 export function ordemEfetiva(o: Ordem, plano: Plano, selosDesligados: boolean): Ordem {
-  if (plano === "lente" && (o === "alertas" || o === "selo" || o === "localizacao")) return ORDEM_PADRAO;
-  if (selosDesligados && o === "selo") return ORDEM_PADRAO;
-  return o;
+  const doPlano = ordemDoPlano(o, plano);
+  if (selosDesligados && doPlano === "selo") return ORDEM_PADRAO;
+  return doPlano;
 }
 
 /** Nome completo de uma UF para listas: "MG" → "Minas Gerais". */

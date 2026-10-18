@@ -28,13 +28,13 @@ export const DECIDA = {
       icon: "m2",
       plano: "luneta",
       title: "Preço do m² na região",
-      text: "A avaliação comparada com a média dos imóveis do mesmo tipo em leilão na rua, no bairro e na cidade. Em 5 capitais, também com o preço pago em compras registradas na prefeitura (ITBI).",
+      text: "A avaliação comparada com a média dos imóveis do mesmo tipo em leilão na rua, no bairro e na cidade. Em 5 capitais, também com o valor das compras registradas na prefeitura (ITBI).",
     },
     {
       icon: "doc",
       plano: "luneta",
       title: "Relatório em PDF",
-      text: "A simulação inteira numa página A4: resultado, cenários, custos linha a linha, preço da região e alertas. Para guardar, imprimir ou levar ao advogado.",
+      text: "A simulação inteira num relatório em PDF, em folhas A4: resultado, cenários, custos linha a linha, preço da região e alertas. Para guardar, imprimir ou levar ao advogado.",
     },
     {
       icon: "casa",
@@ -55,8 +55,8 @@ export const DECIDA = {
     pergunta: (objetivo: string, meses: number, cenario: string) => `Para ${objetivo}, vendendo em ${meses} meses no cenário ${cenario}:`,
     resposta: "Dê no máximo",
     minimo: "Lance mínimo hoje",
-    /** "cabem R$ 39.778 de disputa" */
-    folga: ["cabem", "de disputa"],
+    /** "sobram R$ 39.778 acima do lance mínimo" (a margem para disputar o lance) */
+    folga: ["sobram", "acima do lance mínimo"],
     matriz: "Cenários e prazos",
     matrizUnidade: "lance máximo, em reais",
     matrizSr: "Lance máximo por cenário e prazo de venda, exemplo fictício. Atinge: o lance máximo fica acima do lance mínimo. Não atinge: nem o lance mínimo dá a meta.",
@@ -69,7 +69,7 @@ export const DECIDA = {
     title: "A avaliação comparada com a média da rua, do bairro e da cidade",
     niveis: ["Muito abaixo", "Abaixo", "Na média", "Acima", "Muito acima"],
     /** {cidades}: lidas dos arquivos do ITBI; {n}: o total de compras (placeholder até a decisão do dono) */
-    itbi: "Em {cidades}, também com o preço pago em {n} compras registradas na prefeitura (ITBI).",
+    itbi: "Em {cidades}, também com o valor de {n} compras registradas na prefeitura (ITBI).",
   },
   /**
    * Publicar o total de compras do ITBI (lido dos arquivos no build, hoje ~203 mil)? Decisão do dono: só depois de
@@ -82,7 +82,7 @@ export const DECIDA = {
 export const NOTA_LOCAL = {
   eyebrow: "Nota de localização · plano Luneta",
   title: ["Um bom negócio também depende do", "entorno", "."] satisfies TitleParts,
-  lead: "Para cada imóvel, uma nota de 0 a 100 que compara o entorno com onde moram as pessoas da mesma cidade. Uma nota 78 quer dizer: melhor localizado que 78% dos moradores. Você vê cada parte da nota e de onde veio cada dado.",
+  lead: "Para cada imóvel com endereço localizado, uma nota de 0 a 100 que compara o entorno com onde moram as pessoas da mesma cidade. Uma nota 78 quer dizer: melhor localizado que 78% dos moradores. Você vê cada parte da nota e de onde veio cada dado.",
   steps: [
     {
       n: "01",
@@ -97,7 +97,7 @@ export const NOTA_LOCAL = {
     {
       n: "03",
       title: "Comparamos com a própria cidade",
-      text: "O IBGE divide a cidade em quadrados de 200 m, com os moradores de cada um. Medimos todos do mesmo jeito, e a nota é a posição do imóvel entre os moradores: vale dentro da cidade, não entre cidades. Abaixo de 20 mil moradores, mostramos só a posição em terços.",
+      text: "Comparamos com onde moram as pessoas da mesma cidade: a nota vale dentro da cidade, não entre cidades.",
     },
   ],
   more: "Como a nota é calculada",
@@ -119,7 +119,7 @@ export const NOTA_LOCAL = {
     semPonto: "Área de risco: a cidade tem áreas mapeadas, mas sem o endereço exato não conferimos.",
   },
   partesTitulo: "As seis partes da nota",
-  partesLead: "O peso de cada parte é o mesmo em todas as cidades. A página do imóvel mostra a nota de cada parte e os números por trás dela.",
+  partesLead: "Os pesos são os mesmos em todas as cidades; quando falta um dado, o peso dele vai para as outras partes, na mesma proporção. A página do imóvel mostra a nota de cada parte e os números por trás dela.",
   /** O que entra em cada parte e de onde vem. O peso não é digitado aqui: vem de PESOS_PADRAO. */
   partes: {
     servicos: { text: "Mercados, farmácias e padarias a até 500 m; escolas e unidades de saúde a até 1 km.", fonte: "IBGE, Inep e Ministério da Saúde" },
@@ -131,7 +131,9 @@ export const NOTA_LOCAL = {
   } satisfies Record<ChaveComponenteLocal, { text: string; fonte: string }>,
   risco:
     "Áreas de risco ficam fora da nota: quando há uma área de deslizamento ou inundação mapeada no lugar do imóvel ou perto dele, aparece um alerta. Onde não há mapeamento, a página diz isso, porque a ausência de área mapeada não quer dizer que não haja risco.",
-  fora: "Também ficam fora o preço do m², que aparece na região do imóvel, e a segurança, que não tem dado aberto por rua. Os pesos foram conferidos com o preço pago em compras reais em 5 capitais (ITBI), mas o preço não entra na nota.",
+  fora: "Também ficam fora o preço do m², que aparece na região do imóvel, e a segurança, que não tem dado aberto por rua. Os pesos foram conferidos com o valor das compras registradas no ITBI em 5 capitais, mas o preço não entra na nota.",
+  /** no celular, as duas notas acima numa linha só (UX-05) */
+  foraCurto: "Áreas de risco aparecem como alerta, fora da nota; o preço do m² e a segurança também ficam fora.",
   disclaimer:
     "A nota resume dados abertos e pode estar desatualizada ou errada para um endereço. Não é avaliação do imóvel nem garantia: visite o local antes de decidir.",
 } as const;

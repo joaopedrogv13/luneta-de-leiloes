@@ -56,15 +56,6 @@ function Cell({ value, plan }: { value: PlanValue; plan: string }) {
         <span className="sr-only">Incluído no plano {plan}</span>
       </span>
     );
-  if (value === "blur")
-    return (
-      <span className="text-[11px] leading-tight text-nevoa">
-        <span aria-hidden="true" className="mr-1 inline-block blur-[1.5px] text-latao-texto">
-          ✓
-        </span>
-        desfocado
-      </span>
-    );
   return (
     <span className="text-nevoa">
       <span aria-hidden="true">—</span>
@@ -141,28 +132,14 @@ export function PlansTable() {
                       {f.rotulo}
                     </li>
                   ))}
-                {highlights.map((f) =>
-                  f.valor === "blur" ? (
-                    <li key={f.rotulo} className="flex gap-2.5 text-nevoa">
-                      <span aria-hidden="true" className="font-bold text-latao-texto blur-[1.5px]">
-                        ✓
-                      </span>
-                      <span>
-                        <span className="blur-[1.2px]" aria-hidden="true">
-                          {f.rotulo}
-                        </span>
-                        <span className="sr-only">{f.rotulo}</span> <span className="text-[11px]">(aparecem desfocados)</span>
-                      </span>
-                    </li>
-                  ) : (
-                    <li key={f.rotulo} className="flex gap-2.5">
-                      <span aria-hidden="true" className="font-bold text-latao-texto">
-                        ✓
-                      </span>
-                      {f.rotulo}
-                    </li>
-                  ),
-                )}
+                {highlights.map((f) => (
+                  <li key={f.rotulo} className="flex gap-2.5">
+                    <span aria-hidden="true" className="font-bold text-latao-texto">
+                      ✓
+                    </span>
+                    {f.rotulo}
+                  </li>
+                ))}
               </ul>
               <a href={p.href} data-intent={p.id} className={p.featured ? "btn-primary w-full shadow-[0_0_30px_rgba(201,162,77,.35)]" : "btn-outline w-full"}>
                 {p.cta}

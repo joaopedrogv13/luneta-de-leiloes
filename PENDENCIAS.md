@@ -4,7 +4,10 @@ Este é o arquivo central do projeto: **onde estamos, que dados temos, o que fal
 entrega (última atualização: 18/10/2026, rodada 4: nota de localização de 0 a 100 com dados, servidor e **tela pronta**
 (página do imóvel, filtro, ordem, selo, PDF e a página pública `/metodologia/localizacao`); landing com as novidades do
 plano Luneta ("Decida com números", "Nota de localização", tabela de planos em grupos, FAQ novo); responsividade da
-prévia no celular, tablet e celular deitado; coleta no PC do dono pronta; a trava visual dos planos vem a seguir).
+prévia no celular, tablet e celular deitado; coleta no PC do dono pronta; **a trava dos planos pronta**: no Lente, cada
+recurso da Luneta vira uma chamada no mesmo lugar, e os filtros avançados ficam com cadeado; ver "Rodada 4 · a trava dos
+planos"; **revisão final da rodada 4**: 44 achados de três revisores corrigidos ou anotados, a landing sem promessa que o
+produto ainda não cumpre e a nota recalculada; ver "Rodada 4 · revisão final").
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
@@ -41,7 +44,12 @@ a busca, os filtros, a ordem e a paginação no servidor; "Estado: Minas Gerais"
 - passar o mouse num imóvel acende a cidade no mapa, e a cidade no mapa acende os imóveis dela; "Ver só esta cidade";
 - a barra de filtros fica fixa (no celular some ao rolar para baixo e volta ao rolar para cima);
 - a busca inteira vai na URL: o link compartilhado e o "voltar" do navegador reabrem a mesma busca, na mesma posição;
-- "Ver como: Lente | Luneta" no cabeçalho; no Lente, tags, selos e favoritos travados com o convite à Luneta.
+- "Ver como: Lente | Luneta" no cabeçalho. No Lente (rodada 4):
+  - nos cartões, nada de tags, selo ou nota;
+  - os filtros avançados e as ordens da Luneta aparecem com o cadeado e abrem a janela da Luneta;
+  - na página do imóvel, a chamada da Luneta no lugar do simulador, da região, da nota e dos riscos.
+
+  Detalhes em "Rodada 4 · a trava dos planos".
 - Peso no navegador (build de produção): 209 KB de JavaScript comprimido na primeira carga (139 KB são do Next e do
   React, ~70 KB do app); o mapa (37 KB) só baixa quando aparece; a página chega pronta do servidor (HTML de 41 KB
   comprimido), sem esqueleto. Os links para a landing ("voltar ao site", "Plano Luneta") não a pré-carregam mais (eram
@@ -369,7 +377,8 @@ para ver como no plano Lente. Tudo o que a base tem do imóvel numa página só:
 - id que não existe responde 404 com o caminho de volta à lista.
 
 Pendências da página:
-- [ ] **Decisão sua:** o simulador fica aberto no plano Lente por enquanto. Travar, deixar aberto ou abrir só uma parte?
+- [x] ~~**Decisão sua:** o simulador fica aberto no plano Lente?~~ Decidido na rodada 4: simulador e PDF são da Luneta. No
+  Lente, a chamada fica no lugar e o código do simulador nem é baixado (ver "Rodada 4 · a trava dos planos").
 - [x] Legenda do mapa pequeno: agora segue a precisão de verdade ("pela rua" nos imóveis da Leilões Judiciais, "centro
   da cidade" na Caixa).
 - [ ] Fotos da Caixa: não carregam deste ambiente (rede bloqueada); a página mostra o desenho no lugar. Conferir no navegador
@@ -774,8 +783,8 @@ em português simples para a página pública, está em `base/fontes/localizacao
 | Situação | Imóveis | % | O que a tela mostra |
 |---|---|---|---|
 | nota calculada (ponto no número ou na rua) | 13.293 | 62,6% | a nota e as 6 partes |
-| nota aproximada (só o bairro) | 4.388 | 20,7% | uma faixa e o meio dela |
-| sem nota: endereço só na cidade | 2.834 | 13,3% | o motivo |
+| nota aproximada (só o bairro) | 4.386 | 20,7% | uma faixa e o meio dela |
+| sem nota: endereço só na cidade | 2.836 | 13,4% | o motivo |
 | sem nota: cidade pequena (menos de 20 mil moradores ou 50 quadrados) | 666 | 3,1% | os números do entorno e a posição em terços |
 | sem nota: rural ou cidade fora da base | 49 | 0,2% | o motivo |
 
@@ -802,8 +811,8 @@ em português simples para a página pública, está em `base/fontes/localizacao
 Pendências da A2:
 - [x] **Site (frente C):** a nota na tela (seção, filtro, ordem, selo, resumo, PDF) e a página "Como a nota é calculada".
   Feito em 18/10/2026: ver "C · a nota na tela" abaixo.
-- [ ] **Planos (frente D):** a tela da trava no Lente para `localizacao`, `regiao`, `portais`, `simulador` e `relatorio`
-  (o servidor já não manda os dados) e os filtros avançados.
+- [x] **Planos (frente D):** a tela da trava no Lente para `localizacao`, `regiao`, `portais`, `simulador` e `relatorio`
+  (o servidor já não manda os dados) e os filtros avançados. Feito em 18/10/2026: ver "Rodada 4 · a trava dos planos".
 - [ ] **Quem integra:** depois do `base:geocode` e do exportar no banco principal, rodar `pois.py` e `nota.py` (ou copiar
   os `localizacao*.json.gz` do Actions); imóvel novo fica "pendente" até a próxima rodada.
 - [ ] **v1.1:** setores de risco do SGB (alto e muito alto) quando a camada e a licença forem confirmadas no Actions; o CEP
@@ -896,8 +905,8 @@ Pendências da revisão:
 
   Quem vem de um imóvel (`?de=<id>`) vê "Voltar ao imóvel". No celular, o detalhe de cada parte abre num toque.
 - **Exemplos da /assinante:** o cartão diz "Exemplo fictício".
-- **Lente:** no lugar do cartão, uma chamada com uma prévia desenhada (não é a nota do imóvel) e "Conhecer a Luneta". Fica
-  em `ChamadaNotaLuneta.tsx`, pequeno, para a frente D trocar.
+- **Lente:** o mapa e o endereço continuam; embaixo, a chamada da Luneta (`RecursoLuneta`, com a nota desenhada, nunca a
+  do imóvel), "Conhecer a Luneta" e o link "Como a nota é calculada".
 - **Conferido no navegador** (`next start`, 360, 390, 768, 1024 e 1440 px, os dois temas), em 10 imóveis:
   - o seu: 22 em São Gonçalo;
   - 97 em São Paulo;
@@ -914,8 +923,8 @@ Pendências da revisão:
   com a seção inteira numa página.
 
 Pendências da C:
-- [ ] **Frente D:** trocar `ChamadaNotaLuneta` pela chamada única do Lente. No Lente, mostrar o filtro e a ordem da nota
-  travados (hoje somem). Pôr na landing o link para `/metodologia/localizacao`.
+- [x] **Frente D:** trocar `ChamadaNotaLuneta` pela chamada única do Lente (`RecursoLuneta`); no Lente, o filtro e a ordem
+  da nota aparecem com o cadeado; a landing tem o link para `/metodologia/localizacao` (D2).
 - [ ] **Decisão sua:** o mapa mini da página mostra o estado com o ponto, sem as ruas. Com o ponto no número, um mapa de
   ruas mostraria o quarteirão: tiles do OSM com atribuição ou outro provedor, e o limite de uso entra na conta.
 - [ ] **Técnico:** os números da conferência com o ITBI na página do método estão em `src/lib/catalogo/metodologia.ts`
@@ -945,9 +954,11 @@ marketing." A landing de antes desta rodada está no branch `versao-site-v1`. A 
   - Os textos das duas ficam em `src/content/ferramentas.ts` (só no servidor; `site.ts` vai ao navegador).
 - **Tabela de planos em 4 grupos** (Encontrar · Decidir · Acompanhar · Equipe):
   - **Lente:** todos os leilões, fotos e mapa, os 6 filtros (estado, cidade, tipo, faixa de preço, deságio e data), a
-    página do imóvel com os dados da fonte, a matrícula e o glossário, e os parecidos. Tags e selos aparecem desfocados.
+    página do imóvel com os dados da fonte, a matrícula e o glossário, e os parecidos. Tags e selos não aparecem (nem
+    desfocados; a página do imóvel mostra onde eles estariam): ver "Rodada 4 · revisão final".
   - **Luneta:** tudo do Lente e mais tags e selos, filtros avançados, simulador, preço do m² com o ITBI, buscas nos
-    portais, nota de localização, PDF, favoritos com alerta de praça e prioridade com o advogado.
+    portais, nota de localização, PDF, favoritos e prioridade no contato com advogado (o alerta de praça só entra na
+    landing quando existir: `PRODUTO.alertaPraca`).
   - **Telescópio:** tudo da Luneta, mais a base em planilha, vários usuários e suporte.
   - Nos cartões, linhas com o mesmo rótulo curto viram uma só ("Tags de risco e selos", "Favoritos com alerta de praça").
     A coluna da Luneta segue destacada entre os grupos.
@@ -1004,6 +1015,228 @@ Prints em `scratchpad/prints/r4-D2/`.
   mudar, alinhar.
 - [ ] O aviso do simulador tem duas cópias: `src/content/avisos.ts` e `src/components/simulador/Simulador.tsx`. O teste
   confere que dizem o mesmo; juntar quando alguém mexer no simulador.
+
+### Rodada 4 · a trava dos planos no catálogo e na página do imóvel (18/10/2026)
+
+Pedido: "Todas as novas implementações vão para o plano Luneta". Antes, no Lente, várias coisas só sumiam ou apareciam
+vazias (a região dizia "ainda não há imóveis suficientes", a nota sumia, o simulador ficava aberto). Agora cada recurso
+da Luneta tem uma chamada, no mesmo lugar, e o servidor não manda o dado.
+
+**A regra (uma só, em `src/lib/catalogo/planos.ts`):**
+- `pode(plano, recurso)`: o plano vê o recurso se tiver pelo menos o plano mínimo dele (`MINIMO`, hoje tudo "luneta").
+  - O Telescópio, quando existir no catálogo, entra no tipo `Plano` e em `NIVEL` com nível 2 e vê tudo da Luneta.
+  - Nenhuma tela compara com `plano === "luneta"`: um 3º plano não quebra nada.
+  - Plano desconhecido vale como o Lente.
+- **Filtros do Lente** (`FILTROS_LENTE`): os 6 prometidos (estado, cidade e bairro, tipo, faixa de preço e avaliação,
+  deságio, data) e a busca por texto.
+  - O resto é "filtro avançado": área, quartos, vagas, R$/m², modalidade, praça, financiamento, FGTS, parcelamento,
+    ocupação, natureza, fonte e foto.
+  - Também são da Luneta os filtros de tags, de selo e de nota (`recursoDoFiltro`).
+- **Ordens do Lente:** deságio, preço, data, área, R$/m² e recentes. "Menos alertas", "Melhor selo" e "Melhor
+  localização" são da Luneta (`RECURSO_DA_ORDEM`).
+- **No servidor** (`consulta.ts`, `pagina.ts`):
+  - no Lente, os filtros e as ordens da Luneta são ignorados (`filtrosDoPlano`, `ordemDoPlano`);
+  - as facetas dos filtros avançados saem vazias;
+  - os itens saem sem tags, selo e nota;
+  - a página do imóvel sai sem tags, selo, o porquê do selo, nota, preço da região (o ITBI nem é calculado) e portais;
+  - fica a cobertura de preços (de quais cidades a Luneta tem o ITBI), que é pública.
+- **A tela** usa a mesma regra (`filtros-rotulos.ts`: `gruposIgnorados`, `grupoPermitido`, `gruposForaDoPlano`).
+- **De onde vem o plano:** na prévia e na demonstração, do `?plano=lente` (qualquer um tira o parâmetro e vê a Luneta).
+  Com login, as mesmas funções recebem o plano da sessão.
+
+**O que o Lente vê:**
+- **Componente único `RecursoLuneta`** (`src/components/catalogo/planos/`), em três formas:
+  - "secao": prévia **desenhada** e borrada (formas fixas, nunca o dado, nem no HTML), "Plano Luneta", o nome e a
+    chamada de `RECURSOS_LUNETA`, "Conhecer a Luneta" e "Comparar os planos" (`/#planos`);
+  - "compacto": o mesmo, menor, no painel de filtros;
+  - "linha": um filtro avançado com o cadeado.
+
+  Ele substituiu a chamada da nota (`ChamadaNotaLuneta`), o bloco das tags, o `Travado` do painel, as tags borradas dos
+  cartões e o `BotaoConhecerLuneta`.
+- **Janela da Luneta** (`UpgradeModal`) com o texto do recurso que a abriu (`planos/textos.ts`: "O simulador é da
+  Luneta.", "Os filtros avançados são da Luneta."...), mais "Comparar os planos".
+  - Agora usa a mesma pilha de diálogos do catálogo: aberta sobre o painel de filtros, o Esc fecha só ela, e o foco volta
+    ao filtro.
+- **Página do imóvel**, com as chamadas no mesmo lugar e o título da seção mantido (a navegação e as âncoras funcionam):
+  - riscos (tags e selo);
+  - a nota, embaixo do mapa e do endereço, que continuam;
+  - o simulador, com o PDF;
+  - o preço do m² na região, com os portais. Se a cidade tem ITBI, a chamada diz "A Luneta tem compras reais de
+    <cidade>", e "De onde vêm os preços" continua.
+  - O simulador vem por `next/dynamic` e só é desenhado na Luneta: o pedaço dele (~150 KB) não é baixado no Lente
+    (conferido nos chunks).
+  - Navegação das seções com o cadeado em Riscos, Simulador e Região.
+  - Resumo da direita: "Simular" vira "Conhecer a Luneta"; linhas com o cadeado para riscos e nota.
+  - Barra do celular: nos exemplos sem anúncio, "Conhecer a Luneta" no lugar de "Simular".
+  - Continua tudo do Lente: dados da fonte, fotos, registro, glossário, mapa, parecidos e links.
+- **`/relatorio` no Lente:** página travada simples ("Relatório do imóvel", a chamada do PDF, "Voltar ao imóvel"), sem
+  simulação, região nem alertas. "Assinar Luneta" abre o relatório de verdade.
+  - A simulação do relatório também vem por `next/dynamic` (`SimulacaoAdiada.tsx`) e não é baixada no Lente.
+  - A impressão automática (`?imprimir=1`) espera a simulação ficar pronta.
+- **Catálogo:**
+  - no painel, cada filtro avançado aparece no lugar dele com o cadeado e abre a janela, sem filtrar;
+  - Nota, Riscos e Selo têm a chamada compacta;
+  - as seções inteiras da Luneta têm o cadeado na navegação e no título;
+  - "Quartos" na barra do computador vira um botão com o cadeado;
+  - em "Ordenar", as três ordens da Luneta aparecem com "LUNETA" (inclusive "Melhor localização", que antes sumia);
+  - nos cartões e nas linhas, nada de selo, tags ou nota;
+  - aviso do topo: "Você está vendo como Lente. Na Luneta: tags de risco e selos, filtros avançados, simulador de lance,
+    preço da região, nota de localização e favoritos", com "Comparar os planos".
+- **Link da Luneta aberto no Lente** (ex.: `?plano=lente&quartosMin=2&ordem=localizacao`):
+  - a lista não usa o filtro, e a tela avisa "Este filtro é do plano Luneta: 2+ quartos. A lista abaixo mostra os imóveis
+    sem esse filtro", e o mesmo para a ordem;
+  - botões "Conhecer a Luneta" e "Tirar da busca";
+  - a URL guarda o filtro: trocando para a Luneta, ele volta.
+
+**Testes** (no `test:site`, 253 casos):
+- `planos.test.ts`: `MINIMO`/`pode`/`travasDo`, o recurso de cada filtro, `filtrosDoPlano`/`filtrosForaDoPlano`, as
+  ordens, `paraPlano`, `aplicarPlanoPagina` e o espelho em `filtros-rotulos`;
+- `consulta.test.ts`: cada filtro avançado filtra na Luneta e não filtra no Lente, as ordens, e as facetas avançadas
+  vazias no Lente;
+- `url.test.ts`: um link da Luneta aberto no Lente (a URL guarda, a busca ignora);
+- **`pagina.test.ts` (novo):** monta a `PaginaImovel` pelo mesmo caminho do servidor (`conjuntos.ts` + `pagina.ts`, que
+  o `servidor.ts` chama) no Lente e na Luneta. Roda nos 6 exemplos e no instantâneo real (a casa de São Gonçalo e uma
+  casa de São Paulo com ITBI).
+  - Confere que o JSON do Lente não leva nenhum pedaço que só a Luneta tem: slugs e trechos das tags, o porquê do selo,
+    componentes da nota, referências e ITBI, URLs dos portais.
+  - Confere também que o que é do Lente continua igual.
+
+**Conferido** (`next start` na porta 3315, Playwright):
+- páginas: `/previa` (lista, painel de filtros, ordem, link com filtro avançado), a casa de São Gonçalo e uma casa de São
+  Paulo com ITBI, `/relatorio`, `/assinante` e um exemplo, nos dois planos;
+- larguras e temas: 360, 390, 768, 1024 e 1440 px, claro e escuro. São 160 estados, prints em
+  `scratchpad/prints/r4-D1/`;
+- sem rolagem lateral e sem erro no console (fora as fotos da Caixa, que a rede daqui não abre);
+- no Lente, o simulador nunca é baixado;
+- pelo `curl` do HTML e do RSC, nenhum dado da Luneta sai no Lente: nada de componentes da nota, ITBI, portais, tags,
+  selo ou "Melhor localizado que";
+- pela API, `plano=lente` com `quartosMin`, `comFoto`, `notaLocalMin` e `ordem=localizacao` devolve a mesma lista do
+  filtro só por estado, sem as facetas avançadas;
+- teclado: Enter abre a janela com o foco em "Assinar Luneta"; Esc fecha só ela e o foco volta a quem abriu;
+  "Assinar Luneta" troca para a Luneta e põe o foco no título do simulador.
+
+**Decisões suas (planos):**
+- [x] **Busca por texto com quartos no Lente:** resolvido na revisão final (R4-VAZ-06): no Lente, a parte "2 quartos" da
+  busca é ignorada no servidor e a tela avisa "Este filtro é do plano Luneta: 2 quartos (na busca)", com "Tirar da
+  busca". Se preferir dar quartos ao Lente, é passar "quartos" para `FILTROS_PROMETIDOS.lente` e `FILTROS_LENTE`.
+- [ ] **Recurso que nem a Luneta teria para o imóvel:** hoje a chamada aparece sempre. Por exemplo, a nota de um endereço
+  localizado só na cidade, ou a região sem amostra; a chamada da nota diz que depende de o endereço ser localizado.
+  - Proposta: o servidor diz "sem dado" e o Lente vê a mesma frase neutra da Luneta, sem convite.
+  - Custo: ler a nota e o ITBI também no Lente (só para saber se existem).
+- [ ] Na prévia não há login: a trava é demonstração (`?plano=lente`). Não anunciar "dados protegidos" antes do login.
+
+**Falta (técnico):**
+- [ ] Com login: o plano vem da sessão (`base/FASE1-SITE.md`, passo 5). As funções de `planos.ts` já recebem o plano.
+- [ ] Ramos do Lente que ficaram sem uso (o aviso das dívidas no `Editores.tsx`, as linhas "plano Lente" do PDF): agora
+  passam por `pode`. Voltam a valer se o `MINIMO` mudar (ex.: simulador no Lente e tags na Luneta).
+
+### Rodada 4 · revisão final (18/10/2026)
+
+Três revisores independentes (UX no navegador; vazamento de plano e coerência landing × produto; conteúdo e números da
+nota) acharam 44 problemas. Cada um foi conferido (reproduzido no navegador, na API ou nos dados) antes de corrigir. Base:
+o commit da trava dos planos (D1). Conferido com `next start` (porta 3330), Playwright, axe e o PDF A4; prints em
+`scratchpad/prints/r4-final/`.
+
+**O que mudou para quem usa:**
+- **Folhas e janelas sem travar a tela no celular** (UX-01, alta). A trava de rolagem ia no `<html>`, e qualquer estilo no
+  `<html>` recalcula a página inteira (os tokens de cor são variáveis no `:root`). Agora vai no `<body>` (a rolagem continua
+  travada, por roda e por toque). Medido a 390 px com CPU 4×: "Filtros" de 1,33–1,54 s para 0,90 s (o estilo de 0,6–0,9 s
+  para 0,23 s; o resto é desenhar o painel); as folhas do simulador de 632/360/360 ms para 320/128/120 ms. A ilustração por
+  baixo da foto sai do DOM quando a foto aparece (~900 nós de SVG a menos por página).
+- **A janela da Luneta cabe no celular deitado** (UX-02): altura máxima com rolagem própria, sem o anel em tela baixa
+  (844×390: de −40/430 px para 25/365 px).
+- **Página do imóvel no Lente sem parede de convites** (UX-03): só a primeira chamada (Riscos) é o cartão grande; a nota,
+  o simulador e a região viram uma faixa curta ("Na Luneta: …" e "Ver na Luneta", em contorno), sem o título repetido. No
+  celular, o dourado fica só para "Ver anúncio". 390 px: de 8 para 7,2 telas. A chamada do simulador numa venda direta ganhou
+  o aviso de que a simulação não é recomendação (R4-VAZ-11).
+- **"De onde vêm os preços" só com o que existe** (UX-07): as cidades com compras registradas e uma frase para a cidade do
+  imóvel. Saíram da tela do cliente o FipeZAP, a "coleta pendente" e a LAI. A fonte de SP, Rio e POA diz "licença a confirmar
+  com a prefeitura" (R4-VAZ-10).
+- **O valor do ITBI com o nome certo** (R4-VAZ-04): "preço médio declarado" em SP e no Rio, "base de cálculo média do ITBI"
+  em POA e Fortaleza, "avaliação média da prefeitura para o ITBI" no Recife (página, gráfico, frase e PDF); na landing e no
+  FAQ, "o valor das compras registradas no ITBI".
+- **Plano na URL:** `?plano=LENTE`, ` lente`, vazio ou desconhecido ficam no Lente (antes abriam a Luneta); só a ausência
+  do parâmetro abre a Luneta da demonstração (R4-VAZ-07, `lerPlano` em `planos.ts`). O layout da página do imóvel só
+  confere se o id existe, sem montar a página da Luneta (R4-VAZ-08).
+- **Teclado e foco:** a aba focada na faixa das seções não fica mais embaixo da seta (UX-08); os campos do formulário da
+  landing têm anel de foco de 2 px (UX-09).
+- **CLS:** a galeria mantém a caixa quando as fotos da Caixa falham (imóvel 1440: CLS 0); a data do relatório reserva o
+  lugar (0,006, era 0,011–0,025); a largura medida vai num cookie e o servidor acerta a vista da lista da 2ª página em diante
+  (tablet de 7" com UA de computador: 0,53 na 1ª visita, 0 na 2ª) (UX-12, UX-13).
+
+**Landing × produto (não vender o que ainda não existe):**
+- Nova constante `src/lib/catalogo/produto.ts`: `PRODUTO.leituraDoEdital` e `PRODUTO.alertaPraca`, as duas em `false`.
+  - Leitura do edital (R4-VAZ-01, alta): hoje as 86 mil tags vêm dos campos da lista da Caixa e de ausência (nenhuma do
+    edital, da ficha ou do processo; "ocupação não informada" em 100% dos imóveis). Com `false`, a landing, "Por dentro", o
+    FAQ, a chamada e a janela dizem o que a Luneta lê hoje (financiamento, direito de preferência, deságio, praça) e que
+    ocupação, dívidas e matrícula entram com a leitura do edital. O teste `site.test.ts` só deixa ligar com pelo menos 10% das
+    tags vindas de texto e menos da metade dos imóveis sem a ocupação.
+  - Alerta de praça (R4-VAZ-09): saem a linha "Alerta por e-mail" da tabela, a pergunta do FAQ, o cartão do e-mail em
+    "Primeira e segunda praça", "Favoritos e alerta de 2ª praça" em "Por dentro", o aviso ao favoritar e as menções na janela
+    e no aviso do catálogo. Fica "favoritos".
+- Tags e selos "desfocados" no Lente (UX-04, R4-VAZ-02, M14): escolhido o caminho (a) do revisor, o mais honesto para o
+  comprador: a tabela marca "—" para o Lente, o cartão não diz mais "(aparecem desfocados)", "Por dentro" diz "Riscos e
+  selos só na Luneta". A animação de "Por dentro" continua borrando as tags como metáfora do que a Lente não vê (ver
+  decisões).
+- Relatório "numa página A4" (R4-VAZ-03, M8): o PDF tem 6 a 7 folhas; agora "num relatório em folhas A4" (teste proíbe a frase).
+- Nota "para cada imóvel" (R4-VAZ-05): "para cada imóvel com endereço localizado" (62,6% calculada, 20,7% aproximada).
+- A busca da janela "Por dentro" dizia "leiloeiro" (o campo não vem da fonte): agora "Cidade, bairro, estado ou palavra".
+- Filtros avançados com uma lista só (UX-10): `FILTROS_PROMETIDOS` mudou para `planos.ts`; a chamada e a janela citam 5
+  ("área, quartos, vagas, praça, forma de pagamento e mais"); "natureza" saiu.
+- Landing no celular (UX-05): a seção "Nota de localização" de 3.890 para 2.164 px a 360 px (as seis partes ficam só a partir
+  do tablet; o exemplo já mostra as seis com o peso; o passo 03 virou uma frase; as duas notas, uma linha). Landing a 360 px:
+  de 38 para 35,7 telas. "cabem R$ 39.778 de disputa" virou "sobram R$ 39.778 acima do lance mínimo".
+- Link "Abrir a área do assinante" com 44 px de altura (UX-14); "política de privacidade [link]" no formulário (UX-15).
+
+**A nota de localização (recalculada com `nota.py` em 18/10/2026):**
+- **Pontos de ônibus do OSM** (M1, alta): além dos 10% do Censo, o morador típico precisa ter pelo menos 1 ponto mapeado a
+  500 m. 265 → 141 cidades usam os pontos do OSM (as 5 capitais do ITBI continuam; a validação não mudou). Goiânia, São
+  Gonçalo, Duque de Caxias e as outras 121 com o "comum" igual a 0 ficam com a estação e o ponto na quadra do Censo. 3.474
+  notas mudaram (591 em 10 pontos ou mais, no máximo 26). Onde o OSM entra e o imóvel tem 0 pontos, a tela diz "nenhum no
+  mapa aberto (pode estar incompleto)". Os textos dizem a regra real (saiu "razoavelmente completo").
+- **Área de risco pela margem do ponto** (M2): no número e na rua, a procura vai até a incerteza do ponto (100 a 500 m),
+  como no bairro. Alertas: 1.185 → 1.272 (86 na rua). Fora do número exato, o texto fala "do ponto da rua do endereço",
+  nunca "o imóvel fica dentro".
+- **Rua espalhada** (M3): 793 imóveis "bairro" eram, na verdade, o meio de uma rua achada com os endereços espalhados
+  (coluna nova `rua_espalhada`). A tela diz "Rua espalhada: nota aproximada" e "o meio da rua do endereço", nunca "centro
+  do bairro". O mapa diz "Posição aproximada: pelo bairro". Os 2 imóveis de Monte Mor com o setor do Censo em Hortolândia
+  ficaram sem nota ("cidade").
+- **Textos:** a faixa da aproximada é a do meio, "Nota provável entre 46 e 86 (faixa do meio)" (M4); cidade pequena com as
+  três contagens no topo, no cartão e no PDF, "1 parte acima da maioria, 3 no meio e 2 abaixo" (M5); o porquê da cidade
+  pequena é o critério que valeu (M6); o recálculo é "de tempos em tempos", com a data do último (M7); "Por que esses pesos"
+  coerente com a conferência (M9); BH também publica o ITBI (M10); "quando falta um dado, o peso vai para as outras partes"
+  (M11); a página do método diz "Nota para 17.679 dos 21.230 imóveis", "666 imóveis com ponto" e "em geral a menos de 100 m"
+  (M12); o rótulo do ponto pela precisão, não pela situação (M13); cidade fora da base e rural: "não conferida" (M16); o PDF
+  mostra todos os números de cada parte (M17); jargão trocado (casamento, acesso, empate, pesada, setor, natureza) e
+  artigos da Serra, da Praia Grande e do Guarujá (M18); os 8 recortes da conferência, com a ressalva da área dos
+  apartamentos de SP e Fortaleza, e sem "por definição" (M15).
+- Contraste da barra dos pesos no escuro (UX-06): axe sem violações na página do método e na landing, nos dois temas.
+
+**Não era problema ou ficou como está (e por quê):**
+- `content-visibility` nos itens da lista (opcional da UX-01): não aplicado. Com a lista e os cards de alturas diferentes,
+  o tamanho reservado (520 px) erra a altura antes de desenhar, e a volta para o mesmo imóvel ("voltar" e "Ver no mapa")
+  pararia no lugar errado. O ganho principal (a trava no body) já veio.
+- UX-03 "juntar simulador e região numa chamada só": ficaram duas faixas curtas, porque as seções têm âncora e navegação
+  próprias (`#simulador`, `#regiao`).
+- UX-12 na primeira visita: o servidor ainda não sabe a largura (sem dica do navegador). Desenhar as duas vistas pelo CSS
+  seria refazer a lista; ficou o cookie.
+
+**Decisões suas:**
+- [ ] **Animação "Por dentro" no Lente:** ela ainda borra as tags dos exemplos (metáfora). Manter, ou trocar por cartões sem
+  tags com o cadeado (mais fiel ao produto)?
+- [ ] **Ligar `PRODUTO.leituraDoEdital`** quando as fichas da Caixa e a leitura do edital entrarem na base (o teste confere a
+  proporção). **Ligar `PRODUTO.alertaPraca`** quando houver login e envio de e-mail.
+- [ ] **ITBI de SP, Rio e POA** aparece na Luneta (prévia e demonstração) com "licença a confirmar com a prefeitura".
+  Confirmar as licenças (base/FONTES.md) ou segurar essas três cidades atrás da mesma decisão do total (`mostrarTotalItbi`).
+- [ ] **"Atualizada todos os dias"** (hero, "Por dentro" e FAQ) é a promessa do lançamento; hoje a base é uma carga só.
+- [ ] Selos na landing: a prévia mostra "selos desligados" (critérios pendentes); a landing os vende.
+
+**Falta (técnico):**
+- [ ] Os 2 imóveis de Monte Mor sem nota ainda aparecem no mapa no ponto de Hortolândia (o ponto vem do instantâneo):
+  rebaixar no `geocodificar.py` (setor de outro município) e rodar `base:geocode` + `base:exportar -- --site`.
+- [ ] Testar a trava no `<body>` no Safari do iPhone (a propagação do overflow é a mesma do `<html>`, mas não houve iPhone).
+- [ ] Recálculo da nota encadeado na atualização da base (hoje manual; o texto diz isso).
+- [ ] O relatório ainda cresce ~45 px quando a simulação adiada chega (CLS 0,006).
 
 ### Ler cada leilão com IA: é viável?
 

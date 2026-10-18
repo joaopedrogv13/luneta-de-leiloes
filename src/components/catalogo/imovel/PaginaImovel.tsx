@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BACK_TO_SITE } from "@/components/assinante/shared";
 import type { EntradaSimulador } from "@/components/simulador";
 import { cidadePequena, linhaResumoNota, ondeRisco } from "@/lib/catalogo/nota-texto";
+import { pode } from "@/lib/catalogo/planos";
 import type { Conjunto, PaginaImovel as DadosPagina, LocalizacaoImovel, Plano } from "@/lib/catalogo/tipos";
 import { CabecalhoImovel } from "./CabecalhoImovel";
 import { ProvedorImovel } from "./ContextoImovel";
@@ -17,6 +18,7 @@ import { SecaoRegiao } from "./SecaoRegiao";
 import { AVISO_CLASSIFICACAO, SecaoRiscos } from "./SecaoRiscos";
 import { SecaoResumo } from "./SecaoResumo";
 import { SecaoSimulador } from "./SecaoSimulador";
+import { SecaoRegiaoTravada, SecaoSimuladorTravada } from "./SecoesTravadas";
 import { TopoImovel } from "./TopoImovel";
 import { GradeImovel, LateralRecolhivel, PilulaResumo } from "./ResumoRecolhivel";
 import styles from "./imovel.module.css";
@@ -24,17 +26,20 @@ import { VoltarBusca } from "./VoltarBusca";
 
 /**
  * Ordem das seções e da navegação: a localização antes do simulador; os parecidos no fim da página. Os dados da
- * fonte viraram o rodapé de Documentos (a âncora #fonte continua valendo).
+ * fonte viraram o rodapé de Documentos (a âncora #fonte continua valendo). No Lente, as seções inteiras da Luneta
+ * (riscos, simulador, região) ganham o cadeado na navegação; a localização não, porque o mapa e o endereço são do Lente.
  */
-const SECOES: SecaoNav[] = [
-  { id: "resumo", rotulo: "Resumo" },
-  { id: "riscos", rotulo: "Riscos" },
-  { id: "localizacao", rotulo: "Localização" },
-  { id: "simulador", rotulo: "Simulador" },
-  { id: "regiao", rotulo: "Região" },
-  { id: "documentos", rotulo: "Documentos" },
-  { id: "parecidos", rotulo: "Parecidos" },
-];
+function secoesDo(plano: Plano): SecaoNav[] {
+  return [
+    { id: "resumo", rotulo: "Resumo" },
+    { id: "riscos", rotulo: "Riscos", travada: !pode(plano, "tags") },
+    { id: "localizacao", rotulo: "Localização" },
+    { id: "simulador", rotulo: "Simulador", travada: !pode(plano, "simulador") },
+    { id: "regiao", rotulo: "Região", travada: !pode(plano, "regiao") },
+    { id: "documentos", rotulo: "Documentos" },
+    { id: "parecidos", rotulo: "Parecidos" },
+  ];
+}
 
 /** A nota no resumo da direita: o número (ou "—"), a linha curta e o alerta de área de risco (null no Lente). */
 function resumoDaNota(loc: LocalizacaoImovel | null): DadosResumo["local"] {
@@ -45,14 +50,16 @@ function resumoDaNota(loc: LocalizacaoImovel | null): DadosResumo["local"] {
     nota: comNota ? loc.nota : null,
     aproximada: comNota && loc.situacao === "aproximada",
     linha: linhaResumoNota(loc),
-    risco: loc.alertas.length > 0 ? ondeRisco(loc.alertas[0]!.distanciaM, loc.precisao === "bairro") : null,
+    risco: loc.alertas.length > 0 ? ondeRisco(loc.alertas[0]!.distanciaM, loc) : null,
   };
 }
 
 /**
  * Página do imóvel (/previa/imovel/[id] e /assinante/imovel/[id]). Componente do servidor: monta o layout e
  * entrega aos pedaços interativos (galeria, resumo, navegação, tags, simulador, mapa, parecidos) só o que
- * cada um usa. O plano já vem aplicado pelo servidor: no Lente não há tags nem selo nos dados.
+ * cada um usa. O plano já vem aplicado pelo servidor: no Lente não há tags, selo, nota, preço da região nem portais nos
+ * dados, e no lugar de cada recurso da Luneta vai a chamada (RecursoLuneta), na mesma posição; o código do simulador nem
+ * é carregado.
  *
  * Computador: galeria grande no topo; embaixo, o conteúdo à esquerda e o resumo fixo à direita, que a pessoa pode
  * recolher (o conteúdo ocupa a largura e uma pílula com o lance fica na barra das seções; a escolha fica salva).
@@ -94,10 +101,9 @@ export function PaginaImovel({
     anuncio: i.links.find((l) => l.tipo === "anuncio")?.url ?? null,
     exemplo,
     falta,
-    riscos:
-      plano === "lente"
-        ? null
-        : {
+    riscos: !pode(plano, "tags")
+      ? null
+      : {
             grave: contar((t) => !t.emRevisao && t.severidade === "grave"),
             atencao: contar((t) => !t.emRevisao && t.severidade === "atencao"),
             positivo: contar((t) => !t.emRevisao && t.severidade === "positivo"),
@@ -170,7 +176,7 @@ export function PaginaImovel({
             >
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
-                  <NavSecoes secoes={SECOES} />
+                  <NavSecoes secoes={secoesDo(plano)} />
                 </div>
                 <PilulaResumo lance={i.lance} desagio={i.desagio} precoFixo={i.modalidade === "venda_direta"} />
               </div>
@@ -181,8 +187,12 @@ export function PaginaImovel({
               <SecaoResumo imovel={i} agora={agora} />
               <SecaoRiscos imovel={i} plano={plano} selosDesligados={pagina.selosDesligados} />
               <SecaoLocalizacao imovel={i} localizacao={pagina.localizacao} travada={pagina.travas.includes("localizacao")} />
-              <SecaoSimulador imovel={entradaSimulador} referencias={pagina.vizinhanca.referencias} />
-              <SecaoRegiao imovel={i} vizinhanca={pagina.vizinhanca} />
+              {pode(plano, "simulador") ? (
+                <SecaoSimulador imovel={entradaSimulador} referencias={pagina.vizinhanca.referencias} />
+              ) : (
+                <SecaoSimuladorTravada imovel={i} />
+              )}
+              {pode(plano, "regiao") ? <SecaoRegiao imovel={i} vizinhanca={pagina.vizinhanca} /> : <SecaoRegiaoTravada imovel={i} vizinhanca={pagina.vizinhanca} />}
               <SecaoDocumentos imovel={i} />
               <SecaoParecidos imovel={i} vizinhanca={pagina.vizinhanca} />
             </div>

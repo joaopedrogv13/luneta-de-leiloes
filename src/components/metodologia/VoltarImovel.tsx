@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { idDeImovelValido } from "@/lib/catalogo/nota-texto";
+import { lerPlano } from "@/lib/catalogo/planos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
 
 /**
@@ -15,7 +16,7 @@ export function VoltarImovel({ className = "", rotulo = "Voltar ao imóvel" }: {
   const id = sp.get("de");
   if (!idDeImovelValido(id)) return null;
   const conjunto = id.startsWith("ex-") ? "exemplos" : "previa";
-  const href = `${rotaImovel(conjunto, id, sp.get("plano") === "lente" ? "lente" : "luneta")}#localizacao`;
+  const href = `${rotaImovel(conjunto, id, lerPlano(sp.get("plano")))}#localizacao`;
   return (
     <Link href={href} prefetch={false} className={className}>
       <span aria-hidden="true">←&nbsp;</span>

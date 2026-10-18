@@ -5,7 +5,7 @@ import type { Conjunto, ResultadoBusca, SobreConjunto } from "@/lib/catalogo/tip
 import { lerBusca } from "@/lib/catalogo/url";
 import type { PropsCatalogoApp } from "../CatalogoApp";
 import { chaveDoEstado } from "./consultas";
-import { CHAVE_PREFERENCIAS, lerPreferencias, pareceCelular } from "./preferencias";
+import { CHAVE_PREFERENCIAS, CHAVE_TELA, lerPreferencias, lerTela, pareceCelular } from "./preferencias";
 
 type Entrada = Record<string, string | string[] | undefined>;
 
@@ -43,7 +43,7 @@ export async function carregarCatalogo(
         mapa: estado.mapa,
       },
       preferencias: lerPreferencias(jarra.get(CHAVE_PREFERENCIAS)?.value),
-      palpiteCelular: pareceCelular(cabecalhos),
+      palpiteCelular: pareceCelular(cabecalhos, lerTela(jarra.get(CHAVE_TELA)?.value)),
       selosDesligados: resultado?.selosDesligados ?? sobre?.selosDesligados ?? conjunto === "previa",
     },
     sobre: sobre ?? resultado?.sobre ?? { geradoEm: new Date().toISOString(), fontes: [] },

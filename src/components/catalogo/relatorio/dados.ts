@@ -7,11 +7,12 @@ import { MODALIDADE_ROTULO, normalizar, numero, OCUPACAO_ROTULO, PRACA_ROTULO, T
 import type { ImovelDetalhe, Plano, ReferenciaM2 } from "../../../lib/catalogo/tipos";
 import type { ResultadoCompleto } from "../../../lib/simulador/completa";
 import { chaveAjustada } from "../../../lib/simulador/conta";
+import { pode } from "../../../lib/catalogo/planos";
 import { area, juntar, meses, moeda, moedaMes, pct, porArea } from "../../../lib/simulador/formato";
 import { multiplicador, PADRAO, reformaPadrao, ROTULO_NIVEL, type Modelo } from "../../../lib/simulador/premissas";
 import { CENARIO_ROTULO, vendaDoCenario } from "../../../lib/simulador/textos";
 import type { Ajustes, EntradaSimulador, LinhaDesligavel, Premissas } from "../../../lib/simulador/tipos";
-import { areaDetalhada, descricaoReferencia, precoPorArea } from "../imovel/formato";
+import { areaDetalhada, descricaoReferencia, nomeValorItbi, precoPorArea } from "../imovel/formato";
 import { referenciaLeiloes, referenciaPrincipal } from "../../../lib/catalogo/referencia";
 
 // ---------------------------------------------------------------------------
@@ -364,7 +365,7 @@ export function premissasUsadas(r: Pick<ResultadoCompleto, "modelo">, plano: Pla
       ? `${moeda(p.dividas)} (valor informado por você)`
       : m.dividasApontadas.length
         ? `falta informar: a análise aponta ${juntar(m.dividasApontadas)}`
-        : plano === "lente"
+        : !pode(plano, "tags")
           ? "não analisadas no plano Lente (as tags de dívida são da Luneta): confira no edital"
           : "nenhuma apontada pela análise";
 
@@ -424,7 +425,7 @@ export function premissasUsadas(r: Pick<ResultadoCompleto, "modelo">, plano: Pla
           "Dívidas que passam ao comprador",
           ["dividas"],
           dividasTexto,
-          m.dividasApontadas.length ? "falta informar" : plano === "lente" ? "não analisadas (plano Lente)" : "nenhuma",
+          m.dividasApontadas.length ? "falta informar" : !pode(plano, "tags") ? "não analisadas (plano Lente)" : "nenhuma",
           "dividas",
         ),
         linha(
@@ -693,9 +694,11 @@ export function regiaoRel(
     }
   }
   if (principal) {
-    const alvo = principal.fonte === "itbi" ? `o preço médio pago ${ESCOPO_NO[principal.escopo]}` : `a média ${ESCOPO_DA[principal.escopo]}`;
-    const de = principal.fonte === "itbi" ? "do" : "da";
-    const ao = principal.fonte === "itbi" ? "ao" : "à";
+    // ITBI: o nome do número pela cidade ("o preço médio declarado", "a base de cálculo média do ITBI"...; R4-VAZ-04)
+    const nomeItbi = principal.fonte === "itbi" && refPrincipal ? nomeValorItbi(refPrincipal).alvo : null;
+    const alvo = nomeItbi ? `${nomeItbi.artigo} ${nomeItbi.nome} ${ESCOPO_NO[principal.escopo]}` : `a média ${ESCOPO_DA[principal.escopo]}`;
+    const de = nomeItbi?.artigo === "o" ? "do" : "da";
+    const ao = nomeItbi?.artigo === "o" ? "ao" : "à";
     const media = precoPorArea(principal.media, i.area);
     const sujeito = principal.avaliacao ? "A avaliação deste imóvel" : principal.lance ? "O lance mínimo deste imóvel" : null;
     const c = principal.avaliacao ?? principal.lance;

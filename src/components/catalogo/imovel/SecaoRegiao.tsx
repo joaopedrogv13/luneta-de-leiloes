@@ -5,6 +5,7 @@ import { Expansor } from "./Expansor";
 import { FontesPrecos } from "./FontesPrecos";
 import {
   alvoDaReferencia,
+  nomeValorItbi,
   AREA_HECTARE,
   compararComMedia,
   diferencaCurta,
@@ -170,9 +171,10 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
     return r ? frasePercentil(r) : null;
   })();
 
+  const maiusc = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
   const contexto = (r: ReferenciaM2) =>
     r.fonte === "itbi"
-      ? `Preço médio pago em ${numero(r.amostra)} ${r.amostra === 1 ? "compra" : "compras"} de ${tipos} registradas na prefeitura (ITBI) ${ondeRecorte(r)}${periodoCurto(r.periodo) ? `, de ${periodoCurto(r.periodo)}` : ""}: `
+      ? `${maiusc(nomeValorItbi(r).curto)} em ${numero(r.amostra)} ${r.amostra === 1 ? "compra" : "compras"} de ${tipos} registradas na prefeitura (ITBI) ${ondeRecorte(r)}${periodoCurto(r.periodo) ? `, de ${periodoCurto(r.periodo)}` : ""}: `
       : `Média de avaliação de ${numero(r.amostra)} ${tipos} em leilão ${ondeRecorte(r)}: `;
 
   const faltaLeiloes = (escopo: ReferenciaM2["escopo"], igualA: ReferenciaM2["escopo"] | null) => {
@@ -225,7 +227,7 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
     <tbody>
       <tr className="border-t border-nevoa/15">
         <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[13px] font-medium text-nevoa sm:px-6 sm:text-[12px]">
-          Transações reais (ITBI) · preço médio pago
+          Compras registradas (ITBI) · {nomeValorItbi(itbi[0] ?? {}).curto}
           {itbi[0]?.periodo && <span className="whitespace-nowrap"> · {periodoCurto(itbi[0].periodo)}</span>}
         </th>
       </tr>
@@ -250,7 +252,7 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
               ? itbiSemComparacao
               : v.cobertura?.cidadeTemItbi
               ? `A prefeitura de ${i.cidade} não registra compras de ${tipos} suficientes para comparar.`
-              : `Ainda não temos o preço pago nas compras registradas em ${lugarCidade}.${v.cobertura ? " Veja abaixo de quais cidades temos." : ""}`}
+              : `Ainda não temos as compras registradas na prefeitura (ITBI) de ${lugarCidade}.${v.cobertura ? " Veja abaixo de quais cidades temos." : ""}`}
           </td>
         </tr>
       )}
@@ -262,7 +264,7 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
       id="regiao"
       titulo="Preço do m² na região"
       sobretitulo="Comparação com a região"
-      descricao="Médias de avaliação dos imóveis do mesmo tipo em leilão na base e, onde a Luneta tem o dado, do preço pago nas compras registradas na prefeitura (ITBI). Avaliação de leilão não é preço de mercado: use como referência."
+      descricao="Médias de avaliação dos imóveis do mesmo tipo em leilão na base e, onde a Luneta tem o dado, do valor das compras registradas na prefeitura (ITBI). Avaliação de leilão não é preço de mercado: use como referência."
     >
       <div className="space-y-6">
         {semReferencia ? (

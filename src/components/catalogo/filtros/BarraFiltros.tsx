@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { BOTAO_ROTULO, GRUPOS_DO_BOTAO, filtrosEfetivos, removerGrupos, resumoBotao, type BotaoRapido, type GrupoFiltro } from "@/lib/catalogo/filtros-rotulos";
+import { BOTAO_ROTULO, GRUPOS_DO_BOTAO, filtrosEfetivos, grupoPermitido, recursoDoGrupo, removerGrupos, resumoBotao, type BotaoRapido, type GrupoFiltro } from "@/lib/catalogo/filtros-rotulos";
 import { numero } from "@/lib/catalogo/rotulos";
 import type { Facetas, Filtros, Ordem } from "@/lib/catalogo/tipos";
 import { contarFiltros } from "@/lib/catalogo/url";
 import { CHIP, CHIP_OFF, CHIP_ON, EYEBROW } from "../ui/estilos";
-import { Girando, IconeAjustes, IconeSeta, IconeX } from "../ui/icones";
+import { Girando, IconeAjustes, IconeCadeado, IconeSeta, IconeX } from "../ui/icones";
 import { Popover } from "../ui/Popover";
 import { semMovimento } from "../ui/useAdiado";
 import { BuscaLocal } from "./BuscaLocal";
@@ -184,36 +184,51 @@ export function BarraFiltros({
             outros não pulam de linha nem levam o pop-up aberto junto. Abaixo de lg (tablet em pé) e em tela baixa
             não cabem: ficam em "Filtros", que abre o painel. */}
         <div role="group" aria-label="Filtros rápidos" className={compacta ? "hidden" : "hidden min-w-0 flex-1 flex-wrap items-center gap-2 lg:flex baixa:hidden"}>
-          {RAPIDOS.map((b) => (
-            <FiltroRapido
-              key={b}
-              botao={b}
-              className={SO_NO_LARGO.has(b) ? "max-xl:hidden" : ""}
-              resumo={resumoBotao(filtros, b)}
-              total={total}
-              carregando={carregando}
-              onFechou={descarregar}
-              onLimpar={() => aplicar(`limpar-${b}`, (x) => removerGrupos(x, GRUPOS_DO_BOTAO[b]))}
-              // o pop-up já devolveu o foco ao gatilho "Preço": ao fechar a folha, o foco volta para ele
-              onMais={b === "preco" ? () => abrirPainel(document.activeElement instanceof HTMLButtonElement ? document.activeElement : botaoTodos.current, "valores") : undefined}
-            >
-              {b === "uf" && <ControleEstados {...controle} focarBusca alturaLista="max-h-[min(46vh,320px)] min-h-[120px]" />}
-              {b === "cidade" && <AbasLocal controle={controle} carregando={carregando} />}
-              {b === "tipo" && <ControleTipo {...controle} />}
-              {b === "preco" && <ControleFaixa {...controle} grupo="lance" adiar rotuloVisivel={false} />}
-              {b === "desagio" && <ControleFaixa {...controle} grupo="desagio" adiar rotuloVisivel={false} />}
-              {b === "quartos" && (
-                <div className="flex flex-col gap-5">
-                  <Campo rotulo="Quartos">
-                    <ControleMinimo {...controle} grupo="quartos" />
-                  </Campo>
-                  <Campo rotulo="Vagas de garagem">
-                    <ControleMinimo {...controle} grupo="vagas" />
-                  </Campo>
-                </div>
-              )}
-            </FiltroRapido>
-          ))}
+          {RAPIDOS.map((b) =>
+            // filtro que o plano não tem (Lente: "Quartos"): o mesmo botão com o cadeado, que abre a janela da Luneta
+            GRUPOS_DO_BOTAO[b].every((g) => !grupoPermitido(g, plano)) ? (
+              <button
+                key={b}
+                type="button"
+                aria-haspopup="dialog"
+                onClick={(e) => onUpsell(e.currentTarget, recursoDoGrupo(GRUPOS_DO_BOTAO[b][0]!))}
+                className={`${CHIP} ${CHIP_OFF} gap-1.5 pr-3 pointer-fine:pr-2.5 ${SO_NO_LARGO.has(b) ? "max-xl:hidden" : ""}`}
+              >
+                {BOTAO_ROTULO[b]}
+                <IconeCadeado tamanho={12} className="text-latao-texto" />
+                <span className="sr-only"> (plano Luneta)</span>
+              </button>
+            ) : (
+              <FiltroRapido
+                key={b}
+                botao={b}
+                className={SO_NO_LARGO.has(b) ? "max-xl:hidden" : ""}
+                resumo={resumoBotao(filtros, b)}
+                total={total}
+                carregando={carregando}
+                onFechou={descarregar}
+                onLimpar={() => aplicar(`limpar-${b}`, (x) => removerGrupos(x, GRUPOS_DO_BOTAO[b]))}
+                // o pop-up já devolveu o foco ao gatilho "Preço": ao fechar a folha, o foco volta para ele
+                onMais={b === "preco" ? () => abrirPainel(document.activeElement instanceof HTMLButtonElement ? document.activeElement : botaoTodos.current, "valores") : undefined}
+              >
+                {b === "uf" && <ControleEstados {...controle} focarBusca alturaLista="max-h-[min(46vh,320px)] min-h-[120px]" />}
+                {b === "cidade" && <AbasLocal controle={controle} carregando={carregando} />}
+                {b === "tipo" && <ControleTipo {...controle} />}
+                {b === "preco" && <ControleFaixa {...controle} grupo="lance" adiar rotuloVisivel={false} />}
+                {b === "desagio" && <ControleFaixa {...controle} grupo="desagio" adiar rotuloVisivel={false} />}
+                {b === "quartos" && (
+                  <div className="flex flex-col gap-5">
+                    <Campo rotulo="Quartos">
+                      <ControleMinimo {...controle} grupo="quartos" />
+                    </Campo>
+                    <Campo rotulo="Vagas de garagem">
+                      <ControleMinimo {...controle} grupo="vagas" />
+                    </Campo>
+                  </div>
+                )}
+              </FiltroRapido>
+            ),
+          )}
         </div>
 
         {/* compacta (colada) ou tela baixa: o total e "Ordenar" sobem para esta linha (em tela baixa, o total só

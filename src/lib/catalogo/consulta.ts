@@ -22,6 +22,7 @@
  *   confirmada ou em revisão (o que "esconder" tira). Tag já escondida: os dois contam quantos voltariam
  *   ao deixar de escondê-la. Ordem: grave, atenção, positivo, informativo.
  */
+import { filtrosDoPlano, ordemDoPlano, paraPlano, pode } from "./planos";
 import { MODALIDADE_ROTULO, OCUPACAO_ROTULO, PRACA_ROTULO, SELO_ROTULO, TIPO_ROTULO, UF_NOME } from "./rotulos";
 import { interpretarBusca, palavras, type ClausulaBusca } from "./texto";
 import {
@@ -89,6 +90,10 @@ const UM_DIA = 24 * 3600 * 1000;
 const FACETAS_VAZIAS: Facetas = {
   uf: [], cidade: [], bairro: [], tipo: [], modalidade: [], praca: [], ocupacao: [], natureza: [], fonte: [], tags: [], selo: [],
   lance: null, avaliacao: null, desagio: null, lanceM2: null, area: null, financiamento: 0, fgts: 0, parcelamento: 0, comFoto: 0,
+};
+/** As facetas dos filtros avançados (planos.ts › recursoDoFiltro), vazias para o plano que não os usa. */
+const FACETAS_AVANCADAS_VAZIAS: Partial<Facetas> = {
+  modalidade: [], praca: [], ocupacao: [], natureza: [], fonte: [], lanceM2: null, area: null, financiamento: 0, fgts: 0, parcelamento: 0, comFoto: 0,
 };
 const TRES_HORAS = 3 * 3600 * 1000;
 
@@ -511,25 +516,17 @@ export interface OpcoesBusca {
   facetas?: boolean;
 }
 
-/**
- * Tira o que o plano não vê: no Lente, tags, selo e a nota de localização (o conteúdo bloqueado nunca chega ao
- * navegador).
- */
-export function paraPlano<T extends { tags: unknown[]; selo: number; notaLocal?: number | null }>(item: T, plano: Plano): T {
-  return plano === "lente" ? { ...item, tags: [], selo: 0, ...("notaLocal" in item ? { notaLocal: null } : {}) } : item;
-}
+/** Tira o que o plano não vê (planos.ts): no Lente, tags, selo e a nota de localização. */
+export { paraPlano };
 
-/** Busca já validada: plano e conjunto aplicados aos filtros e à ordem. */
+/**
+ * Busca já validada: plano e conjunto aplicados aos filtros e à ordem (planos.ts). No Lente, os filtros avançados, os
+ * de tags, selo e nota e as ordens da Luneta (alertas, selo, localização) são ignorados: um link da Luneta aberto no
+ * Lente não filtra nada a mais (a tela avisa "este filtro é do plano Luneta").
+ */
 function efetivos(busca: Busca, selosDesligados: boolean): { f: Filtros; ordem: Ordem } {
-  const f: Filtros = { ...busca.filtros };
-  let ordem = busca.ordem;
-  if (busca.plano === "lente") {
-    delete f.comTags;
-    delete f.semTags;
-    delete f.selo;
-    delete f.notaLocalMin;
-    if (ordem === "alertas" || ordem === "selo" || ordem === "localizacao") ordem = ORDEM_PADRAO;
-  }
+  const f: Filtros = { ...filtrosDoPlano(busca.filtros, busca.plano) };
+  let ordem = ordemDoPlano(busca.ordem, busca.plano);
   if (selosDesligados) {
     delete f.selo;
     if (ordem === "selo") ordem = ORDEM_PADRAO;
@@ -591,13 +588,16 @@ function lugares(ix: IndiceCatalogo) {
  *   dessa cidade ou bairro, não os que têm o nome no endereço (a "Rua Belo Horizonte" em Belford Roxo).
  *   Nome de estado ("são paulo", "rio de janeiro") continua valendo o estado inteiro.
  * - Senão, todas as cláusulas precisam casar: estado/sigla pela UF, tipo e quartos pelos campos do imóvel,
- *   os termos pelas palavras do título, bairro, cidade, endereço e id.
+ *   os termos pelas palavras do título, bairro, cidade, endereço e id. Sem `quartos` (o Lente: o filtro de quartos é
+ *   da Luneta), "2 quartos" não filtra.
  */
-function casarTexto(ix: IndiceCatalogo, q: string | undefined): Uint8Array | null {
+function casarTexto(ix: IndiceCatalogo, q: string | undefined, quartos = true): Uint8Array | null {
   if (!q) return null;
   // cláusula repetida ("casa casa casa") não muda o resultado: conta uma vez só
   const vistas = new Set<string>();
   const clausulas: ClausulaBusca[] = interpretarBusca(q).filter((c) => {
+    // "2 quartos" na busca é o filtro de quartos, da Luneta: o Lente não o usa (R4-VAZ-06)
+    if (c.tipo === "quartos" && !quartos) return false;
     const k = JSON.stringify(c);
     if (vistas.has(k)) return false;
     vistas.add(k);
@@ -717,7 +717,11 @@ const porTotal = (a: OpcaoFaceta, b: OpcaoFaceta) => b.total - a.total || a.rotu
 export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: Busca, opcoesBusca: OpcoesBusca = {}): Omit<ResultadoBusca, "sobre"> {
   const ix = Array.isArray(fonte) ? indiceDe(fonte as readonly ImovelResumo[], opcoesBusca.indice) : (fonte as IndiceCatalogo);
   const selosDesligados = opcoesBusca.selosDesligados ?? false;
-  const lente = busca.plano === "lente";
+  // o que o plano vê nas facetas (no Lente, nem a contagem das tags, do selo, da nota e dos filtros avançados sai)
+  const veTags = pode(busca.plano, "tags");
+  const veSelo = pode(busca.plano, "selos");
+  const veNota = pode(busca.plano, "localizacao");
+  const veAvancados = pode(busca.plano, "filtrosAvancados");
   const { f, ordem } = efetivos(busca, selosDesligados);
   const agora = opcoesBusca.agora ?? new Date();
   const hoje = diaBrasilia(agora)!;
@@ -726,7 +730,7 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
   const v = ix.numeros;
 
   // ---- preparação dos filtros
-  const texto = casarTexto(ix, f.q);
+  const texto = casarTexto(ix, f.q, veAvancados);
 
   const selUf = new Set(f.uf ?? []);
   const selCidade = new Set(f.cidade ?? []);
@@ -910,7 +914,7 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
     if (okSelo && !okSelo[ix.selo[k]!]) m |= B_SELO;
     mascaras[k] = m;
     // contagem da nota (o filtro da nota mínima mostra quantos daria cada valor): passa nos outros filtros
-    if (!lente && (m === 0 || m === B_NOTA_LOCAL)) {
+    if (veNota && (m === 0 || m === B_NOTA_LOCAL)) {
       const nota = v.notaLocal[k]!;
       if (nota === nota) cNota[Math.min(100, Math.max(0, Math.round(nota)))]!++;
     }
@@ -936,7 +940,7 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
       if (primeiraColeta === null) primeiraColeta = coleta;
       else if (coleta !== primeiraColeta) variasColetas = true;
       cSelo[ix.selo[k]!]!++;
-      if (!lente) {
+      if (veTags) {
         for (let w = 0; w < W; w++) {
           let x = ix.tagsConfirmadas[k * W + w]!;
           while (x) {
@@ -997,7 +1001,7 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
         break;
       case B_SEM_TAGS:
         // escondido por uma tag só: conta nela ("quantos voltam se deixar de esconder")
-        if (semAcertos === 1 && !lente) {
+        if (semAcertos === 1 && veTags) {
           cTag[semUltima]!++;
           cTagRevisao[semUltima]!++;
         }
@@ -1120,7 +1124,7 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
     fonte: ix.fontes
       .flatMap((x, k) => (cFonte[k]! > 0 || f.fonte?.includes(x.id) ? [{ valor: x.id, rotulo: x.nome, total: cFonte[k]! }] : []))
       .sort(porTotal),
-    tags: lente
+    tags: !veTags
       ? []
       : ix.slugs.flatMap((s, k) =>
           cTagRevisao[k]! > 0 || tagsSel.has(s.slug)
@@ -1128,7 +1132,7 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
             : [],
         ),
     selo:
-      lente || selosDesligados
+      !veSelo || selosDesligados
         ? []
         : ([3, 2, 1] as const).flatMap((s) => (cSelo[s]! > 0 || f.selo?.includes(s) ? [{ valor: String(s), rotulo: SELO_ROTULO[s], total: cSelo[s]! }] : [])),
     lance: hLance,
@@ -1142,8 +1146,10 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
     comFoto: cFoto,
     comData: cData,
     coletaUnica: total > 0 && !variasColetas,
-    notaLocal: lente ? [] : acumuladoDeCima(cNota),
+    notaLocal: veNota ? acumuladoDeCima(cNota) : [],
   };
+  // filtros avançados (Luneta): no Lente as contagens e histogramas deles não saem (os controles aparecem travados)
+  if (!veAvancados) Object.assign(facetas, FACETAS_AVANCADAS_VAZIAS);
 
   // sem facetas (o pedido do mapa): ~80 KB a menos na resposta
   return { total, pagina, porPagina, totalPaginas, itens, facetas: semFacetas ? FACETAS_VAZIAS : facetas, mapa, totalConjunto: n - vencidos, selosDesligados };

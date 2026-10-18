@@ -56,9 +56,6 @@ export const ORDEM_ROTULO: Record<Ordem, string> = {
   recentes: "Mais recentes",
 };
 
-/** Ordens que dependem de tags, selo ou nota de localização: só no plano Luneta. */
-export const ORDENS_LUNETA: readonly Ordem[] = ["alertas", "selo", "localizacao"];
-
 export const UF_NOME: Record<string, string> = {
   AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará", DF: "Distrito Federal",
   ES: "Espírito Santo", GO: "Goiás", MA: "Maranhão", MT: "Mato Grosso", MS: "Mato Grosso do Sul",

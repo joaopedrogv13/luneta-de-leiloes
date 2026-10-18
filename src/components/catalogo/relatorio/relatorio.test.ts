@@ -243,7 +243,7 @@ test("região: níveis da comparação e a frase com a referência principal (IT
     ref({ escopo: "rua", nome: "Rua X, São Gonçalo/RJ", amostra: 3, media: 2000 }),
     ref({ escopo: "bairro", nome: "Tribobo, São Gonçalo/RJ", amostra: 9, media: 3050 }),
     ref({ escopo: "cidade", nome: "São Gonçalo/RJ", amostra: 813 }),
-    ref({ escopo: "bairro", nome: "Tribobo, São Gonçalo/RJ", amostra: 120, fonte: "itbi", media: 4000, periodo: ["2025-09-01", "2026-08-31"], lanceM2: null }),
+    ref({ escopo: "bairro", nome: "Tribobo, São Gonçalo/RJ", amostra: 120, fonte: "itbi", valorItbi: "declarado", media: 4000, periodo: ["2025-09-01", "2026-08-31"], lanceM2: null }),
   ];
   const r = regiaoRel(casa, refs);
   assert.deepEqual(
@@ -257,7 +257,7 @@ test("região: níveis da comparação e a frase com a referência principal (IT
   assert.equal(r.itbi.length, 1);
   assert.equal(r.itbi[0]!.periodo, "set/2025 a ago/2026");
   // o bairro tem 120 compras registradas (ITBI): a frase usa o preço pago, e os leilões vêm em segunda linha
-  assert.equal(r.frase, "A avaliação deste imóvel (R$ 2.682/m²) está 33% abaixo do preço médio pago no bairro (R$ 4.000/m²).");
+  assert.equal(r.frase, "A avaliação deste imóvel (R$ 2.682/m²) está 33% abaixo do preço médio declarado no bairro (R$ 4.000/m²).");
   assert.equal(r.nivel, 0);
   assert.equal(r.fontePrincipal, "itbi");
   // a rua tem só 3 imóveis em leilão: a segunda linha usa o bairro
@@ -295,7 +295,7 @@ test("região: níveis da comparação e a frase com a referência principal (IT
 
   // só ITBI: compara com o preço pago
   const so = regiaoRel(casa, [refs[3]!]);
-  assert.equal(so.frase, "A avaliação deste imóvel (R$ 2.682/m²) está 33% abaixo do preço médio pago no bairro (R$ 4.000/m²).");
+  assert.equal(so.frase, "A avaliação deste imóvel (R$ 2.682/m²) está 33% abaixo do preço médio declarado no bairro (R$ 4.000/m²).");
   // sem área: diz que não dá para comparar por m²
   const semArea = regiaoRel({ ...casa, avaliacaoM2: null, lanceM2: null }, refs);
   assert.match(semArea.frase!, /não informa a área/);

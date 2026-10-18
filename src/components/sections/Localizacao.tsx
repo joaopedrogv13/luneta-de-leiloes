@@ -135,10 +135,12 @@ export function Localizacao() {
           </figure>
         </div>
 
-        <div className="mt-16 sm:mt-20">
-          <h3 className="font-display text-[clamp(22px,2.4vw,28px)] leading-tight font-bold tracking-[-0.02em]">{NOTA_LOCAL.partesTitulo}</h3>
-          <p className="mt-3 max-w-[640px] text-[15px] leading-relaxed text-nevoa">{NOTA_LOCAL.partesLead}</p>
-          <ul data-stagger className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* No celular, as seis partes com o peso já estão no exemplo acima: o bloco dos cartões fica só a partir de md
+            (a seção tinha 5 telas a 360 px; revisão final da rodada 4, UX-05). O método completo é o link acima. */}
+        <div className="mt-10 sm:mt-20">
+          <h3 className="font-display text-[clamp(22px,2.4vw,28px)] leading-tight font-bold tracking-[-0.02em] max-md:hidden">{NOTA_LOCAL.partesTitulo}</h3>
+          <p className="mt-3 max-w-[640px] text-[15px] leading-relaxed text-nevoa max-md:hidden">{NOTA_LOCAL.partesLead}</p>
+          <ul data-stagger className="mt-8 grid gap-4 max-md:hidden sm:grid-cols-2 lg:grid-cols-3">
             {partes.map((k) => (
               <li key={k} data-reveal className="card flex flex-col p-6">
                 <p className="flex items-start justify-between gap-3">
@@ -154,10 +156,11 @@ export function Localizacao() {
               </li>
             ))}
           </ul>
-          <div className="mt-8 grid gap-4 text-[14px] leading-relaxed text-nevoa md:grid-cols-2 md:gap-10">
+          <div className="mt-8 grid gap-4 text-[14px] leading-relaxed text-nevoa max-md:hidden md:grid-cols-2 md:gap-10">
             <p className="flex gap-3 border-l-2 border-latao pl-4">{NOTA_LOCAL.risco}</p>
             <p className="flex gap-3 border-l-2 border-nevoa/40 pl-4">{NOTA_LOCAL.fora}</p>
           </div>
+          <p className="border-l-2 border-latao pl-4 text-[14px] leading-relaxed text-nevoa md:hidden">{NOTA_LOCAL.foraCurto}</p>
           <p className="mt-6 text-xs leading-relaxed text-nevoa">{NOTA_LOCAL.disclaimer}</p>
         </div>
       </div>

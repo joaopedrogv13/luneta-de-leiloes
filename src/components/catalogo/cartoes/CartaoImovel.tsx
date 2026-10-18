@@ -166,7 +166,6 @@ export function CartaoImovel({
             tags={imovel.tags}
             plano={plano}
             limite={2}
-            onUpsell={onUpsell}
             hrefEvidencia={`${hrefImovel}#tags`}
             rotulo={`Tags de risco: ${imovel.titulo}`}
             className="mt-3 sm:hidden"
@@ -175,7 +174,6 @@ export function CartaoImovel({
             tags={imovel.tags}
             plano={plano}
             limite={3}
-            onUpsell={onUpsell}
             hrefEvidencia={`${hrefImovel}#tags`}
             rotulo={`Tags de risco: ${imovel.titulo}`}
             className="mt-4 max-sm:hidden"

@@ -3,7 +3,8 @@
 import { useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { Seal } from "@/components/ui/Seal";
 import { area, local, moeda, moedaCurta, MODALIDADE_ROTULO, numero, PRACA_ROTULO, SELO_ROTULO } from "@/lib/catalogo/rotulos";
-import type { ImovelResumo, Plano } from "@/lib/catalogo/tipos";
+import { pode } from "@/lib/catalogo/planos";
+import type { ImovelResumo, Plano, Recurso } from "@/lib/catalogo/tipos";
 import { quandoPraca } from "./datas";
 import { IconeArea, IconeCadeado, IconeCalendario, IconeCoracao, IconeQuarto, IconeRegua, IconeVaga } from "./icones";
 
@@ -16,7 +17,7 @@ export interface PropsImovel {
   favorito: boolean;
   onFavoritar: (id: string) => void;
   /** plano Lente: abre o convite à Luneta; recebe quem abriu, para o foco voltar a ele */
-  onUpsell: (opener: HTMLElement) => void;
+  onUpsell: (opener: HTMLElement, recurso?: Recurso | null) => void;
   /** mouse ou foco no imóvel (destaca o ponto no mapa); null ao sair */
   onHover?: (id: string | null) => void;
   /** destacado (ponto do mapa sob o mouse) */
@@ -194,16 +195,13 @@ export function LinhaPraca({ imovel, className = "" }: { imovel: Pick<ImovelResu
   );
 }
 
-/** Selo genérico do Lente: o mesmo desenho em todo cartão, para não entregar o nível. */
-const SELO_GENERICO = 2;
-
 /**
- * O cartão mostra o selo? Não quando ele está "em análise" (na prévia, todos os imóveis: a faixa do topo e
- * "Ordenar" já avisam; repetir "Selo em análise" em cada cartão era ruído). No Lente, o selo travado aparece
- * (é o convite à Luneta).
+ * O cartão mostra o selo? Não no plano que não tem selos (Lente: nos cartões, nada de selo, tags ou nota; o convite
+ * fica no aviso do topo da lista e na página do imóvel), nem quando ele está "em análise" (na prévia, todos os imóveis:
+ * a faixa do topo e "Ordenar" já avisam; repetir "Selo em análise" em cada cartão era ruído).
  */
 export function mostrarSelo(imovel: Pick<ImovelResumo, "seloPendente">, plano: Plano) {
-  return plano === "lente" || !imovel.seloPendente;
+  return pode(plano, "selos") && !imovel.seloPendente;
 }
 
 /** Complemento do nome acessível de um imóvel: com 24 "Casa 2 quartos" na página, o local e o lance distinguem. */
@@ -213,23 +211,10 @@ export function complementoSr(imovel: Pick<ImovelResumo, "bairro" | "cidade" | "
 
 /**
  * Selo do imóvel. Luneta: anéis + nome ("Alvo"), ou "Selo em análise" (critérios pendentes) com o anel
- * tracejado. Lente: bloco neutro e desfocado, sem o selo real no DOM.
+ * tracejado. Lente: nada (o selo nem chega ao navegador; ver mostrarSelo).
  */
 export function SeloImovel({ imovel, plano, tamanho = 30 }: { imovel: Pick<ImovelResumo, "selo" | "seloPendente">; plano: Plano; tamanho?: number }) {
-  if (plano === "lente") {
-    return (
-      <div className="flex items-center gap-2 select-none">
-        <span aria-hidden="true" className="inline-flex blur-[3px] grayscale">
-          <Seal level={SELO_GENERICO} size={tamanho} />
-        </span>
-        <span aria-hidden="true" className="inline-flex items-center gap-1 text-[11px] leading-none font-semibold tracking-[0.1em] whitespace-nowrap text-nevoa uppercase">
-          <IconeCadeado size={11} />
-          Selo · Luneta
-        </span>
-        <span className="sr-only">Selo: recurso do plano Luneta</span>
-      </div>
-    );
-  }
+  if (!pode(plano, "selos")) return null;
   const pendente = imovel.seloPendente;
   const nivel = pendente ? 0 : imovel.selo;
   const tom = pendente || nivel === 0 ? "text-nevoa" : nivel === 3 ? "text-pos" : "text-latao-texto";
@@ -263,16 +248,17 @@ export function BotaoFavoritar({
   plano: Plano;
   favorito: boolean;
   onFavoritar: (id: string) => void;
-  onUpsell: (opener: HTMLElement) => void;
+  onUpsell: (opener: HTMLElement, recurso?: Recurso | null) => void;
   icone?: boolean;
   className?: string;
 }) {
-  const lente = plano === "lente";
+  // favoritos são da Luneta: no Lente, o cadeado e a janela da Luneta
+  const lente = !pode(plano, "favoritos");
   const ligado = !lente && favorito;
   const clicar = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (lente) onUpsell(e.currentTarget);
+    if (lente) onUpsell(e.currentTarget, "favoritos");
     else onFavoritar(imovel.id);
   };
   const { cidade, uf, lance } = imovel;

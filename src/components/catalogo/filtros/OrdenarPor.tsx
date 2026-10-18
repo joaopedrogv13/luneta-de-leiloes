@@ -2,18 +2,15 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ordemEfetiva } from "@/lib/catalogo/filtros-rotulos";
-import { ORDEM_ROTULO, ORDENS_LUNETA } from "@/lib/catalogo/rotulos";
-import type { Ordem, Plano } from "@/lib/catalogo/tipos";
+import { ordemPermitida, RECURSO_DA_ORDEM } from "@/lib/catalogo/planos";
+import { ORDEM_ROTULO } from "@/lib/catalogo/rotulos";
+import type { Ordem, Plano, Recurso } from "@/lib/catalogo/tipos";
 import { CHIP, CHIP_OFF } from "../ui/estilos";
 import { IconeCadeado, IconeCheck, IconeOrdenar, IconeSeta } from "../ui/icones";
 import { Popover } from "../ui/Popover";
 
-/**
- * Ordem do menu: as do dia a dia primeiro, as da Luneta no fim. "Melhor localização" ainda não aparece no Lente (a tela
- * da trava é da frente de planos).
- */
+/** Ordem do menu: as do dia a dia primeiro, as da Luneta (alertas, selo, localização) no fim. */
 const ORDENS: readonly Ordem[] = ["desagio", "lance-asc", "lance-desc", "m2-asc", "area-desc", "data", "recentes", "alertas", "selo", "localizacao"];
-const ESCONDIDAS_NO_LENTE: ReadonlySet<Ordem> = new Set(["localizacao"]);
 
 const DESCRICAO: Record<Ordem, string> = {
   desagio: "Maior desconto sobre a avaliação primeiro",
@@ -31,9 +28,10 @@ const DESCRICAO: Record<Ordem, string> = {
 export const SELOS_EM_ANALISE = "Selos em análise: critérios em definição";
 
 /**
- * "Ordenar por": lista de ordens num pop-up. No plano Lente, "Menos alertas" e "Melhor selo" aparecem
- * com cadeado e abrem o upgrade; com os selos desligados (prévia), "Melhor selo" fica desabilitado com a
- * explicação. Teclado: ↑↓ andam, Enter/Espaço escolhem, Esc fecha.
+ * "Ordenar por": lista de ordens num pop-up. No plano Lente (planos.ts), "Menos alertas", "Melhor selo" e "Melhor
+ * localização" aparecem com o cadeado "Luneta" e abrem a janela da Luneta com o texto do recurso, sem ordenar; com os
+ * selos desligados (prévia), "Melhor selo" fica desabilitado com a explicação. Teclado: ↑↓ andam, Enter/Espaço
+ * escolhem, Esc fecha.
  */
 export function OrdenarPor({
   ordem,
@@ -49,7 +47,7 @@ export function OrdenarPor({
   onOrdem: (o: Ordem) => void;
   plano: Plano;
   selosDesligados: boolean;
-  onUpsell: (opener: HTMLElement) => void;
+  onUpsell: (opener: HTMLElement, recurso?: Recurso | null) => void;
   /**
    * Ordens que não mudariam nada nesta busca, com o porquê ("Todos os imóveis desta busca foram coletados no
    * mesmo dia"): aparecem desabilitadas, como "Melhor selo" com os selos em análise.
@@ -61,18 +59,18 @@ export function OrdenarPor({
 }) {
   const [aberto, setAberto] = useState(false);
   const caixa = useRef<HTMLSpanElement>(null);
-  const lente = plano === "lente";
   // um link com "Menos alertas" aberto no Lente ordena pelo padrão: o botão mostra a que vale
   const atual = ordemEfetiva(ordem, plano, selosDesligados);
+  const travadas = new Set(ORDENS.filter((o) => !ordemPermitida(o, plano)));
 
   const escolher = (o: Ordem, fechar: () => void) => {
-    const travada = lente && ORDENS_LUNETA.includes(o);
+    const travada = travadas.has(o);
     if (o === "selo" && selosDesligados && !travada) return;
     if (indisponiveis[o] && o !== atual) return;
     fechar();
     const gatilho = caixa.current?.querySelector<HTMLButtonElement>("button");
     if (travada) {
-      if (gatilho) onUpsell(gatilho);
+      if (gatilho) onUpsell(gatilho, RECURSO_DA_ORDEM[o]);
       return;
     }
     gatilho?.focus({ preventScroll: true });
@@ -103,7 +101,7 @@ export function OrdenarPor({
         }}
       >
         {({ fechar }) => (
-          <ListaOrdens ordem={atual} lente={lente} selosDesligados={selosDesligados} indisponiveis={indisponiveis} onEscolher={(o) => escolher(o, fechar)} />
+          <ListaOrdens ordem={atual} travadas={travadas} selosDesligados={selosDesligados} indisponiveis={indisponiveis} onEscolher={(o) => escolher(o, fechar)} />
         )}
       </Popover>
     </span>
@@ -112,13 +110,14 @@ export function OrdenarPor({
 
 function ListaOrdens({
   ordem,
-  lente,
+  travadas,
   selosDesligados,
   indisponiveis,
   onEscolher,
 }: {
   ordem: Ordem;
-  lente: boolean;
+  /** as ordens que o plano não tem (cadeado "Luneta") */
+  travadas: ReadonlySet<Ordem>;
   selosDesligados: boolean;
   indisponiveis: Partial<Record<Ordem, string>>;
   onEscolher: (o: Ordem) => void;
@@ -144,8 +143,8 @@ function ListaOrdens({
 
   return (
     <ul ref={lista} role="listbox" aria-label="Ordenar por" onKeyDown={andar} className="flex flex-col p-1.5">
-      {ORDENS.filter((o) => !(lente && ESCONDIDAS_NO_LENTE.has(o))).map((o) => {
-        const travada = lente && ORDENS_LUNETA.includes(o);
+      {ORDENS.map((o) => {
+        const travada = travadas.has(o);
         const on = o === ordem;
         const motivo = !travada && o === "selo" && selosDesligados ? SELOS_EM_ANALISE : !on ? indisponiveis[o] : undefined;
         const desligada = !!motivo;

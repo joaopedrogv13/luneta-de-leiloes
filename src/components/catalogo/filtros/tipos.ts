@@ -1,4 +1,4 @@
-import type { Facetas, Filtros, Ordem, Plano } from "@/lib/catalogo/tipos";
+import type { Facetas, Filtros, Ordem, Plano, Recurso } from "@/lib/catalogo/tipos";
 
 /** Resposta de uma contagem com facetas (o painel mostra cidades, bairros e contagens do rascunho). */
 export interface Consulta {
@@ -26,8 +26,11 @@ export interface PropsFiltros {
   onOrdem: (o: Ordem) => void;
   /** recebe o objeto Filtros inteiro novo (nunca o mesmo objeto alterado) */
   onChange: (f: Filtros) => void;
-  /** recurso travado no plano Lente: abre o modal de upgrade; `opener` recebe o foco de volta */
-  onUpsell: (opener: HTMLElement) => void;
+  /**
+   * recurso travado no plano Lente: abre a janela da Luneta com o texto do recurso (sem recurso, o texto padrão);
+   * `opener` recebe o foco de volta
+   */
+  onUpsell: (opener: HTMLElement, recurso?: Recurso | null) => void;
   /** quantos imóveis um rascunho de filtros daria (o painel chama com espera de 250 ms e cancela a anterior) */
   contar: (f: Filtros, sinal?: AbortSignal) => Promise<number>;
   /**

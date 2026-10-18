@@ -29,7 +29,7 @@ export function idDeImovelValido(id: string | null | undefined): id is string {
 }
 
 /** Atribuição do OpenStreetMap (ODbL): sempre com o link da página de direitos autorais. */
-export const OSM_ATRIBUICAO = { texto: "© colaboradores do OpenStreetMap", url: "https://www.openstreetmap.org/copyright" } as const;
+export const OSM_ATRIBUICAO = { texto: "© contribuidores do OpenStreetMap", url: "https://www.openstreetmap.org/copyright" } as const;
 
 // ---------------------------------------------------------------------------
 // Cidade na frase
@@ -42,6 +42,10 @@ const COM_ARTIGO: Record<string, "do" | "da"> = {
   Crato: "do",
   "Cabo de Santo Agostinho": "do",
   "Rio Grande": "do",
+  // o uso comum (revisão final da rodada 4, M18): "da Serra", "da Praia Grande", "do Guarujá"
+  Serra: "da",
+  "Praia Grande": "da",
+  "Guarujá": "do",
 };
 
 /** "de São Gonçalo/RJ", "do Rio de Janeiro/RJ" (com a UF quando o nome vem como "Cidade/UF"). */
@@ -70,12 +74,27 @@ export function frasePercentil(nota: number, cidade: string): string {
   return `Melhor localizado que ${n}% dos moradores ${daCidade(cidade)}`;
 }
 
-/** Nota aproximada (só o bairro): "Melhor localizado que 41% a 76% dos moradores de Santos/SP" (pontas entre 1 e 99). */
+/**
+ * Nota aproximada (só o bairro): "Nota provável entre 41 e 76 (faixa do meio), comparada com os moradores de Santos/SP"
+ * (pontas entre 1 e 99). A faixa vai do quartil de baixo ao de cima das áreas habitadas em volta do ponto: é a metade do
+ * meio, não o intervalo inteiro (revisão final da rodada 4, M4).
+ */
 export function fraseFaixa(faixa: readonly [number, number], cidade: string): string {
   const lo = Math.min(99, Math.max(1, notaNaEscala(Math.min(faixa[0], faixa[1]))));
   const hi = Math.min(99, Math.max(1, notaNaEscala(Math.max(faixa[0], faixa[1]))));
   if (lo === hi) return frasePercentil(lo, cidade);
-  return `Melhor localizado que ${lo}% a ${hi}% dos moradores ${daCidade(cidade)}`;
+  return `Nota provável entre ${lo} e ${hi} (faixa do meio), comparada com os moradores ${daCidade(cidade)}`;
+}
+
+/**
+ * Onde as partes e o risco foram medidos, na frase (M2, M3, M13): "o imóvel" (número), "o ponto da rua do endereço"
+ * (rua), "o meio da rua do endereço" (bairro com a rua achada, mas espalhada) ou "o centro do bairro".
+ */
+export function pontoMedido(loc: Pick<LocalizacaoImovel, "precisao"> & { pontoRuaEspalhada?: boolean }): { o: string; do: string; no: string; exato: boolean } {
+  if (loc.precisao === "numero") return { o: "o imóvel", do: "do imóvel", no: "no imóvel", exato: true };
+  if (loc.precisao === "rua") return { o: "o ponto da rua do endereço", do: "do ponto da rua do endereço", no: "no ponto da rua do endereço", exato: false };
+  if (loc.precisao === "bairro" && loc.pontoRuaEspalhada) return { o: "o meio da rua do endereço", do: "do meio da rua do endereço", no: "no meio da rua do endereço", exato: false };
+  return { o: "o centro do bairro", do: "do centro do bairro", no: "no centro do bairro", exato: false };
 }
 
 /** A nota grande: "78"; a aproximada com "~" ("~59"). */
@@ -127,7 +146,10 @@ export interface SeloPrecisao {
  * - bairro: "Só no bairro: nota aproximada";
  * - cidade ou sem ponto: "Endereço só na cidade".
  */
-export function seloPrecisao(loc: Pick<LocalizacaoImovel, "precisao" | "desvioM" | "situacao" | "faixa">, exemplo = false): SeloPrecisao | null {
+export function seloPrecisao(
+  loc: Pick<LocalizacaoImovel, "precisao" | "desvioM" | "situacao" | "faixa"> & { pontoRuaEspalhada?: boolean },
+  exemplo = false,
+): SeloPrecisao | null {
   if (exemplo) {
     return {
       rotulo: "Exemplo fictício",
@@ -154,13 +176,26 @@ export function seloPrecisao(loc: Pick<LocalizacaoImovel, "precisao" | "desvioM"
         nivel: "media",
       };
     case "bairro": {
-      const faixa = loc.faixa ? ` A nota fica entre ${notaNaEscala(Math.min(...loc.faixa))} e ${notaNaEscala(Math.max(...loc.faixa))}.` : "";
+      const faixa = loc.faixa
+        ? ` Metade das áreas habitadas em volta tem nota entre ${notaNaEscala(Math.min(...loc.faixa))} e ${notaNaEscala(Math.max(...loc.faixa))}; um quarto fica abaixo e um quarto acima.`
+        : "";
+      const incerteza = loc.desvioM ? desvioTexto(loc.desvioM).slice(1) : null;
+      // a rua foi achada, mas os endereços dela se espalham demais: o ponto é o meio da rua, não o centro do bairro (M3)
+      if (loc.pontoRuaEspalhada) {
+        return {
+          rotulo: loc.situacao === "aproximada" ? "Rua espalhada: nota aproximada" : "Endereço localizado na rua, com incerteza alta",
+          explicacao:
+            `A rua do endereço foi encontrada no cadastro do IBGE, mas os endereços dela se espalham${incerteza ? ` por cerca de ${incerteza}` : " demais"}: ` +
+            `o ponto é o meio da rua, e a nota é aproximada, a faixa do meio das áreas habitadas em volta desse ponto.${faixa} O número do meio é o que vale para ordenar e filtrar.`,
+          nivel: "fraca",
+        };
+      }
       return {
         rotulo: loc.situacao === "aproximada" ? "Só no bairro: nota aproximada" : "Endereço localizado só no bairro",
         explicacao:
           "A rua do endereço não foi encontrada no cadastro do IBGE, só o bairro. O ponto é o centro do bairro" +
-          `${loc.desvioM ? ` (incerteza de cerca de ${desvioTexto(loc.desvioM).slice(1)})` : ""}, e a nota é uma faixa: vai das áreas habitadas ` +
-          `menos bem localizadas às mais bem localizadas em volta desse centro.${faixa} O número do meio é o que vale para ordenar e filtrar.`,
+          `${incerteza ? ` (incerteza de cerca de ${incerteza})` : ""}, e a nota é a faixa do meio das áreas habitadas em volta desse centro.` +
+          `${faixa} O número do meio é o que vale para ordenar e filtrar.`,
         nivel: "fraca",
       };
     }
@@ -195,20 +230,44 @@ export function cidadePequena(loc: Pick<LocalizacaoImovel, "componentes">): bool
   return loc.componentes.some((c) => c.terco !== undefined && c.terco !== null);
 }
 
+/** Quantas partes ficam em cada terço (só as que têm terço). */
+export function contarTercos(componentes: readonly Pick<ComponenteLocal, "terco">[]): Record<Terco, number> & { total: number } {
+  const n = { alto: 0, medio: 0, baixo: 0, total: 0 };
+  for (const c of componentes) {
+    if (!c.terco) continue;
+    n[c.terco] += 1;
+    n.total += 1;
+  }
+  return n;
+}
+
+const LISTA_E = (itens: string[]) => (itens.length <= 1 ? itens.join("") : `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`);
+
 /**
- * Resumo da cidade pequena: "Em 5 das 6 partes, o entorno fica acima da maioria de Cocal do Sul/SC." (ou "em todas",
- * "em nenhuma"), contando só as partes com terço.
+ * As três contagens numa frase só, a mesma no topo, no cartão e no PDF. Antes o topo contava só as partes "acima" e o
+ * cartão escolhia um lado no empate: o resumo puxava para o positivo (revisão final da rodada 4, M5).
+ * "1 parte acima da maioria, 3 no meio e 2 abaixo" (o terço sem parte fica de fora). null sem nenhuma parte.
+ */
+export function tercosEmFrase(componentes: readonly Pick<ComponenteLocal, "terco">[]): string | null {
+  const n = contarTercos(componentes);
+  if (n.total === 0) return null;
+  const partes = (k: number) => `${k} ${k === 1 ? "parte" : "partes"}`;
+  const itens: string[] = [];
+  if (n.alto) itens.push(`${partes(n.alto)} acima da maioria`);
+  if (n.medio) itens.push(itens.length ? `${n.medio} no meio` : `${partes(n.medio)} no meio`);
+  if (n.baixo) itens.push(itens.length ? `${n.baixo} abaixo${n.alto ? "" : " da maioria"}` : `${partes(n.baixo)} abaixo da maioria`);
+  return LISTA_E(itens);
+}
+
+/**
+ * Resumo da cidade pequena: "Comparado com o resto de Canitar/SP, das 6 partes: 1 parte acima da maioria, 3 no meio e 2
+ * abaixo." Sempre as três contagens (a mesma frase do topo e do PDF), contando só as partes com terço.
  */
 export function resumoTercos(componentes: readonly Pick<ComponenteLocal, "terco">[], cidade: string): string {
-  const com = componentes.filter((c): c is { terco: Terco } => !!c.terco);
-  if (com.length === 0) return `Não há dados do entorno suficientes para comparar com o resto ${daCidade(cidade)}.`;
-  const altos = com.filter((c) => c.terco === "alto").length;
-  const baixos = com.filter((c) => c.terco === "baixo").length;
-  const de = daCidade(cidade);
-  const partes = (n: number) => (n === com.length ? (n === 1 ? "Na única parte medida" : `Em todas as ${n} partes`) : `Em ${n} das ${com.length} partes`);
-  if (altos > 0 && altos >= baixos) return `${partes(altos)}, o entorno fica acima da maioria ${de}.`;
-  if (baixos > 0) return `${partes(baixos)}, o entorno fica abaixo da maioria ${de}.`;
-  return `Em todas as partes medidas, o entorno fica no meio ${de}.`;
+  const frase = tercosEmFrase(componentes);
+  if (!frase) return `Não há dados do entorno suficientes para comparar com o resto ${daCidade(cidade)}.`;
+  const n = contarTercos(componentes);
+  return `Comparado com o resto ${daCidade(cidade)}, ${n.total === 1 ? "na única parte medida" : `das ${n.total} partes`}: ${frase}.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -223,11 +282,29 @@ function metros(m: number) {
  * O que a tela diz quando NÃO há alerta (nunca "sem risco"):
  * - a cidade não tem mapeamento: "Esta cidade não tem mapeamento de risco nessa base; isso não quer dizer que não haja
  *   risco.";
- * - a cidade tem e o ponto foi conferido: "Nenhuma área de risco mapeada a menos de 100 m do imóvel" (no bairro: do
- *   centro do bairro), com a ressalva;
+ * - a cidade tem e o ponto foi conferido: "Nenhuma área de risco mapeada a menos de 100 m do imóvel" (na rua, "do ponto
+ *   da rua do endereço"; no bairro, "do centro do bairro"), com a ressalva;
+ * - a cidade não foi encontrada nas bases, ou o imóvel é rural: "não conferida" (não é "sem mapeamento");
  * - a cidade tem, mas o ponto não deu para conferir (endereço só na cidade).
  */
-export function textoRiscoSemAlerta(loc: Pick<LocalizacaoImovel, "coberturaRisco" | "riscoRaioM" | "precisao">): { titulo: string; texto: string } {
+export function textoRiscoSemAlerta(
+  loc: Pick<LocalizacaoImovel, "coberturaRisco" | "riscoRaioM" | "precisao"> &
+    Partial<Pick<LocalizacaoImovel, "referencia" | "motivo" | "situacao">> & { pontoRuaEspalhada?: boolean },
+): { titulo: string; texto: string } {
+  // a cidade não foi encontrada nas bases: a cobertura é desconhecida, não ausente (M16)
+  if (loc.referencia === null && loc.situacao === "sem_nota") {
+    return {
+      titulo: "Área de risco: não conferida",
+      texto: "Não conferimos áreas de risco: a cidade deste imóvel não foi encontrada nas bases do IBGE usadas aqui. Isso não quer dizer que não haja risco; confira com a Defesa Civil do município.",
+    };
+  }
+  // imóvel rural (M16)
+  if (/^Imóvel rural/.test(loc.motivo ?? "")) {
+    return {
+      titulo: "Área de risco: não conferida",
+      texto: "Imóvel rural: não conferimos a área de risco. Isso não quer dizer que não haja risco; confira com a Defesa Civil do município.",
+    };
+  }
   if (!loc.coberturaRisco) {
     return {
       titulo: "Sem mapeamento de risco nesta cidade",
@@ -240,18 +317,23 @@ export function textoRiscoSemAlerta(loc: Pick<LocalizacaoImovel, "coberturaRisco
       texto: "A cidade tem áreas de risco mapeadas pelo IBGE e pelo Cemaden (base de 2010), mas sem a rua ou o bairro do imóvel não dá para saber se ele fica perto de uma. Confira com a Defesa Civil do município.",
     };
   }
-  const onde = loc.precisao === "bairro" ? `a menos de ${metros(loc.riscoRaioM)} do centro do bairro` : `a menos de ${metros(loc.riscoRaioM)} do imóvel`;
+  // fora do número exato, "do ponto do endereço", nunca "do imóvel" (M2)
+  const onde = `a menos de ${metros(loc.riscoRaioM)} ${pontoMedido(loc).do}`;
   return {
     titulo: `Nenhuma área de risco mapeada ${onde}`,
     texto: "Conferido no mapeamento do IBGE e do Cemaden, com base de 2010. Isso não quer dizer que não haja risco: o mapeamento não cobre tudo e é antigo. Confira com a Defesa Civil do município.",
   };
 }
 
-/** "dentro de uma área de risco" ou "a cerca de 260 m de uma área de risco" (frase curta do alerta, para o resumo). */
-export function ondeRisco(distanciaM: number | null, aproximada: boolean): string {
-  if (distanciaM === null) return aproximada ? "área de risco mapeada no bairro" : "área de risco mapeada perto";
-  if (distanciaM <= 0) return aproximada ? "centro do bairro dentro de área de risco mapeada" : "dentro de área de risco mapeada";
-  return `área de risco mapeada a cerca de ${metros(distanciaM)}${aproximada ? " do centro do bairro" : ""}`;
+/**
+ * "dentro de área de risco mapeada" ou "área de risco mapeada a cerca de 260 m" (frase curta do alerta, para o resumo).
+ * Fora do número exato, diz de que ponto ("do ponto da rua do endereço", "do centro do bairro").
+ */
+export function ondeRisco(distanciaM: number | null, loc: Pick<LocalizacaoImovel, "precisao"> & { pontoRuaEspalhada?: boolean }): string {
+  const p = pontoMedido(loc);
+  if (distanciaM === null) return loc.precisao === "bairro" && !loc.pontoRuaEspalhada ? "área de risco mapeada no bairro" : "área de risco mapeada perto";
+  if (distanciaM <= 0) return p.exato ? "dentro de área de risco mapeada" : `${p.o.replace(/^o /, "")} dentro de área de risco mapeada`;
+  return `área de risco mapeada a cerca de ${metros(distanciaM)}${p.exato ? "" : ` ${p.do}`}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -287,14 +369,14 @@ export const SOBRE_COMPONENTE: Record<ChaveComponenteLocal, SobreComponente> = {
   transporte: {
     curto: "Estação de metrô, trem, BRT, barca ou terminal, e pontos de ônibus.",
     oQueMede:
-      "A distância até a estação de metrô, trem, VLT, BRT, barca ou terminal de ônibus mais perto, quantos pontos de ônibus há a até 500 m e que parte dos domicílios fica em quadra com ponto de ônibus. Os pontos do OpenStreetMap só entram onde o mapa da cidade está razoavelmente completo.",
+      "A distância até a estação de metrô, trem, VLT, BRT, barca ou terminal de ônibus mais perto, quantos pontos de ônibus há a até 500 m e que parte dos domicílios fica em quadra com ponto de ônibus. Os pontos de ônibus do OpenStreetMap só entram quando o mapa da cidade tem pelo menos um décimo dos pontos que o Censo registra e o morador típico tem pelo menos um ponto mapeado a 500 m; fora disso, o transporte fica com a estação e o ponto na quadra do Censo.",
     raio: "até 5 km (estação) e 500 m (pontos de ônibus)",
     fontes: "OpenStreetMap e IBGE (Censo Demográfico 2022)",
   },
   renda: {
     curto: "Renda típica dos moradores em volta.",
     oQueMede:
-      "A renda típica dos responsáveis por domicílio que têm rendimento (a mediana de cada setor do Censo), pesada pelos domicílios no raio. Valores de 2022, sem correção.",
+      "A renda típica de quem sustenta cada domicílio em volta (a mediana de cada pequena área do Censo), ponderada pelos domicílios no raio. Valores de 2022, sem correção.",
     raio: "500 m (1 km onde há menos de 50 domicílios)",
     fontes: "IBGE (Censo Demográfico 2022, renda do responsável; valores de 2022)",
   },
@@ -348,13 +430,12 @@ export function motivoCurto(loc: Pick<LocalizacaoImovel, "situacao" | "precisao"
 
 /**
  * A linha do resumo lateral: "Melhor localizado que 78% dos moradores", "Aproximada, entre 41 e 76 (só o bairro)",
- * "Cidade pequena: acima da maioria em 5 de 6 partes" ou "Sem nota: endereço só na cidade".
+ * "Cidade pequena: 1 parte acima da maioria, 3 no meio e 2 abaixo" ou "Sem nota: endereço só na cidade".
  */
 export function linhaResumoNota(loc: Pick<LocalizacaoImovel, "situacao" | "precisao" | "motivo" | "componentes" | "nota" | "faixa">): string {
   if (cidadePequena(loc)) {
-    const com = loc.componentes.filter((c) => !!c.terco);
-    const altos = com.filter((c) => c.terco === "alto").length;
-    return altos > 0 ? `Cidade pequena: acima da maioria em ${altos} de ${com.length} partes` : "Cidade pequena: veja as partes em terços";
+    const frase = tercosEmFrase(loc.componentes);
+    return frase ? `Cidade pequena: ${frase}` : "Cidade pequena: veja as partes em terços";
   }
   if (loc.situacao === "aproximada" && loc.nota !== null) {
     return loc.faixa

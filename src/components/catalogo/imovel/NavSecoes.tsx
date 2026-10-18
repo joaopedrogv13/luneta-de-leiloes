@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Popover } from "@/components/catalogo/ui/Popover";
-import { IconeSetaDireita, IconeSetaEsquerda } from "./icones";
+import { IconeCadeado, IconeSetaDireita, IconeSetaEsquerda } from "./icones";
 import { linhaDeLeitura } from "./rolagem";
 
 /** Computador (lg): as abas que não cabem vão para "Mais ▾" (com o resumo aberto, em 1024 px, a fila não cabia). */
@@ -14,6 +14,19 @@ const GAP = 4;
 export interface SecaoNav {
   id: string;
   rotulo: string;
+  /** a seção inteira é da Luneta (plano Lente): cadeado de 12 px e "(plano Luneta)" para leitores de tela */
+  travada?: boolean;
+}
+
+/** O cadeado de uma seção travada (o texto vai para leitores de tela). */
+function Cadeado({ s }: { s: SecaoNav }) {
+  if (!s.travada) return null;
+  return (
+    <>
+      <IconeCadeado tamanho={12} className="ml-1.5 text-latao-texto" />
+      <span className="sr-only"> (plano Luneta)</span>
+    </>
+  );
 }
 
 /** Botão de rolar a fila de lado (só no mouse: no toque, a fila rola com o dedo; no teclado, o Tab leva até cada aba). */
@@ -165,7 +178,8 @@ export function NavSecoes({ secoes }: { secoes: SecaoNav[] }) {
         ref={lista}
         style={pontas.esq || pontas.dir ? { maskImage: mascara, WebkitMaskImage: mascara } : undefined}
         // com "Mais", a fila não estica: o botão fica logo depois da última aba
-        className={`-mx-4 flex min-w-0 gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden ${fora.length ? "" : "flex-1"}`}
+        // scroll-px-12: a aba focada pelo Tab para longe das pontas, onde ficam a seta (32 px) e o esmaecido (UX-08)
+        className={`-mx-4 flex min-w-0 scroll-px-12 gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden ${fora.length ? "" : "flex-1"}`}
       >
         {secoes.map((s, k) => {
           const ativa = s.id === atual;
@@ -174,11 +188,14 @@ export function NavSecoes({ secoes }: { secoes: SecaoNav[] }) {
               <a
                 href={`#${s.id}`}
                 aria-current={ativa ? "location" : undefined}
+                // com o Tab, a aba vem inteira para a vista da fila (sem mexer na rolagem da página)
+                onFocus={(e) => e.currentTarget.scrollIntoView({ inline: "nearest", block: "nearest" })}
                 className={`relative inline-flex min-h-11 items-center rounded-full px-3.5 text-[13.5px] font-medium whitespace-nowrap no-underline transition-colors duration-150 pointer-fine:min-h-9 ${
                   ativa ? "bg-latao/15 text-luar ring-1 ring-latao/55" : "text-nevoa hover:bg-nevoa/[0.08] hover:text-luar"
                 }`}
               >
                 {s.rotulo}
+                <Cadeado s={s} />
               </a>
             </li>
           );
@@ -216,6 +233,7 @@ export function NavSecoes({ secoes }: { secoes: SecaoNav[] }) {
                     className={`flex min-h-11 items-center rounded-xl px-3 text-[14px] no-underline pointer-fine:min-h-10 transition-colors hover:bg-nevoa/[0.08] ${s.id === atual ? "font-semibold text-luar" : "text-luar/90"}`}
                   >
                     {s.rotulo}
+                    <Cadeado s={s} />
                   </a>
                 </li>
               ))}

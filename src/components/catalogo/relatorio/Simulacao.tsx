@@ -42,6 +42,15 @@ export function ProvedorRelatorio({
   const [estado] = useEstadoSimulador(entrada.id);
   const r = useMemo(() => simulacaoCompleta(entrada, estado, referencias), [entrada, estado, referencias]);
   const valor = useMemo(() => ({ r, plano }), [r, plano]);
+  // a simulação chega num pedaço de JavaScript à parte (SimulacaoAdiada.tsx): a impressão automática (?imprimir=1,
+  // BarraRelatorio) espera este sinal para sair com os ajustes salvos
+  useEffect(() => {
+    const html = document.documentElement;
+    html.dataset.simulacaoPronta = "";
+    return () => {
+      delete html.dataset.simulacaoPronta;
+    };
+  }, []);
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }
 
@@ -72,7 +81,14 @@ const lerHora = () => abertoEm;
  * fontes) mostram a mesma hora; voltando ao relatório pelo navegador (sem recarregar), ele ganha a hora nova, e não a
  * da primeira visita (a simulação pode ter mudado nesse meio-tempo).
  */
-export function CarimboData() {
+/**
+ * A data mais larga que o carimbo pode ter ("28 de fevereiro de 2026, 23:59"): com `reservar`, ela ocupa o mesmo lugar,
+ * invisível, enquanto a hora ainda não chegou (no servidor e na hidratação). O cabeçalho da capa é alinhado à direita
+ * e andava ~100 px quando a data aparecia (CLS; revisão final da rodada 4, UX-13).
+ */
+const MAIS_LARGA = `${dataHoraExtensa(Date.parse("2026-02-28T23:59:00-03:00"))} (horário de Brasília)`;
+
+export function CarimboData({ reservar = false }: { reservar?: boolean }) {
   const t = useSyncExternalStore(assinarHora, lerHora, () => null);
   useEffect(() => {
     if (abertoEm === null) {
@@ -83,7 +99,16 @@ export function CarimboData() {
       abertoEm = null;
     };
   }, []);
-  return <>{t === null ? "\u00a0" : `${dataHoraExtensa(t)} (horário de Brasília)`}</>;
+  const texto = t === null ? "\u00a0" : `${dataHoraExtensa(t)} (horário de Brasília)`;
+  if (!reservar) return <>{texto}</>;
+  return (
+    <span style={{ display: "inline-grid" }}>
+      <span aria-hidden="true" style={{ gridArea: "1 / 1", visibility: "hidden" }}>
+        {MAIS_LARGA}
+      </span>
+      <span style={{ gridArea: "1 / 1" }}>{texto}</span>
+    </span>
+  );
 }
 
 /** Texto curto do lance usado na conta detalhada. */

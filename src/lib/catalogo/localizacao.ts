@@ -50,8 +50,8 @@ export interface ArquivoLocalizacao {
   motivos: string[];
   precisoes: string[];
   renda: { variavel: string; rotulo: string; valores: string };
-  /** os parâmetros do cálculo (nota.py); os que o site usa: o raio da procura por área de risco */
-  regras?: { risco_perto_m?: number; risco_aprox_max_m?: number };
+  /** os parâmetros do cálculo (nota.py); os que o site usa: o raio da procura por área de risco e o porte da cidade pequena */
+  regras?: { risco_perto_m?: number; risco_aprox_max_m?: number; cidade_pequena_moradores?: number; cidade_pequena_celulas?: number };
   fontes: FonteArquivo[];
   colunas: Record<string, Coluna>;
 }
@@ -240,7 +240,7 @@ export const INDICADORES: Record<ChaveComponenteLocal, DefIndicador[]> = {
     { chave: "onibus_500", rotulo: "Pontos de ônibus a até 500 m", formato: "contagem", osm: true },
     { chave: "onibus_face", rotulo: "Domicílios em quadra com ponto de ônibus", formato: "pct" },
   ],
-  renda: [{ chave: "renda", rotulo: "Renda típica dos responsáveis com rendimento", formato: "moeda" }],
+  renda: [{ chave: "renda", rotulo: "Renda típica de quem sustenta o domicílio", formato: "moeda" }],
   infra: [
     { chave: "pavimentacao", rotulo: "Domicílios em rua pavimentada", formato: "pct" },
     { chave: "calcada", rotulo: "Domicílios em rua com calçada", formato: "pct" },
@@ -310,8 +310,9 @@ const RISCO_PERTO_M = 100;
 const RISCO_APROX_MAX_M = 500;
 
 /**
- * Raio (m) em que a área de risco foi procurada, como em nota.py: 100 m do ponto no número ou na rua; no bairro, o
- * desvio do ponto entre 100 e 500 m. null quando não houve procura (cidade sem mapeamento, imóvel sem ponto).
+ * Raio (m) em que a área de risco foi procurada, como em nota.py (raio_risco): a incerteza do ponto, entre 100 e 500 m,
+ * em qualquer precisão. Antes, 100 m fixos no número e na rua: a rua com ±230 m dizia "nenhuma área a menos de 100 m do
+ * imóvel" (revisão final da rodada 4, M2). null quando não houve procura (cidade sem mapeamento, imóvel sem ponto).
  */
 export function raioRisco(
   regras: ArquivoLocalizacao["regras"],
@@ -322,32 +323,56 @@ export function raioRisco(
 ): number | null {
   if (!temPonto || !cidadeMapeada || precisao === null || precisao === "cidade") return null;
   const perto = regras?.risco_perto_m ?? RISCO_PERTO_M;
-  if (precisao !== "bairro") return perto;
   return Math.min(regras?.risco_aprox_max_m ?? RISCO_APROX_MAX_M, Math.max(perto, desvioM ?? perto));
 }
 
 /** O texto de cada motivo (sem nota ou aproximada). */
-function textoMotivo(motivo: string | null, situacao: LocalizacaoImovel["situacao"], cidade: CidadeLocalizacao | null, desvioM: number | null, nomeCidade: string): string | null {
+function textoMotivo(
+  motivo: string | null,
+  situacao: LocalizacaoImovel["situacao"],
+  cidade: CidadeLocalizacao | null,
+  desvioM: number | null,
+  nomeCidade: string,
+  extra: { espalhada?: boolean; regras?: ArquivoLocalizacao["regras"]; geradoEm?: string } = {},
+): string | null {
   if (situacao === "aproximada") {
-    const raio = desvioM ? ` (incerteza de cerca de ${desvioM >= 1000 ? `${KM_INTEIRO.format(desvioM / 1000)} km` : `${numero(desvioM)} m`})` : "";
+    const medida = desvioM ? (desvioM >= 1000 ? `${KM_INTEIRO.format(desvioM / 1000)} km` : `${numero(desvioM)} m`) : null;
+    // a faixa é a do meio (quartis 25 e 75), não o intervalo inteiro (M4)
+    if (extra.espalhada) {
+      // a rua foi achada, mas os endereços dela se espalham: o ponto é o meio da rua, não o centro do bairro (M3)
+      return (
+        `A rua do endereço foi encontrada, mas os endereços dela se espalham${medida ? ` por cerca de ${medida}` : " demais"}: o ponto é o meio da ` +
+        "rua e a nota é aproximada, o meio da faixa do meio das notas das áreas habitadas em volta. As partes e os números abaixo foram medidos " +
+        "nesse ponto, não no imóvel."
+      );
+    }
     return (
-      `O endereço foi localizado só no bairro${raio}: a nota é o meio da faixa das notas das áreas habitadas em volta do centro do bairro. ` +
-      "As partes e os números abaixo foram medidos no centro do bairro, não no imóvel."
+      `O endereço foi localizado só no bairro${medida ? ` (incerteza de cerca de ${medida})` : ""}: a nota é o meio da faixa do meio das notas das ` +
+      "áreas habitadas em volta do centro do bairro. As partes e os números abaixo foram medidos no centro do bairro, não no imóvel."
     );
   }
-  if (situacao === "pendente") return "A nota deste imóvel ainda não foi calculada: ele entrou na base depois do último cálculo.";
+  if (situacao === "pendente") {
+    // o recálculo é manual, de tempos em tempos (M7): a data do último
+    const quando = extra.geradoEm ? ` (${extra.geradoEm.slice(8, 10)}/${extra.geradoEm.slice(5, 7)}/${extra.geradoEm.slice(0, 4)})` : "";
+    return `A nota deste imóvel ainda não foi calculada: ele entrou na base depois do último cálculo${quando}. A nota é recalculada de tempos em tempos.`;
+  }
   switch (motivo) {
     case "cidade":
       return "O endereço foi localizado só na cidade, sem a rua ou o bairro: uma nota aqui diria mais do que sabemos. O ponto no mapa é a sede do município.";
     case "rural":
       return "Imóvel rural: a nota mede serviços a pé, transporte e infraestrutura de rua, que descrevem a cidade, não uma área rural.";
     case "pequena": {
+      // o porquê pelo critério que valeu (M6): quase sempre os moradores (todas as cidades pequenas da base têm 50 áreas
+      // ou mais, até 1.028); "tão poucas áreas" contradizia o número logo antes
+      const minMoradores = extra.regras?.cidade_pequena_moradores ?? 20_000;
+      const minCelulas = extra.regras?.cidade_pequena_celulas ?? 50;
       const m = cidade ? numero(cidade.moradores) : "poucos";
-      return (
-        `${nomeCidade} tem ${m} moradores e ${cidade ? numero(cidade.celulas) : "poucas"} áreas habitadas na grade do IBGE (quadrados de 200 m na ` +
-        "cidade e de 1 km no campo): entre tão poucas áreas, uma nota de 0 a 100 enganaria. Mostramos os números do entorno e a posição em " +
-        "terços na cidade."
-      );
+      const areas = `${cidade ? numero(cidade.celulas) : "poucas"} áreas habitadas na grade do IBGE (quadrados de 200 m na cidade e de 1 km no campo)`;
+      const porque =
+        cidade && cidade.moradores >= minMoradores && cidade.celulas < minCelulas
+          ? `com menos de ${numero(minCelulas)} áreas habitadas, poucas casas mudariam muito a posição de 0 a 100`
+          : `com menos de ${numero(minMoradores)} moradores, poucas casas mudariam muito a posição de 0 a 100`;
+      return `${nomeCidade} tem ${m} moradores e ${areas}: ${porque}. Mostramos os números do entorno e a posição em terços na cidade.`;
     }
     case "sem_cidade":
       return "A cidade deste imóvel não foi encontrada nas bases do IBGE usadas para a nota.";
@@ -384,7 +409,7 @@ export function montarLocalizacao(d: DadosLocalizacao, id: string, lugar: { cida
       situacao: "pendente", nota: null, faixa: null, precisao: null, desvioM: null, lat: null, lon: null, referencia: null,
       componentes: (ORDEM_EMPATE.slice() as ChaveComponenteLocal[]).sort((a, b) => (p.pesos[b] ?? 0) - (p.pesos[a] ?? 0) || ORDEM_EMPATE.indexOf(a) - ORDEM_EMPATE.indexOf(b))
         .map((c) => ({ chave: c, rotulo: ROTULO_COMPONENTE[c], nota: null, peso: p.pesos[c] ?? 0, indicadores: [] })),
-      alertas: [], motivo: textoMotivo(null, "pendente", null, null, nome), coberturaRisco: false, riscoRaioM: null, fontes: fontesDe(d, false),
+      alertas: [], motivo: textoMotivo(null, "pendente", null, null, nome, { geradoEm: p.gerado_em }), coberturaRisco: false, riscoRaioM: null, fontes: fontesDe(d, false),
       versao: p.versao, geradoEm: p.gerado_em,
     };
   }
@@ -422,7 +447,9 @@ export function montarLocalizacao(d: DadosLocalizacao, id: string, lugar: { cida
             if (v === null) return [];
             if (def.osm) usouOsm = true;
             const comum = def.osm ? (comumOsm?.[def.chave] ?? null) : (cidade?.comum[def.chave] ?? null);
-            return [{ chave: def.chave, rotulo: def.rotulo, valor: formatar(v, def), numero: v, comum: comum === null || comum === undefined ? null : formatar(comum, def) }];
+            // zero no mapa aberto não é "não há": o OSM pode estar incompleto ali (M1)
+            const texto = def.osm && def.formato === "contagem" && v === 0 ? "nenhum no mapa aberto (pode estar incompleto)" : formatar(v, def);
+            return [{ chave: def.chave, rotulo: def.rotulo, valor: texto, numero: v, comum: comum === null || comum === undefined ? null : formatar(comum, def) }];
           });
       const n = brutas[cc];
       const comp: ComponenteLocal = {
@@ -441,11 +468,18 @@ export function montarLocalizacao(d: DadosLocalizacao, id: string, lugar: { cida
 
   const alertas: AlertaLocal[] = [];
   const riscoM = valor(c, "risco_m", k);
+  // bairro "rebaixado": a rua foi achada, mas espalhada (o ponto é o meio da rua; M3)
+  const espalhada = precisao === "bairro" && valor(c, "rua_espalhada", k) === 1;
   if (riscoM !== null && temPonto) {
-    const aprox = precisao === "bairro";
-    const onde = riscoM <= 0 ? (aprox ? "O ponto aproximado do imóvel (centro do bairro) fica dentro de uma área de risco mapeada." : "O imóvel fica dentro de uma área de risco mapeada.")
-      : `Há uma área de risco mapeada a cerca de ${distancia(riscoM)} ${aprox ? "do centro do bairro (a posição do imóvel é aproximada)" : "do imóvel"}.`;
-    alertas.push({ tipo: "area_risco", titulo: aprox ? "Área de risco mapeada no bairro" : "Área de risco mapeada perto", texto: `${onde} ${TEXTO_RISCO_FIM}`, distanciaM: riscoM, fonte: FONTE_RISCO });
+    // fora do número exato, o alerta fala do ponto do endereço, nunca "o imóvel fica dentro" (M2)
+    const ponto = precisao === "numero" ? null : precisao === "rua" ? "o ponto da rua do endereço" : espalhada ? "o meio da rua do endereço" : "o centro do bairro";
+    const aprox = " (a posição do imóvel é aproximada)";
+    const onde = ponto === null
+      ? riscoM <= 0 ? "O imóvel fica dentro de uma área de risco mapeada." : `Há uma área de risco mapeada a cerca de ${distancia(riscoM)} do imóvel.`
+      : riscoM <= 0 ? `${ponto.charAt(0).toUpperCase()}${ponto.slice(1)} fica dentro de uma área de risco mapeada${aprox}.`
+        : `Há uma área de risco mapeada a cerca de ${distancia(riscoM)} d${ponto}${aprox}.`;
+    const titulo = precisao === "bairro" && !espalhada ? "Área de risco mapeada no bairro" : "Área de risco mapeada perto";
+    alertas.push({ tipo: "area_risco", titulo, texto: `${onde} ${TEXTO_RISCO_FIM}`, distanciaM: riscoM, fonte: FONTE_RISCO });
   }
   const nota = mostraNota ? valor(c, "nota", k) : null;
   const fmin = valor(c, "faixa_min", k);
@@ -461,7 +495,8 @@ export function montarLocalizacao(d: DadosLocalizacao, id: string, lugar: { cida
     referencia: cidade ? { nome: `${cidade.nome}/${cidade.uf}`, moradores: cidade.moradores, celulas: cidade.celulas } : null,
     componentes,
     alertas,
-    motivo: situacao === "calculada" ? null : textoMotivo(motivo, situacao, cidade, desvioM, cidade ? cidade.nome : lugar.cidade),
+    motivo: situacao === "calculada" ? null : textoMotivo(motivo, situacao, cidade, desvioM, cidade ? cidade.nome : lugar.cidade, { espalhada, regras: p.regras }),
+    ...(espalhada ? { pontoRuaEspalhada: true } : {}),
     coberturaRisco: !!cidade?.bater,
     riscoRaioM: raioRisco(p.regras, precisao, desvioM, temPonto, !!cidade?.bater),
     fontes: fontesDe(d, usouOsm),

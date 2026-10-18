@@ -53,7 +53,6 @@ export function LinhaImovel({
             tags={imovel.tags}
             plano={plano}
             limite={3}
-            onUpsell={onUpsell}
             hrefEvidencia={`${hrefImovel}#tags`}
             rotulo={`Tags de risco: ${imovel.titulo}`}
             className="mt-3.5 @max-xl:hidden"

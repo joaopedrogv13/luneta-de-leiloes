@@ -1,19 +1,19 @@
 # Medição da nota de localização
 
-Gerado em 18/10/2026 03:35 UTC por `base/fontes/localizacao/nota.py`, em 343 s. 21.230 imóveis do instantâneo, 1.153 cidades. Método: README desta pasta (base/fontes/localizacao/README.md).
+Gerado em 18/10/2026 23:21 UTC por `base/fontes/localizacao/nota.py`, em 572 s. 21.230 imóveis do instantâneo, 1.153 cidades. Método: README desta pasta (base/fontes/localizacao/README.md).
 
 - Renda: **V06006 (mediana por setor, confirmada no dicionário do IBGE)**, valores de 2022.
 - OpenStreetMap: sim, dados de 2026-10-17T20:20:51Z.
-- Arquivos do site: `localizacao.json.gz` 616 KB, `localizacao-osm.json.gz` 217 KB, `localizacao-cidades.json.gz` 50 KB.
+- Arquivos do site: `localizacao.json.gz` 617 KB, `localizacao-osm.json.gz` 217 KB, `localizacao-cidades.json.gz` 49 KB.
 
 ## Situação dos imóveis
 
 | Situação | Imóveis | % |
 |---|---|---|
 | calculada | 13.293 | 62,6% |
-| aproximada | 4.388 | 20,7% |
-| sem_nota | 3.549 | 16,7% |
-| · sem nota: endereço só na cidade | 2.834 | 13,3% |
+| aproximada | 4.386 | 20,7% |
+| sem_nota | 3.551 | 16,7% |
+| · sem nota: endereço só na cidade | 2.836 | 13,4% |
 | · sem nota: cidade pequena (terços) | 666 | 3,1% |
 | · sem nota: imóvel rural | 45 | 0,2% |
 | · sem nota: cidade fora da base de cálculo | 4 | 0,0% |
@@ -24,8 +24,8 @@ Por precisão do ponto:
 |---|---|---|---|---|
 | numero | 10.481 | 10.179 | 0 | 302 |
 | rua | 3.211 | 3.114 | 0 | 97 |
-| bairro | 4.655 | 0 | 4.388 | 267 |
-| cidade | 2.883 | 0 | 0 | 2.883 |
+| bairro | 4.653 | 0 | 4.386 | 267 |
+| cidade | 2.885 | 0 | 0 | 2.885 |
 
 Por porte da cidade (moradores na grade 2022):
 
@@ -33,30 +33,30 @@ Por porte da cidade (moradores na grade 2022):
 |---|---|---|---|
 | menos de 20 mil | 331 | 920 | 0 (0,0%) |
 | 20 a 50 mil | 330 | 1.280 | 957 (74,8%) |
-| 50 a 100 mil | 207 | 2.811 | 2.503 (89,0%) |
+| 50 a 100 mil | 207 | 2.811 | 2.501 (89,0%) |
 | 100 a 500 mil | 244 | 6.992 | 6.154 (88,0%) |
 | mais de 500 mil | 41 | 9.223 | 8.067 (87,5%) |
 
 ## Distribuição das notas
 
-Imóveis com nota calculada (13.293): média 40,5; p10 9, p25 19, mediana 37, p75 59, p90 78.
+Imóveis com nota calculada (13.293): média 40,6; p10 9, p25 19, mediana 38, p75 59, p90 78.
 
 | Faixa | 0–9 | 10–19 | 20–29 | 30–39 | 40–49 | 50–59 | 60–69 | 70–79 | 80–89 | 90–100 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Imóveis | 1.656 | 1.800 | 1.796 | 1.798 | 1.772 | 1.298 | 1.106 | 929 | 548 | 590 |
+| Imóveis | 1.697 | 1.708 | 1.796 | 1.846 | 1.765 | 1.298 | 1.041 | 968 | 580 | 594 |
 
-Aproximadas (4.388): meio da faixa com mediana 41; largura da faixa mediana de 17 pontos (p90 35).
+Aproximadas (4.386): meio da faixa com mediana 42; largura da faixa mediana de 17 pontos (p90 35).
 
 Conferência: a nota média das células, pesada pelos moradores, fica em 50,0 na cidade típica (o percentil com ranking médio dá 50 por construção).
 
 ## Cobertura por cidade
 
 - Cidades: 1.153; pequenas (menos de 20 mil moradores ou 50 células habitadas, só terços): 331 (28,7%).
-- Pontos de ônibus do OSM usados (pontos do OSM dentro das células habitadas da cidade em número de pelo menos 10% das faces com ponto de ônibus do Censo): 265 cidades (23,0%); nas outras, só o Censo.
+- Pontos de ônibus do OSM usados (pontos do OSM dentro das células habitadas da cidade em número de pelo menos 10% das faces com ponto de ônibus do Censo, e o morador típico com pelo menos 1 ponto mapeado a 500 m): 141 cidades (12,2%); nas outras, só o Censo.
 - Com estação, barca ou terminal mapeado no OSM: 968 (84,0%). Com parque, praça ou parquinho: 1.147 (99,5%).
 - Com mapeamento de risco do BATER: 287 (24,9%); nas outras, "sem mapeamento de risco para esta cidade" (nunca "sem risco").
 - Componentes fora da nota (peso redistribuído): Lazer (sem_parque): 6 cidades.
-- Imóveis com alerta de área de risco mapeada perto (BATER): 1.185.
+- Imóveis com alerta de área de risco mapeada perto (BATER): 1.272.
 - Domicílios do CNEFE (cidades da base e vizinhas): 83.097.778. Com o código de setor fora dos agregados de 2022 (o CNEFE grava o setor da malha da coleta): 6.411.749 (7,7%); 6.367.555 recebem o setor do polígono da malha 2022 em que caem; ficam sem setor 44.194 (0,1%).
 - Imóveis com mais de 30% dos domicílios do raio sem a renda do setor (setor em sigilo ou sem setor; renda incompleta): 169.
 - Imóveis com nota calculada sem a parte de renda (nenhum domicílio com dado a 1 km; peso redistribuído): 0.
@@ -112,7 +112,7 @@ Mediana entre as linhas: nota 0,32; Serviços -0,00; Transporte 0,18; Renda 0,50
 
 ### Sensibilidade dos pesos
 
-A mesma validação com a nota recalculada com outros pesos (cada linha é uma cidade e um tipo, como acima). "Renda 30" e "sem renda" só servem de comparação: a renda acompanha o preço por definição e pesar mais nela transformaria a nota numa medida de renda.
+A mesma validação com a nota recalculada com outros pesos (cada linha é uma cidade e um tipo, como acima). "Renda 30" e "sem renda" só servem de comparação: a renda acompanha o preço de perto e pesar mais nela transformaria a nota numa medida de renda.
 
 | Pesos (serviços/transporte/renda/infra/comércio/lazer) | Mediana | Mínimo | Linhas negativas |
 |---|---|---|---|

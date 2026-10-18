@@ -148,23 +148,3 @@ export function ReguaNota({ nota, faixa = null, rotulo, className = "" }: { nota
     </div>
   );
 }
-
-/** Prévia desenhada (não real) para a chamada do Lente: anel com "██" e quatro barras, borrados. */
-export function PreviaNotaBorrada({ className = "" }: { className?: string }) {
-  const larguras = ["78%", "52%", "64%", "36%"];
-  return (
-    <div aria-hidden="true" className={`flex items-center gap-4 opacity-70 blur-[3px] select-none ${className}`}>
-      <AnelNota nota={72} tamanho={84} texto="██" legenda="" />
-      <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-        {larguras.map((w, k) => (
-          <div key={k} className="flex items-center gap-3">
-            <span className="block h-2.5 w-20 shrink-0 rounded-full bg-nevoa/30" />
-            <span className="relative block h-2 flex-1 overflow-hidden rounded-full bg-nevoa/15">
-              <span className="absolute inset-y-0 left-0 rounded-full bg-latao/80" style={{ width: w }} />
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}

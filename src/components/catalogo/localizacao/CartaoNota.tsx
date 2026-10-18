@@ -10,6 +10,7 @@ import {
   NOTA_NAO_GARANTIA,
   notaNaEscala,
   OSM_ATRIBUICAO,
+  pontoMedido,
   resumoTercos,
   rotaMetodoLocal,
   SEM_DADO_COMPONENTE,
@@ -96,7 +97,9 @@ function dataOsm(loc: LocalizacaoImovel): string | null {
 /** Conteúdo do pop-up de uma parte: o que é medido, os números com o comum na cidade e a fonte. */
 function PainelParte({ c, loc, cidade, fechar }: { c: ComponenteLocal; loc: LocalizacaoImovel; cidade: string; fechar: () => void }) {
   const sobre = SOBRE_COMPONENTE[c.chave];
-  const aproximada = loc.situacao === "aproximada";
+  // o ponto medido pela precisão, não pela situação: a cidade pequena com o endereço só no bairro também foi medida no
+  // centro do bairro (revisão final da rodada 4, M13)
+  const ponto = pontoMedido(loc);
   const osm = /OpenStreetMap/.test(sobre.fontes) ? dataOsm(loc) : null;
   const exemplo = loc.fontes.length === 1 && loc.fontes[0]!.nome === "Exemplo fictício";
   return (
@@ -124,7 +127,7 @@ function PainelParte({ c, loc, cidade, fechar }: { c: ComponenteLocal; loc: Loca
         </div>
         {c.indicadores.length > 0 && (
           <div>
-            <dt className={ROTULO}>{aproximada ? "No centro do bairro" : "Em volta deste imóvel"}</dt>
+            <dt className={ROTULO}>{ponto.exato ? "Em volta deste imóvel" : `Em volta ${ponto.do}`}</dt>
             <dd className="mt-1.5">
               <ul className="divide-y divide-nevoa/12 rounded-xl border border-nevoa/15">
                 {c.indicadores.map((i) => (
@@ -153,7 +156,7 @@ function PainelParte({ c, loc, cidade, fechar }: { c: ComponenteLocal; loc: Loca
         )}
         {c.incompleto && (
           <p className="rounded-xl border border-aten/40 bg-aten/[0.07] px-3 py-2 text-[13px] leading-snug text-luar">
-            Dado incompleto: mais de 30% dos domicílios em volta estão em setores do Censo sem esse número (sigilo do IBGE).
+            Dado incompleto: mais de 30% dos domicílios em volta estão em pequenas áreas do Censo sem esse número (sigilo do IBGE).
           </p>
         )}
       </dl>
@@ -240,7 +243,7 @@ export function BlocoRisco({ loc }: { loc: LocalizacaoImovel }) {
               <p className="text-[15px] leading-snug font-semibold text-luar">{a.titulo}</p>
               <p className="mt-1 text-sm leading-relaxed text-luar/90">{a.texto}</p>
               <p className="mt-1.5 text-[12.5px] leading-snug text-nevoa">
-                Fonte: {a.fonte}.{loc.riscoRaioM !== null ? ` Procuramos até ${numero(loc.riscoRaioM)} m ${loc.precisao === "bairro" ? "do centro do bairro" : "do imóvel"}.` : ""}
+                Fonte: {a.fonte}.{loc.riscoRaioM !== null ? ` Procuramos até ${numero(loc.riscoRaioM)} m ${pontoMedido(loc).do}.` : ""}
               </p>
             </div>
           </div>
@@ -377,7 +380,7 @@ export function CartaoNota({
             </p>
             <p className="mt-1.5 text-[14px] leading-snug text-nevoa">
               {aproximada
-                ? `Nota aproximada: o endereço foi localizado só no bairro. O meio da faixa (${notaNaEscala(loc.nota!)}) vale para ordenar e filtrar.`
+                ? `Nota aproximada: ${loc.pontoRuaEspalhada ? "a rua do endereço foi encontrada, mas os endereços dela se espalham demais" : "o endereço foi localizado só no bairro"}. O meio da faixa (${notaNaEscala(loc.nota!)}) vale para ordenar e filtrar.`
                 : loc.referencia
                   ? `Comparado com onde moram as ${numero(loc.referencia.moradores)} pessoas da cidade (Censo 2022).`
                   : "Comparado com o resto da cidade."}
@@ -411,7 +414,9 @@ export function CartaoNota({
             <h4 className="text-[15px] font-semibold text-luar">O que entra na nota</h4>
             <p className="text-[12.5px] text-nevoa">Abra uma parte para ver os números</p>
           </div>
-          {aproximada && <p className="mt-1 text-[13px] leading-snug text-nevoa">As partes foram medidas no centro do bairro, não no imóvel.</p>}
+          {!exemplo && loc.precisao !== "numero" && loc.precisao !== null && (
+            <p className="mt-1 text-[13px] leading-snug text-nevoa">As partes foram medidas {pontoMedido(loc).no}, não no imóvel exato.</p>
+          )}
           <ul className="mt-2 grid gap-x-8 gap-y-0.5 @2xl:grid-cols-2">
             {loc.componentes.map((c) => (
               <LinhaParte key={c.chave} c={c} loc={loc} cidade={nomeCidade} />
@@ -433,6 +438,9 @@ export function CartaoNota({
     </div>
   );
 }
+
+/** "2026-10-18" → "18/10/2026" */
+const dataBr = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 
 /** Sem nota: o motivo pronto do servidor e o que dá para ver no lugar. */
 function SemNota({ loc, urlMapa }: { loc: LocalizacaoImovel; urlMapa: string }) {
@@ -457,7 +465,7 @@ function SemNota({ loc, urlMapa }: { loc: LocalizacaoImovel; urlMapa: string }) 
             Compare o preço do m² da região
           </a>
         </li>
-        {pendente && <li className="py-1">A nota é recalculada a cada atualização da base; volte em alguns dias.</li>}
+        {pendente && <li className="py-1">A nota é recalculada de tempos em tempos (o último cálculo é de {dataBr(loc.geradoEm)}); este imóvel entra no próximo.</li>}
       </ul>
     </div>
   );

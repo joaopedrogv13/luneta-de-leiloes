@@ -235,7 +235,7 @@ export function diferencaCurta(c: { pct: number; razao: number }): string {
   return `${numero(Math.abs(c.pct))}% ${c.pct < 0 ? "abaixo" : "acima"}`;
 }
 
-/** Com o que se compara: "a média do bairro" (leilões) ou "o preço médio pago no bairro" (ITBI). */
+/** Com o que se compara: "a média do bairro" (leilões) ou "o preço médio declarado no bairro" (ITBI). */
 export interface AlvoComparacao {
   artigo: "a" | "o";
   nome: string;
@@ -244,9 +244,30 @@ export interface AlvoComparacao {
 const ESCOPO_NA_FRASE: Record<ReferenciaM2["escopo"], string> = { rua: "da rua", bairro: "do bairro", cidade: "da cidade", uf: "do estado" };
 const ESCOPO_NO: Record<ReferenciaM2["escopo"], string> = { rua: "na rua", bairro: "no bairro", cidade: "na cidade", uf: "no estado" };
 
-/** "a média do bairro" para os leilões; "o preço médio pago no bairro" para o ITBI. */
-export function alvoDaReferencia(r: Pick<ReferenciaM2, "escopo" | "fonte">): AlvoComparacao {
-  return r.fonte === "itbi" ? { artigo: "o", nome: `preço médio pago ${ESCOPO_NO[r.escopo]}` } : { artigo: "a", nome: `média ${ESCOPO_NA_FRASE[r.escopo]}` };
+/**
+ * O nome do número do ITBI, pelo que ele é na cidade (ReferenciaM2.valorItbi): só São Paulo e o Rio publicam o preço
+ * declarado na compra; Porto Alegre e Fortaleza, a base de cálculo; o Recife, a avaliação da prefeitura. `curto` vai no
+ * título da tabela e na descrição; `alvo`, na frase da comparação (revisão final da rodada 4, R4-VAZ-04).
+ */
+export const NOME_VALOR_ITBI: Record<NonNullable<ReferenciaM2["valorItbi"]> | "registrado", { curto: string; alvo: AlvoComparacao }> = {
+  declarado: { curto: "preço médio declarado", alvo: { artigo: "o", nome: "preço médio declarado" } },
+  base_calculo: { curto: "base de cálculo média", alvo: { artigo: "a", nome: "base de cálculo média do ITBI" } },
+  avaliacao_prefeitura: { curto: "avaliação média da prefeitura", alvo: { artigo: "a", nome: "avaliação média da prefeitura para o ITBI" } },
+  registrado: { curto: "valor médio registrado", alvo: { artigo: "o", nome: "valor médio registrado no ITBI" } },
+};
+export const nomeValorItbi = (r: Pick<ReferenciaM2, "valorItbi">) => NOME_VALOR_ITBI[r.valorItbi ?? "registrado"];
+
+/**
+ * A fonte do ITBI sem licença confirmada em base/FONTES.md (São Paulo, Rio e Porto Alegre): o dado aparece na Luneta,
+ * e a linha da fonte diz isso (revisão final da rodada 4, R4-VAZ-10; a decisão de segurar ou não é do dono).
+ */
+export const LICENCA_A_CONFIRMAR = "licença a confirmar com a prefeitura";
+
+/** "a média do bairro" para os leilões; "o preço médio declarado no bairro" (ou a base de cálculo...) para o ITBI. */
+export function alvoDaReferencia(r: Pick<ReferenciaM2, "escopo" | "fonte" | "valorItbi">): AlvoComparacao {
+  if (r.fonte !== "itbi") return { artigo: "a", nome: `média ${ESCOPO_NA_FRASE[r.escopo]}` };
+  const a = nomeValorItbi(r).alvo;
+  return { artigo: a.artigo, nome: `${a.nome} ${ESCOPO_NO[r.escopo]}` };
 }
 
 /**
@@ -266,13 +287,13 @@ export function predicadoComparacao(c: { pct: number; razao: number }, alvo: Alv
  */
 export { mediaReferencia as mediaDe, fonteReferencia as fonteDaReferencia, referenciaLeiloes, referenciaPrincipal } from "../../../lib/catalogo/referencia";
 /**
- * Como a referência é descrita numa frase: "preço médio pago em 10 compras registradas na prefeitura (ITBI) no
+ * Como a referência é descrita numa frase: "preço médio declarado em 10 compras registradas na prefeitura (ITBI) no
  * bairro Sacoma, São Paulo/SP" ou "avaliação média de 22 casas em leilão na cidade de São Paulo/SP".
  */
-export function descricaoReferencia(r: Pick<ReferenciaM2, "escopo" | "nome" | "fonte" | "amostra" | "tipo">): string {
+export function descricaoReferencia(r: Pick<ReferenciaM2, "escopo" | "nome" | "fonte" | "amostra" | "tipo" | "valorItbi">): string {
   const n = numero(r.amostra);
   return r.fonte === "itbi"
-    ? `preço médio pago em ${n} ${r.amostra === 1 ? "compra registrada" : "compras registradas"} na prefeitura (ITBI) ${ondeRecorte(r)}`
+    ? `${nomeValorItbi(r).curto} em ${n} ${r.amostra === 1 ? "compra registrada" : "compras registradas"} na prefeitura (ITBI) ${ondeRecorte(r)}`
     : `avaliação média de ${n} ${TIPO_NA_FRASE[r.tipo]} em leilão ${ondeRecorte(r)}`;
 }
 
@@ -551,7 +572,8 @@ export function legendaPosicao(p: ImovelResumo["precisaoGeo"], cnefe = false): s
     case "cep":
       return "Posição aproximada (pelo CEP)";
     case "bairro":
-      return "Posição aproximada (centro do bairro)";
+      // "pelo bairro", não "centro do bairro": em ~800 imóveis o ponto é o meio de uma rua achada, mas espalhada (M3)
+      return "Posição aproximada (pelo bairro)";
     default:
       return "Posição aproximada (centro da cidade)";
   }
@@ -567,7 +589,7 @@ export function textoPosicao(i: Pick<ImovelResumo, "precisaoGeo" | "cidade" | "u
     case "cep":
       return "Posição aproximada: pelo CEP do endereço";
     case "bairro":
-      return i.bairro ? `Posição aproximada: centro do bairro ${i.bairro}, ${i.cidade}/${i.uf}` : `Posição aproximada: um bairro de ${i.cidade}/${i.uf}`;
+      return i.bairro ? `Posição aproximada: pelo bairro ${i.bairro}, ${i.cidade}/${i.uf}` : `Posição aproximada: um bairro de ${i.cidade}/${i.uf}`;
     default:
       return `Posição aproximada: centro de ${i.cidade}/${i.uf}`;
   }

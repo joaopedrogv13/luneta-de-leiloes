@@ -6,17 +6,24 @@ import { useEffect, useRef, type RefObject } from "react";
 const openStack: HTMLElement[] = [];
 let scrollLocks = 0;
 
+/*
+ * A trava vai no <body>, nunca no <html>. Com o <html> em `overflow: visible` (o padrão; nada no CSS muda), o
+ * overflow do body passa para a janela e a rolagem para do mesmo jeito (roda, toque e teclado). Mudar qualquer estilo
+ * do <html> recalcula o estilo da página inteira (os tokens de cor e espaço são variáveis no :root): no celular médio
+ * eram ~300 ms para abrir e outros ~260 ms para fechar cada folha ou janela (revisão da rodada 4, UX-01). No body, 3 ms.
+ * Ao desfazer, volta o `overflow-x: clip` do CSS (globals.css).
+ */
 function lockScroll() {
   if (scrollLocks++ > 0) return;
   const gap = window.innerWidth - document.documentElement.clientWidth;
-  document.documentElement.style.overflow = "hidden";
+  document.body.style.overflow = "hidden";
   // compensa a barra de rolagem que some, para a página não "pular" para o lado
   if (gap > 0) document.body.style.paddingRight = `${gap}px`;
 }
 
 function unlockScroll() {
   if (--scrollLocks > 0) return;
-  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
   document.body.style.paddingRight = "";
 }
 

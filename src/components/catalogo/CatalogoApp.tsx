@@ -2,34 +2,38 @@
 
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { UpgradeModal } from "@/components/assinante/UpgradeModal";
-import { filtrosEfetivos, filtrosIguais, limparVazios } from "@/lib/catalogo/filtros-rotulos";
+import { filtrosEfetivos, filtrosIguais, gruposForaDoPlano, limparVazios, pilulas, recursoDoGrupo, removerGrupos } from "@/lib/catalogo/filtros-rotulos";
+import { ordemPermitida, pode, RECURSO_DA_ORDEM } from "@/lib/catalogo/planos";
+import { TOAST_FAVORITADO } from "@/lib/catalogo/produto";
 import { chaveUltimaBusca, rotaImovel, ROTA_LISTA } from "@/lib/catalogo/rotas";
-import type { Conjunto, Facetas, Filtros, ImovelResumo, Ordem, Plano, PontoMapa, ResultadoBusca } from "@/lib/catalogo/tipos";
+import { ORDEM_PADRAO, type Conjunto, type Facetas, type Filtros, type ImovelResumo, type Ordem, type Plano, type PontoMapa, type Recurso, type ResultadoBusca } from "@/lib/catalogo/tipos";
+import { quartosDaBusca, rotuloQuartosDaBusca, semQuartos } from "@/lib/catalogo/texto";
 import { lerBusca, type Vista } from "@/lib/catalogo/url";
 import { AreaMapa } from "./app/AreaMapa";
-import { AvisoLente, Toast, type Mensagem } from "./app/Avisos";
+import { AvisoForaDoPlano, AvisoLente, Toast, type Mensagem } from "./app/Avisos";
 import s from "./app/catalogo.module.css";
 import { chaveDoEstado, enderecoPagina, type PedidoLista } from "./app/consultas";
 import { EstadoVazio } from "./app/EstadoVazio";
 import { MapaTelaCheia } from "./app/MapaTelaCheia";
 import { criarLojaDestaque, salvarPreferencias, useAcesoPeloMapa, useMidia, usePreferencias, type LojaDestaque } from "./app/hooks";
 import { Paginacao } from "./app/Paginacao";
-import { CONSULTA_BARRA_COMPACTA, CONSULTA_BARRA_RECOLHE, CONSULTA_COMPUTADOR, CONSULTA_CELULAR, type Preferencias } from "./app/preferencias";
+import { CHAVE_TELA, CONSULTA_BARRA_COMPACTA, CONSULTA_BARRA_RECOLHE, CONSULTA_COMPUTADOR, CONSULTA_CELULAR, type Preferencias } from "./app/preferencias";
 import { Cabecalho, type FaixaAviso } from "./Cabecalho";
 import { CartaoImovel, LinhaImovel, ListaEsqueletos, SeletorVista } from "./cartoes";
 import { IconeLista, IconeMapa } from "./cartoes/icones";
 import { BarraFiltros } from "./filtros";
+import { ProvedorPedirLuneta } from "./planos/convite";
 import { consumirVoltaPropria, depoisDoHistorico } from "./ui/historico";
 import { semMovimento } from "./ui/useAdiado";
 import { useBusca } from "./useBusca";
 import { useFavoritos } from "./useFavoritos";
 
-const TOAST_FAVORITO = "Você será avisado por e-mail quando a praça mudar (demonstração).";
+const TOAST_FAVORITO = TOAST_FAVORITADO;
 /** Na prévia os selos estão desligados (critérios pendentes): o aviso não promete o que não aparece. */
 const toastPlano = (selosDesligados: boolean) =>
   selosDesligados
-    ? "Plano Luneta ativado nesta demonstração: tags de risco à vista (selos ainda em análise). Nenhuma cobrança foi feita."
-    : "Plano Luneta ativado nesta demonstração: tags e selos à vista. Nenhuma cobrança foi feita.";
+    ? "Plano Luneta ativado nesta demonstração: tags de risco, filtros avançados, simulador, preço da região e nota de localização à vista (selos ainda em análise). Nenhuma cobrança foi feita."
+    : "Plano Luneta ativado nesta demonstração: tags e selos, filtros avançados, simulador, preço da região e nota de localização à vista. Nenhuma cobrança foi feita.";
 
 /** Facetas vazias (só até a primeira resposta, quando o servidor não conseguiu buscar). */
 const FACETAS_VAZIAS: Facetas = {
@@ -99,6 +103,14 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   const pref = usePreferencias(preferencias);
   const celular = useMidia(CONSULTA_CELULAR, palpiteCelular);
   const computador = useMidia(CONSULTA_COMPUTADOR, !palpiteCelular);
+  // a largura medida vai num cookie: da próxima página em diante, o servidor desenha a vista certa (UX-12)
+  useEffect(() => {
+    try {
+      document.cookie = `${CHAVE_TELA}=${celular ? "c" : "g"}; path=/; max-age=31536000; samesite=lax`;
+    } catch {
+      // cookies bloqueados: fica o palpite pelo navegador
+    }
+  }, [celular]);
   const vista: Vista = vistaEscolhida ?? pref.vista ?? (celular ? "cards" : "lista");
   /** null = padrão do aparelho (o CSS decide na primeira pintura: visível a partir de lg) */
   const mapaPedido = mapaEscolhido ?? pref.mapa;
@@ -358,10 +370,13 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const avisar = useCallback((texto: string) => setMensagem({ id: Date.now(), texto }), []);
   const [upgradeAberto, setUpgradeAberto] = useState(false);
+  const [recursoUpgrade, setRecursoUpgrade] = useState<Recurso | null>(null);
   const abridorUpgrade = useRef<HTMLElement | null>(null);
   const lunetaRef = useRef<HTMLButtonElement>(null);
-  const onUpsell = useCallback((quem: HTMLElement) => {
+  /** a janela da Luneta, com o texto do recurso travado que a abriu (sem recurso: o texto padrão) */
+  const onUpsell = useCallback((quem: HTMLElement | null, recurso?: Recurso | null) => {
     abridorUpgrade.current = quem;
+    setRecursoUpgrade(recurso ?? null);
     setUpgradeAberto(true);
   }, []);
   const fecharUpgrade = useCallback(() => setUpgradeAberto(false), []);
@@ -424,190 +439,224 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
 
   const itens = resultado?.itens ?? [];
   const pilulasValendo = filtrosEfetivos(filtros, plano, selosDesligados);
+  // um link da Luneta aberto no Lente (filtros avançados, ordem por nota...): o servidor ignora, e a tela avisa
+  const gruposFora = gruposForaDoPlano(filtros, plano);
+  const ordemFora = ordemPermitida(pedido.ordem, plano) ? null : pedido.ordem;
+  // "2 quartos" escrito na busca é o filtro de quartos (Luneta): o servidor ignora essa parte no Lente (R4-VAZ-06)
+  const quartosFora = filtros.q && !pode(plano, "filtrosAvancados") ? quartosDaBusca(filtros.q) : [];
+  const recursosFora = new Set<Recurso>([
+    ...gruposFora.map((g) => recursoDoGrupo(g) ?? "filtrosAvancados"),
+    ...(quartosFora.length ? (["filtrosAvancados"] as const) : []),
+    ...(ordemFora && RECURSO_DA_ORDEM[ordemFora] ? [RECURSO_DA_ORDEM[ordemFora]!] : []),
+  ]);
   const semResultado = resultado !== null && !busca.carregando && total === 0;
 
   return (
-    <div
-      ref={raiz}
-      className="[--cab-h:0px] [--faixa-v:0px] [--topo-h:136px] lg:[--topo-h:125px] [@media(min-width:64rem)_and_(min-height:50.0625rem)]:[--cab-h:65px] [@media(min-width:64rem)_and_(min-height:50.0625rem)]:[--topo-h:190px]"
-    >
-      <a
-        href="#lista-imoveis"
-        className="fixed top-2 left-2 z-[70] -translate-y-24 rounded-full bg-latao px-4 py-2.5 text-sm font-semibold text-noite-fixa transition-transform focus:translate-y-0 focus-visible:outline-noite-fixa"
+    // os RecursoLuneta de dentro (painel de filtros) abrem a mesma janela da Luneta
+    <ProvedorPedirLuneta value={onUpsell}>
+      <div
+        ref={raiz}
+        className="[--cab-h:0px] [--faixa-v:0px] [--topo-h:136px] lg:[--topo-h:125px] [@media(min-width:64rem)_and_(min-height:50.0625rem)]:[--cab-h:65px] [@media(min-width:64rem)_and_(min-height:50.0625rem)]:[--topo-h:190px]"
       >
-        Pular para os resultados
-      </a>
-
-      <Cabecalho
-        plano={plano}
-        onPlano={mudarPlano}
-        titulo={textos.titulo}
-        area={textos.area}
-        faixa={faixa}
-        lunetaRef={lunetaRef}
-        cabecalhoRef={cabecalho}
-      />
-
-      <main id="conteudo">
-        <div ref={sentinela} aria-hidden="true" className="h-px" />
-        {/* a barra (sticky): por fora, só a posição, o recolher e a altura reservada quando compacta (transparente
-            e sem receber cliques); por dentro, a superfície visível */}
-        <div
-          ref={barra}
-          data-colada={colada ? "" : undefined}
-          data-recolhida={recolhida ? "" : undefined}
-          onFocusCapture={() => setRecolhida(false)}
-          style={compacta ? { minHeight: compacta.altura } : undefined}
-          className={`group/barra sticky top-[var(--cab-h)] z-30 transition-[translate] duration-200 ease-luneta data-[recolhida]:-translate-y-[calc(100%+2px)] motion-reduce:transition-none ${compacta ? "pointer-events-none" : ""}`}
+        <a
+          href="#lista-imoveis"
+          className="fixed top-2 left-2 z-[70] -translate-y-24 rounded-full bg-latao px-4 py-2.5 text-sm font-semibold text-noite-fixa transition-transform focus:translate-y-0 focus-visible:outline-noite-fixa"
         >
+          Pular para os resultados
+        </a>
+
+        <Cabecalho
+          plano={plano}
+          onPlano={mudarPlano}
+          titulo={textos.titulo}
+          area={textos.area}
+          faixa={faixa}
+          lunetaRef={lunetaRef}
+          cabecalhoRef={cabecalho}
+        />
+
+        <main id="conteudo">
+          <div ref={sentinela} aria-hidden="true" className="h-px" />
+          {/* a barra (sticky): por fora, só a posição, o recolher e a altura reservada quando compacta (transparente
+              e sem receber cliques); por dentro, a superfície visível */}
           <div
-            ref={barraVisivel}
-            className="pointer-events-auto relative border-b border-transparent bg-noite/90 px-4 py-2.5 backdrop-blur-md sm:py-3 transition-[box-shadow,border-color] duration-200 ease-luneta group-data-[colada]/barra:border-nevoa/15 group-data-[colada]/barra:shadow-[0_12px_30px_-14px_rgba(0,0,0,.7)] group-data-[recolhida]/barra:shadow-none motion-reduce:transition-none sm:px-6 lg:px-8 [[data-theme=light]_&]:group-data-[colada]/barra:shadow-[0_10px_28px_-14px_rgba(15,24,48,.28)]"
+            ref={barra}
+            data-colada={colada ? "" : undefined}
+            data-recolhida={recolhida ? "" : undefined}
+            onFocusCapture={() => setRecolhida(false)}
+            style={compacta ? { minHeight: compacta.altura } : undefined}
+            className={`group/barra sticky top-[var(--cab-h)] z-30 transition-[translate] duration-200 ease-luneta data-[recolhida]:-translate-y-[calc(100%+2px)] motion-reduce:transition-none ${compacta ? "pointer-events-none" : ""}`}
           >
-            <div className={`mx-auto ${largura}`}>
-              <BarraFiltros
-                filtros={filtros}
-                facetas={facetas}
-                total={total}
-                carregando={busca.carregando}
-                plano={plano}
-                selosDesligados={selosDesligados}
-                ordem={pedido.ordem}
-                onOrdem={onOrdem}
-                onChange={mudarFiltros}
-                onAplicarPainel={aplicarPainel}
-                onUpsell={onUpsell}
-                contar={busca.contar}
-                consultar={busca.consultar}
-                compacta={!!compacta}
-                // celular: Lista | Cards num ícone no fim da linha da busca (na linha do total, em 360 px, ele
-                // caía sozinho numa terceira linha)
-                acoesBusca={<SeletorVista vista={vista} onVista={escolherVista} mapa={mapaVisivel} onMapa={escolherMapa} apenasAlternar />}
-                acoes={
-                  <SeletorVista
-                    vista={vista}
-                    onVista={escolherVista}
-                    mapa={mapaVisivel}
-                    onMapa={escolherMapa}
-                    // no celular o mapa tem o botão flutuante: aqui só Lista | Cards, em ícones de 44 px
-                    semMapaCelular
-                    // em telas médias e no celular só os ícones (o nome fica para leitores de tela e na dica do mouse)
-                    rotuloClassName="max-lg:sr-only"
-                  />
-                }
-              />
-            </div>
-            <div aria-hidden="true" data-ativo={busca.carregando ? "" : undefined} className={s.progresso} />
-          </div>
-        </div>
-
-        {/* coluna do mapa: ~40% (36% em 1024 px, para a linha ainda caber com a foto ao lado) */}
-        <div className={comColuna ? "lg:grid lg:grid-cols-[minmax(0,1fr)_36%] xl:grid-cols-[minmax(0,1fr)_40%]" : ""}>
-          <section id="resultados" aria-labelledby="titulo-resultados" className="min-w-0 px-4 pt-3 pb-16 sm:px-6 sm:pt-5 lg:px-8">
-            <h2 id="titulo-resultados" ref={tituloLista} tabIndex={-1} className="sr-only">
-              {resultado ? `Resultados, página ${resultado.pagina} de ${resultado.totalPaginas}` : "Resultados"}
-            </h2>
-
-            <div className={`mx-auto flex flex-col gap-5 ${largura}`}>
-              {lente && <AvisoLente onAssinar={() => assinar("aviso")} />}
-
-              {mapaVisivel && !mapaNaColuna ? <div className={classeFaixa}>{mapa("faixa")}</div> : null}
-
-              {busca.erro && (
-                <div role="alert" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-grave/45 bg-grave/[0.07] px-4 py-3">
-                  <p className="min-w-[200px] flex-1 text-sm text-luar">
-                    <strong className="font-semibold">Não foi possível {resultado ? "atualizar a lista" : "carregar os imóveis"}.</strong> {busca.erro}
-                  </p>
-                  <button type="button" onClick={busca.tentarDeNovo} className="btn-ghost !min-h-11 !px-4 !text-[13px] pointer-fine:!min-h-10">
-                    Tentar de novo
-                  </button>
-                </div>
-              )}
-
-              {/* destino do "Pular para os resultados": a lista, depois do mapa em faixa */}
-              <div id="lista-imoveis" tabIndex={-1} className="scroll-mt-[calc(var(--topo-h)+16px)] outline-none">
-                {itens.length === 0 ? (
-                  // nada a mostrar ainda: esqueletos (primeira carga sem dados, ou saindo do estado vazio
-                  // para a busca nova); com erro, só o aviso acima; pronto e sem nada, o estado vazio
-                  busca.erro ? null : semResultado ? (
-                    <EstadoVazio
-                      filtros={pilulasValendo}
-                      nomes={facetas}
-                      contar={busca.contar}
-                      onChange={mudarFiltros}
-                      onLimparTudo={() => mudarFiltros({})}
-                    />
-                  ) : (
-                    <div className="@container">
-                      <ListaEsqueletos vista={vista} quantidade={6} className={vista === "cards" ? GRADE_CARDS : LISTA_LINHAS} />
-                    </div>
-                  )
-                ) : (
-                  // lista anterior esmaecida enquanto a nova chega, ou se a nova falhou (o aviso diz que não atualizou)
-                  <div aria-busy={busca.carregando} data-desatualizada={busca.erro ? "" : undefined} className={`${s.lista} @container`}>
-                    <ListaImoveis
-                      itens={itens}
+            <div
+              ref={barraVisivel}
+              className="pointer-events-auto relative border-b border-transparent bg-noite/90 px-4 py-2.5 backdrop-blur-md sm:py-3 transition-[box-shadow,border-color] duration-200 ease-luneta group-data-[colada]/barra:border-nevoa/15 group-data-[colada]/barra:shadow-[0_12px_30px_-14px_rgba(0,0,0,.7)] group-data-[recolhida]/barra:shadow-none motion-reduce:transition-none sm:px-6 lg:px-8 [[data-theme=light]_&]:group-data-[colada]/barra:shadow-[0_10px_28px_-14px_rgba(15,24,48,.28)]"
+            >
+              <div className={`mx-auto ${largura}`}>
+                <BarraFiltros
+                  filtros={filtros}
+                  facetas={facetas}
+                  total={total}
+                  carregando={busca.carregando}
+                  plano={plano}
+                  selosDesligados={selosDesligados}
+                  ordem={pedido.ordem}
+                  onOrdem={onOrdem}
+                  onChange={mudarFiltros}
+                  onAplicarPainel={aplicarPainel}
+                  onUpsell={onUpsell}
+                  contar={busca.contar}
+                  consultar={busca.consultar}
+                  compacta={!!compacta}
+                  // celular: Lista | Cards num ícone no fim da linha da busca (na linha do total, em 360 px, ele
+                  // caía sozinho numa terceira linha)
+                  acoesBusca={<SeletorVista vista={vista} onVista={escolherVista} mapa={mapaVisivel} onMapa={escolherMapa} apenasAlternar />}
+                  acoes={
+                    <SeletorVista
                       vista={vista}
-                      plano={planoDosDados}
-                      conjunto={conjunto}
-                      ehFavorito={ehFavorito}
-                      onFavoritar={onFavoritar}
-                      onUpsell={onUpsell}
-                      loja={loja}
+                      onVista={escolherVista}
+                      mapa={mapaVisivel}
+                      onMapa={escolherMapa}
+                      // no celular o mapa tem o botão flutuante: aqui só Lista | Cards, em ícones de 44 px
+                      semMapaCelular
+                      // em telas médias e no celular só os ícones (o nome fica para leitores de tela e na dica do mouse)
+                      rotuloClassName="max-lg:sr-only"
                     />
+                  }
+                />
+              </div>
+              <div aria-hidden="true" data-ativo={busca.carregando ? "" : undefined} className={s.progresso} />
+            </div>
+          </div>
+
+          {/* coluna do mapa: ~40% (36% em 1024 px, para a linha ainda caber com a foto ao lado) */}
+          <div className={comColuna ? "lg:grid lg:grid-cols-[minmax(0,1fr)_36%] xl:grid-cols-[minmax(0,1fr)_40%]" : ""}>
+            <section id="resultados" aria-labelledby="titulo-resultados" className="min-w-0 px-4 pt-3 pb-16 sm:px-6 sm:pt-5 lg:px-8">
+              <h2 id="titulo-resultados" ref={tituloLista} tabIndex={-1} className="sr-only">
+                {resultado ? `Resultados, página ${resultado.pagina} de ${resultado.totalPaginas}` : "Resultados"}
+              </h2>
+
+              <div className={`mx-auto flex flex-col gap-5 ${largura}`}>
+                {lente && <AvisoLente onAssinar={() => assinar("aviso")} />}
+
+                {(gruposFora.length > 0 || ordemFora || quartosFora.length > 0) && (
+                  <AvisoForaDoPlano
+                    filtros={[
+                      ...pilulas(filtros, facetas)
+                        .filter((p) => gruposFora.includes(p.grupo))
+                        .map((p) => p.rotulo),
+                      ...quartosFora.map((c) => `${rotuloQuartosDaBusca(c)} (na busca)`),
+                    ]}
+                    ordem={ordemFora}
+                    onConhecer={(el) => onUpsell(el, recursosFora.size === 1 ? [...recursosFora][0] : null)}
+                    onTirar={() => {
+                      if (gruposFora.length || quartosFora.length) {
+                        const sem = gruposFora.length ? removerGrupos(filtros, gruposFora) : filtros;
+                        const q = quartosFora.length && sem.q ? semQuartos(sem.q) : sem.q;
+                        mudarFiltros(limparVazios({ ...sem, q: q || undefined }));
+                      }
+                      if (ordemFora) onOrdem(ORDEM_PADRAO);
+                    }}
+                  />
+                )}
+
+                {mapaVisivel && !mapaNaColuna ? <div className={classeFaixa}>{mapa("faixa")}</div> : null}
+
+                {busca.erro && (
+                  <div role="alert" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-grave/45 bg-grave/[0.07] px-4 py-3">
+                    <p className="min-w-[200px] flex-1 text-sm text-luar">
+                      <strong className="font-semibold">Não foi possível {resultado ? "atualizar a lista" : "carregar os imóveis"}.</strong> {busca.erro}
+                    </p>
+                    <button type="button" onClick={busca.tentarDeNovo} className="btn-ghost !min-h-11 !px-4 !text-[13px] pointer-fine:!min-h-10">
+                      Tentar de novo
+                    </button>
                   </div>
                 )}
+
+                {/* destino do "Pular para os resultados": a lista, depois do mapa em faixa */}
+                <div id="lista-imoveis" tabIndex={-1} className="scroll-mt-[calc(var(--topo-h)+16px)] outline-none">
+                  {itens.length === 0 ? (
+                    // nada a mostrar ainda: esqueletos (primeira carga sem dados, ou saindo do estado vazio
+                    // para a busca nova); com erro, só o aviso acima; pronto e sem nada, o estado vazio
+                    busca.erro ? null : semResultado ? (
+                      <EstadoVazio
+                        filtros={pilulasValendo}
+                        nomes={facetas}
+                        contar={busca.contar}
+                        onChange={mudarFiltros}
+                        onLimparTudo={() => mudarFiltros({})}
+                      />
+                    ) : (
+                      <div className="@container">
+                        <ListaEsqueletos vista={vista} quantidade={6} className={vista === "cards" ? GRADE_CARDS : LISTA_LINHAS} />
+                      </div>
+                    )
+                  ) : (
+                    // lista anterior esmaecida enquanto a nova chega, ou se a nova falhou (o aviso diz que não atualizou)
+                    <div aria-busy={busca.carregando} data-desatualizada={busca.erro ? "" : undefined} className={`${s.lista} @container`}>
+                      <ListaImoveis
+                        itens={itens}
+                        vista={vista}
+                        plano={planoDosDados}
+                        conjunto={conjunto}
+                        ehFavorito={ehFavorito}
+                        onFavoritar={onFavoritar}
+                        onUpsell={onUpsell}
+                        loja={loja}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* a paginação entrando na tela tira o botão flutuante do mapa do caminho */}
+                <div ref={fimDaLista} aria-hidden="true" className="h-px" />
+                {resultado && total > 0 && (
+                  <Paginacao
+                    pagina={resultado.pagina}
+                    totalPaginas={resultado.totalPaginas}
+                    porPagina={resultado.porPagina}
+                    total={total}
+                    hrefDe={hrefPagina}
+                    onIr={irParaPagina}
+                    onTopo={() => irAoTopo(true)}
+                  />
+                )}
               </div>
+            </section>
 
-              {/* a paginação entrando na tela tira o botão flutuante do mapa do caminho */}
-              <div ref={fimDaLista} aria-hidden="true" className="h-px" />
-              {resultado && total > 0 && (
-                <Paginacao
-                  pagina={resultado.pagina}
-                  totalPaginas={resultado.totalPaginas}
-                  porPagina={resultado.porPagina}
-                  total={total}
-                  hrefDe={hrefPagina}
-                  onIr={irParaPagina}
-                  onTopo={() => irAoTopo(true)}
-                />
-              )}
-            </div>
-          </section>
+            {vista === "lista" && (
+              <div className={`${classeColuna} sticky top-[var(--topo-h)] h-[calc(100svh-var(--topo-h)-var(--faixa-v))] self-start border-l border-nevoa/12`}>
+                {mapaVisivel && mapaNaColuna ? mapa("painel") : null}
+              </div>
+            )}
+          </div>
+        </main>
 
-          {vista === "lista" && (
-            <div className={`${classeColuna} sticky top-[var(--topo-h)] h-[calc(100svh-var(--topo-h)-var(--faixa-v))] self-start border-l border-nevoa/12`}>
-              {mapaVisivel && mapaNaColuna ? mapa("painel") : null}
-            </div>
-          )}
-        </div>
-      </main>
+        {rodape}
 
-      {rodape}
+        <MapaTelaCheia aberto={telaCheia} onFechar={() => setMapaCheio(false)} cidades={busca.pontos?.length ?? null} total={total}>
+          {mapa("painel", "h-full")}
+        </MapaTelaCheia>
 
-      <MapaTelaCheia aberto={telaCheia} onFechar={() => setMapaCheio(false)} cidades={busca.pontos?.length ?? null} total={total}>
-        {mapa("painel", "h-full")}
-      </MapaTelaCheia>
+        {/* Celular: o mapa liga e desliga num botão flutuante (a barra fixa fica com duas linhas só); sai do caminho
+            quando a paginação aparece. Abaixo dos pop-ups (z-20): um pop-up de filtro, de ordem ou de tag que desce
+            até o pé da tela fica por cima dele, e o botão some enquanto houver um aberto. */}
+        <button
+          type="button"
+          onClick={alternarMapaCelular}
+          className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-20 inline-flex min-h-12 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full bg-luar px-5 text-[15px] font-semibold text-noite shadow-[0_14px_36px_rgba(0,0,0,.45)] transition-[opacity,translate,scale] duration-200 ease-luneta active:scale-[0.96] motion-reduce:transition-none sm:hidden [body:has([data-popover])_&]:pointer-events-none [body:has([data-popover])_&]:opacity-0 ${
+            botaoMapaVisivel ? "" : "pointer-events-none translate-y-4 opacity-0"
+          }`}
+          tabIndex={botaoMapaVisivel ? undefined : -1}
+          aria-hidden={!botaoMapaVisivel || undefined}
+        >
+          {mapaVisivel ? <IconeLista /> : <IconeMapa />}
+          {mapaVisivel ? "Esconder mapa" : "Ver no mapa"}
+        </button>
 
-      {/* Celular: o mapa liga e desliga num botão flutuante (a barra fixa fica com duas linhas só); sai do caminho
-          quando a paginação aparece. Abaixo dos pop-ups (z-20): um pop-up de filtro, de ordem ou de tag que desce
-          até o pé da tela fica por cima dele, e o botão some enquanto houver um aberto. */}
-      <button
-        type="button"
-        onClick={alternarMapaCelular}
-        className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-20 inline-flex min-h-12 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full bg-luar px-5 text-[15px] font-semibold text-noite shadow-[0_14px_36px_rgba(0,0,0,.45)] transition-[opacity,translate,scale] duration-200 ease-luneta active:scale-[0.96] motion-reduce:transition-none sm:hidden [body:has([data-popover])_&]:pointer-events-none [body:has([data-popover])_&]:opacity-0 ${
-          botaoMapaVisivel ? "" : "pointer-events-none translate-y-4 opacity-0"
-        }`}
-        tabIndex={botaoMapaVisivel ? undefined : -1}
-        aria-hidden={!botaoMapaVisivel || undefined}
-      >
-        {mapaVisivel ? <IconeLista /> : <IconeMapa />}
-        {mapaVisivel ? "Esconder mapa" : "Ver no mapa"}
-      </button>
-
-      <UpgradeModal open={upgradeAberto} openerRef={abridorUpgrade} onClose={fecharUpgrade} onUpgrade={() => assinar("modal")} />
-      <Toast mensagem={mensagem} />
-    </div>
+        <UpgradeModal open={upgradeAberto} recurso={recursoUpgrade} openerRef={abridorUpgrade} onClose={fecharUpgrade} onUpgrade={() => assinar("modal")} />
+        <Toast mensagem={mensagem} />
+      </div>
+    </ProvedorPedirLuneta>
   );
 }
 
@@ -631,7 +680,7 @@ const ListaImoveis = memo(function ListaImoveis({
   conjunto: Conjunto;
   ehFavorito: (id: string) => boolean;
   onFavoritar: (id: string) => void;
-  onUpsell: (quem: HTMLElement) => void;
+  onUpsell: (quem: HTMLElement, recurso?: Recurso | null) => void;
   loja: LojaDestaque;
 }) {
   // Página nova sob o mouse parado: o cartão que acendia a cidade saiu sem "pointerleave". O mapa apaga.
@@ -675,7 +724,7 @@ const ItemImovel = memo(function ItemImovel({
   href: string;
   favorito: boolean;
   onFavoritar: (id: string) => void;
-  onUpsell: (quem: HTMLElement) => void;
+  onUpsell: (quem: HTMLElement, recurso?: Recurso | null) => void;
   loja: LojaDestaque;
   eager: boolean;
 }) {

@@ -6,8 +6,10 @@ import { Seal } from "@/components/ui/Seal";
 import { SELO_ROTULO, SEVERIDADE_ROTULO } from "@/lib/catalogo/rotulos";
 import type { ImovelDetalhe, Plano, Severidade, TagDetalhe } from "@/lib/catalogo/tipos";
 import type { ChaveGlossario } from "@/content/glossario";
-import { BotaoConhecerLuneta } from "./BotaoConhecerLuneta";
-import { IconeCadeado, IconeInfo } from "./icones";
+import { RecursoLuneta } from "@/components/catalogo/planos/RecursoLuneta";
+import { PRODUTO } from "@/lib/catalogo/produto";
+import { pode } from "@/lib/catalogo/planos";
+import { IconeInfo } from "./icones";
 import { Secao, Subtitulo } from "./partes";
 import { BotaoTermo } from "./Termo";
 
@@ -49,40 +51,26 @@ function LinhaTag({ tag }: { tag: TagDetalhe }) {
   );
 }
 
-/** Pílulas falsas e desfocadas do plano Lente (o conteúdo real nem chega ao navegador). */
-const FALSAS = ["w-36", "w-28", "w-44", "w-24", "w-32", "w-40", "w-28"] as const;
-
 /**
  * Seção 2, "Riscos e alertas". Luneta: as tags confirmadas agrupadas por gravidade (cada uma clicável, com
  * evidência, origem e confiança), um bloco à parte com as tags em revisão, o selo (ou "Selo em análise") com
- * o porquê e o aviso de que a classificação não é garantia. Lente: tudo travado, com o convite à Luneta.
+ * o porquê e o aviso de que a classificação não é garantia. Lente: a chamada da Luneta (RecursoLuneta, com as
+ * pílulas desenhadas; as tags nem chegam ao navegador).
  */
 export function SecaoRiscos({ imovel: i, plano, selosDesligados }: { imovel: ImovelDetalhe; plano: Plano; selosDesligados: boolean }) {
-  if (plano === "lente") {
+  if (!pode(plano, "tags")) {
     return (
       <Secao id="riscos" titulo="Riscos e alertas" sobretitulo="Análise automática">
-        <div id="tags" className="scroll-mt-3 overflow-hidden rounded-3xl border border-latao/40 bg-tinta">
-          <div
-            aria-hidden="true"
-            className="flex h-[92px] flex-wrap content-start gap-2 overflow-hidden px-6 pt-6 blur-[3px] select-none [mask-image:linear-gradient(180deg,#000_40%,transparent)] sm:px-8"
-          >
-            {FALSAS.map((w, k) => (
-              <span key={k} className={`block h-[34px] shrink-0 rounded-full border border-nevoa/50 bg-nevoa/15 ${w}`} />
-            ))}
-          </div>
-          <div className="flex flex-col items-start gap-3 px-6 pb-6 sm:px-8 sm:pb-8">
-            <span className="inline-flex items-center gap-2 text-[12px] font-semibold tracking-[0.12em] text-latao-texto uppercase">
-              <IconeCadeado tamanho={15} />
-              Plano Luneta
-            </span>
-            <p className="max-w-[46ch] font-display text-[20px] leading-snug font-bold tracking-[-0.01em] text-luar sm:text-[22px]">
-              Tags de risco e selo deste imóvel são da Luneta.
-            </p>
-            <p className="max-w-[56ch] text-[14px] leading-relaxed text-nevoa">
-              Ocupação, dívidas que passam ao arrematante, ações judiciais, matrícula e mais, com o trecho do anúncio que levou a cada alerta.
-            </p>
-            <BotaoConhecerLuneta />
-          </div>
+        <div id="tags" className="scroll-mt-3">
+          <RecursoLuneta
+            recurso="tags"
+            titulo="Tags de risco e selo deste imóvel"
+            texto={
+              PRODUTO.leituraDoEdital
+                ? "Ocupação, dívidas que passam ao arrematante, ações judiciais, matrícula e mais, com o trecho do anúncio que levou a cada alerta, e o selo quando o imóvel passa nos critérios."
+                : "Os alertas que os dados da fonte já mostram (financiamento, direito de preferência do devedor, deságio e praça), com a origem de cada um, e o selo quando o imóvel passa nos critérios."
+            }
+          />
         </div>
         <Aviso />
       </Secao>

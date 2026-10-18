@@ -27,7 +27,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { gunzip } from "node:zlib";
 import { chaveBairro, ruaGenerica } from "./lugar";
-import type { CoberturaPrecos, FontePreco, ImovelResumo, ReferenciaM2, TipoImovel } from "./tipos";
+import type { CoberturaPrecos, FontePreco, ImovelResumo, ReferenciaM2, TipoImovel, ValorItbi } from "./tipos";
 import { chaveCidade, type RuaDoImovel } from "./vizinhanca";
 
 const descompactar = promisify(gunzip);
@@ -178,6 +178,7 @@ export function referenciasItbi(arquivo: ArquivoItbi | null, imovel: ImovelResum
   if (areaComComum(arquivo, tipo)) return [];
   const lugar = `${imovel.cidade}/${imovel.uf}`;
   const bairro = chaveBairro(imovel.bairro);
+  const valorItbi = configDe(arquivo.uf, arquivo.cidade)?.tipoValor;
   const candidatos: { escopo: ReferenciaM2["escopo"]; nome: string; e: EstatItbi | undefined }[] = [
     { escopo: "rua", nome: `${rua?.nome}, ${lugar}`, e: rua && !ruaGenerica(rua.chave) ? proprio(proprio(arquivo.ruas, rua.chave)?.tipos, tipo) : undefined },
     { escopo: "bairro", nome: `${imovel.bairro}, ${lugar}`, e: bairro ? proprio(proprio(arquivo.bairros, bairro)?.tipos, tipo) : undefined },
@@ -189,6 +190,7 @@ export function referenciasItbi(arquivo: ArquivoItbi | null, imovel: ImovelResum
           escopo,
           fonte: "itbi",
           periodo: arquivo.fonte.periodo,
+          ...(valorItbi ? { valorItbi } : {}),
           media: e.media,
           nome,
           tipo: imovel.tipo,
@@ -216,6 +218,8 @@ interface CidadeItbi {
   detalheSemArquivo: string;
   /** o valor do arquivo: o declarado na compra, a base de cálculo do imposto ou a avaliação da prefeitura */
   valor?: string;
+  /** o mesmo, como código (o nome do número na tela) */
+  tipoValor?: ValorItbi;
   /** tipos cuja área no arquivo inclui a parte comum do prédio: ficam fora da comparação (ver o topo) */
   areaComComum?: readonly TipoItbi[];
 }
@@ -227,19 +231,19 @@ const LAI = "a prefeitura não publica as transações; dá para pedir pela Lei 
 export const CIDADES_ITBI: readonly CidadeItbi[] = [
   {
     cidade: "São Paulo", uf: "SP", url: "https://prefeitura.sp.gov.br/web/fazenda/w/acesso_a_informacao/31501", licenca: null, semArquivo: "coleta_pendente",
-    detalheSemArquivo: COLETA_PRONTA, valor: "valor declarado", areaComComum: ["apartamento", "comercial"],
+    detalheSemArquivo: COLETA_PRONTA, valor: "valor declarado", tipoValor: "declarado", areaComComum: ["apartamento", "comercial"],
   },
   {
     cidade: "Rio de Janeiro", uf: "RJ", url: "https://fazenda.prefeitura.rio/itbi-valores-medios-por-m2-de-transacoes-imobiliarias-por-trecho-de-logradouro/", licenca: null,
-    semArquivo: "coleta_pendente", detalheSemArquivo: COLETA_PRONTA, valor: "valor declarado",
+    semArquivo: "coleta_pendente", detalheSemArquivo: COLETA_PRONTA, valor: "valor declarado", tipoValor: "declarado",
   },
   {
     cidade: "Porto Alegre", uf: "RS", url: "https://dadosabertos.poa.br/dataset/itbi", licenca: null, semArquivo: "coleta_pendente", detalheSemArquivo: COLETA_PRONTA,
-    valor: "base de cálculo da prefeitura",
+    valor: "base de cálculo da prefeitura", tipoValor: "base_calculo",
   },
   {
     cidade: "Fortaleza", uf: "CE", url: "https://dados.fortaleza.ce.gov.br/dataset/imposto-sobre-transmissao-de-bens-imoveis-itbi", licenca: "CC-BY", semArquivo: "coleta_pendente",
-    detalheSemArquivo: COLETA_PRONTA, valor: "base de cálculo da prefeitura", areaComComum: ["apartamento", "comercial"],
+    detalheSemArquivo: COLETA_PRONTA, valor: "base de cálculo da prefeitura", tipoValor: "base_calculo", areaComComum: ["apartamento", "comercial"],
   },
   {
     cidade: "Belo Horizonte", uf: "MG", url: "https://dados.pbh.gov.br/dataset/itbi-relatorios", licenca: "CC-BY", semArquivo: "coleta_pendente",
@@ -247,7 +251,7 @@ export const CIDADES_ITBI: readonly CidadeItbi[] = [
   },
   {
     cidade: "Recife", uf: "PE", url: "https://dados.recife.pe.gov.br/dataset/imposto-sobre-transmissao-de-bens-imoveis-itbi", licenca: "ODbL", semArquivo: "coleta_pendente",
-    detalheSemArquivo: COLETA_PRONTA, valor: "avaliação da prefeitura para o imposto",
+    detalheSemArquivo: COLETA_PRONTA, valor: "avaliação da prefeitura para o imposto", tipoValor: "avaliacao_prefeitura",
   },
   ...([["Salvador", "BA"], ["Goiânia", "GO"], ["Brasília", "DF"], ["Curitiba", "PR"], ["Florianópolis", "SC"], ["Campinas", "SP"], ["Niterói", "RJ"]] as const).map(
     ([cidade, uf]): CidadeItbi => ({ cidade, uf, url: null, licenca: null, semArquivo: "sem_dado_aberto", detalheSemArquivo: LAI }),

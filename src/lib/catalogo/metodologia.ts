@@ -96,7 +96,7 @@ export function pctTexto(parte: number, total: number): string {
 }
 
 /**
- * A conferência dos pesos com o preço pago nas compras registradas (ITBI) em 5 capitais: correlação de postos de
+ * A conferência dos pesos com o valor das compras registradas (ITBI) em 5 capitais: correlação de postos de
  * Spearman entre a nota no ponto de cada rua e o preço mediano por m² pago nela. Medição de 18/10/2026
  * (base/saida/localizacao/medicao-nota.md); vale para as 5 capitais e não valida o interior.
  */
@@ -109,13 +109,18 @@ export const VALIDACAO_ITBI = {
   negativos: 1,
   /** mediana por parte, entre os 8 recortes (cidade e tipo) */
   porParte: { renda: 0.5, infra: 0.29, transporte: 0.18, lazer: 0.02, servicos: 0.0, comercio: -0.07 } satisfies Record<ChaveComponenteLocal, number>,
-  /** alguns recortes, para a tabela */
+  /**
+   * os 8 recortes da tabela de medicao-nota.md (antes eram 6, sem avisar: faltavam Recife apartamentos e Porto Alegre
+   * casas; M15). `areaComComum`: a área do ITBI inclui a parte comum do prédio (a página do imóvel não compara).
+   */
   exemplos: [
-    { cidade: "São Paulo", tipo: "apartamentos", ruas: 2333, rho: 0.55 },
+    { cidade: "São Paulo", tipo: "apartamentos", ruas: 2333, rho: 0.55, areaComComum: true },
     { cidade: "Porto Alegre", tipo: "apartamentos", ruas: 561, rho: 0.39 },
     { cidade: "Rio de Janeiro", tipo: "apartamentos", ruas: 813, rho: 0.32 },
     { cidade: "São Paulo", tipo: "casas", ruas: 455, rho: 0.32 },
-    { cidade: "Fortaleza", tipo: "apartamentos", ruas: 364, rho: 0.06 },
+    { cidade: "Porto Alegre", tipo: "casas", ruas: 76, rho: 0.32 },
+    { cidade: "Fortaleza", tipo: "apartamentos", ruas: 364, rho: 0.06, areaComComum: true },
+    { cidade: "Recife", tipo: "apartamentos", ruas: 409, rho: 0.01 },
     { cidade: "Rio de Janeiro", tipo: "casas", ruas: 97, rho: -0.1 },
   ],
   /** os pesos da decisão inicial e o resultado com eles */

@@ -3,6 +3,7 @@
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { descricaoReferencia, mediaDe } from "@/components/catalogo/imovel/formato";
 import { MODALIDADE_ROTULO } from "@/lib/catalogo/rotulos";
+import { pode } from "@/lib/catalogo/planos";
 import type { Plano, ReferenciaM2 } from "@/lib/catalogo/tipos";
 import { baseItbi, custoReforma, iptuMensal } from "@/lib/simulador/calculo";
 import { completarModelo, type ResultadoCompleto } from "@/lib/simulador/completa";
@@ -1304,7 +1305,7 @@ function EdDividas({ m, plano, aoPedirLuneta, definir, tirar }: { m: Modelo; pla
               A análise aponta {juntar(m.dividasApontadas)}: você informou {moeda(p.dividas)}.
             </Aviso>
           )
-        ) : plano === "lente" ? (
+        ) : !pode(plano, "tags") ? (
           <p className="flex items-start gap-2 text-[12.5px] leading-relaxed text-nevoa">
             <IconeCadeado className="mt-0.5" />
             <span>

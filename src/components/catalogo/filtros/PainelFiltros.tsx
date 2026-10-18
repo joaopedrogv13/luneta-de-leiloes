@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
-import { chaveFiltros, contarGrupos, filtrosEfetivos, limparVazios, type GrupoFiltro } from "@/lib/catalogo/filtros-rotulos";
+import { chaveFiltros, contarGrupos, filtrosEfetivos, grupoPermitido, limparVazios, recursoDoGrupo, type GrupoFiltro } from "@/lib/catalogo/filtros-rotulos";
 import { ROTA_METODO_LOCAL } from "@/lib/catalogo/nota-texto";
 import { numero } from "@/lib/catalogo/rotulos";
-import type { Facetas, Filtros } from "@/lib/catalogo/tipos";
+import type { Facetas, Filtros, Recurso } from "@/lib/catalogo/tipos";
 import { contarFiltros } from "@/lib/catalogo/url";
 import { useMidia } from "../app/hooks";
 import { CampoData } from "../ui/CampoData";
 import { AJUDA, LINK } from "../ui/estilos";
+import { RecursoLuneta } from "../planos/RecursoLuneta";
 import { Folha, rolarPara } from "../ui/Folha";
 import { Girando, IconeCadeado } from "../ui/icones";
 import { semMovimento } from "../ui/useAdiado";
@@ -45,6 +46,9 @@ export const SECOES: readonly { id: SecaoFiltro; rotulo: string; grupos: readonl
   { id: "foto", rotulo: "Foto", grupos: ["comFoto"] },
 ];
 
+/** As seções pelo id (para o cadeado da seção inteira). */
+const SECAO = Object.fromEntries(SECOES.map((x) => [x.id, x])) as Record<SecaoFiltro, (typeof SECOES)[number]>;
+
 /**
  * Listas de seleção dentro do painel. No computador, caixa de 264 px que rola por dentro; no celular, sem
  * altura máxima (uma lista que rola dentro da folha que rola prende o dedo): 8 itens e "Mostrar todos".
@@ -54,11 +58,31 @@ const LOTE_CELULAR = 8;
 
 type Resultado = { chave: string; total: number | null; facetas?: Facetas };
 
+/** Nome e frase curta de cada filtro avançado, na linha com o cadeado do plano Lente. */
+const TRAVADO: Partial<Record<GrupoFiltro, { nome: string; texto?: string }>> = {
+  lanceM2: { nome: "R$/m² do lance", texto: "O lance dividido pela área, numa faixa" },
+  area: { nome: "Área", texto: "Faixa de área em m²" },
+  quartos: { nome: "Quartos", texto: "Pelo menos 1, 2, 3 ou 4 quartos" },
+  vagas: { nome: "Vagas de garagem", texto: "Pelo menos 1, 2 ou 3 vagas" },
+  modalidade: { nome: "Modalidade", texto: "Leilão, venda direta, venda online, licitação" },
+  praca: { nome: "Praça", texto: "1ª, 2ª ou praça única" },
+  financiamento: { nome: "Aceita financiamento" },
+  fgts: { nome: "Aceita FGTS" },
+  parcelamento: { nome: "Aceita parcelamento" },
+  ocupacao: { nome: "Ocupação", texto: "Ocupado ou desocupado, como a fonte informa" },
+  natureza: { nome: "Natureza", texto: "Judicial ou extrajudicial" },
+  fonte: { nome: "Fonte", texto: "Caixa, Leilões Judiciais e as outras fontes da base" },
+  comFoto: { nome: "Com foto", texto: "Só os anúncios que publicam foto" },
+};
+
 /**
  * "Todos os filtros": a Folha com todas as seções e navegação por seção. Trabalha num rascunho: nada
  * muda na lista até "Mostrar N imóveis" (N ao vivo: `consultar`/`contar` com espera de 250 ms, a
- * anterior cancelada). Fechar sem aplicar descarta o rascunho. No plano Lente, Riscos e Selo aparecem
- * travados (abrem o upgrade); com os selos desligados, Selo aparece desabilitado com a explicação.
+ * anterior cancelada). Fechar sem aplicar descarta o rascunho.
+ * Plano Lente (src/lib/catalogo/planos.ts): os filtros que não são do Lente aparecem com o cadeado, no mesmo lugar
+ * (RecursoLuneta: uma linha por filtro avançado; Nota, Riscos e Selo com a chamada compacta) e, ao clicar, abrem a
+ * janela da Luneta sem filtrar; a seção inteira da Luneta tem o cadeado na navegação. Com os selos desligados, Selo
+ * aparece desabilitado com a explicação.
  */
 export function PainelFiltros({
   aberto,
@@ -212,10 +236,25 @@ export function PainelFiltros({
   };
 
   const ativos = contarFiltros(rascunho);
-  const lente = plano === "lente";
-  // a nota de localização é da Luneta: no Lente a seção some por enquanto (a tela da trava é da frente de planos)
-  const secoes = lente ? SECOES.filter((s) => s.id !== "nota") : SECOES;
+  // o que este plano não usa (Lente: tudo fora dos 6 filtros prometidos; ver planos.ts) aparece com o cadeado
+  const travadoGrupo = (g: GrupoFiltro) => !grupoPermitido(g, plano);
+  const secaoTravada = (s: (typeof SECOES)[number]) => s.grupos.every(travadoGrupo);
+  const secoes = SECOES;
   const props = { f: rascunho, facetas: facetasVivas, aplicar };
+  const pedir = (el: HTMLElement | null, r?: Recurso | null) => {
+    if (el) onUpsell(el, r);
+  };
+  /** Um filtro avançado no plano que não o tem: a linha com o cadeado (abre a janela da Luneta, não filtra). */
+  const trava = (g: GrupoFiltro): ReactNode => {
+    if (!travadoGrupo(g)) return null;
+    const t = TRAVADO[g];
+    return <RecursoLuneta variante="linha" recurso={recursoDoGrupo(g) ?? "filtrosAvancados"} titulo={t?.nome} texto={t?.texto} onConhecer={pedir} />;
+  };
+  /** Uma seção inteira de recurso próprio da Luneta (nota, riscos, selo): a chamada compacta. */
+  const chamada = (g: GrupoFiltro, titulo: string, texto: string): ReactNode =>
+    travadoGrupo(g) ? (
+      <RecursoLuneta variante="compacto" comoTitulo="p" recurso={recursoDoGrupo(g) ?? "filtrosAvancados"} titulo={titulo} texto={texto} onConhecer={pedir} />
+    ) : null;
 
   const mostrar = () => {
     if (!igualAplicado) onChange(limparVazios(rascunho));
@@ -225,7 +264,7 @@ export function PainelFiltros({
   const itemNav = (s: (typeof SECOES)[number], vertical: boolean) => {
     const n = contarGrupos(rascunho, s.grupos);
     const on = secaoAtiva === s.id;
-    const travada = lente && (s.id === "riscos" || s.id === "selo");
+    const travada = secaoTravada(s);
     return (
       <li key={s.id} className="shrink-0">
         <button
@@ -339,20 +378,25 @@ export function PainelFiltros({
             </Campo>
           </Secao>
 
-          {!lente && (
-            <Secao
-              uid={uid}
-              id="nota"
-              titulo="Nota de localização"
-              descricao="De 0 a 100: o entorno do imóvel comparado com onde moram as pessoas da mesma cidade. Imóveis sem nota (endereço só na cidade, cidade pequena, área rural) ficam de fora; a nota aproximada (só o bairro) conta pelo meio da faixa."
-            >
+          <Secao
+            uid={uid}
+            id="nota"
+            titulo="Nota de localização"
+            selo={secaoTravada(SECAO.nota) ? "Luneta" : undefined}
+            descricao={
+              travadoGrupo("notaLocal")
+                ? undefined
+                : "De 0 a 100: o entorno do imóvel comparado com onde moram as pessoas da mesma cidade. Imóveis sem nota (endereço só na cidade, cidade pequena, área rural) ficam de fora; a nota aproximada (só o bairro) conta pelo meio da faixa."
+            }
+          >
+            {chamada("notaLocal", "Filtrar pela nota de localização é do plano Luneta", "Veja só os imóveis com o entorno acima de 60, 70 ou 80, comparado com a própria cidade.") ?? (
               <ControleNotaLocal {...props} />
-              <Link href={ROTA_METODO_LOCAL} target="_blank" prefetch={false} className={`${LINK} -mt-2 self-start`}>
-                Como a nota é calculada
-                <span className="sr-only"> (abre em nova aba)</span>
-              </Link>
-            </Secao>
-          )}
+            )}
+            <Link href={ROTA_METODO_LOCAL} target="_blank" prefetch={false} className={`${LINK} -mt-2 self-start`}>
+              Como a nota é calculada
+              <span className="sr-only"> (abre em nova aba)</span>
+            </Link>
+          </Secao>
 
           <Secao uid={uid} id="tipo" titulo="Tipo de imóvel">
             <ControleTipo {...props} />
@@ -365,26 +409,34 @@ export function PainelFiltros({
             <Divisor />
             <ControleFaixa {...props} grupo="desagio" />
             <Divisor />
-            <ControleFaixa {...props} grupo="lanceM2" />
+            {trava("lanceM2") ?? <ControleFaixa {...props} grupo="lanceM2" />}
           </Secao>
 
-          <Secao uid={uid} id="caracteristicas" titulo="Características">
-            <ControleFaixa {...props} grupo="area" />
-            <Campo rotulo="Quartos" ajuda="Pelo menos. Anúncios que não informam ficam de fora.">
-              <ControleMinimo {...props} grupo="quartos" />
-            </Campo>
-            <Campo rotulo="Vagas de garagem" ajuda="Pelo menos. Cerca de metade dos anúncios não informa vagas: com o filtro, eles ficam de fora.">
-              <ControleMinimo {...props} grupo="vagas" />
-            </Campo>
+          <Secao uid={uid} id="caracteristicas" titulo="Características" selo={secaoTravada(SECAO.caracteristicas) ? "Luneta" : undefined}>
+            {trava("area") ?? <ControleFaixa {...props} grupo="area" />}
+            {trava("quartos") ?? (
+              <Campo rotulo="Quartos" ajuda="Pelo menos. Anúncios que não informam ficam de fora.">
+                <ControleMinimo {...props} grupo="quartos" />
+              </Campo>
+            )}
+            {trava("vagas") ?? (
+              <Campo rotulo="Vagas de garagem" ajuda="Pelo menos. Cerca de metade dos anúncios não informa vagas: com o filtro, eles ficam de fora.">
+                <ControleMinimo {...props} grupo="vagas" />
+              </Campo>
+            )}
           </Secao>
 
           <Secao uid={uid} id="leilao" titulo="Leilão">
-            <Campo rotulo="Modalidade">
-              <ControleLista {...props} chave="modalidade" />
-            </Campo>
-            <Campo rotulo="Praça" ajuda="“Não informada” são anúncios que não dizem a praça atual.">
-              <ControleLista {...props} chave="praca" />
-            </Campo>
+            {trava("modalidade") ?? (
+              <Campo rotulo="Modalidade">
+                <ControleLista {...props} chave="modalidade" />
+              </Campo>
+            )}
+            {trava("praca") ?? (
+              <Campo rotulo="Praça" ajuda="“Não informada” são anúncios que não dizem a praça atual.">
+                <ControleLista {...props} chave="praca" />
+              </Campo>
+            )}
             <Campo rotulo="Data da praça" ajuda="Muitas fontes não publicam a data: ao filtrar por data, os anúncios sem data ficam de fora.">
               <CampoData
                 de={rascunho.dataDe}
@@ -394,29 +446,35 @@ export function PainelFiltros({
             </Campo>
           </Secao>
 
-          <Secao uid={uid} id="condicoes" titulo="Condições">
-            <ControleSimNao {...props} chave="financiamento" />
-            <ControleSimNao {...props} chave="fgts" />
-            <ControleSimNao {...props} chave="parcelamento" />
-            <Divisor />
-            <Campo rotulo="Ocupação" ajuda="Quase nenhuma fonte informa se o imóvel está ocupado. Na dúvida, trate como ocupado e confira o edital.">
-              <ControleLista {...props} chave="ocupacao" />
-            </Campo>
-            <Campo rotulo="Natureza">
-              <ControleLista {...props} chave="natureza" />
-            </Campo>
-            <Campo rotulo="Fonte">
-              <ControleLista {...props} chave="fonte" />
-            </Campo>
+          <Secao uid={uid} id="condicoes" titulo="Condições" selo={secaoTravada(SECAO.condicoes) ? "Luneta" : undefined}>
+            {trava("financiamento") ?? <ControleSimNao {...props} chave="financiamento" />}
+            {trava("fgts") ?? <ControleSimNao {...props} chave="fgts" />}
+            {trava("parcelamento") ?? <ControleSimNao {...props} chave="parcelamento" />}
+            {!travadoGrupo("ocupacao") && <Divisor />}
+            {trava("ocupacao") ?? (
+              <Campo rotulo="Ocupação" ajuda="Quase nenhuma fonte informa se o imóvel está ocupado. Na dúvida, trate como ocupado e confira o edital.">
+                <ControleLista {...props} chave="ocupacao" />
+              </Campo>
+            )}
+            {trava("natureza") ?? (
+              <Campo rotulo="Natureza">
+                <ControleLista {...props} chave="natureza" />
+              </Campo>
+            )}
+            {trava("fonte") ?? (
+              <Campo rotulo="Fonte">
+                <ControleLista {...props} chave="fonte" />
+              </Campo>
+            )}
           </Secao>
 
-          <Secao uid={uid} id="riscos" titulo="Riscos" selo={lente ? "Luneta" : undefined}>
-            {lente ? (
-              <Travado
-                titulo="Filtrar por risco é do plano Luneta"
-                texto="Esconda imóveis ocupados, com dívidas ou com ação judicial, e veja só os que têm pontos positivos."
-                onUpsell={onUpsell}
-              />
+          <Secao uid={uid} id="riscos" titulo="Riscos" selo={secaoTravada(SECAO.riscos) ? "Luneta" : undefined}>
+            {travadoGrupo("semTags") ? (
+              chamada(
+                "semTags",
+                "Filtrar por risco é do plano Luneta",
+                "Esconda imóveis ocupados, com dívidas ou com ação judicial, e veja só os que têm pontos positivos.",
+              )
             ) : (
               <>
                 <Campo rotulo="Esconder imóveis com…" ajuda="Vale também para as tags ainda em revisão.">
@@ -430,13 +488,9 @@ export function PainelFiltros({
             )}
           </Secao>
 
-          <Secao uid={uid} id="selo" titulo="Selo" selo={lente ? "Luneta" : undefined}>
-            {lente ? (
-              <Travado
-                titulo="Selos são do plano Luneta"
-                texto="Promissor, Na Mira e Alvo: os imóveis que passaram nos critérios da Luneta."
-                onUpsell={onUpsell}
-              />
+          <Secao uid={uid} id="selo" titulo="Selo" selo={secaoTravada(SECAO.selo) ? "Luneta" : undefined}>
+            {travadoGrupo("selo") ? (
+              chamada("selo", "Selos são do plano Luneta", "Promissor, Na Mira e Alvo: os imóveis que passaram nos critérios da Luneta.")
             ) : selosDesligados ? (
               <div className="flex flex-col gap-3">
                 <ControleSelo {...props} desabilitado />
@@ -447,12 +501,14 @@ export function PainelFiltros({
             )}
           </Secao>
 
-          <Secao uid={uid} id="foto" titulo="Foto">
-            <ControleSimNao
-              {...props}
-              chave="comFoto"
-              ajuda="“Com foto”: o anúncio traz o endereço de ao menos uma foto (na Caixa, o endereço segue o padrão do site e não é conferido; a foto pode não abrir)."
-            />
+          <Secao uid={uid} id="foto" titulo="Foto" selo={secaoTravada(SECAO.foto) ? "Luneta" : undefined}>
+            {trava("comFoto") ?? (
+              <ControleSimNao
+                {...props}
+                chave="comFoto"
+                ajuda="“Com foto”: o anúncio traz o endereço de ao menos uma foto (na Caixa, o endereço segue o padrão do site e não é conferido; a foto pode não abrir)."
+              />
+            )}
           </Secao>
         </div>
       )}
@@ -502,31 +558,3 @@ function Secao({
 function Divisor() {
   return <hr className="border-nevoa/12" />;
 }
-
-/** Larguras dos marcadores falsos (as mesmas sempre: não entregam quais nem quantas tags existem). */
-const MARCADORES = ["w-24", "w-32", "w-20", "w-28", "w-24", "w-16"] as const;
-
-function Travado({ titulo, texto, onUpsell }: { titulo: string; texto: string; onUpsell: (opener: HTMLElement) => void }) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-latao/35 bg-latao/[0.06] p-4">
-      <div aria-hidden="true" className="flex flex-wrap gap-2 opacity-60 blur-[2px] select-none">
-        {MARCADORES.map((w, i) => (
-          <span key={i} className={`block h-9 rounded-full border border-nevoa/40 bg-nevoa/10 ${w}`} />
-        ))}
-      </div>
-      <div className="mt-4 flex items-start gap-3">
-        <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-latao/60 text-latao-texto">
-          <IconeCadeado tamanho={16} />
-        </span>
-        <div className="flex min-w-0 flex-col gap-1">
-          <p className="text-sm leading-snug font-semibold text-luar">{titulo}</p>
-          <p className="text-[13px] leading-snug text-nevoa">{texto}</p>
-        </div>
-      </div>
-      <button type="button" aria-haspopup="dialog" onClick={(e) => onUpsell(e.currentTarget)} className="btn-outline mt-4 w-full">
-        Conhecer a Luneta
-      </button>
-    </div>
-  );
-}
-

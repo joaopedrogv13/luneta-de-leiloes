@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { FINAL_CTA, PLANS } from "@/content/site";
+import { RichText } from "@/components/ui/RichText";
 
 type Field = "nome" | "email" | "whatsapp" | "lgpd";
 type Values = { nome: string; email: string; whatsapp: string; lgpd: boolean };
@@ -80,8 +81,10 @@ export function LeadForm() {
     setSent(true);
   };
 
+  // Foco: borda em latão e um anel de 2 px (o `focus:outline-none` anulava o outline do focus-visible, e só a borda
+  // de 1 px, a ~2:1 no tema claro, indicava o campo ativo; revisão final da rodada 4, UX-09).
   const input =
-    "mt-1.5 w-full rounded-xl border bg-noite px-4 py-3.5 text-base text-luar placeholder:text-nevoa/70 transition-colors duration-150 focus:border-latao focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-latao-texto";
+    "mt-1.5 w-full rounded-xl border bg-noite px-4 py-3.5 text-base text-luar placeholder:text-nevoa/70 transition-colors duration-150 focus:border-latao focus:outline-none focus-visible:ring-2 focus-visible:ring-latao-texto focus-visible:ring-offset-2 focus-visible:ring-offset-tinta";
   const label = "block text-xs font-medium tracking-[0.06em] text-nevoa uppercase";
 
   const field = (name: "nome" | "email" | "whatsapp", text: string, props: React.InputHTMLAttributes<HTMLInputElement>) => {
@@ -172,10 +175,11 @@ export function LeadForm() {
               />
               <span>
                 Concordo em receber contatos da Luneta de Leilões e li a{" "}
+                {/* a página ainda não existe: o placeholder fica visível, como no rodapé (UX-15) */}
                 <a href="#politica-de-privacidade" className="text-latao-texto underline underline-offset-2">
                   política de privacidade
                 </a>{" "}
-                (LGPD). Posso cancelar quando quiser.
+                <RichText text="[link]" /> (LGPD). Posso cancelar quando quiser.
               </span>
             </label>
             {show("lgpd") && (

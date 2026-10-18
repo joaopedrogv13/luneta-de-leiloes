@@ -149,7 +149,9 @@ test("rua com alerta a 60 m; sem renda no ponto o peso dela é redistribuído", 
   assert.equal(l.componentes.find((c) => c.chave === "renda")!.nota, null);
   assert.equal(somaPesos(l), 100);
   assert.equal(l.alertas[0]!.titulo, "Área de risco mapeada perto");
-  assert.match(l.alertas[0]!.texto, /a cerca de 60 m do imóvel/);
+  // na rua, o alerta fala do ponto do endereço, nunca "do imóvel" (M2)
+  assert.match(l.alertas[0]!.texto, /a cerca de 60 m do ponto da rua do endereço \(a posição do imóvel é aproximada\)/);
+  assert.doesNotMatch(l.alertas[0]!.texto, /do imóvel\./);
   const parque = l.componentes.find((c) => c.chave === "lazer")!.indicadores[0]!;
   assert.equal(parque.valor, "mais de 3 km");
 });
@@ -186,7 +188,11 @@ test("risco: o raio que foi conferido; imóvel sem ponto numa cidade mapeada nã
   f.cidades.cidades["3304904"]!.bater = true;
   const d = dados(f);
   assert.equal(montarLocalizacao(d, "caixa-1", SG)!.riscoRaioM, 100);
-  assert.equal(montarLocalizacao(d, "caixa-5", SG)!.riscoRaioM, 100); // rua
+  // rua com ±300 m: a procura vai até a margem do ponto, não 100 m fixos (revisão final da rodada 4, M2)
+  assert.equal(montarLocalizacao(d, "caixa-5", SG)!.riscoRaioM, 300);
+  assert.equal(raioRisco(undefined, "rua", 230, true, true), 230);
+  assert.equal(raioRisco(undefined, "numero", 40, true, true), 100);
+  assert.equal(raioRisco(undefined, "numero", 150, true, true), 150);
   assert.equal(montarLocalizacao(d, "caixa-2", SG)!.riscoRaioM, 500); // bairro: desvio de 1,2 km, no máximo 500 m
   const semPonto = montarLocalizacao(d, "caixa-3", SG)!;
   assert.equal(semPonto.coberturaRisco, true);
@@ -207,12 +213,34 @@ test("textos da aproximada e da cidade pequena: as partes são do centro do bair
   assert.match(p.motivo!, /quadrados de 200 m na cidade e de 1 km no campo/);
 });
 
+test("rua espalhada (bairro rebaixado por desvio alto): o meio da rua, nunca o centro do bairro (M3)", () => {
+  const f = fixture();
+  f.principal.colunas.rua_espalhada = [null, 1, null, null, null];
+  f.cidades.cidades["3304904"]!.bater = true;
+  const l = montarLocalizacao(dados(f), "caixa-2", SG)!;
+  assert.equal(l.pontoRuaEspalhada, true);
+  assert.match(l.motivo!, /A rua do endereço foi encontrada, mas os endereços dela se espalham por cerca de 1,2 km/);
+  assert.doesNotMatch(l.motivo!, /centro do bairro/);
+  assert.match(l.alertas[0]!.texto, /^O meio da rua do endereço fica dentro de uma área de risco mapeada/);
+  assert.equal(l.alertas[0]!.titulo, "Área de risco mapeada perto");
+  // sem a coluna (arquivo antigo), o bairro de sempre
+  assert.equal(montarLocalizacao(dados(), "caixa-2", SG)!.pontoRuaEspalhada, undefined);
+});
+
+test("cidade pequena: o porquê é o critério que valeu, não \"tão poucas áreas\" (M6)", () => {
+  const p = montarLocalizacao(dados(), "caixa-4", { cidade: "Abadia dos Dourados", uf: "MG" })!;
+  assert.match(p.motivo!, /com menos de 20\.000 moradores, poucas casas mudariam muito a posição de 0 a 100/);
+  assert.doesNotMatch(p.motivo!, /tão poucas áreas/);
+});
+
 test("pendente: imóvel fora do arquivo; sem o arquivo principal, null", () => {
   const l = montarLocalizacao(dados(), "caixa-999", SG)!;
   assert.equal(l.situacao, "pendente");
   assert.equal(l.nota, null);
   assert.equal(l.componentes.length, 6);
   assert.match(l.motivo!, /ainda não foi calculada/);
+  // o recálculo é manual: a data do último, sem prometer "a cada atualização" (M7)
+  assert.match(l.motivo!, /depois do último cálculo \(18\/10\/2026\)\. A nota é recalculada de tempos em tempos\./);
   assert.equal(montarLocalizacao({ ...dados(), principal: null }, "caixa-1", SG), null);
   assert.equal(notaLocalDe({ ...dados(), principal: null }, "caixa-1"), null);
 });

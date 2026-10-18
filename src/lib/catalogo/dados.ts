@@ -1,13 +1,8 @@
 /**
- * Dados do catálogo no servidor, carregados uma vez por instância (Vercel: por função fria) e
- * guardados em memória:
- * - "previa": o instantâneo do banco em base/saida/site (src/lib/catalogo/instantaneo.ts). A lista
- *   inteira vem na primeira busca; cada pedaço de detalhes só quando uma página de imóvel precisa dele.
- * - "exemplos": os 6 exemplos fictícios (src/lib/catalogo/exemplos.ts).
- *
- * A nota de localização (src/lib/catalogo/localizacao.ts) entra no resumo de cada imóvel (`notaLocal`) antes do índice
- * e, por imóvel, em `localizacao(id)`: na prévia, dos arquivos base/saida/site/localizacao*.json.gz; nos exemplos,
- * a nota fictícia de src/content/examples.ts.
+ * Dados do catálogo no servidor, carregados uma vez por instância (Vercel: por função fria) e guardados em memória.
+ * Como cada conjunto é montado está em src/lib/catalogo/conjuntos.ts (sem nada do Next, para os testes):
+ * - "previa": o instantâneo do banco em base/saida/site, com a nota de localização;
+ * - "exemplos": os 6 exemplos fictícios de src/content/examples.ts.
  *
  * SÓ SERVIDOR: lê arquivos e guarda o conjunto inteiro (com tags e selo, sem plano aplicado). O navegador
  * recebe só o que src/lib/catalogo/servidor.ts devolve, com o plano já aplicado.
@@ -15,105 +10,14 @@
  */
 import "server-only";
 import { LISTINGS } from "../../content/examples";
-import { criarIndice, diaBrasilia, type IndiceCatalogo } from "./consulta";
-import { converterExemplos, localizacaoDosExemplos, resumoDe } from "./exemplos";
-import { lerLista, lerParte, montarDetalhe, parteDoId, pastaPadrao, type DetalheParcial } from "./instantaneo";
-import { dadosLocalizacao, montarLocalizacao, notaLocalDe } from "./localizacao";
-import type { Conjunto, ImovelDetalhe, ImovelResumo, LocalizacaoImovel, SobreConjunto } from "./tipos";
-import { indiceDeRuas, type ContextoVizinhanca, type RuaDoImovel } from "./vizinhanca";
+import { carregarExemplos, carregarPrevia, type DadosConjunto } from "./conjuntos";
+import { diaBrasilia } from "./consulta";
+import { pastaPadrao } from "./instantaneo";
+import type { Conjunto } from "./tipos";
 
-export interface DadosConjunto {
-  conjunto: Conjunto;
-  itens: readonly ImovelResumo[];
-  indice: IndiceCatalogo;
-  sobre: SobreConjunto;
-  /** Selos desligados neste conjunto (prévia: critérios pendentes com o advogado). */
-  selosDesligados: boolean;
-  /** Posição de cada id na lista. */
-  posicao: ReadonlyMap<string, number>;
-  /** Rua de cada item (mesma posição), tirada do endereço; null sem endereço ou sem nome que identifique a rua. */
-  ruas: readonly (RuaDoImovel | null)[];
-  /** Rua e imóveis da mesma rua (mesma cidade) do item na posição k, para a vizinhança. */
-  contexto(k: number): ContextoVizinhanca;
-  /** Detalhe completo (sem plano aplicado), ou null se o id não existe. */
-  detalhe(id: string): Promise<ImovelDetalhe | null>;
-  /**
-   * Nota de localização do imóvel (sem plano aplicado): null quando o conjunto não tem o dado; "pendente" quando o
-   * imóvel ainda não foi calculado.
-   */
-  localizacao(id: string): Promise<LocalizacaoImovel | null>;
-}
+export type { DadosConjunto };
 
 const carregados = new Map<Conjunto, Promise<DadosConjunto>>();
-
-async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
-  const [lista, loc] = await Promise.all([lerLista(pasta), dadosLocalizacao()]);
-  // a nota entra no resumo antes do índice (a ordem e o filtro por nota usam o índice)
-  for (const i of lista.itens) i.notaLocal = notaLocalDe(loc, i.id);
-  const enderecos = lista.enderecos;
-  const indice = criarIndice(lista.itens, { textoExtra: (_, k) => enderecos[k] });
-  const posicao = new Map(lista.itens.map((i, k) => [i.id, k]));
-  const { ruas, contexto } = indiceDeRuas(lista.itens, enderecos);
-  const partes = new Map<string, Promise<Map<string, DetalheParcial>>>();
-  const parte = (p: string) => {
-    let pronta = partes.get(p);
-    if (!pronta) {
-      pronta = lerParte(pasta, p, lista.geradoEm);
-      // falhou (arquivo faltando no deploy?): tenta de novo na próxima página, sem guardar o erro
-      pronta.catch(() => partes.delete(p));
-      partes.set(p, pronta);
-    }
-    return pronta;
-  };
-  return {
-    conjunto: "previa",
-    itens: lista.itens,
-    indice,
-    sobre: lista.sobre,
-    selosDesligados: true,
-    posicao,
-    ruas,
-    contexto,
-    async detalhe(id) {
-      const k = posicao.get(id);
-      if (k === undefined) return null;
-      const parcial = (await parte(parteDoId(id, lista.partes))).get(id);
-      if (!parcial) return null;
-      return montarDetalhe(lista.itens[k]!, enderecos[k] ?? null, parcial);
-    },
-    async localizacao(id) {
-      const k = posicao.get(id);
-      if (k === undefined) return null;
-      const i = lista.itens[k]!;
-      return montarLocalizacao(loc, id, { cidade: i.cidade, uf: i.uf });
-    },
-  };
-}
-
-function carregarExemplos(): DadosConjunto {
-  const agora = new Date();
-  const detalhes = converterExemplos(LISTINGS, agora);
-  const itens: ImovelResumo[] = detalhes.map(resumoDe);
-  const porId = new Map(detalhes.map((d) => [d.id, d]));
-  const locs = localizacaoDosExemplos(LISTINGS, agora);
-  return {
-    conjunto: "exemplos",
-    itens,
-    indice: criarIndice(itens),
-    sobre: { geradoEm: agora.toISOString(), fontes: [{ id: "exemplo", nome: "Exemplo fictício", geradoNaFonteEm: null, total: itens.length }] },
-    selosDesligados: false,
-    posicao: new Map(itens.map((i, k) => [i.id, k])),
-    // os exemplos não têm endereço: sem rua
-    ruas: itens.map(() => null),
-    contexto: () => ({}),
-    async detalhe(id) {
-      return porId.get(id) ?? null;
-    },
-    async localizacao(id) {
-      return locs.get(id) ?? null;
-    },
-  };
-}
 
 /** Dia (Brasília) em que os exemplos foram montados: as datas das praças são relativas a ele. */
 let diaDosExemplos: string | null = null;
@@ -131,7 +35,7 @@ export function dadosDoConjunto(conjunto: Conjunto): Promise<DadosConjunto> {
   }
   let pronto = carregados.get(conjunto);
   if (!pronto) {
-    pronto = conjunto === "previa" ? carregarPrevia(pastaPadrao()) : Promise.resolve(carregarExemplos());
+    pronto = conjunto === "previa" ? carregarPrevia(pastaPadrao()) : Promise.resolve(carregarExemplos(LISTINGS));
     // erro de leitura não fica guardado: a próxima requisição tenta de novo
     pronto.catch(() => carregados.delete(conjunto));
     carregados.set(conjunto, pronto);

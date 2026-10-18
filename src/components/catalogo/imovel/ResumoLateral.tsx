@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { BotaoFavoritar } from "@/components/catalogo/cartoes/partes";
+import { IconeAneis } from "@/components/catalogo/ui/icones";
+import { pode } from "@/lib/catalogo/planos";
 import { SeverityIcon } from "@/components/niveis/severity";
 import { data, dataHora, moeda, MODALIDADE_ROTULO, PRACA_ROTULO } from "@/lib/catalogo/rotulos";
-import type { ImovelResumo, Severidade } from "@/lib/catalogo/tipos";
+import type { ImovelResumo, Recurso, Severidade } from "@/lib/catalogo/tipos";
 import { useImovel } from "./ContextoImovel";
 import { fraseDesagio } from "./formato";
 import { AnelNota } from "@/components/catalogo/localizacao/visual";
@@ -116,6 +118,25 @@ export function AcoesTitulo({
   );
 }
 
+/** Uma linha do resumo que é da Luneta (plano Lente): abre a janela com o texto do recurso. */
+function LinhaTravada({ recurso, titulo, texto }: { recurso: Recurso; titulo: string; texto: string }) {
+  const { pedirLuneta } = useImovel();
+  return (
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      onClick={(e) => pedirLuneta(e.currentTarget, recurso)}
+      className="-mx-2 flex min-h-11 w-[calc(100%+1rem)] cursor-pointer items-center justify-between gap-3 rounded-xl px-2 py-1 text-left text-sm transition-colors hover:bg-nevoa/[0.07]"
+    >
+      <span>
+        <span className="block font-medium text-luar">{titulo}</span>
+        <span className="mt-1 block text-[13px] text-nevoa">{texto}</span>
+      </span>
+      <IconeCadeado tamanho={16} className="text-latao-texto" />
+    </button>
+  );
+}
+
 /**
  * Resumo fixo da coluna direita (no celular, logo abaixo do título): lance mínimo, avaliação e deságio,
  * praça e data, "Ver anúncio na fonte", "Simular lance", Favoritar (Luneta) e Compartilhar, e o resumo dos
@@ -200,12 +221,27 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
               Exemplo fictício: não há anúncio real para abrir.
             </p>
           )}
-          <a href="#simulador" className={`${d.anuncio ? "btn-outline gap-2" : "btn-primary"} w-full max-md:px-4! ${d.anuncio ? "" : "max-md:col-span-2"}`}>
-            <IconeCalculadora tamanho={18} />
-            <span>
-              Simular<span className={d.anuncio ? "max-md:sr-only" : ""}> {precoFixo(d) ? "compra" : "lance"}</span>
-            </span>
-          </a>
+          {pode(plano, "simulador") ? (
+            <a href="#simulador" className={`${d.anuncio ? "btn-outline gap-2" : "btn-primary"} w-full max-md:px-4! ${d.anuncio ? "" : "max-md:col-span-2"}`}>
+              <IconeCalculadora tamanho={18} />
+              <span>
+                Simular<span className={d.anuncio ? "max-md:sr-only" : ""}> {precoFixo(d) ? "compra" : "lance"}</span>
+              </span>
+            </a>
+          ) : (
+            // Lente: o simulador e o PDF são da Luneta; no lugar de "Simular", o convite (a janela com tudo o que ela tem)
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={(e) => pedirLuneta(e.currentTarget)}
+              className={`${d.anuncio ? "btn-outline gap-2" : "btn-primary"} w-full max-md:px-4! ${d.anuncio ? "" : "max-md:col-span-2"}`}
+            >
+              <IconeAneis tamanho={17} />
+              <span>
+                <span className={d.anuncio ? "max-md:sr-only" : ""}>Conhecer a </span>Luneta
+              </span>
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-2 max-md:hidden">
           <BotaoFavoritar
@@ -255,19 +291,9 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
             <IconeSetaDireita tamanho={16} className="text-nevoa transition-transform duration-150 group-hover/riscos:translate-x-0.5 motion-reduce:transition-none" />
           </a>
         ) : (
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            onClick={(e) => pedirLuneta(e.currentTarget)}
-            className="-mx-2 flex min-h-11 w-[calc(100%+1rem)] cursor-pointer items-center justify-between gap-3 rounded-xl px-2 py-1 text-left text-sm transition-colors hover:bg-nevoa/[0.07]"
-          >
-            <span>
-              <span className="block font-medium text-luar">Riscos e alertas</span>
-              <span className="mt-1 block text-[13px] text-nevoa">Tags de risco e selo são do plano Luneta</span>
-            </span>
-            <IconeCadeado tamanho={16} className="text-latao-texto" />
-          </button>
+          <LinhaTravada recurso="tags" titulo="Riscos e alertas" texto="Tags de risco e selo são do plano Luneta" />
         )}
+        {!pode(plano, "localizacao") && <LinhaTravada recurso="localizacao" titulo="Nota de localização" texto="A nota do entorno é do plano Luneta" />}
         {d.local && (
           <a
             href="#localizacao"
@@ -323,11 +349,13 @@ function definirBarraMinimizada(v: boolean) {
 }
 
 /**
- * Celular: barra fixa no pé da tela com o lance e "Ver anúncio" (ou "Simular", nos exemplos). Aparece
+ * Celular: barra fixa no pé da tela com o lance e "Ver anúncio" (ou "Simular", nos exemplos; no Lente, "Conhecer a
+ * Luneta", porque o simulador é da Luneta). Aparece
  * quando os botões do resumo saem da tela por cima; some de novo quando eles voltam. A pessoa pode minimizá-la
  * (fica uma pílula pequena no canto com o lance, para trazê-la de volta); a escolha fica salva no navegador.
  */
 export function BarraInferior({ d }: { d: DadosResumo }) {
+  const { plano, pedirLuneta } = useImovel();
   const [visivel, setVisivel] = useState(false);
   // a escolha salva vale depois da hidratação (a barra só aparece depois de rolar: não há o que piscar)
   const minimizada = useSyncExternalStore(assinarBarra, barraMinimizada, () => false);
@@ -406,10 +434,20 @@ export function BarraInferior({ d }: { d: DadosResumo }) {
               <IconeExterno tamanho={16} />
               <span className="sr-only"> na fonte (abre em nova aba)</span>
             </a>
-          ) : (
+          ) : pode(plano, "simulador") ? (
             <a href="#simulador" className="btn-primary min-h-11! shrink-0 px-5! text-[14px]! max-[379px]:px-4!">
               {precoFixo(d) ? "Simular compra" : "Simular lance"}
             </a>
+          ) : (
+            // Lente (exemplos, sem anúncio): o simulador é da Luneta
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={(e) => pedirLuneta(e.currentTarget)}
+              className="btn-primary min-h-11! shrink-0 px-5! text-[14px]! max-[379px]:px-4!"
+            >
+              Conhecer a Luneta
+            </button>
           )}
         </div>
       </aside>

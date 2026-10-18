@@ -1,6 +1,6 @@
 import { moedaCurta, numero } from "@/lib/catalogo/rotulos";
 import type { ReferenciaM2 } from "@/lib/catalogo/tipos";
-import { AREA_HECTARE, concorda, escalaRegiao, fonteDaReferencia, nomeRecorte, posicaoNaEscala, precoPorArea, ROTULO_ESCOPO, TIPO_NA_FRASE } from "./formato";
+import { AREA_HECTARE, concorda, escalaRegiao, fonteDaReferencia, nomeRecorte, nomeValorItbi, posicaoNaEscala, precoPorArea, ROTULO_ESCOPO, TIPO_NA_FRASE } from "./formato";
 
 /** Posição (0–100%) de um valor na escala, presa às bordas. */
 const pos = (v: number, min: number, max: number) => `${posicaoNaEscala(v, min, max).pct.toFixed(2)}%`;
@@ -59,7 +59,7 @@ export function GraficoM2({
     <figure className="rounded-3xl border border-nevoa/15 bg-tinta p-4 sm:p-6">
       <figcaption className="sr-only">
         Avaliação {hectare ? "por hectare" : "por m²"} {concorda(referencias[0]!.tipo).dos} {concorda(referencias[0]!.tipo).outros}{" "}
-        {TIPO_NA_FRASE[referencias[0]!.tipo]} em leilão em cada recorte e, quando houver, o preço pago nas compras registradas na prefeitura
+        {TIPO_NA_FRASE[referencias[0]!.tipo]} em leilão em cada recorte e, quando houver, o valor das compras registradas na prefeitura
         (ITBI), comparados ao lance e à avaliação {hectare ? "por hectare" : "por m²"} deste imóvel.
       </figcaption>
 
@@ -97,7 +97,7 @@ export function GraficoM2({
           <div key={`${itbi ? "itbi" : "leiloes"}-${r.escopo}`}>
             {(k === 0 || itbi !== faixas[k - 1]!.itbi) && (temLeiloes || itbi) && (
               <p className={`mb-3 text-[11px] leading-none font-semibold tracking-[0.12em] text-nevoa uppercase ${k > 0 ? "border-t border-nevoa/15 pt-5" : ""}`}>
-                {itbi ? "Transações reais (ITBI) · preço pago" : "Imóveis em leilão na base · avaliação"}
+                {itbi ? `Compras registradas (ITBI) · ${nomeValorItbi(r).curto}` : "Imóveis em leilão na base · avaliação"}
               </p>
             )}
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">

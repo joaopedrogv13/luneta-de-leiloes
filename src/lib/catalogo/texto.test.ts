@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { casaBusca, interpretarBusca, linkGoogleMaps, palavras, quartosTexto } from "./texto";
+import { casaBusca, interpretarBusca, linkGoogleMaps, palavras, quartosDaBusca, quartosTexto, rotuloQuartosDaBusca, semQuartos } from "./texto";
 
 test("palavras: minúsculas, sem acento, separadas por pontuação", () => {
   assert.deepEqual(palavras("São Paulo/SP — Água Verde, nº 18"), ["sao", "paulo", "sp", "agua", "verde", "n", "18"]);
@@ -60,4 +60,16 @@ test("linkGoogleMaps: endereço, bairro, cidade - UF, sem repetir a cidade", () 
 test("quartosTexto", () => {
   assert.equal(quartosTexto(1), "1 quarto");
   assert.equal(quartosTexto(3), "3 quartos");
+});
+
+test("quartos na busca: as partes de quartos e o texto sem elas (o Lente avisa e tira da busca)", () => {
+  assert.deepEqual(quartosDaBusca("ap 2 quartos centro"), [{ n: 2, minimo: false }]);
+  assert.deepEqual(quartosDaBusca("casa 3+ qts"), [{ n: 3, minimo: true }]);
+  assert.deepEqual(quartosDaBusca("copacabana"), []);
+  assert.equal(rotuloQuartosDaBusca({ n: 1, minimo: false }), "1 quarto");
+  assert.equal(rotuloQuartosDaBusca({ n: 3, minimo: true }), "3+ quartos");
+  assert.equal(semQuartos("ap 2 quartos centro"), "ap centro");
+  assert.equal(semQuartos("casa 3+ qts"), "casa");
+  assert.equal(semQuartos("2 Dormitórios, Tijuca"), "Tijuca");
+  assert.equal(semQuartos("rua 2 de maio"), "rua 2 de maio", "número sem palavra de quartos fica");
 });

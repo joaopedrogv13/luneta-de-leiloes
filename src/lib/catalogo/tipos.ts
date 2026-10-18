@@ -8,7 +8,8 @@
  * Regras que atravessam tudo:
  * - Dinheiro em reais (number), áreas em m², datas em ISO (UTC). Formatação só na hora de mostrar.
  * - `null` = a fonte não informa. Nunca adivinhar; a tela diz "não informado pela fonte".
- * - No plano Lente o servidor não manda tags nem selo (nem o filtro/ordem por eles funciona): o conteúdo
+ * - No plano Lente o servidor não manda tags, selo, nota de localização, preço da região nem buscas nos portais, e os
+ *   filtros avançados e as ordens da Luneta não valem (regra única em src/lib/catalogo/planos.ts): o conteúdo
  *   bloqueado nunca chega ao navegador.
  * - Sem imports com "@/" aqui e nos demais módulos de src/lib/catalogo: os testes rodam em Node puro.
  */
@@ -379,6 +380,13 @@ export interface FaixaM2 {
  * é a avaliação e o lance de outros imóveis da base). Usa o menor recorte com amostra suficiente:
  * bairro (n ≥ 5), senão cidade (n ≥ 5), senão UF.
  */
+/**
+ * O que o valor do ITBI de uma cidade é (base/fontes/itbi/README.md): o preço declarado na compra (São Paulo, Rio), a
+ * base de cálculo da prefeitura (Porto Alegre, Fortaleza) ou a avaliação da prefeitura para o imposto (Recife). Muda o
+ * nome do número na tela ("preço médio declarado", "base de cálculo média"...); revisão final da rodada 4, R4-VAZ-04.
+ */
+export type ValorItbi = "declarado" | "base_calculo" | "avaliacao_prefeitura";
+
 export interface ReferenciaM2 {
   /** recorte, do mais perto ao mais longe */
   escopo: "rua" | "bairro" | "cidade" | "uf";
@@ -389,6 +397,8 @@ export interface ReferenciaM2 {
   fonte?: "leiloes" | "itbi";
   /** ITBI: período coberto [de, até] (AAAA-MM-DD) */
   periodo?: [string, string] | null;
+  /** ITBI: o que o valor da cidade é (ausente: "valor registrado", sem dizer qual) */
+  valorItbi?: ValorItbi;
   /** média do recorte (sem os 10% mais baixos e os 10% mais altos), R$/m²: avaliação (leilões) ou preço pago (ITBI) */
   media?: number | null;
   /** "Centro, Uberlândia/MG", "Uberlândia/MG", "MG" */
@@ -510,8 +520,14 @@ export interface LocalizacaoImovel {
   /** a cidade tem mapeamento BATER? (false → "sem mapeamento de risco para esta cidade") */
   coberturaRisco: boolean;
   /**
-   * Raio (m) em que a área de risco foi procurada: 100 m do imóvel (número ou rua) ou até 500 m do centro do bairro
-   * (aproximada). null = não foi conferido: a cidade não tem mapeamento, ou o imóvel não tem ponto (endereço só na
+   * Precisão "bairro" em que o ponto é, na verdade, o meio de uma rua achada no CNEFE, rebaixada porque os endereços
+   * dela se espalham demais (motivo "desvio_alto" do geocode, ~800 imóveis). A tela fala em "meio da rua", nunca em
+   * "centro do bairro" (revisão final da rodada 4, M3). Ausente = falso.
+   */
+  pontoRuaEspalhada?: boolean;
+  /**
+   * Raio (m) em que a área de risco foi procurada: a incerteza do ponto, entre 100 e 500 m, em qualquer precisão (antes,
+   * 100 m fixos no número e na rua; M2). null = não foi conferido: a cidade não tem mapeamento, ou o imóvel não tem ponto (endereço só na
    * cidade). Sem alerta, a tela diz o que foi conferido ("nenhuma área mapeada a menos de 100 m do imóvel") e, com
    * `coberturaRisco` e raio null, que a cidade tem áreas mapeadas mas o imóvel não pôde ser conferido. Nunca "sem risco".
    */

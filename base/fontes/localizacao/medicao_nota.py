@@ -161,7 +161,8 @@ def gravar(caminho: Path, res: dict, imoveis: list[dict], tamanhos: dict, usar_v
     parque = sum(1 for cc in C.values() if cc["incluidos"].get("lazer"))
     w(f"- Cidades: {num(n)}; pequenas (menos de 20 mil moradores ou 50 células habitadas, só terços): {num(pequenas)} ({pct(pequenas, n)}).")
     w(f"- Pontos de ônibus do OSM usados (pontos do OSM dentro das células habitadas da cidade em número de pelo menos 10% das "
-      f"faces com ponto de ônibus do Censo): {num(onibus_ok)} cidades ({pct(onibus_ok, n)}); nas outras, só o Censo.")
+      f"faces com ponto de ônibus do Censo, e o morador típico com pelo menos 1 ponto mapeado a 500 m): {num(onibus_ok)} cidades "
+      f"({pct(onibus_ok, n)}); nas outras, só o Censo.")
     w(f"- Com estação, barca ou terminal mapeado no OSM: {num(estacao)} ({pct(estacao, n)}). Com parque, praça ou parquinho: {num(parque)} ({pct(parque, n)}).")
     w(f"- Com mapeamento de risco do BATER: {num(bater)} ({pct(bater, n)}); nas outras, \"sem mapeamento de risco para esta cidade\" (nunca \"sem risco\").")
     if fora:
@@ -230,7 +231,7 @@ def gravar(caminho: Path, res: dict, imoveis: list[dict], tamanhos: dict, usar_v
         w("### Sensibilidade dos pesos")
         w("")
         w("A mesma validação com a nota recalculada com outros pesos (cada linha é uma cidade e um tipo, como acima). "
-          "\"Renda 30\" e \"sem renda\" só servem de comparação: a renda acompanha o preço por definição e pesar mais nela "
+          "\"Renda 30\" e \"sem renda\" só servem de comparação: a renda acompanha o preço de perto e pesar mais nela "
           "transformaria a nota numa medida de renda.")
         w("")
         cab = ["Pesos (serviços/transporte/renda/infra/comércio/lazer)", "Mediana", "Mínimo", "Linhas negativas"]

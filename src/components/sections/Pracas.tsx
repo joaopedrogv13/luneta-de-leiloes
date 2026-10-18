@@ -6,7 +6,10 @@ const PRIMEIRA = 400000;
 const SEGUNDA = 200000;
 const fmt = (n: number) => n.toLocaleString("pt-BR");
 
-/** Primeira e segunda praça + alerta por e-mail quando um favorito vai para a 2ª praça (plano Luneta). */
+/**
+ * Primeira e segunda praça + alerta por e-mail quando um favorito vai para a 2ª praça (plano Luneta). O alerta só aparece
+ * quando existir (PRODUTO.alertaPraca, src/lib/catalogo/produto.ts); até lá, a frase fala só dos favoritos.
+ */
 export function Pracas() {
   return (
     <section aria-labelledby="pracas-titulo" className="section bg-tinta">
@@ -49,7 +52,8 @@ export function Pracas() {
             </div>
           </div>
 
-          {/* o alerta que o assinante Luneta recebe */}
+          {/* o alerta que o assinante Luneta recebe (só quando o envio existir: PRODUTO.alertaPraca) */}
+          {PRACAS.mostrarAlerta && (
           <div data-slide-up className="flex items-start gap-3.5 rounded-2xl border border-latao/45 bg-noite p-4 shadow-[0_18px_50px_rgba(0,0,0,.25)] sm:px-5">
             <span aria-hidden="true" className="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-latao/50 bg-latao/15 text-latao-texto">
               <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -67,6 +71,7 @@ export function Pracas() {
               </p>
             </div>
           </div>
+          )}
         </figure>
       </div>
     </section>
