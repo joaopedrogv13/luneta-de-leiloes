@@ -136,7 +136,7 @@ export function GraficoM2({
                     </span>
                   )}
                 </div>
-                <p className="mt-1.5 text-[12.5px] leading-snug text-nevoa">
+                <p className="mt-1.5 text-[13px] leading-snug text-nevoa sm:text-[12.5px]">
                   {itbi ? "Preço pago" : deAvaliacao ? "Avaliações" : "Lances"}: metade entre <span className="text-luar/90 tabular-nums">{m2(faixa.p25)}</span> e{" "}
                   <span className="text-luar/90 tabular-nums">{m2(faixa.p75)}</span> · mediana <span className="text-luar/90 tabular-nums">{m2(faixa.mediana)}</span>
                   {deAvaliacao && r.lanceM2 && (

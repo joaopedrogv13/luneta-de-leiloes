@@ -116,16 +116,24 @@ export function BotaoRecolher() {
  */
 export function PilulaResumo({ lance, desagio, precoFixo = false }: { lance: number; desagio: number | null; /** venda direta: "Preço", não "Lance" */ precoFixo?: boolean }) {
   const recolhido = useResumoRecolhido();
+  const computador = useComputador();
   const abaixo = desagio !== null && desagio > 0;
+  // celular deitado (tela baixa, sem a barra do lance no pé): a pílula leva ao cartão do preço, logo abaixo do título
+  const irAoResumo = () => {
+    const alvo = document.getElementById(ID_RESUMO_LATERAL);
+    alvo?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    const primeiro = Array.from(alvo?.querySelectorAll<HTMLElement>("a[href], button") ?? []).find((el) => el.getClientRects().length > 0);
+    primeiro?.focus({ preventScroll: true });
+  };
   return (
     <button
       id={ID_PILULA}
       type="button"
-      aria-expanded={false}
+      aria-expanded={computador ? false : undefined}
       aria-controls={ID_RESUMO_LATERAL}
-      tabIndex={recolhido ? 0 : -1}
-      onClick={() => definirResumoRecolhido(false)}
-      className={`${styles.pilula} min-h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-latao/45 bg-tinta py-1 pr-2 pl-3.5 text-[13px] leading-none whitespace-nowrap text-luar transition-colors duration-150 hover:border-latao hover:bg-latao/10 [[data-theme=light]_&]:shadow-[0_4px_14px_-6px_rgba(15,24,48,.25)]`}
+      tabIndex={recolhido || !computador ? 0 : -1}
+      onClick={() => (computador ? definirResumoRecolhido(false) : irAoResumo())}
+      className={`${styles.pilula} min-h-9 shrink-0 pointer-coarse:min-h-11 cursor-pointer items-center gap-2 rounded-full border border-latao/45 bg-tinta py-1 pr-2 pl-3.5 text-[13px] leading-none whitespace-nowrap text-luar transition-colors duration-150 hover:border-latao hover:bg-latao/10 [[data-theme=light]_&]:shadow-[0_4px_14px_-6px_rgba(15,24,48,.25)]`}
     >
       <span className="text-nevoa">{precoFixo ? "Preço" : "Lance"}</span>
       <span className="font-display font-bold tracking-[-0.01em] tabular-nums">{moeda(lance)}</span>
@@ -134,7 +142,7 @@ export function PilulaResumo({ lance, desagio, precoFixo = false }: { lance: num
           · −{desagio}%<span className="sr-only"> da avaliação</span>
         </span>
       )}
-      <span className="sr-only">. Mostrar o resumo do preço</span>
+      <span className="sr-only">. {computador ? "Mostrar o resumo do preço" : "Ir ao preço e às ações"}</span>
       <span aria-hidden="true" className="ml-0.5 grid size-7 place-items-center rounded-full bg-nevoa/10 text-nevoa">
         <IconePainel abrir tamanho={16} />
       </span>

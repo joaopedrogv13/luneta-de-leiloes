@@ -1,26 +1,74 @@
 /*
- * Layout da página do imóvel no computador (lg, 1024 px ou mais): o conteúdo à esquerda e o resumo fixo à direita.
- * Com data-resumo="recolhido" na grade (botão no canto do resumo; ver ResumoRecolhivel.tsx), a coluna do resumo
- * vai a 0, o conteúdo ocupa a largura liberada (transição da grade) e a pílula aparece na barra das seções.
- * O conteúdo do resumo tem largura fixa: na transição ele não se espreme, só desliza e some.
+ * Layout da página do imóvel (a grade: galeria, cabeçalho, resumo do preço e conteúdo).
+ * - Celular: uma coluna, na ordem do HTML. O cabeçalho e o resumo formam um cartão só (o "cartão de decisão").
+ * - Tablet em pé (md, 768 a 1023 px): a galeria à esquerda (7/12) e o título à direita (5/12); embaixo, o resumo
+ *   do preço na largura toda, com duas colunas por dentro (preço e praça | ações); e o conteúdo.
+ * - Computador (lg, 1024 px ou mais): a galeria na largura toda; embaixo, o conteúdo à esquerda e o resumo fixo à
+ *   direita. Com data-resumo="recolhido" na grade (botão no canto do resumo; ver ResumoRecolhivel.tsx), a coluna do
+ *   resumo vai a 0, o conteúdo ocupa a largura liberada (transição da grade) e a pílula aparece na barra das
+ *   seções. O conteúdo do resumo tem largura fixa: na transição ele não se espreme, só desliza e some.
  */
 
 .pilula {
   display: none;
 }
 
-@media (min-width: 64rem) {
+/* tela baixa (celular deitado): sem a barra do lance no pé, o preço fica na pílula da barra das seções */
+@media (max-height: 500px) and (max-width: 63.99rem) {
+  .pilula {
+    display: inline-flex;
+  }
+}
+
+@media (min-width: 48rem) and (max-width: 63.99rem) {
   .grade {
-    grid-template-columns: minmax(0, 1fr) 368px;
-    grid-template-rows: auto 1fr;
-    column-gap: 2.5rem;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    column-gap: 1.5rem;
+  }
+  .galeria {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .cabeca {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+  .lateral {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .conteudo {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
+@media (min-width: 64rem) {
+  /* 1024 a 1279: resumo de 336 px e respiro de 2 rem (a coluna do conteúdo sobe de 552 para ~592 px) */
+  .grade {
+    grid-template-columns: minmax(0, 1fr) 336px;
+    grid-template-rows: auto auto 1fr;
+    column-gap: 2rem;
     transition:
       grid-template-columns 300ms cubic-bezier(0.2, 0.7, 0.2, 1),
       column-gap 300ms cubic-bezier(0.2, 0.7, 0.2, 1);
   }
+  .galeria {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .cabeca {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .conteudo {
+    grid-column: 1;
+    grid-row: 3;
+  }
   .lateral {
     grid-column-start: 2;
-    grid-row: 1 / span 2;
+    grid-row: 2 / span 2;
     align-self: start;
     position: sticky;
     top: 88px;
@@ -30,7 +78,7 @@
       visibility 0s linear 0s;
   }
   .lateralConteudo {
-    width: 368px;
+    width: 336px;
   }
 
   .grade[data-resumo="recolhido"] {
@@ -50,6 +98,11 @@
   .grade[data-resumo="recolhido"] .pilula {
     display: inline-flex;
     animation: surgir 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  /* resumo recolhido: as seções de texto param em 880 px (com 1.216 px, as linhas passavam de 120 caracteres);
+     o simulador, a localização e os parecidos usam a largura toda */
+  .grade[data-resumo="recolhido"] :is([data-secao-imovel="resumo"], [data-secao-imovel="riscos"], [data-secao-imovel="regiao"], [data-secao-imovel="documentos"]) {
+    max-width: 880px;
   }
 }
 

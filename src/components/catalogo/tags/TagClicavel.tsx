@@ -26,7 +26,8 @@ const REVISAO = {
 };
 
 export const TAMANHO_TAG: Record<TamanhoTag, string> = {
-  sm: "gap-1.5 px-2.5 py-1.5 text-xs",
+  // no toque, 28 px + a área estendida (::before) = 44 px, sem encostar na área da linha de cima (ListaTags)
+  sm: "gap-1.5 px-2.5 py-1.5 text-xs pointer-coarse:py-2",
   md: "gap-2 px-3 py-2 text-[13px]",
 };
 

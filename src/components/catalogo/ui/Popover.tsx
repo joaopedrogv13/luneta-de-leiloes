@@ -1,13 +1,34 @@
 "use client";
 
 import { autoUpdate, flip, offset, shift, size, useFloating, type Placement } from "@floating-ui/react-dom";
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+
+/** O que recebe o foco pelo Tab dentro da folha. */
+const FOCAVEIS = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Tela baixa (celular deitado): o pop-up vira uma folha que sobe de baixo, com a altura da tela. */
+const TELA_BAIXA = "(max-height: 500px)";
+function assinarTelaBaixa(avisar: () => void) {
+  const m = window.matchMedia(TELA_BAIXA);
+  m.addEventListener("change", avisar);
+  return () => m.removeEventListener("change", avisar);
+}
+function useTelaBaixa() {
+  return useSyncExternalStore(
+    assinarTelaBaixa,
+    () => window.matchMedia(TELA_BAIXA).matches,
+    () => false,
+  );
+}
 
 /**
  * Pop-up ancorado (filtros rápidos, explicação de tag, cartão do mapa). Não é modal: abre por clique
  * no botão-gatilho (ou pelo `aberto` controlado), fecha com Esc, clique fora ou `fechar()`. O foco vai
  * para o painel ao abrir (se `focarAoAbrir`) e volta ao gatilho ao fechar com Esc. Fica sempre dentro
- * da tela (flip/shift) e limita a altura ao espaço disponível (rola por dentro).
+ * da tela (flip/shift) e limita a altura ao espaço disponível (rola por dentro). Em tela baixa (celular
+ * deitado, até 500 px de altura) não há espaço para um pop-up ancorado: ele vira uma folha que sobe de baixo,
+ * com a largura de até 560 px e a altura da tela, sobre um fundo escurecido (tocar fora fecha, como sempre).
  *
  * O gatilho é um <button> desenhado aqui (o React Compiler não aceita ref passada a render-prop):
  *   <Popover rotulo="Preço" gatilho={{ conteudo: "Preço", className: "chip" }}>
@@ -57,6 +78,7 @@ export function Popover({
     [abertoControlado, onAbertoChange],
   );
   const id = useId();
+  const folha = useTelaBaixa();
   const painel = useRef<HTMLDivElement | null>(null);
   const botao = useRef<HTMLButtonElement | null>(null);
 
@@ -121,6 +143,58 @@ export function Popover({
 
   const classeBotao = typeof gatilho.className === "function" ? gatilho.className(aberto) : (gatilho.className ?? "");
 
+  const painelAberto = aberto ? (
+    <div
+      ref={(el) => {
+        painel.current = el;
+        // em folha, o floating-ui não posiciona nem limita a altura
+        refs.setFloating(folha ? null : el);
+      }}
+      id={id}
+      // marca de "pop-up aberto": o botão flutuante do mapa (celular) sai da frente enquanto houver um
+      data-popover=""
+      role={papel === "dialog" ? "dialog" : "note"}
+      aria-label={rotulo}
+      tabIndex={-1}
+      // o foco saiu do pop-up (Tab além do último controle): fecha, como um menu do sistema; foco que
+      // vai para o próprio gatilho ou some (clique em área sem foco) não fecha
+      onBlur={(e) => {
+        const para = e.relatedTarget as Node | null;
+        if (!para || e.currentTarget.contains(para) || botao.current?.contains(para)) return;
+        ultimo.current.setAberto(false);
+      }}
+      // em folha, o painel fica no fim do <body> (portal): o Tab além do último controle (ou o Shift+Tab antes do
+      // primeiro) ia para o fim do documento e dava a volta pela página, por trás da folha aberta. Aqui ele fecha a
+      // folha e devolve o foco ao gatilho, como o pop-up ancorado (o próximo Tab segue a partir dele)
+      onKeyDown={
+        folha
+          ? (e) => {
+              if (e.key !== "Tab") return;
+              const itens = Array.from(e.currentTarget.querySelectorAll<HTMLElement>(FOCAVEIS)).filter((el) => el.getClientRects().length > 0);
+              const agora = document.activeElement;
+              const saindo = itens.length === 0 || (e.shiftKey ? agora === itens[0] || agora === e.currentTarget : agora === itens[itens.length - 1]);
+              if (!saindo) return;
+              e.preventDefault();
+              ultimo.current.setAberto(false);
+              botao.current?.focus({ preventScroll: true });
+            }
+          : undefined
+      }
+      style={folha ? undefined : { ...floatingStyles, width: largura }}
+      className={
+        folha
+          ? `fixed inset-x-0 bottom-0 z-[60] mx-auto max-h-[calc(100dvh-8px)] w-full max-w-[560px] overflow-auto overscroll-contain rounded-t-3xl border border-b-0 border-nevoa/25 bg-tinta text-luar shadow-[0_-24px_80px_rgba(7,11,22,.45)] outline-none transition-[translate,opacity] duration-200 ease-luneta starting:translate-y-6 starting:opacity-0 motion-reduce:transition-none ${className}`
+          : `z-[60] max-w-[92vw] overflow-auto overscroll-contain rounded-2xl border border-nevoa/25 bg-tinta text-luar shadow-[0_18px_60px_rgba(0,0,0,.35)] outline-none transition-[opacity,scale] duration-150 ease-out starting:scale-[0.98] starting:opacity-0 motion-reduce:transition-none ${className}`
+      }
+    >
+      {typeof children === "function" ? children({ fechar }) : children}
+    </div>
+  ) : null;
+  // tela baixa: fundo escurecido atrás da folha (tocar nele fecha, pelo "clique fora")
+  const fundo = <div aria-hidden="true" className="fixed inset-0 z-[59] bg-noite-fixa/55 backdrop-blur-[2px]" />;
+  // em tela baixa, a folha vai para o fim do <body>: a barra de filtros (backdrop-filter) e os cartões (translate)
+  // prenderiam o position: fixed dentro deles
+
   return (
     <>
       <button
@@ -140,31 +214,7 @@ export function Popover({
       >
         {typeof gatilho.conteudo === "function" ? gatilho.conteudo(aberto) : gatilho.conteudo}
       </button>
-      {aberto && (
-        <div
-          ref={(el) => {
-            painel.current = el;
-            refs.setFloating(el);
-          }}
-          id={id}
-          // marca de "pop-up aberto": o botão flutuante do mapa (celular) sai da frente enquanto houver um
-          data-popover=""
-          role={papel === "dialog" ? "dialog" : "note"}
-          aria-label={rotulo}
-          tabIndex={-1}
-          // o foco saiu do pop-up (Tab além do último controle): fecha, como um menu do sistema; foco que
-          // vai para o próprio gatilho ou some (clique em área sem foco) não fecha
-          onBlur={(e) => {
-            const para = e.relatedTarget as Node | null;
-            if (!para || e.currentTarget.contains(para) || botao.current?.contains(para)) return;
-            ultimo.current.setAberto(false);
-          }}
-          style={{ ...floatingStyles, width: largura }}
-          className={`z-[60] max-w-[92vw] overflow-auto overscroll-contain rounded-2xl border border-nevoa/25 bg-tinta text-luar shadow-[0_18px_60px_rgba(0,0,0,.35)] outline-none transition-[opacity,scale] duration-150 ease-out starting:scale-[0.98] starting:opacity-0 motion-reduce:transition-none ${className}`}
-        >
-          {typeof children === "function" ? children({ fechar }) : children}
-        </div>
-      )}
+      {folha && aberto ? createPortal(<>{fundo}{painelAberto}</>, document.body) : painelAberto}
     </>
   );
 }

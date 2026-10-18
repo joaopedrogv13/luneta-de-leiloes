@@ -53,8 +53,11 @@ function anteriorEhABusca(alvo: string) {
   }
 }
 
-/** "Voltar à busca": a última busca desta sessão, no plano da página; senão, a lista do conjunto. */
-export function VoltarBusca({ conjunto, plano }: { conjunto: Conjunto; plano: Plano }) {
+/**
+ * "Voltar à busca": a última busca desta sessão, no plano da página; senão, a lista do conjunto. `icone`: só a
+ * seta num botão redondo de 44 px (o cabeçalho do celular), com o nome para leitores de tela e na dica.
+ */
+export function VoltarBusca({ conjunto, plano, icone = false, className = "" }: { conjunto: Conjunto; plano: Plano; icone?: boolean; className?: string }) {
   const href = useSyncExternalStore(
     semAssinatura,
     () => destino(conjunto, plano),
@@ -66,12 +69,26 @@ export function VoltarBusca({ conjunto, plano }: { conjunto: Conjunto; plano: Pl
     e.preventDefault();
     window.history.back();
   };
+  if (icone) {
+    return (
+      <Link
+        href={href}
+        onClick={voltar}
+        prefetch={false}
+        title="Voltar à busca"
+        className={`grid size-11 shrink-0 place-items-center rounded-full text-luar no-underline transition-colors hover:bg-nevoa/10 ${className}`}
+      >
+        <IconeVoltar tamanho={18} />
+        <span className="sr-only">Voltar à busca</span>
+      </Link>
+    );
+  }
   return (
     <Link
       href={href}
       onClick={voltar}
       prefetch={false}
-      className="group/voltar -ml-2 inline-flex min-h-11 items-center gap-2 rounded-full px-2 text-sm font-medium text-nevoa no-underline transition-colors hover:text-luar pointer-fine:min-h-9"
+      className={`group/voltar -ml-2 inline-flex min-h-11 items-center gap-2 rounded-full px-2 text-sm font-medium text-nevoa no-underline transition-colors hover:text-luar pointer-fine:min-h-9 ${className}`}
     >
       <span className="grid size-8 place-items-center rounded-full border border-nevoa/25 transition-[border-color,translate] duration-150 ease-luneta group-hover/voltar:-translate-x-0.5 group-hover/voltar:border-nevoa/60 motion-reduce:transition-none">
         <IconeVoltar tamanho={16} />

@@ -90,12 +90,22 @@ const UFS = Object.entries(UFS_MAPA);
 /**
  * Folgas do enquadramento (px): à direita, a coluna de botões; embaixo, a legenda (duas linhas em telas
  * estreitas). Funções fixas por variante: a câmera mede de novo quando a tela muda de tamanho.
+ * No toque, com o mapa estreito (< 560 px, o celular em tela cheia), os botões ficam numa linha em cima e a
+ * legenda num "?" no canto de baixo: a folga vai para cima e para baixo e o Brasil usa quase a largura toda (mais
+ * folga à direita, onde ficam as bolhas grandes do litoral, para não serem cortadas na borda). Com mouse (a coluna do mapa no computador também
+ * tem menos de 560 px de 1024 a 1440), os botões continuam em coluna e a legenda à vista.
  */
+const FOLGA_ESTREITA: Folga = { cima: 64, dir: 40, baixo: 58, esq: 20 };
 const FOLGAS: Record<VarianteMapa, (w: number, h: number) => Folga> = {
   // painel: folga larga dos dois lados, para nenhuma bolha encostar na borda nem nos botões de zoom
   painel: (w) => ({ cima: 28, dir: 84, baixo: w < 560 ? 76 : 60, esq: 40 }),
   faixa: (w) => ({ cima: 16, dir: 66, baixo: w < 560 ? 72 : 50, esq: 20 }),
   mini: (w) => ({ cima: 18, dir: 58, baixo: w < 400 ? 52 : 40, esq: 18 }),
+};
+const FOLGAS_TOQUE: Record<VarianteMapa, (w: number, h: number) => Folga> = {
+  painel: (w, h) => (w < 560 ? FOLGA_ESTREITA : FOLGAS.painel(w, h)),
+  faixa: (w, h) => (w < 560 ? FOLGA_ESTREITA : FOLGAS.faixa(w, h)),
+  mini: FOLGAS.mini,
 };
 /** Margem extra ao enquadrar pontos: a maior bolha não fica cortada na borda. */
 const MARGEM_PONTOS = 34;
@@ -238,8 +248,10 @@ export function MapaBrasil({
     avisoTimer.current = window.setTimeout(() => setAviso(null), 1600);
   }, []);
 
+  // toque (celular, tablet): decide o cartão "docado" e o mapa estreito (botões em linha, legenda no "?")
+  const [toque] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches === true);
   const cam = useCameraMapa(viewportRef, {
-    folga: FOLGAS[variante],
+    folga: (toque ? FOLGAS_TOQUE : FOLGAS)[variante],
     rolagem: modoRolagem,
     aplicar,
     aoInteragir: () => {
@@ -438,8 +450,12 @@ export function MapaBrasil({
 
   // Mapa estreito no celular (ou estreito e baixo): o cartão vira uma folha presa embaixo do mapa, na
   // largura toda. Ancorado na bolha, ao lado não cabe e embaixo/em cima sobram ~150 px: os destaques sumiam.
-  const [toque] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches === true);
   const docado = !mini && !!tela && tela.w < 560 && (tela.h < 560 || toque);
+  // mapa estreito no toque (celular em tela cheia): os controles numa linha (em coluna, com a legenda, cobriam 1/4
+  // do mapa) e a legenda recolhida num botão "?". Com mouse, a coluna do mapa do computador (< 560 px de 1024 a
+  // 1440) fica como era: botões em coluna e legenda à vista
+  const estreito = !mini && !!tela && tela.w < 560 && toque;
+  const [legendaAberta, setLegendaAberta] = useState(false);
   const alturaMax = tela ? tela.h - 16 : 600;
   const { refs, floatingStyles, isPositioned } = useFloating({
     open: !!cartao && !docado,
@@ -524,6 +540,13 @@ export function MapaBrasil({
   const clicarBolha = (e: MouseEvent<HTMLButtonElement>, n: NoMapa) => {
     const teclado = e.detail === 0;
     if (n.grupo) {
+      // no toque não há "passar o mouse": o 1º toque num grupo mostra o cartão dele (com "Aproximar"), como o
+      // mouse por cima mostra no computador; o 2º toque no mesmo grupo aproxima
+      if (toque && !teclado && !(ativo?.id === n.id && ativo.fixo)) {
+        abrir(e.currentTarget, { id: n.id, fixo: true });
+        abridor.current = e.currentTarget;
+        return;
+      }
       aproximar(n, teclado);
       return;
     }
@@ -890,14 +913,14 @@ export function MapaBrasil({
         </button>
       )}
 
-      <div data-controles className={`${s.vidro} absolute top-3 right-3 z-30 flex flex-col overflow-hidden rounded-2xl`}>
+      <div data-controles className={`${s.vidro} absolute top-3 right-3 z-30 flex overflow-hidden rounded-2xl ${estreito ? "flex-row" : "flex-col"}`}>
         <BotaoControle rotulo="Aproximar" onClick={() => cam.zoomPor(1.8)} desativado={camera.z >= ZOOM_MAX - 1e-3}>
           <path d="M12 5v14M5 12h14" />
         </BotaoControle>
         <BotaoControle rotulo="Afastar" onClick={() => cam.zoomPor(1 / 1.8)} desativado={camera.z <= ZOOM_MIN + 1e-3}>
           <path d="M5 12h14" />
         </BotaoControle>
-        <span aria-hidden="true" className="mx-2 h-px bg-nevoa/20" />
+        <span aria-hidden="true" className={estreito ? "my-2 w-px bg-nevoa/20" : "mx-2 h-px bg-nevoa/20"} />
         <BotaoControle rotulo="Brasil inteiro" onClick={brasilInteiro}>
           <path d="M9 4 3.8 6.1a1 1 0 0 0-.6.9v12.1a.6.6 0 0 0 .8.6L9 17.6l6 2.4 5.2-2.1a1 1 0 0 0 .6-.9V4.9a.6.6 0 0 0-.8-.6L15 6.4 9 4Z" />
           <path d="M9 4v13.6M15 6.4V20" />
@@ -914,13 +937,38 @@ export function MapaBrasil({
           </svg>
           <span>{notaPosicao}</span>
         </p>
+      ) : estreito && !legendaAberta ? (
+        // mapa estreito: a legenda fica num botão "?" (aberta, ela cobria a parte de baixo do mapa)
+        <button
+          type="button"
+          onClick={() => setLegendaAberta(true)}
+          aria-expanded={false}
+          aria-label="Mostrar a legenda do mapa"
+          title="Legenda"
+          className={`${s.vidro} absolute bottom-3 left-3 z-20 grid size-11 cursor-pointer place-items-center rounded-full font-display text-[15px] font-bold text-luar`}
+        >
+          ?
+        </button>
       ) : (
         // legenda: cidade × grupo (o grupo tem um anel por dentro) e a precisão da posição; para leitores de
-        // tela, a mesma explicação está nas instruções do mapa
+        // tela, a mesma explicação está nas instruções do mapa (aberta pelo "?", ela também se lê e se fecha)
         <div
-          aria-hidden="true"
-          className={`${s.vidro} pointer-events-none absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-2.5 py-1.5 text-[11px] leading-snug text-nevoa sm:max-w-[calc(100%-5.5rem)]`}
+          aria-hidden={estreito ? undefined : true}
+          className={`${s.vidro} ${estreito ? "" : "pointer-events-none"} absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-2.5 py-1.5 text-[12px] leading-snug text-nevoa sm:max-w-[calc(100%-5.5rem)] sm:text-[11px]`}
         >
+          {estreito && (
+            <button
+              type="button"
+              onClick={() => setLegendaAberta(false)}
+              aria-expanded={true}
+              aria-label="Esconder a legenda do mapa"
+              className="-my-1 -ml-1 grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-nevoa hover:text-luar"
+            >
+              <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">
+                <path d="M5 5l10 10M15 5 5 15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-luar">
             <svg viewBox="0 0 12 12" className="size-3 shrink-0">
               <circle cx="6" cy="6" r="4.2" className={s.simbolo} />

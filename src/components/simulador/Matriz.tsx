@@ -9,7 +9,7 @@ import { LIMITES, multiplicador, PADRAO } from "@/lib/simulador/premissas";
 import { CENARIO_ROTULO, metaPorExtenso, palavrasPreco } from "@/lib/simulador/textos";
 import type { Ajustes, Celula, Cenario, CenarioFixo, VendaPersonalizada } from "@/lib/simulador/tipos";
 import { EditorPersonalizado } from "./CartaoResposta";
-import { Aviso, CampoNumero, Deslizante, IconeAjuda, IconeLapis, IconeNao, IconeOk, IconeVoltar, Segmentado } from "./controles";
+import { Aviso, CampoNumero, Chip, Deslizante, IconeAjuda, IconeLapis, IconeNao, IconeOk, IconeVoltar, Segmentado } from "./controles";
 import type { Visao } from "./estado";
 
 const CHAVE_CENARIO: Record<CenarioFixo, "cenarioConservador" | "cenarioBase" | "cenarioOtimista"> = {
@@ -175,7 +175,7 @@ export function Matriz({
         </button>
       </div>
 
-      <p className="mt-1 px-1 text-[13.5px] leading-relaxed text-nevoa sm:px-0">
+      <p className="mt-1 px-1 text-sm leading-relaxed text-nevoa sm:px-0 sm:text-[13.5px]">
         {visao === "teto" && fixo ? (
           <>
             Quanto de custo imprevisto ainda cabe, comprando por <strong className="font-semibold text-luar">{moeda(lance)}</strong>, para{" "}
@@ -196,7 +196,7 @@ export function Matriz({
         )}
       </p>
       <Segmentado
-        className="mt-4"
+        className="mt-4 max-w-[560px]"
         nome="sim-visao"
         legenda="O que mostrar na tabela"
         valor={visao}
@@ -276,7 +276,7 @@ export function Matriz({
               aoMudar={(n) => aoMudarMeuLance(n === lance ? null : n)}
             />
           </div>
-          <p id="sim-meu-lance-ajuda" className="mt-1 text-[12.5px] leading-relaxed text-nevoa">
+          <p id="sim-meu-lance-ajuda" className="mt-1 text-sm leading-relaxed text-nevoa sm:text-[12.5px]">
             {fixo
               ? `Na venda direta o preço é fixo (${moeda(lance)}): mude só para comparar. O valor vale para toda a tabela e para o Detalhe.`
               : `Lance mínimo atual: ${moeda(lance)}. O lance que você digitar vale para toda a tabela e para o Detalhe.`}
@@ -291,7 +291,10 @@ export function Matriz({
         </div>
       )}
 
-      <div className="mt-4 -mx-1 sm:mx-0" onMouseLeave={() => setSobre(null)}>
+      {/* celular: um prazo por vez, com linhas largas (4 colunas de ~58 px deixavam o % em 10,5 px) */}
+      <MatrizCelular r={r} visao={visao} linhas={linhas} colunas={colunas} ri={ri} ci={ci} aoSelecionar={aoSelecionar} definirPct={definirPct} aoAjustar={aoAjustar} />
+
+      <div className="mt-4 -mx-1 max-sm:hidden sm:mx-0" onMouseLeave={() => setSobre(null)}>
         <table ref={ref} className="w-full table-fixed border-separate border-spacing-1">
           <caption className="sr-only">
             {visao === "teto"
@@ -391,7 +394,7 @@ export function Matriz({
       {/* a leitura da célula: o que ela quer dizer (a escolhida, ou a que está sob o mouse ou o foco) */}
       {leitura && (
         <div
-          className={`mt-3 flex gap-2.5 rounded-2xl border px-3.5 py-3 text-[13.5px] leading-relaxed sm:px-4 ${
+          className={`mt-3 flex gap-2.5 rounded-2xl border px-3.5 py-3 text-sm leading-relaxed sm:px-4 sm:text-[13.5px] ${
             leitura.tom === "ok" ? "border-pos/30 bg-pos/[0.06]" : leitura.tom === "nao" ? "border-grave/30 bg-grave/[0.06]" : "border-nevoa/20 bg-noite/50"
           }`}
         >
@@ -418,7 +421,7 @@ export function Matriz({
         </div>
       )}
 
-      <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 px-1 text-[12.5px] leading-relaxed text-nevoa sm:px-0">
+      <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 px-1 text-[13px] leading-relaxed text-nevoa sm:px-0 sm:text-[12.5px]">
         {visao === "teto" && fixo ? (
           <>
             <span className="inline-flex items-center gap-1.5">
@@ -778,58 +781,7 @@ function BotaoCelula({
   aoTeclar: (e: KeyboardEvent<HTMLButtonElement>) => void;
   aoSobre: (v: boolean) => void;
 }) {
-  const lance = r.modelo.entrada.lance;
-  const quando = `${CENARIO_ROTULO[cel.cenario].toLowerCase()}, venda em ${meses(cel.meses)}`;
-  // O nome acessível é o próprio texto visível (o que um comando de voz enxerga: "clicar R$ 96 mil"), seguido do
-  // contexto só para o leitor de tela. Sem aria-label, que trocava o texto visível por outra frase (WCAG 2.5.3).
-  let principal: { curto: string; longo: string; grave?: boolean; moeda: boolean };
-  let secundario: { curto: string; longo: string } | null;
-  let ok: boolean | null;
-  let contexto: string;
-
-  if (visao === "teto" && r.semDisputa) {
-    // venda direta: a margem para imprevistos pelo preço pedido (o preço não sobe: "lance máximo" não quer dizer nada)
-    const m = cel.margem ?? null;
-    ok = m !== null;
-    if (m === null) {
-      principal = { curto: "—", longo: "—", moeda: false };
-      secundario = { curto: "não atinge", longo: "não atinge" };
-      contexto = `: não atinge a meta no cenário ${quando}, nem sem imprevistos`;
-    } else {
-      principal = { curto: curto(m), longo: moeda(m), moeda: true };
-      secundario = { curto: "de folga", longo: "de folga" };
-      contexto = `: margem de ${moeda(m)} para custos imprevistos no cenário ${quando}, mantendo a meta`;
-    }
-  } else if (visao === "teto") {
-    if (cel.teto === null) {
-      principal = { curto: "—", longo: "—", moeda: false };
-      secundario = { curto: "sem teto", longo: "nenhum lance" };
-      ok = null;
-      contexto = `: nenhum lance atinge a meta no cenário ${quando}`;
-    } else {
-      // a folga em reais entre o lance mínimo e o teto ("sobra R$ 104 mil"), como no cartão: mais direto que
-      // "+414% vs. mínimo", que o dono achou difícil de ler
-      const folga = cel.teto - lance;
-      ok = cel.teto >= lance;
-      principal = { curto: curto(cel.teto), longo: moeda(cel.teto), moeda: true };
-      const igual = lance > 0 ? Math.abs(folga / lance) < 0.0005 : folga === 0;
-      secundario = igual
-        ? { curto: "≈ mín.", longo: "≈ lance mínimo" }
-        : ok
-          ? { curto: `+${curto(folga)}`, longo: `sobra ${moedaCurta(folga)}` }
-          : { curto: `−${curto(-folga)}`, longo: `faltam ${moedaCurta(-folga)}` };
-      contexto = `: lance máximo no cenário ${quando}; ${
-        igual ? "praticamente igual ao lance mínimo" : ok ? `sobra ${moeda(folga)} acima do lance mínimo` : `fica ${moeda(-folga)} abaixo do lance mínimo`
-      }`;
-    }
-  } else {
-    const s = cel.comMeuLance;
-    ok = atingeMeta(s, r.meta);
-    principal = { curto: curto(s.lucro), longo: moedaSinal(s.lucro), grave: s.lucro < 0, moeda: true };
-    // no celular a célula tem ~60 px: só o %, e o cabeçalho da tabela diz "lucro em R$ e % ao ano"
-    secundario = { curto: pct(s.roiAA, 0), longo: `${pct(s.roiAA)} ao ano` };
-    contexto = `: ${s.lucro >= 0 ? "lucro" : "prejuízo"} e retorno ao ano no cenário ${quando}; ${ok ? "atinge" : "não atinge"} a meta`;
-  }
+  const { principal, secundario, ok, contexto } = conteudoCelula(r, cel, visao);
   const dica = leituraCelula(r, cel, visao);
 
   return (
@@ -893,5 +845,152 @@ function BotaoCelula({
         <strong className="font-semibold">{dica.titulo}:</strong> {dica.texto}
       </span>
     </>
+  );
+}
+
+/** Conteúdo de uma célula: o número principal, o secundário, se atinge a meta e a frase para o leitor de tela. */
+function conteudoCelula(r: ResultadoCompleto, cel: CelulaMatriz, visao: Visao) {
+  const lance = r.modelo.entrada.lance;
+  const quando = `${CENARIO_ROTULO[cel.cenario].toLowerCase()}, venda em ${meses(cel.meses)}`;
+  // O nome acessível é o próprio texto visível (o que um comando de voz enxerga: "clicar R$ 96 mil"), seguido do
+  // contexto só para o leitor de tela. Sem aria-label, que trocava o texto visível por outra frase (WCAG 2.5.3).
+  let principal: { curto: string; longo: string; grave?: boolean; moeda: boolean };
+  let secundario: { curto: string; longo: string } | null;
+  let ok: boolean | null;
+  let contexto: string;
+
+  if (visao === "teto" && r.semDisputa) {
+    // venda direta: a margem para imprevistos pelo preço pedido (o preço não sobe: "lance máximo" não quer dizer nada)
+    const m = cel.margem ?? null;
+    ok = m !== null;
+    if (m === null) {
+      principal = { curto: "—", longo: "—", moeda: false };
+      secundario = { curto: "não atinge", longo: "não atinge" };
+      contexto = `: não atinge a meta no cenário ${quando}, nem sem imprevistos`;
+    } else {
+      principal = { curto: curto(m), longo: moeda(m), moeda: true };
+      secundario = { curto: "de folga", longo: "de folga" };
+      contexto = `: margem de ${moeda(m)} para custos imprevistos no cenário ${quando}, mantendo a meta`;
+    }
+  } else if (visao === "teto") {
+    if (cel.teto === null) {
+      principal = { curto: "—", longo: "—", moeda: false };
+      secundario = { curto: "sem teto", longo: "nenhum lance" };
+      ok = null;
+      contexto = `: nenhum lance atinge a meta no cenário ${quando}`;
+    } else {
+      // a folga em reais entre o lance mínimo e o teto ("sobra R$ 104 mil"), como no cartão: mais direto que
+      // "+414% vs. mínimo", que o dono achou difícil de ler
+      const folga = cel.teto - lance;
+      ok = cel.teto >= lance;
+      principal = { curto: curto(cel.teto), longo: moeda(cel.teto), moeda: true };
+      const igual = lance > 0 ? Math.abs(folga / lance) < 0.0005 : folga === 0;
+      secundario = igual
+        ? { curto: "≈ mín.", longo: "≈ lance mínimo" }
+        : ok
+          ? { curto: `+${curto(folga)}`, longo: `sobra ${moedaCurta(folga)}` }
+          : { curto: `−${curto(-folga)}`, longo: `faltam ${moedaCurta(-folga)}` };
+      contexto = `: lance máximo no cenário ${quando}; ${
+        igual ? "praticamente igual ao lance mínimo" : ok ? `sobra ${moeda(folga)} acima do lance mínimo` : `fica ${moeda(-folga)} abaixo do lance mínimo`
+      }`;
+    }
+  } else {
+    const s = cel.comMeuLance;
+    ok = atingeMeta(s, r.meta);
+    principal = { curto: curto(s.lucro), longo: moedaSinal(s.lucro), grave: s.lucro < 0, moeda: true };
+    // no celular a célula tem ~60 px: só o %, e o cabeçalho da tabela diz "lucro em R$ e % ao ano"
+    secundario = { curto: pct(s.roiAA, 0), longo: `${pct(s.roiAA)} ao ano` };
+    contexto = `: ${s.lucro >= 0 ? "lucro" : "prejuízo"} e retorno ao ano no cenário ${quando}; ${ok ? "atinge" : "não atinge"} a meta`;
+  }
+  return { principal, secundario, ok, contexto };
+}
+
+/**
+ * Celular (abaixo de sm): a tabela vira um prazo por vez. Em cima, os prazos (6 · 12 · 18 · 24 · o seu); embaixo,
+ * uma linha larga por cenário, com o % editável, o número principal em 16 px, o secundário (folga ou % ao ano) e
+ * ✓/✕. Trocar o prazo só muda o que se vê; tocar numa linha escolhe a célula (a mesma do cartão e do Detalhe).
+ */
+function MatrizCelular({
+  r,
+  visao,
+  linhas,
+  colunas,
+  ri,
+  ci,
+  aoSelecionar,
+  definirPct,
+  aoAjustar,
+}: {
+  r: ResultadoCompleto;
+  visao: Visao;
+  linhas: Cenario[];
+  colunas: number[];
+  ri: number;
+  ci: number;
+  aoSelecionar: (c: Celula) => void;
+  definirPct: (c: CenarioFixo, fracao: number) => void;
+  aoAjustar: (mudar: (a: Ajustes) => Ajustes) => void;
+}) {
+  // o prazo à vista: o da célula escolhida, até a pessoa trocar aqui (e de novo quando a escolhida muda de prazo)
+  const [vendo, setVendo] = useState<{ base: number; meses: number } | null>(null);
+  const mesesVistos = vendo && vendo.base === colunas[ci] && colunas.includes(vendo.meses) ? vendo.meses : colunas[ci];
+  const c = Math.max(0, colunas.indexOf(mesesVistos));
+  const celulas = r.tabela!;
+  return (
+    <div className="mt-4 sm:hidden">
+      <p id="sim-matriz-prazo" className="px-1 text-[13px] font-medium text-nevoa">
+        Vendendo em quantos meses
+      </p>
+      <div role="group" aria-labelledby="sim-matriz-prazo" className="mt-2 flex flex-wrap gap-1.5 px-1">
+        {colunas.map((m) => (
+          <Chip key={m} ativo={m === mesesVistos} onClick={() => setVendo({ base: colunas[ci], meses: m })} ariaLabel={`${meses(m)}${r.colunaExtra === m ? " (o seu prazo)" : ""}`}>
+            {m}
+            {r.colunaExtra === m && <span className="font-normal text-nevoa"> · seu</span>}
+          </Chip>
+        ))}
+      </div>
+      <ul className="mt-3 flex flex-col gap-2" aria-label={`Cenários, vendendo em ${meses(mesesVistos)}`}>
+        {celulas.map((linha, rr) => {
+          const cel = linha[c];
+          if (!cel) return null;
+          const cenario = linhas[rr];
+          const sel = rr === ri && c === ci;
+          const { principal, secundario, ok, contexto } = conteudoCelula(r, cel, visao);
+          return (
+            <li key={cenario} className="flex items-stretch gap-2">
+              <div className="flex w-[6.5rem] shrink-0 flex-col justify-center px-1">
+                <span className={`text-[14px] leading-tight font-semibold ${rr === ri ? "text-latao-texto" : ""}`}>{CENARIO_ROTULO[cenario]}</span>
+                <span>
+                  <EditarPctCenario r={r} cenario={cenario} aoDefinirPct={definirPct} aoAjustar={aoAjustar} />
+                </span>
+              </div>
+              <button
+                type="button"
+                aria-pressed={sel}
+                onClick={() => aoSelecionar({ cenario, meses: mesesVistos })}
+                className={`relative flex min-h-16 min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-[background-color,border-color] duration-150 motion-reduce:transition-none ${
+                  sel ? "border-latao-texto bg-latao/15 shadow-[inset_0_0_0_1px_var(--latao-texto)]" : ok ? "border-pos/25 bg-pos/[0.07]" : "border-nevoa/15 bg-noite/60"
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className={`block font-display text-[16px] leading-tight font-bold tabular-nums ${principal.grave ? "text-grave-texto" : ""}`}>
+                    {principal.longo === "—" ? <span aria-hidden="true">—</span> : principal.longo}
+                  </span>
+                  {secundario && <span className="mt-1 block text-[13px] leading-tight text-nevoa tabular-nums">{secundario.longo}</span>}
+                </span>
+                <span aria-hidden="true" className="flex shrink-0 items-center">
+                  {ok === true && <IconeOk className="size-3.5 text-pos" />}
+                  {ok === false && <IconeNao className="size-3.5 text-grave-texto" />}
+                </span>
+                <span className="sr-only">
+                  {contexto}
+                  {sel ? " (escolhida)" : ""}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

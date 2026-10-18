@@ -42,13 +42,16 @@ export function BlocoPreco({
   tamanho = "md",
   alinhamento = "inicio",
   compacto = false,
+  desagioNaFoto = false,
 }: {
-  imovel: Pick<ImovelResumo, "lance" | "avaliacao" | "desagio">;
+  imovel: Pick<ImovelResumo, "lance" | "avaliacao" | "desagio"> & Partial<Pick<ImovelResumo, "modalidade">>;
   tamanho?: "md" | "lg";
   /** "linha": à esquerda, e à direita quando a linha larga põe o preço na própria coluna (container query) */
   alinhamento?: "inicio" | "fim" | "linha";
   /** num @container estreito (< 36rem: a linha compacta do celular), números menores e a avaliação curta */
   compacto?: boolean;
+  /** a foto já mostra o deságio em destaque: no celular, o "· −90%" ao lado da avaliação sai (fica para o leitor de tela) */
+  desagioNaFoto?: boolean;
 }) {
   // lance acima de 5× a avaliação: quase sempre erro de digitação da fonte (R$ 69,7 milhões num apartamento
   // avaliado em R$ 401 mil); em vez de "17.259% acima da avaliação", o aviso para conferir
@@ -64,7 +67,10 @@ export function BlocoPreco({
   const menor = compacto ? "@max-xl:text-[21px]" : "";
   return (
     <div className={fim}>
-      <p className={`text-[11px] leading-none font-semibold tracking-[0.12em] text-nevoa uppercase ${compacto ? "@max-xl:text-[10px]" : ""}`}>Lance mínimo</p>
+      {/* venda direta: o preço é fixo ("Preço de venda", como na página do imóvel) */}
+      <p className={`text-[11px] leading-none font-semibold tracking-[0.12em] text-nevoa uppercase ${compacto ? "@max-xl:text-[10px]" : ""}`}>
+        {imovel.modalidade === "venda_direta" ? "Preço de venda" : "Lance mínimo"}
+      </p>
       <p className={`mt-1.5 font-display leading-none font-bold tracking-[-0.03em] whitespace-nowrap text-luar tabular-nums ${fonte} ${menor}`}>{valor}</p>
       <p className={`mt-2 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[13px] leading-snug text-nevoa ${fimFlex} ${compacto ? "@max-xl:mt-1 @max-xl:text-xs" : ""}`}>
         {imovel.avaliacao !== null ? (
@@ -76,10 +82,10 @@ export function BlocoPreco({
             {d && abaixo && (
               // o ponto vai junto do número: se quebrar a linha, não fica um "·" solto no fim
               <span className="font-semibold whitespace-nowrap text-luar">
-                <span aria-hidden="true" className="mr-1.5 font-normal text-nevoa">
-                  ·
+                <span aria-hidden="true" className={desagioNaFoto ? "max-sm:hidden" : ""}>
+                  <span className="mr-1.5 font-normal text-nevoa">·</span>
+                  {d.curto}
                 </span>
-                <span aria-hidden="true">{d.curto}</span>
                 <span className="sr-only">, {d.frase}</span>
               </span>
             )}
@@ -177,7 +183,11 @@ export function LinhaPraca({ imovel, className = "" }: { imovel: Pick<ImovelResu
             {quando.passou && <span> (já passou)</span>}
           </span>
         ) : (
-          <span className="whitespace-nowrap">data não informada</span>
+          // numa linha estreita (lista ao lado do mapa, celular) a forma curta, para não quebrar a linha
+          <span className="whitespace-nowrap">
+            <span className="@max-2xl:hidden">data não informada</span>
+            <span className="hidden @max-2xl:inline">sem data</span>
+          </span>
         )}
       </span>
     </p>

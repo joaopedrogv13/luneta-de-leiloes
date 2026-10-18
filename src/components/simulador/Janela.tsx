@@ -17,7 +17,7 @@ function useNoNavegador() {
 
 /**
  * Pop-up modal do simulador (edição de um tipo de despesa, "Como usar"): no computador, uma janela no centro da
- * tela; no celular, uma folha que sobe de baixo. Cabeçalho com título e fechar, corpo que rola e rodapé fixo.
+ * tela; no celular, uma folha que sobe de baixo; em tela baixa (celular deitado), a tela inteira. Cabeçalho com título e fechar, corpo que rola e rodapé fixo.
  * Foco preso, Esc fecha, a página atrás não rola e o foco volta para quem abriu (useDialog). Só existe
  * enquanto está aberta (quem usa monta e desmonta).
  */
@@ -64,13 +64,14 @@ export function Janela({
         aria-modal="true"
         aria-labelledby={`${id}-titulo`}
         tabIndex={-1}
-        className={`fixed inset-x-0 bottom-0 z-[70] flex max-h-[92dvh] flex-col overflow-clip rounded-t-3xl border border-b-0 border-nevoa/20 bg-tinta text-luar shadow-[0_-24px_80px_rgba(7,11,22,.45)] outline-none transition-[translate,opacity,scale] duration-250 ease-luneta starting:translate-y-8 starting:opacity-0 motion-reduce:transition-none md:inset-auto md:top-1/2 md:left-1/2 md:max-h-[min(86vh,820px)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:border-b md:shadow-[0_24px_80px_rgba(7,11,22,.45)] md:starting:translate-y-[calc(-50%+12px)] ${largura}`}
+        // tela baixa (celular deitado, ~390 px): a janela ocupa a tela inteira (no centro, sobrava um corpo de 148 px)
+        className={`fixed inset-x-0 bottom-0 z-[70] flex max-h-[92dvh] flex-col overflow-clip rounded-t-3xl border border-b-0 border-nevoa/20 bg-tinta text-luar shadow-[0_-24px_80px_rgba(7,11,22,.45)] outline-none transition-[translate,opacity,scale] duration-250 ease-luneta starting:translate-y-8 starting:opacity-0 motion-reduce:transition-none md:inset-auto md:top-1/2 md:left-1/2 md:max-h-[min(86vh,820px)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:border-b md:shadow-[0_24px_80px_rgba(7,11,22,.45)] md:starting:translate-y-[calc(-50%+12px)] ${largura} baixa:inset-0 baixa:max-h-none baixa:w-full baixa:translate-x-0 baixa:translate-y-0 baixa:rounded-none baixa:border-0 baixa:starting:translate-y-4`}
       >
-        <div className="flex shrink-0 items-start gap-3 border-b border-nevoa/15 px-5 pt-4 pb-3 md:px-6 md:pt-5 md:pb-4">
+        <div className="flex shrink-0 items-start gap-3 border-b border-nevoa/15 px-5 pt-4 pb-3 md:px-6 md:pt-5 md:pb-4 baixa:items-center baixa:pt-2 baixa:pb-2">
           <div className="min-w-0 flex-1">
-            <span aria-hidden="true" className="mx-auto mb-3 block h-1 w-10 rounded-full bg-nevoa/35 md:hidden" />
-            {sobretitulo && <p className="eyebrow mb-1.5">{sobretitulo}</p>}
-            <h2 id={`${id}-titulo`} className="font-display text-[20px] leading-tight font-bold tracking-[-0.01em] md:text-[22px]">
+            <span aria-hidden="true" className="mx-auto mb-3 block h-1 w-10 rounded-full bg-nevoa/35 md:hidden baixa:hidden" />
+            {sobretitulo && <p className="eyebrow mb-1.5 baixa:mb-0.5">{sobretitulo}</p>}
+            <h2 id={`${id}-titulo`} className="font-display text-[20px] leading-tight font-bold tracking-[-0.01em] md:text-[22px] baixa:text-[18px]">
               {titulo}
             </h2>
           </div>
@@ -84,8 +85,12 @@ export function Janela({
             <IconeFechar />
           </button>
         </div>
-        <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 md:px-6 md:py-5">{children}</div>
-        {rodape && <div className="shrink-0 border-t border-nevoa/15 bg-tinta px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] md:px-6 md:pb-4">{rodape}</div>}
+        <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 md:px-6 md:py-5 baixa:py-3">{children}</div>
+        {rodape && (
+          <div className="shrink-0 border-t border-nevoa/15 bg-tinta px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] md:px-6 md:pb-4 baixa:pt-2 baixa:pb-[max(8px,env(safe-area-inset-bottom))]">
+            {rodape}
+          </div>
+        )}
       </div>
     </>,
     document.body,

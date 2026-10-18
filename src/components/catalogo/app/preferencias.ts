@@ -37,11 +37,13 @@ export const CONSULTA_CELULAR = "(max-width: 767.98px)";
 /** A partir de lg (1024 px) a lista tem o mapa numa coluna fixa à direita; abaixo, numa faixa em cima. */
 export const CONSULTA_COMPUTADOR = "(min-width: 1024px)";
 /**
- * A barra de filtros colada vira uma linha só (busca, total, ordenar e filtros) no tablet e em tela baixa: com
- * os botões rápidos e as pílulas ela passava de 1/4 da tela (76% num celular deitado). No celular em pé ela
- * já tem duas linhas curtas e recolhe ao rolar.
+ * A barra de filtros colada vira uma linha só (busca, total, ordenar e filtros) no tablet, no notebook baixo
+ * (1024 a 1279 px com até 820 px de altura, como o iPad deitado e o 1024×768: ela ficava com 3 linhas, 22% da
+ * tela) e em tela baixa: com os botões rápidos e as pílulas ela passava de 1/4 da tela (76% num celular
+ * deitado). No celular em pé ela já tem duas linhas curtas e recolhe ao rolar.
  */
-export const CONSULTA_BARRA_COMPACTA = "(min-width: 768px) and (max-width: 1023.98px), (min-width: 768px) and (max-height: 699.98px)";
+export const CONSULTA_BARRA_COMPACTA =
+  "(min-width: 768px) and (max-width: 1023.98px), (min-width: 768px) and (max-height: 699.98px), (min-width: 1024px) and (max-width: 1279.98px) and (max-height: 820px)";
 /** A barra sai de cena ao rolar para baixo (e volta ao rolar para cima): celular, toque e tela baixa. */
 export const CONSULTA_BARRA_RECOLHE = "(max-width: 767.98px), (max-height: 620px), (pointer: coarse)";
 

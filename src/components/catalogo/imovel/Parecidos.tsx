@@ -26,7 +26,7 @@ export function Parecidos({ itens, rotulo, criterios }: { itens: ImovelResumo[];
   return (
     <div>
       <div className="flex items-end justify-between gap-4">
-        <p className="text-[13px] leading-snug text-nevoa">
+        <p className="text-sm leading-snug text-nevoa sm:text-[13px]">
           {itens.length === 1 ? "1 imóvel em leilão" : `${itens.length} imóveis em leilão`} {criterios}; primeiro os da mesma rua e do mesmo bairro.
         </p>
         {itens.length > 2 && (

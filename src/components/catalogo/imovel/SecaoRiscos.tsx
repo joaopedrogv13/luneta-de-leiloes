@@ -41,7 +41,7 @@ function LinhaTag({ tag }: { tag: TagDetalhe }) {
         </div>
         {TERMO_DA_TAG[tag.slug] && <BotaoTermo termo={TERMO_DA_TAG[tag.slug]!} className="shrink-0" />}
       </div>
-      <p className="text-[13.5px] leading-relaxed text-nevoa sm:pt-1.5">
+      <p className="text-sm leading-relaxed text-nevoa sm:pt-1.5 sm:text-[13.5px]">
         {tag.emRevisao && <span className={`font-semibold ${TOM_TITULO[tag.severidade]}`}>{SEVERIDADE_ROTULO[tag.severidade]}, se confirmada. </span>}
         {c.oQueE}
       </p>
@@ -132,7 +132,7 @@ export function SecaoRiscos({ imovel: i, plano, selosDesligados }: { imovel: Imo
             </svg>
             Em revisão <span className="tabular-nums">({revisao.length})</span>
           </Subtitulo>
-          <p className="mt-2 max-w-[64ch] text-[13.5px] leading-relaxed text-nevoa">
+          <p className="mt-2 max-w-[64ch] text-sm leading-relaxed text-nevoa sm:text-[13.5px]">
             Calculadas automaticamente e ainda sem leitura humana: podem estar erradas. Não trate como fato; use como pista para ler o edital.
           </p>
           <ul aria-label="Tags em revisão" className="mt-2">
@@ -162,7 +162,7 @@ export function SecaoRiscos({ imovel: i, plano, selosDesligados }: { imovel: Imo
 
 function Aviso() {
   return (
-    <p className="mt-5 flex gap-2.5 text-[13px] leading-relaxed text-nevoa">
+    <p className="mt-5 flex gap-2.5 text-sm leading-relaxed text-nevoa sm:text-[13px]">
       <IconeInfo tamanho={16} className="mt-0.5 text-nevoa" />
       {AVISO_CLASSIFICACAO}
     </p>

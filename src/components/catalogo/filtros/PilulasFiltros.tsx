@@ -8,9 +8,11 @@ import { IconeX } from "../ui/icones";
 /**
  * Linha dos filtros ativos: cada pílula remove o seu (estados e cidades em cascata) e "Limpar tudo"
  * zera. Depois de remover, o foco vai para a pílula seguinte (ou para "Limpar tudo"), para quem usa
- * teclado não cair no começo da página. No celular a linha rola de lado; no computador quebra.
- * `ocultarNoComputador`: grupos cujas pílulas somem a partir de md (o botão rápido deles já mostra o
- * filtro e tem o × para limpar); "Limpar tudo" aparece no computador com qualquer filtro ativo.
+ * teclado não cair no começo da página. No celular e no tablet a linha rola de lado, com o fim esmaecido
+ * (mostra que há mais); no computador quebra.
+ * `ocultarNoComputador`: grupos cujas pílulas somem a partir de lg (o botão rápido deles já mostra o
+ * filtro e tem o × para limpar); `ocultarNoLargo`, o mesmo a partir de xl (botões que só cabem ali);
+ * "Limpar tudo" aparece no computador com qualquer filtro ativo.
  */
 export function PilulasFiltros({
   filtros,
@@ -20,6 +22,7 @@ export function PilulasFiltros({
   className = "",
   aoEsvaziar,
   ocultarNoComputador,
+  ocultarNoLargo,
 }: {
   filtros: Filtros;
   /** nomes de fontes e tags (opcional) */
@@ -30,8 +33,10 @@ export function PilulasFiltros({
   className?: string;
   /** para onde vai o foco quando não sobra pílula (ex.: o campo de busca) */
   aoEsvaziar?: () => void;
-  /** grupos que não viram pílula no computador (a partir de md) */
+  /** grupos que não viram pílula no computador (a partir de lg) */
   ocultarNoComputador?: ReadonlySet<GrupoFiltro>;
+  /** grupos que não viram pílula a partir de xl */
+  ocultarNoLargo?: ReadonlySet<GrupoFiltro>;
 }) {
   const lista = useRef<HTMLUListElement>(null);
   const itens = pilulas(filtros, facetas);
@@ -69,10 +74,16 @@ export function PilulasFiltros({
     <ul
       ref={lista}
       aria-label="Filtros ativos"
-      className={`flex items-center gap-2 ${rolavel ? "-mx-4 snap-x scroll-px-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden" : "flex-wrap"} ${className}`}
+      // o fim esmaecido (máscara) mostra que a fila continua; o respiro à direita deixa a última pílula ("Limpar
+      // tudo") sair inteira da máscara quando a fila chega ao fim
+      className={`flex items-center gap-2 ${rolavel ? "-mx-4 snap-x scroll-px-4 overflow-x-auto px-4 pr-12 pb-1 [scrollbar-width:none] max-lg:[mask-image:linear-gradient(to_right,#000_calc(100%-48px),transparent)] sm:-mx-6 sm:scroll-px-6 sm:px-6 sm:pr-12 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0 [&::-webkit-scrollbar]:hidden" : "flex-wrap"} ${className}`}
     >
       {itens.map((p, i) => (
-        <li key={p.id} className={`shrink-0 snap-start ${ocultarNoComputador?.has(p.grupo) ? "md:hidden" : ""}`}>
+        <li
+          key={p.id}
+          // em tela baixa os botões rápidos não aparecem (nem no computador): a pílula volta
+          className={`shrink-0 snap-start ${ocultarNoComputador?.has(p.grupo) ? "lg:hidden baixa:block" : ocultarNoLargo?.has(p.grupo) ? "xl:hidden baixa:block" : ""}`}
+        >
           <button
             type="button"
             data-pilula
@@ -92,7 +103,7 @@ export function PilulasFiltros({
         </li>
       ))}
       {itens.length > 0 && (
-        <li className={`shrink-0 snap-start ${itens.length === 1 ? "max-md:hidden" : ""}`}>
+        <li className={`shrink-0 snap-start ${itens.length === 1 ? "max-lg:hidden" : ""}`}>
           <button
             type="button"
             onClick={(e) => remover({}, 0, e.timeStamp)}

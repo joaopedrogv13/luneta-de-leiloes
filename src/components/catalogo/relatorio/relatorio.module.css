@@ -1241,6 +1241,63 @@
   }
 }
 
+/* ------------------------------------------------------------------ celular estreito: letra de leitura
+   Com a base de 12,5 px e os rótulos em em, o texto ia a 8,7–11,9 px. Aqui a base é 14 px e nenhum rótulo fica
+   abaixo de 11 px; a tabela de cenários vira um bloco por cenário (os prazos lado a lado, com o nome em cima),
+   em vez de rolar de lado. O PDF (impressão e data-a4) não muda. */
+
+@media screen and (max-width: 640px) {
+  .tela:not([data-a4]) .documento {
+    font-size: 14px;
+  }
+  .tela:not([data-a4]) :is(.cabecaFolha, .tipoDoc p:first-child, .sobretitulo, .foto figcaption, .fato dt, .subtitulo, .rotuloPequeno, .kpi dt, .marcaAjuste, .tabela thead th, .conta thead th, .conta .grupo th, .premissas .grupo th, .nivel, .fimDocumento) {
+    font-size: max(0.78em, 11px);
+  }
+  .tela:not([data-a4]) .matriz td.escolhida::after {
+    font-size: max(0.68em, 10px);
+  }
+  .tela:not([data-a4]) .rolagem:has(> .matriz) {
+    overflow: visible;
+  }
+  .tela:not([data-a4]) .rolagem > .matriz {
+    min-width: 0;
+  }
+  .tela:not([data-a4]) .rolagem:has(> .matriz) + .dicaRolagem {
+    display: none;
+  }
+  .tela:not([data-a4]) .matriz,
+  .tela:not([data-a4]) .matriz tbody {
+    display: block;
+  }
+  .tela:not([data-a4]) .matriz thead {
+    display: none;
+  }
+  .tela:not([data-a4]) .matriz tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9em 0.5em;
+    padding: 0.7em 0 0.8em;
+    border-bottom: 0.5pt solid var(--linha);
+  }
+  .tela:not([data-a4]) .matriz tr > th {
+    grid-column: 1 / -1;
+    padding: 0;
+    border: 0;
+  }
+  .tela:not([data-a4]) .matriz td {
+    padding: 0.5em 0.4em;
+    border: 0.5pt solid var(--linha);
+    border-radius: 6px;
+  }
+  .tela:not([data-a4]) .matriz td::before {
+    content: attr(data-prazo);
+    display: block;
+    margin-bottom: 0.2em;
+    font-size: max(0.78em, 11px);
+    color: var(--suave);
+  }
+}
+
 /* ------------------------------------------------------------------ impressão */
 
 @media print {

@@ -91,7 +91,7 @@ export function OrdenarPor({
           conteudo: (a) => (
             <>
               <IconeOrdenar className="text-nevoa" />
-              <span className={`text-nevoa ${compacto ? "sr-only" : "max-sm:sr-only"}`}>Ordenar:</span>{" "}
+              <span className={`text-nevoa ${compacto ? "sr-only" : "max-sm:sr-only baixa:sr-only"}`}>Ordenar:</span>{" "}
               <span className="font-semibold">{ORDEM_ROTULO[atual]}</span>
               <IconeSeta className={`text-nevoa transition-transform duration-150 motion-reduce:transition-none ${a ? "rotate-180" : ""}`} />
             </>

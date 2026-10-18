@@ -44,13 +44,13 @@ export function SecaoLocalizacao({ imovel: i }: { imovel: ImovelDetalhe }) {
               {!localRepetido(i) && <span className="mt-0.5 block text-nevoa">{local(i)}</span>}
             </span>
           </p>
-          {ponto && <p className="mt-4 text-[13.5px] leading-relaxed text-nevoa">{textoPosicao(i)}. O ponto no mapa não marca o imóvel exato.</p>}
+          {ponto && <p className="mt-4 text-sm leading-relaxed text-nevoa sm:text-[13.5px]">{textoPosicao(i)}. O ponto no mapa não marca o imóvel exato.</p>}
           <a href={url} target="_blank" rel="noopener noreferrer" className="btn-outline mt-5 w-full gap-2">
             Abrir no Google Maps
             <IconeExterno tamanho={16} />
             <NovaAba />
           </a>
-          <p className="mt-2.5 text-[12.5px] leading-snug text-nevoa">
+          <p className="mt-2.5 text-[13px] leading-snug text-nevoa sm:text-[12.5px]">
             {mapa?.descricao ? `${mapa.descricao}.` : i.endereco ? "Busca o endereço publicado pela fonte." : "A fonte não publica o endereço: a busca usa bairro e cidade."}
           </p>
         </div>

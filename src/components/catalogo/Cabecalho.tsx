@@ -77,11 +77,12 @@ export function Cabecalho({
           className={
             faixa.discreta
               ? "border-b border-nevoa/12 bg-tinta px-4 py-2 text-center text-[12.5px] leading-snug font-medium text-nevoa md:hidden"
-              : "bg-latao px-4 py-2 text-center text-[12.5px] leading-snug font-semibold text-noite-fixa sm:px-6"
+              : "bg-latao px-4 py-1.5 text-center text-[12.5px] leading-snug font-semibold text-noite-fixa sm:px-6 sm:py-2"
           }
         >
-          <p className="mx-auto max-sm:hidden">{faixa.completa}</p>
-          <p className="sm:hidden">{faixa.curta}</p>
+          {/* celular deitado (tela baixa): o texto curto numa linha, para a lista aparecer na primeira tela */}
+          <p className="mx-auto max-sm:hidden baixa:hidden">{faixa.completa}</p>
+          <p className="sm:hidden baixa:block baixa:truncate">{faixa.curta}</p>
         </aside>
       )}
       <header ref={cabecalhoRef} className={`border-b border-nevoa/12 bg-noite ${FIXO_NO_COMPUTADOR}`}>
@@ -100,10 +101,11 @@ export function Cabecalho({
               <span aria-hidden="true">← </span>voltar ao site
             </span>
           </Link>
-          <span aria-hidden="true" className="hidden h-8 w-px shrink-0 bg-nevoa/20 md:block" />
-          <div className="min-w-0 max-md:sr-only">
+          <span aria-hidden="true" className="hidden h-8 w-px shrink-0 bg-nevoa/20 md:block baixa:hidden" />
+          {/* tablet: só o título (a linha da área saía cortada); tela baixa: os dois só para leitores de tela */}
+          <div className="min-w-0 max-md:sr-only baixa:sr-only">
             <h1 className="truncate font-display text-[15px] leading-tight font-bold tracking-[-0.01em] text-luar">{titulo}</h1>
-            <p className="truncate text-[12px] leading-tight text-nevoa">{area}</p>
+            <p className="truncate text-[12px] leading-tight text-nevoa max-lg:hidden">{area}</p>
           </div>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">

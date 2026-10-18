@@ -1,8 +1,10 @@
 import "server-only";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SITE } from "@/content/site";
 import { carregarImovel } from "@/components/catalogo/imovel/carregar";
+import { CHAVE_AJUDA_PDF } from "@/components/catalogo/imovel/preferencias";
 import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
 import { tituloDocumento } from "./dados";
 import { Relatorio } from "./Relatorio";
@@ -39,8 +41,10 @@ export async function metadadosRelatorio(conjunto: Conjunto, entrada: Parametros
 
 /** A página do relatório: id inexistente dá 404 (o layout da rota do imóvel já confere antes). */
 export async function renderizarRelatorio(conjunto: Conjunto, entrada: Parametros) {
-  const { id, plano, imprimir } = await lerEntrada(entrada);
+  const [{ id, plano, imprimir }, jarra] = await Promise.all([lerEntrada(entrada), cookies()]);
   const pagina = await carregar(conjunto, id, plano);
   if (!pagina) notFound();
-  return <Relatorio key={pagina.imovel.id} conjunto={conjunto} plano={plano} pagina={pagina} imprimir={imprimir} />;
+  // "Como salvar o PDF" aberto na primeira visita: decidido aqui (cookie), para a primeira pintura já sair assim
+  const ajudaAberta = !jarra.get(CHAVE_AJUDA_PDF);
+  return <Relatorio key={pagina.imovel.id} conjunto={conjunto} plano={plano} pagina={pagina} imprimir={imprimir} ajudaAberta={ajudaAberta} />;
 }

@@ -22,6 +22,7 @@ export function SeletorVista({
   onMapa,
   semMapa = false,
   semMapaCelular = false,
+  apenasAlternar = false,
   rotuloClassName = "",
   className = "",
 }: {
@@ -33,11 +34,26 @@ export function SeletorVista({
   semMapa?: boolean;
   /** esconde o botão do mapa só no celular (lá o mapa tem o botão flutuante) */
   semMapaCelular?: boolean;
+  /** só o botão redondo que troca para a outra vista (o do celular), sem o resto */
+  apenasAlternar?: boolean;
   /** classes dos rótulos ("max-lg:sr-only": só os ícones em telas médias; o nome continua para leitores de tela) */
   rotuloClassName?: string;
   className?: string;
 }) {
   const outra = OPCOES.find((o) => o.valor !== vista)!;
+  if (apenasAlternar) {
+    return (
+      <button
+        type="button"
+        onClick={() => onVista(outra.valor)}
+        aria-label={`Ver em ${outra.rotulo.toLowerCase()}`}
+        title={`Ver em ${outra.rotulo.toLowerCase()}`}
+        className={`inline-flex size-12 cursor-pointer items-center justify-center rounded-full border border-nevoa/25 bg-tinta text-luar transition-colors duration-150 hover:border-nevoa/55 ${className}`}
+      >
+        {outra.icone}
+      </button>
+    );
+  }
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {/* celular (com semMapaCelular): um botão só, que troca para a outra vista (a linha do total e de "Ordenar"

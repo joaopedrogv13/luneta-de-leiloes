@@ -407,7 +407,7 @@ export function MatrizRelatorio() {
         <p className={s.tituloTabela} aria-hidden="true">
           Lance máximo para {metaComoObjetivo(meta)} <span>· comparado com o lance mínimo de hoje ({moeda(lance)})</span>
         </p>
-        <div className={s.rolagem}>
+        <div className={s.rolagem} tabIndex={0} role="region" aria-label="Lance máximo por cenário e prazo (tabela; role para o lado para ver todos os prazos)">
           <table className={`${s.tabela} ${s.matriz}`}>
             <caption className="sr-only">
               Lance máximo para {metaComoObjetivo(meta)}, comparado com o lance mínimo de hoje ({moeda(lance)})
@@ -422,7 +422,7 @@ export function MatrizRelatorio() {
                     const ok = folga !== null && folga >= 0;
                     const classes = [escolhida(c, cel.meses) ? s.escolhida : "", ok ? "" : s.naoAtinge].filter(Boolean).join(" ") || undefined;
                     return (
-                      <td key={cel.meses} className={classes}>
+                      <td key={cel.meses} className={classes} data-prazo={meses(cel.meses)}>
                         <strong>{cel.teto === null ? "nenhum" : moeda(cel.teto)}</strong>
                         <span>
                           {ok ? <IconeOk className={s.pos} /> : <IconeNao className={s.grave} />}
@@ -459,7 +459,7 @@ export function MatrizRelatorio() {
         <p className={s.tituloTabela} aria-hidden="true">
           Margem para custos imprevistos <span>· comprando por {moeda(lance)} e mantendo a meta ({metaPorExtenso(meta)})</span>
         </p>
-        <div className={s.rolagem}>
+        <div className={s.rolagem} tabIndex={0} role="region" aria-label="Margem para imprevistos por cenário e prazo (tabela; role para o lado para ver todos os prazos)">
           <table className={`${s.tabela} ${s.matriz}`}>
             <caption className="sr-only">
               Margem para custos imprevistos, comprando por {moeda(lance)} e mantendo a meta ({metaPorExtenso(meta)})
@@ -473,7 +473,7 @@ export function MatrizRelatorio() {
                     const m = cel.margem ?? null;
                     const classes = [escolhida(c, cel.meses) ? s.escolhida : "", m !== null ? "" : s.naoAtinge].filter(Boolean).join(" ") || undefined;
                     return (
-                      <td key={cel.meses} className={classes}>
+                      <td key={cel.meses} className={classes} data-prazo={meses(cel.meses)}>
                         <strong>{m === null ? "nenhuma" : moeda(m)}</strong>
                         <span>
                           {m !== null ? <IconeOk className={s.pos} /> : <IconeNao className={s.grave} />}
@@ -516,7 +516,7 @@ export function MatrizRelatorio() {
         <p className={s.tituloTabela} aria-hidden="true">
           Lucro e retorno ao ano {fixo ? "comprando por" : "com o lance de"} {moeda(r.meuLance)} <span>· {doLance}</span>
         </p>
-        <div className={s.rolagem}>
+        <div className={s.rolagem} tabIndex={0} role="region" aria-label="Lucro e retorno por cenário e prazo (tabela; role para o lado para ver todos os prazos)">
           <table className={`${s.tabela} ${s.matriz}`}>
             <caption className="sr-only">
               Lucro e retorno ao ano {fixo ? "comprando por" : "com o lance de"} {moeda(r.meuLance)} ({doLance})
@@ -531,7 +531,7 @@ export function MatrizRelatorio() {
                     const ok = atingeMeta(sim, meta);
                     const classes = [escolhida(c, cel.meses) ? s.escolhida : "", ok ? "" : s.naoAtinge].filter(Boolean).join(" ") || undefined;
                     return (
-                      <td key={cel.meses} className={classes}>
+                      <td key={cel.meses} className={classes} data-prazo={meses(cel.meses)}>
                         <strong className={sim.lucro < 0 ? s.negativo : undefined}>{moedaSinal(sim.lucro)}</strong>
                         <span>
                           {ok ? <IconeOk className={s.pos} /> : <IconeNao className={s.grave} />}

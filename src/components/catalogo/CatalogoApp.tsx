@@ -11,6 +11,7 @@ import { AvisoLente, Toast, type Mensagem } from "./app/Avisos";
 import s from "./app/catalogo.module.css";
 import { chaveDoEstado, enderecoPagina, type PedidoLista } from "./app/consultas";
 import { EstadoVazio } from "./app/EstadoVazio";
+import { MapaTelaCheia } from "./app/MapaTelaCheia";
 import { criarLojaDestaque, salvarPreferencias, useAcesoPeloMapa, useMidia, usePreferencias, type LojaDestaque } from "./app/hooks";
 import { Paginacao } from "./app/Paginacao";
 import { CONSULTA_BARRA_COMPACTA, CONSULTA_BARRA_RECOLHE, CONSULTA_COMPUTADOR, CONSULTA_CELULAR, type Preferencias } from "./app/preferencias";
@@ -103,13 +104,16 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   const mapaPedido = mapaEscolhido ?? pref.mapa;
   const mapaVisivel = mapaPedido ?? computador;
   const mapaNaColuna = vista === "lista" && computador;
+  /** celular: o mapa em tela cheia, aberto pelo botão flutuante (não muda a preferência salva) */
+  const [mapaCheio, setMapaCheio] = useState(false);
+  const telaCheia = mapaCheio && celular;
 
   const busca = useBusca({
     conjunto,
     servidor: { pedido: servidor.pedido, resultado: servidor.resultado },
     pedidoInicial: inicio.pedido,
     selosDesligados,
-    mapaVisivel,
+    mapaVisivel: mapaVisivel || telaCheia,
   });
   const { pedido } = busca;
   const plano = pedido.plano;
@@ -340,32 +344,14 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     setMapaEscolhido(visivel);
     salvarPreferencias({ mapa: visivel });
   };
-  /** Onde a pessoa estava na lista quando abriu o mapa no celular (para voltar ao mesmo imóvel ao fechar). */
-  const antesDoMapa = useRef<{ id: string | null; y: number; chave: string } | null>(null);
   /**
-   * Botão flutuante do celular: o mapa abre em faixa no topo da lista e a tela vai até ele; "Esconder mapa"
-   * devolve a pessoa ao imóvel em que estava (se a busca não mudou nesse meio-tempo).
+   * Botão flutuante do celular: o mapa abre em tela cheia (MapaTelaCheia); "Ver lista" fecha e a lista está no
+   * mesmo ponto (o diálogo trava a rolagem atrás). Com o mapa já em faixa no topo da lista (escolha salva, ou
+   * ?mapa=1), o botão o esconde.
    */
   const alternarMapaCelular = () => {
-    const ligar = !mapaVisivel;
-    // a mesma busca (filtros, ordem, página), sem contar o próprio mapa
-    const chave = enderecoPagina(caminho, { ...pedido, vista: null, mapa: null });
-    if (ligar) {
-      const primeiro = Array.from(document.querySelectorAll<HTMLElement>("[data-imovel]")).find((el) => el.getBoundingClientRect().bottom > topoFixo.current + 8);
-      antesDoMapa.current = { id: primeiro?.dataset.imovel ?? null, y: window.scrollY, chave };
-      escolherMapa(true);
-      requestAnimationFrame(() => irAoTopo(false));
-      return;
-    }
-    escolherMapa(false);
-    const voltar = antesDoMapa.current;
-    antesDoMapa.current = null;
-    if (!voltar || voltar.chave !== chave) return;
-    requestAnimationFrame(() => {
-      const el = voltar.id ? document.querySelector<HTMLElement>(`[data-imovel="${CSS.escape(voltar.id)}"]`) : null;
-      if (el) el.scrollIntoView({ block: "start" });
-      else window.scrollTo({ top: voltar.y });
-    });
+    if (!mapaVisivel) setMapaCheio(true);
+    else escolherMapa(false);
   };
 
   // ---- avisos, upgrade e favoritos ----
@@ -476,7 +462,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
         >
           <div
             ref={barraVisivel}
-            className="pointer-events-auto relative border-b border-transparent bg-noite/90 px-4 py-3 backdrop-blur-md transition-[box-shadow,border-color] duration-200 ease-luneta group-data-[colada]/barra:border-nevoa/15 group-data-[colada]/barra:shadow-[0_12px_30px_-14px_rgba(0,0,0,.7)] group-data-[recolhida]/barra:shadow-none motion-reduce:transition-none sm:px-6 lg:px-8 [[data-theme=light]_&]:group-data-[colada]/barra:shadow-[0_10px_28px_-14px_rgba(15,24,48,.28)]"
+            className="pointer-events-auto relative border-b border-transparent bg-noite/90 px-4 py-2.5 backdrop-blur-md sm:py-3 transition-[box-shadow,border-color] duration-200 ease-luneta group-data-[colada]/barra:border-nevoa/15 group-data-[colada]/barra:shadow-[0_12px_30px_-14px_rgba(0,0,0,.7)] group-data-[recolhida]/barra:shadow-none motion-reduce:transition-none sm:px-6 lg:px-8 [[data-theme=light]_&]:group-data-[colada]/barra:shadow-[0_10px_28px_-14px_rgba(15,24,48,.28)]"
           >
             <div className={`mx-auto ${largura}`}>
               <BarraFiltros
@@ -494,6 +480,9 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
                 contar={busca.contar}
                 consultar={busca.consultar}
                 compacta={!!compacta}
+                // celular: Lista | Cards num ícone no fim da linha da busca (na linha do total, em 360 px, ele
+                // caía sozinho numa terceira linha)
+                acoesBusca={<SeletorVista vista={vista} onVista={escolherVista} mapa={mapaVisivel} onMapa={escolherMapa} apenasAlternar />}
                 acoes={
                   <SeletorVista
                     vista={vista}
@@ -514,7 +503,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
 
         {/* coluna do mapa: ~40% (36% em 1024 px, para a linha ainda caber com a foto ao lado) */}
         <div className={comColuna ? "lg:grid lg:grid-cols-[minmax(0,1fr)_36%] xl:grid-cols-[minmax(0,1fr)_40%]" : ""}>
-          <section id="resultados" aria-labelledby="titulo-resultados" className="min-w-0 px-4 pt-5 pb-16 sm:px-6 lg:px-8">
+          <section id="resultados" aria-labelledby="titulo-resultados" className="min-w-0 px-4 pt-3 pb-16 sm:px-6 sm:pt-5 lg:px-8">
             <h2 id="titulo-resultados" ref={tituloLista} tabIndex={-1} className="sr-only">
               {resultado ? `Resultados, página ${resultado.pagina} de ${resultado.totalPaginas}` : "Resultados"}
             </h2>
@@ -595,6 +584,10 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
       </main>
 
       {rodape}
+
+      <MapaTelaCheia aberto={telaCheia} onFechar={() => setMapaCheio(false)} cidades={busca.pontos?.length ?? null} total={total}>
+        {mapa("painel", "h-full")}
+      </MapaTelaCheia>
 
       {/* Celular: o mapa liga e desliga num botão flutuante (a barra fixa fica com duas linhas só); sai do caminho
           quando a paginação aparece. Abaixo dos pop-ups (z-20): um pop-up de filtro, de ordem ou de tag que desce

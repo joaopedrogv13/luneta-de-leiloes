@@ -223,7 +223,8 @@ export function Galeria({ fotos, tipo, titulo, semFotoTexto }: { fotos: string[]
       <div
         role="img"
         aria-label={texto}
-        className="relative isolate -mx-4 aspect-[16/10] overflow-hidden sm:mx-0 sm:rounded-3xl sm:border sm:border-nevoa/15 lg:aspect-auto lg:h-[clamp(240px,38vh,380px)]"
+        // sem foto: no celular uma faixa mais baixa (16:9); no tablet, 4:3 ao lado do título
+        className="relative isolate -mx-4 aspect-[16/9] overflow-hidden sm:mx-0 sm:aspect-[16/10] sm:rounded-3xl sm:border sm:border-nevoa/15 md:max-lg:aspect-[4/3] lg:aspect-auto lg:h-[clamp(240px,38vh,380px)] baixa:max-h-[62vh]"
         style={{ background: FUNDO }}
       >
         <Desenho tipo={tipo} />
@@ -240,7 +241,8 @@ export function Galeria({ fotos, tipo, titulo, semFotoTexto }: { fotos: string[]
   return (
     <section aria-roledescription="carrossel" aria-label={`Fotos do imóvel (${total === 1 ? "1 foto" : `${total} fotos`})`} className={varias ? "lg:grid lg:grid-cols-[minmax(0,1fr)_8.5rem] lg:gap-3" : ""}>
       <div
-        className="relative isolate -mx-4 aspect-[4/3] overflow-hidden sm:mx-0 sm:aspect-[16/10] sm:rounded-3xl sm:border sm:border-nevoa/15 lg:aspect-auto lg:h-[clamp(320px,58vh,560px)]"
+        // tablet em pé: 4:3 na coluna da esquerda, ao lado do título e do preço
+        className="relative isolate -mx-4 aspect-[4/3] overflow-hidden sm:mx-0 sm:aspect-[16/10] sm:rounded-3xl sm:border sm:border-nevoa/15 md:max-lg:aspect-[4/3] lg:aspect-auto lg:h-[clamp(320px,58vh,560px)] baixa:max-h-[62vh]"
         style={{ background: FUNDO }}
       >
         <Ambiente url={atual} ativo={!!atual && !falhas.has(atual)} />

@@ -38,7 +38,7 @@ const PLURAL: Record<Severidade, [string, string]> = {
   info: ["informativo", "informativos"],
 };
 
-function Compartilhar({ titulo, className = "" }: { titulo: string; className?: string }) {
+function Compartilhar({ titulo, className = "", icone = false }: { titulo: string; className?: string; /** só o ícone, num botão redondo de 44 px */ icone?: boolean }) {
   const { avisar } = useImovel();
   const compartilhar = async () => {
     const url = window.location.href.split("#")[0]!;
@@ -68,6 +68,19 @@ function Compartilhar({ titulo, className = "" }: { titulo: string; className?: 
     }
     avisar("Não deu para copiar: copie o endereço na barra do navegador.");
   };
+  if (icone) {
+    return (
+      <button
+        type="button"
+        onClick={compartilhar}
+        title="Compartilhar"
+        className={`inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-nevoa/30 bg-tinta/80 text-nevoa transition-[border-color,color,scale] duration-150 ease-luneta hover:border-latao hover:text-luar active:scale-[0.92] motion-reduce:transition-none ${className}`}
+      >
+        <IconeCompartilhar tamanho={17} />
+        <span className="sr-only">Compartilhar (link desta página)</span>
+      </button>
+    );
+  }
   return (
     <button type="button" onClick={compartilhar} className={`${BOTAO_SECUNDARIO} ${className}`}>
       <IconeCompartilhar tamanho={15} />
@@ -78,9 +91,32 @@ function Compartilhar({ titulo, className = "" }: { titulo: string; className?: 
 }
 
 /**
+ * Celular: Favoritar e Compartilhar como ícones de 44 px ao lado do título (no cartão do preço, eram uma linha
+ * inteira de botões).
+ */
+export function AcoesTitulo({
+  imovel,
+  className = "",
+}: {
+  imovel: Pick<ImovelResumo, "id" | "titulo" | "bairro" | "cidade" | "uf" | "lance">;
+  className?: string;
+}) {
+  const { plano, ehFavorito, alternarFavorito, pedirLuneta } = useImovel();
+  return (
+    <div className={`flex shrink-0 items-center gap-2 ${className}`}>
+      <BotaoFavoritar imovel={imovel} plano={plano} favorito={ehFavorito(imovel.id)} onFavoritar={alternarFavorito} onUpsell={pedirLuneta} icone />
+      <Compartilhar titulo={imovel.titulo} icone />
+    </div>
+  );
+}
+
+/**
  * Resumo fixo da coluna direita (no celular, logo abaixo do título): lance mínimo, avaliação e deságio,
  * praça e data, "Ver anúncio na fonte", "Simular lance", Favoritar (Luneta) e Compartilhar, e o resumo dos
  * riscos com link para a seção.
+ * - Celular: a parte de baixo do "cartão de decisão" (o cabeçalho é a de cima); "Ver anúncio" e "Simular" lado a
+ *   lado; Favoritar e Compartilhar ficam ao lado do título.
+ * - Tablet em pé: na largura toda, com duas colunas por dentro (preço e praça | ações) e os riscos embaixo.
  */
 export function ResumoLateral({ d }: { d: DadosResumo }) {
   const { plano, ehFavorito, alternarFavorito, pedirLuneta } = useImovel();
@@ -91,71 +127,81 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
   return (
     <section
       aria-labelledby="resumo-preco-titulo"
-      className="relative rounded-3xl border border-nevoa/20 bg-tinta p-5 sm:p-6 [[data-theme=light]_&]:shadow-[0_1px_2px_rgba(15,24,48,.05),0_12px_32px_-14px_rgba(15,24,48,.18)]"
+      className="relative rounded-3xl border border-nevoa/20 bg-tinta p-5 sm:p-6 max-md:rounded-t-none max-md:border-t-nevoa/12 max-md:pt-4 md:max-lg:grid md:max-lg:grid-cols-[minmax(0,1fr)_17rem] md:max-lg:gap-x-8 [[data-theme=light]_&]:shadow-[0_1px_2px_rgba(15,24,48,.05),0_12px_32px_-14px_rgba(15,24,48,.18)] max-md:[[data-theme=light]_&]:shadow-[0_12px_32px_-14px_rgba(15,24,48,.18)]"
     >
       <h2 id="resumo-preco-titulo" className="sr-only">
         Preço, praça e ações
       </h2>
       <BotaoRecolher />
-      <p className="text-[11px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">{precoFixo(d) ? "Preço de venda" : "Lance mínimo"}</p>
-      <p className="mt-2 font-display text-[34px] leading-none font-bold tracking-[-0.03em] whitespace-nowrap text-luar sm:text-[38px]">{moeda(d.lance)}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-nevoa">
-        {d.avaliacao !== null ? (
-          <span>
-            Avaliação <span className="font-medium text-luar/90 tabular-nums">{moeda(d.avaliacao)}</span>
-          </span>
-        ) : (
-          <span>Avaliação não informada pela fonte</span>
-        )}
-        {desagio && (
-          <span
-            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12.5px] leading-none font-semibold ${
-              abaixo ? "bg-latao/15 text-latao-texto ring-1 ring-latao/40" : "bg-nevoa/12 text-luar ring-1 ring-nevoa/30"
-            }`}
-          >
-            {abaixo ? `−${d.desagio}%` : desagio.charAt(0).toUpperCase() + desagio.slice(1)}
-            {abaixo && <span className="sr-only">, {desagio}</span>}
-          </span>
-        )}
-      </div>
-
-      <div className="mt-5 flex items-start gap-3 border-t border-nevoa/15 pt-4">
-        <IconeCalendario tamanho={18} className="mt-0.5 text-nevoa" />
-        <div className="min-w-0 text-sm leading-snug">
-          <p className="font-medium text-luar">{partesPraca}</p>
-          {d.dataPraca ? (
-            <p className="mt-1 text-nevoa">
-              <span className="text-luar/90 tabular-nums">{dataHora(d.dataPraca)}</span>
-              {d.falta && (
-                <span className={d.falta.passou ? "text-aten" : ""}>
-                  {" "}
-                  · {d.falta.texto}
-                </span>
-              )}
-            </p>
+      <div className="min-w-0">
+        <p className="text-[11px] leading-none font-semibold tracking-[0.14em] text-nevoa uppercase">{precoFixo(d) ? "Preço de venda" : "Lance mínimo"}</p>
+        <p className="mt-2 font-display text-[34px] leading-none font-bold tracking-[-0.03em] whitespace-nowrap text-luar sm:text-[38px]">{moeda(d.lance)}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-nevoa">
+          {d.avaliacao !== null ? (
+            <span>
+              Avaliação <span className="font-medium text-luar/90 tabular-nums">{moeda(d.avaliacao)}</span>
+            </span>
           ) : (
-            <p className="mt-1 text-nevoa">Data não informada pela fonte</p>
+            <span>Avaliação não informada pela fonte</span>
+          )}
+          {desagio && (
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12.5px] leading-none font-semibold ${
+                abaixo ? "bg-latao/15 text-latao-texto ring-1 ring-latao/40" : "bg-nevoa/12 text-luar ring-1 ring-nevoa/30"
+              }`}
+            >
+              {abaixo ? `−${d.desagio}%` : desagio.charAt(0).toUpperCase() + desagio.slice(1)}
+              {abaixo && <span className="sr-only">, {desagio}</span>}
+            </span>
           )}
         </div>
+
+        <div className="mt-5 flex items-start gap-3 border-t border-nevoa/15 pt-4">
+          <IconeCalendario tamanho={18} className="mt-0.5 text-nevoa" />
+          <div className="min-w-0 text-sm leading-snug">
+            <p className="font-medium text-luar">{partesPraca}</p>
+            {d.dataPraca ? (
+              <p className="mt-1 text-nevoa">
+                <span className="text-luar/90 tabular-nums">{dataHora(d.dataPraca)}</span>
+                {d.falta && (
+                  <span className={d.falta.passou ? "text-aten" : ""}>
+                    {" "}
+                    · {d.falta.texto}
+                  </span>
+                )}
+              </p>
+            ) : (
+              <p className="mt-1 text-nevoa">Data não informada pela fonte</p>
+            )}
+          </div>
+      </div>
       </div>
 
-      <div id={ID_ACOES} className="mt-5 flex flex-col gap-2.5">
-        {d.anuncio ? (
-          <a href={d.anuncio} target="_blank" rel="noopener noreferrer" className="btn-primary w-full">
-            Ver anúncio na fonte
-            <IconeExterno tamanho={17} />
-            <span className="sr-only"> (abre em nova aba)</span>
+      {/* celular: "Ver anúncio" e "Simular" lado a lado (com o nome inteiro para leitores de tela) */}
+      <div id={ID_ACOES} className="mt-5 flex flex-col gap-2.5 max-md:mt-4 md:max-lg:mt-0 md:max-lg:self-center">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:flex-col md:gap-2.5">
+          {d.anuncio ? (
+            <a href={d.anuncio} target="_blank" rel="noopener noreferrer" className="btn-primary w-full max-md:px-4!">
+              {/* um item só no flex do botão (o gap separava "anúncio" de "na fonte") */}
+              <span>
+                Ver anúncio<span className="max-md:sr-only"> na fonte</span>
+              </span>
+              <IconeExterno tamanho={17} />
+              <span className="sr-only"> (abre em nova aba)</span>
+            </a>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-nevoa/35 px-4 py-3 text-center text-[13px] leading-snug text-nevoa max-md:col-span-2 max-md:text-sm">
+              Exemplo fictício: não há anúncio real para abrir.
+            </p>
+          )}
+          <a href="#simulador" className={`${d.anuncio ? "btn-outline gap-2" : "btn-primary"} w-full max-md:px-4! ${d.anuncio ? "" : "max-md:col-span-2"}`}>
+            <IconeCalculadora tamanho={18} />
+            <span>
+              Simular<span className={d.anuncio ? "max-md:sr-only" : ""}> {precoFixo(d) ? "compra" : "lance"}</span>
+            </span>
           </a>
-        ) : (
-          <p className="rounded-2xl border border-dashed border-nevoa/35 px-4 py-3 text-center text-[13px] leading-snug text-nevoa">
-            Exemplo fictício: não há anúncio real para abrir.
-          </p>
-        )}
-        <a href="#simulador" className={d.anuncio ? "btn-outline w-full gap-2" : "btn-primary w-full"}>
-          <IconeCalculadora tamanho={18} />
-          {precoFixo(d) ? "Simular compra" : "Simular lance"}
-        </a>
-        <div className="grid grid-cols-2 gap-2">
+        </div>
+        <div className="grid grid-cols-2 gap-2 max-md:hidden">
           <BotaoFavoritar
             imovel={d}
             plano={plano}
@@ -168,7 +214,7 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
         </div>
       </div>
 
-      <div className="mt-5 border-t border-nevoa/15 pt-4">
+      <div className="mt-5 border-t border-nevoa/15 pt-4 max-md:mt-4 md:max-lg:col-span-2">
         {d.riscos ? (
           <a
             href="#riscos"
@@ -216,7 +262,7 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
             <IconeCadeado tamanho={16} className="text-latao-texto" />
           </button>
         )}
-        <p className="mt-3 text-xs leading-snug text-nevoa">
+        <p className="mt-3 text-xs leading-snug text-nevoa max-sm:text-[13px]">
           {d.exemplo ? "Exemplo fictício, para mostrar a página." : `Fonte: ${d.fonteNome} · coletado em ${data(d.coletadoEm)}.`} Preços e datas mudam: confira o
           edital.
         </p>
@@ -287,7 +333,8 @@ export function BarraInferior({ d }: { d: DadosResumo }) {
         data-barra-fixa=""
         inert={!barra}
         aria-hidden={!barra}
-        className={`fixed inset-x-0 bottom-0 z-40 border-t border-nevoa/20 bg-noite/95 pt-3 pr-4 pl-1.5 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-md [@media(max-height:500px)]:pt-1.5 [@media(max-height:500px)]:pb-[max(6px,env(safe-area-inset-bottom))] transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden [[data-theme=light]_&]:shadow-[0_-8px_24px_rgba(15,24,48,.08)] ${
+        // tela baixa (celular deitado): a barra some e o preço fica na pílula da barra das seções (PilulaResumo)
+        className={`fixed inset-x-0 bottom-0 z-40 border-t border-nevoa/20 bg-noite/95 pt-3 pr-4 pl-1.5 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-md transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden baixa:hidden [[data-theme=light]_&]:shadow-[0_-8px_24px_rgba(15,24,48,.08)] ${
           barra ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0"
         }`}
       >
@@ -338,7 +385,7 @@ export function BarraInferior({ d }: { d: DadosResumo }) {
         inert={!pilula}
         aria-hidden={!pilula}
         aria-label={`Mostrar a barra do ${precoFixo(d) ? "preço" : "lance"} (${precoFixo(d) ? "preço de venda" : "lance mínimo"} ${moeda(d.lance)})`}
-        className={`fixed right-4 bottom-[max(16px,env(safe-area-inset-bottom))] z-40 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-latao/45 bg-tinta/95 py-1.5 pr-2 pl-4 text-[14px] leading-none text-luar shadow-[0_10px_30px_rgba(7,11,22,.45)] backdrop-blur-md transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden [[data-theme=light]_&]:shadow-[0_8px_24px_rgba(15,24,48,.16)] ${
+        className={`fixed right-4 bottom-[max(16px,env(safe-area-inset-bottom))] z-40 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-latao/45 bg-tinta/95 py-1.5 pr-2 pl-4 text-[14px] leading-none text-luar shadow-[0_10px_30px_rgba(7,11,22,.45)] backdrop-blur-md transition-[translate,opacity] duration-200 ease-luneta motion-reduce:transition-none lg:hidden baixa:hidden [[data-theme=light]_&]:shadow-[0_8px_24px_rgba(15,24,48,.16)] ${
           pilula ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-[calc(100%+24px)] opacity-0"
         }`}
       >

@@ -67,7 +67,7 @@ export function FontesPrecos({
   return (
     <div className="rounded-3xl border border-dashed border-nevoa/30 px-4 py-4 sm:px-6 sm:py-5">
       <h3 className="text-[12px] leading-none font-semibold tracking-[0.12em] text-nevoa uppercase">De onde vêm os preços</h3>
-      <ul className="mt-3 space-y-2 text-[13.5px] leading-relaxed text-nevoa">
+      <ul className="mt-3 space-y-2 text-sm leading-relaxed text-nevoa sm:text-[13.5px]">
         <li>
           <span className="font-medium text-luar">Avaliação e lance:</span> os imóveis em leilão na base da Luneta, em todas as cidades.
         </li>
@@ -109,7 +109,7 @@ export function FontesPrecos({
                   <Marca s={s} />
                   {GRUPO[s].titulo} <span className="font-normal text-nevoa tabular-nums">({lista.length})</span>
                 </p>
-                <p className="mt-0.5 pl-7 text-[12.5px] leading-snug text-nevoa">{GRUPO[s].nota}</p>
+                <p className="mt-0.5 pl-7 text-[13px] leading-snug text-nevoa sm:text-[12.5px]">{GRUPO[s].nota}</p>
                 <ul className="mt-2 pl-7">
                   {lista.map((f) => (
                     <li key={f.nome} className="grid gap-x-4 gap-y-0.5 border-t border-nevoa/10 py-2 first:border-t-0 sm:grid-cols-[10.5rem_minmax(0,1fr)]">
@@ -117,7 +117,7 @@ export function FontesPrecos({
                         {f.nome}
                         {f.nome === cidade && <span className="text-[12px] font-normal"> · este imóvel</span>}
                       </p>
-                      <p className="text-[12.5px] leading-snug text-nevoa">
+                      <p className="text-[13px] leading-snug text-nevoa sm:text-[12.5px]">
                         {s === "sem_dado_aberto" ? "a prefeitura não publica as transações" : f.detalhe}
                         {f.imoveisNaBase !== null && f.imoveisNaBase > 0 && (
                           <span className="tabular-nums">

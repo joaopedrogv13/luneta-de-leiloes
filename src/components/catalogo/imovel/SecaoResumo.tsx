@@ -42,7 +42,8 @@ import {
   IconeTerreno,
   IconeVaga,
 } from "./icones";
-import { Fato, GradeFatos, NovaAba, Secao, Subtitulo } from "./partes";
+import { MaisDados } from "./MaisDados";
+import { GradeFatos, NovaAba, Secao, Subtitulo, type DadosFato } from "./partes";
 import { BotaoTermo } from "./Termo";
 
 const I = 16;
@@ -56,6 +57,8 @@ const comPrivativa = (i: ImovelDetalhe) => !semUnidade(i) || i.areaPrivativa !==
 const TERMO_PRACA: Record<Praca, ChaveGlossario> = { "1": "praca_1", "2": "praca_2", unica: "praca_unica" };
 
 const LINK_INTERNO = "font-medium text-latao-texto underline underline-offset-4 hover:text-luar";
+/** Link curto no meio do texto: a área de toque cresce para 44 px (::before) sem mudar a linha. */
+const LINK_TOQUE = "relative before:absolute before:-inset-y-3.5 before:inset-x-0 before:content-[''] pointer-fine:before:hidden";
 
 const BOTAO_FONTE =
   "inline-flex min-h-11 items-center gap-2 rounded-full border border-nevoa/35 bg-noite/40 px-4 text-[13.5px] font-medium text-luar no-underline transition-colors hover:border-latao hover:bg-latao/10 pointer-fine:min-h-9";
@@ -83,7 +86,7 @@ function RegistroPendente({ reg, fonte }: { reg: RegistroNaTela; fonte: string }
       <p className="mt-1.5 text-[15px] leading-snug font-semibold text-luar sm:text-[16px]">
         Na ficha da {fonte} <span className="font-normal text-nevoa">·</span> <span className="font-medium text-luar/85">ainda não lida pela Luneta</span>
       </p>
-      <p className="mt-1 max-w-[62ch] text-[13px] leading-snug text-nevoa">
+      <p className="mt-1 max-w-[62ch] text-sm leading-snug text-nevoa sm:text-[13px]">
         A {fonte} publica esses dados na página do imóvel (a ficha), que não vem na lista que a Luneta lê. Abra a ficha para ver os números.
       </p>
       <ul aria-label="O que cada dado quer dizer" className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
@@ -119,12 +122,20 @@ function RegistroPendente({ reg, fonte }: { reg: RegistroNaTela; fonte: string }
 /**
  * Seção 1, "Resumo": a grade de fatos (o imóvel, preço, venda e pagamento, documentação e processo), todas
  * as praças com data e valor e a descrição completa do anúncio. O que a fonte não informa aparece como
- * "não informado pela fonte", nunca adivinhado.
+ * "não informado pela fonte", nunca adivinhado; os campos sem dado de cada grupo ficam juntos numa linha.
+ *
+ * Celular e tablet: primeiro "Em resumo", com os 6 fatos que mais pesam (área, quartos, vagas, preço por m²,
+ * financiamento e ocupação), e o resto atrás de "Ver todos os dados (N)" (a seção inteira ocupava 3 a 5 telas).
+ * No computador, tudo aberto, como antes.
  */
 export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora: number }) {
   const exemplo = ehExemplo(i);
   // num exemplo fictício não há fonte que deixou de informar: o campo simplesmente não se aplica
   const semDado = (genero: "m" | "f" = "m") => (exemplo ? "não se aplica (exemplo fictício)" : naoInformado(genero));
+  const agrupar = {
+    rotulo: exemplo ? "Não se aplicam (exemplo fictício)" : "Não informados pela fonte",
+    valores: exemplo ? ["não se aplica (exemplo fictício)"] : [naoInformado("m"), naoInformado("f")],
+  };
   const simNao = (v: boolean | null, sim: string, nao: string) => (v === null ? { valor: semDado(), vazio: true } : { valor: v ? sim : nao, vazio: false });
   const area = (v: number | null, genero: "m" | "f" = "f") => (v !== null && v > 0 ? { valor: areaDetalhada(v), vazio: false } : { valor: semDado(genero), vazio: true });
   const privativa = area(i.areaPrivativa);
@@ -154,13 +165,13 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
         : { valor: reg.pdfs.length > 0 ? "Número não informado pela fonte" : semRegistro("m"), vazio: true };
   const notaPdfs =
     reg.pdfs.length === 1 ? (
-      <a href={reg.pdfs[0]!.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 ${LINK_INTERNO}`}>
+      <a href={reg.pdfs[0]!.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 ${LINK_TOQUE} ${LINK_INTERNO}`}>
         PDF da matrícula
         <IconeExterno tamanho={13} />
         <NovaAba />
       </a>
     ) : reg.pdfs.length > 1 ? (
-      <a href="#documentos" className={LINK_INTERNO}>
+      <a href="#documentos" className={`${LINK_TOQUE} ${LINK_INTERNO}`}>
         PDFs das {reg.pdfs.length} matrículas em Documentos
       </a>
     ) : undefined;
@@ -170,267 +181,276 @@ export function SecaoResumo({ imovel: i, agora }: { imovel: ImovelDetalhe; agora
   const semLeiloeiro = vendaDireta && !i.leiloeiro && !siteLeiloeiro;
   const semProcesso = vendaDireta && i.judicial === false && !i.numeroProcesso;
 
+  // ---- os fatos, por grupo ----
+  const fQuartos: DadosFato | null = comQuartos(i)
+    ? { icone: <IconeQuarto tamanho={I} />, rotulo: "Quartos", valor: i.quartos !== null ? String(i.quartos) : semDado(), vazio: i.quartos === null }
+    : null;
+  const fVagas: DadosFato | null = comVagas(i)
+    ? { icone: <IconeVaga tamanho={I} />, rotulo: "Vagas de garagem", valor: i.vagas !== null ? String(i.vagas) : semDado("f"), vazio: i.vagas === null }
+    : null;
+  const fPrecoArea: DadosFato = {
+    icone: <IconeRegua tamanho={I} />,
+    rotulo: `${vendaDireta ? "Preço" : "Lance"} ${porArea}`,
+    valor: i.lanceM2 !== null ? precoArea(i.lance, i.lanceM2) : "sem a área, não dá para calcular",
+    vazio: i.lanceM2 === null,
+  };
+  const fFinanciamento: DadosFato = { icone: <IconeBanco tamanho={I} />, rotulo: "Financiamento", ...fin, termo: "financiamento" };
+  const fFgts: DadosFato = { icone: <IconeCarteira tamanho={I} />, rotulo: "Uso do FGTS", ...fgts, termo: "fgts" };
+  const fParcelamento: DadosFato = {
+    icone: <IconeParcelas tamanho={I} />,
+    rotulo: "Parcelamento",
+    ...parc,
+    termo: "parcelamento",
+    nota: i.parcelamento && i.condicoesPagamento ? i.condicoesPagamento : undefined,
+  };
+  const fOcupacao: DadosFato = {
+    icone: <IconeChave tamanho={I} />,
+    rotulo: "Ocupação",
+    valor: i.ocupacao ? OCUPACAO_ROTULO[i.ocupacao] : semDado("f"),
+    vazio: !i.ocupacao,
+    termo: "ocupacao",
+    nota: i.ocupacao || exemplo ? undefined : "Confira no edital ou visite a região",
+  };
+  const fPrivativa: DadosFato | null = comPrivativa(i) ? { icone: <IconeArea tamanho={I} />, rotulo: "Área privativa", ...privativa } : null;
+  const fTotal: DadosFato = { icone: <IconeAreaTotal tamanho={I} />, rotulo: "Área total", ...total };
+  const fTerreno: DadosFato = { icone: <IconeTerreno tamanho={I} />, rotulo: "Área do terreno", ...terreno };
+
+  const oImovel: (DadosFato | null)[] = [
+    { icone: <IconeCasa tamanho={I} />, rotulo: "Tipo", valor: i.tipo === "outro" ? "Outro tipo" : TIPO_ROTULO[i.tipo] },
+    fPrivativa,
+    fTotal,
+    fTerreno,
+    fQuartos,
+    fVagas,
+  ];
+  const preco: DadosFato[] = [
+    { icone: <IconeEtiqueta tamanho={I} />, rotulo: vendaDireta ? "Preço de venda" : "Lance mínimo", valor: moeda(i.lance) },
+    {
+      icone: <IconeAvaliacao tamanho={I} />,
+      rotulo: "Avaliação",
+      valor: i.avaliacao !== null ? moeda(i.avaliacao) : semDado("f"),
+      vazio: i.avaliacao === null,
+    },
+    {
+      icone: <IconeQueda tamanho={I} />,
+      rotulo: "Deságio",
+      valor: desagio ? desagio.charAt(0).toUpperCase() + desagio.slice(1) : "sem avaliação para comparar",
+      vazio: !desagio,
+    },
+    fPrecoArea,
+    {
+      icone: <IconeRegua tamanho={I} />,
+      rotulo: `Avaliação ${porArea}`,
+      valor: i.avaliacaoM2 !== null ? precoArea(i.avaliacao, i.avaliacaoM2) : "sem a área ou a avaliação, não dá para calcular",
+      vazio: i.avaliacaoM2 === null,
+    },
+  ];
+  const vendaPagamento: DadosFato[] = [
+    {
+      icone: <IconeMartelo tamanho={I} />,
+      rotulo: "Modalidade",
+      valor: MODALIDADE_ROTULO[i.modalidade],
+      termo: termoModalidade(i.modalidade, i.modalidadeFonte),
+      nota: exemplo
+        ? undefined
+        : i.modalidadeFonte && normalizar(i.modalidadeFonte) !== normalizar(MODALIDADE_ROTULO[i.modalidade])
+          ? `Como a ${i.fonte.nome} chama: “${i.modalidadeFonte}”`
+          : `Fonte: ${i.fonte.nome}`,
+    },
+    {
+      icone: <IconeCalendario tamanho={I} />,
+      rotulo: "Praça atual",
+      valor: i.praca ? PRACA_ROTULO[i.praca] : semDado("f"),
+      vazio: !i.praca,
+      termo: i.praca ? TERMO_PRACA[i.praca] : null,
+      nota: i.dataPraca ? dataHora(i.dataPraca) : i.praca ? "data não informada pela fonte" : undefined,
+    },
+    fFinanciamento,
+    fFgts,
+    fParcelamento,
+    fOcupacao,
+    {
+      icone: <IconeBalanca tamanho={I} />,
+      rotulo: "Natureza",
+      valor: i.judicial === null ? semDado("f") : i.judicial ? "Judicial" : "Extrajudicial",
+      vazio: i.judicial === null,
+      termo: i.judicial === null ? null : i.judicial ? "judicial" : vendaDireta ? "extrajudicial_venda_direta" : "extrajudicial",
+      nota: i.judicial === null ? undefined : i.judicial ? "Venda determinada pela Justiça" : "Venda direta do credor ou do dono",
+    },
+  ];
+  const documentacao: (DadosFato | null)[] = [
+    reg.situacao !== "pendente"
+      ? {
+          icone: <IconeDocumento tamanho={I} />,
+          rotulo: reg.matriculas.length > 1 ? "Matrículas" : "Matrícula",
+          valor: matricula.valor,
+          vazio: matricula.vazio,
+          termo: "matricula",
+          nota: notaPdfs,
+        }
+      : null,
+    reg.situacao !== "pendente"
+      ? { icone: <IconeDocumento tamanho={I} />, rotulo: "Cartório e comarca", valor: reg.cartorio ?? semRegistro("m"), vazio: !reg.cartorio, termo: "cartorio" }
+      : null,
+    reg.situacao !== "pendente" && (reg.situacao === "lido" || reg.inscricao)
+      ? {
+          icone: <IconeEtiqueta tamanho={I} />,
+          rotulo: "Inscrição imobiliária",
+          valor: reg.inscricao ?? semRegistro("f"),
+          vazio: !reg.inscricao,
+          termo: "inscricao_imobiliaria",
+          nota: reg.inscricao ? "Número do imóvel no IPTU" : undefined,
+        }
+      : null,
+    reg.situacao !== "pendente" && (reg.situacao === "lido" || reg.averbacao)
+      ? {
+          icone: <IconeCheck tamanho={I} />,
+          rotulo: "Averbação dos leilões negativos",
+          valor: reg.averbacao ?? semRegistro("f"),
+          vazio: !reg.averbacao,
+          termo: "averbacao_leiloes_negativos",
+        }
+      : null,
+    {
+      icone: <IconePasta tamanho={I} />,
+      rotulo: "Processo",
+      valor: i.numeroProcesso ?? (semProcesso ? "Não se aplica (venda extrajudicial)" : semDado()),
+      vazio: !i.numeroProcesso && !semProcesso,
+    },
+    {
+      icone: <IconeLeiloeiro tamanho={I} />,
+      rotulo: "Leiloeiro",
+      valor: i.leiloeiro ?? (siteLeiloeiro ? "Nome não informado pela fonte" : semLeiloeiro ? "Não há (venda direta)" : semDado()),
+      vazio: !i.leiloeiro && !semLeiloeiro,
+      termo: "leiloeiro",
+      nota: siteLeiloeiro ? (
+        // área de toque de 44 px sem mudar a linha (como o (i) do glossário)
+        <a href={siteLeiloeiro.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 ${LINK_TOQUE} ${LINK_INTERNO}`}>
+          Site: {dominio(siteLeiloeiro.url)}
+          <IconeExterno tamanho={13} />
+          <NovaAba />
+        </a>
+      ) : undefined,
+    },
+    { icone: <IconePredio tamanho={I} />, rotulo: "Comitente (quem vende)", valor: i.comitente ?? semDado(), vazio: !i.comitente, termo: "comitente" },
+  ];
+
+  // "Em resumo" (celular e tablet): a área que a fonte deu (privativa, total ou do terreno), quartos, vagas, o
+  // preço por m², financiamento e ocupação; terreno e rural, sem quartos e vagas, completam com o que pesa
+  const areaPrincipal: DadosFato =
+    (fPrivativa && !fPrivativa.vazio && fPrivativa) || (!fTotal.vazio && fTotal) || (!fTerreno.vazio && fTerreno) || { icone: <IconeArea tamanho={I} />, rotulo: "Área", valor: semDado("f"), vazio: true };
+  const extras = [areaPrincipal !== fTerreno && !fTerreno.vazio ? fTerreno : null, fParcelamento, fFgts].filter((f): f is DadosFato => !!f);
+  const essenciais = [areaPrincipal, fQuartos, fVagas, fPrecoArea, fFinanciamento, fOcupacao].filter((f): f is DadosFato => !!f);
+  const emResumo = [...essenciais, ...extras].slice(0, 6);
+  const totalDados =
+    [...oImovel, ...preco, ...vendaPagamento, ...documentacao].filter(Boolean).length + (reg.situacao === "pendente" ? 1 : 0) + pracas.length + 1;
+
   return (
     <Secao id="resumo" titulo="Resumo do imóvel" sobretitulo="Tudo o que a fonte informa">
-      <div className="space-y-8">
-        <div>
-          <Subtitulo className="mb-3">O imóvel</Subtitulo>
-          <GradeFatos rotulo="O imóvel">
-            <Fato icone={<IconeCasa tamanho={I} />} rotulo="Tipo" valor={i.tipo === "outro" ? "Outro tipo" : TIPO_ROTULO[i.tipo]} />
-            {comPrivativa(i) && <Fato icone={<IconeArea tamanho={I} />} rotulo="Área privativa" {...privativa} />}
-            <Fato icone={<IconeAreaTotal tamanho={I} />} rotulo="Área total" {...total} />
-            <Fato icone={<IconeTerreno tamanho={I} />} rotulo="Área do terreno" {...terreno} />
-            {comQuartos(i) && (
-              <Fato
-                icone={<IconeQuarto tamanho={I} />}
-                rotulo="Quartos"
-                valor={i.quartos !== null ? String(i.quartos) : semDado()}
-                vazio={i.quartos === null}
-              />
-            )}
-            {comVagas(i) && (
-              <Fato
-                icone={<IconeVaga tamanho={I} />}
-                rotulo="Vagas de garagem"
-                valor={i.vagas !== null ? String(i.vagas) : semDado("f")}
-                vazio={i.vagas === null}
-              />
-            )}
-          </GradeFatos>
-        </div>
+      {/* celular e tablet: os fatos que mais pesam; o resto em "Ver todos os dados" */}
+      <div className="lg:hidden">
+        <Subtitulo className="mb-3">Em resumo</Subtitulo>
+        <GradeFatos rotulo="Em resumo" fatos={emResumo} agrupar={agrupar} />
+      </div>
+      <MaisDados rotulo={`Ver todos os dados (${totalDados})`} rotuloAberto="Fechar os dados">
+        <div className="space-y-8">
+          <div>
+            <Subtitulo className="mb-3">O imóvel</Subtitulo>
+            <GradeFatos rotulo="O imóvel" fatos={oImovel} agrupar={agrupar} />
+          </div>
 
-        <div>
-          <Subtitulo className="mb-3">Preço</Subtitulo>
-          <GradeFatos rotulo="Preço">
-            <Fato icone={<IconeEtiqueta tamanho={I} />} rotulo={vendaDireta ? "Preço de venda" : "Lance mínimo"} valor={moeda(i.lance)} />
-            <Fato
-              icone={<IconeAvaliacao tamanho={I} />}
-              rotulo="Avaliação"
-              valor={i.avaliacao !== null ? moeda(i.avaliacao) : semDado("f")}
-              vazio={i.avaliacao === null}
-            />
-            <Fato
-              icone={<IconeQueda tamanho={I} />}
-              rotulo="Deságio"
-              valor={desagio ? desagio.charAt(0).toUpperCase() + desagio.slice(1) : "sem avaliação para comparar"}
-              vazio={!desagio}
-            />
-            <Fato
-              icone={<IconeRegua tamanho={I} />}
-              rotulo={`${vendaDireta ? "Preço" : "Lance"} ${porArea}`}
-              valor={i.lanceM2 !== null ? precoArea(i.lance, i.lanceM2) : "sem a área, não dá para calcular"}
-              vazio={i.lanceM2 === null}
-            />
-            <Fato
-              icone={<IconeRegua tamanho={I} />}
-              rotulo={`Avaliação ${porArea}`}
-              valor={i.avaliacaoM2 !== null ? precoArea(i.avaliacao, i.avaliacaoM2) : "sem a área ou a avaliação, não dá para calcular"}
-              vazio={i.avaliacaoM2 === null}
-            />
-          </GradeFatos>
-        </div>
+          <div>
+            <Subtitulo className="mb-3">Preço</Subtitulo>
+            <GradeFatos rotulo="Preço" fatos={preco} agrupar={agrupar} />
+          </div>
 
-        <div>
-          <Subtitulo className="mb-3">Venda e pagamento</Subtitulo>
-          <GradeFatos rotulo="Venda e pagamento">
-            <Fato
-              icone={<IconeMartelo tamanho={I} />}
-              rotulo="Modalidade"
-              valor={MODALIDADE_ROTULO[i.modalidade]}
-              termo={termoModalidade(i.modalidade, i.modalidadeFonte)}
-              nota={
-                exemplo
-                  ? undefined
-                  : i.modalidadeFonte && normalizar(i.modalidadeFonte) !== normalizar(MODALIDADE_ROTULO[i.modalidade])
-                    ? `Como a ${i.fonte.nome} chama: “${i.modalidadeFonte}”`
-                    : `Fonte: ${i.fonte.nome}`
-              }
-            />
-            <Fato
-              icone={<IconeCalendario tamanho={I} />}
-              rotulo="Praça atual"
-              valor={i.praca ? PRACA_ROTULO[i.praca] : semDado("f")}
-              vazio={!i.praca}
-              termo={i.praca ? TERMO_PRACA[i.praca] : null}
-              nota={i.dataPraca ? dataHora(i.dataPraca) : i.praca ? "data não informada pela fonte" : undefined}
-            />
-            <Fato icone={<IconeBanco tamanho={I} />} rotulo="Financiamento" {...fin} termo="financiamento" />
-            <Fato icone={<IconeCarteira tamanho={I} />} rotulo="Uso do FGTS" {...fgts} termo="fgts" />
-            <Fato
-              icone={<IconeParcelas tamanho={I} />}
-              rotulo="Parcelamento"
-              {...parc}
-              termo="parcelamento"
-              nota={i.parcelamento && i.condicoesPagamento ? i.condicoesPagamento : undefined}
-            />
-            <Fato
-              icone={<IconeChave tamanho={I} />}
-              rotulo="Ocupação"
-              valor={i.ocupacao ? OCUPACAO_ROTULO[i.ocupacao] : semDado("f")}
-              vazio={!i.ocupacao}
-              termo="ocupacao"
-              nota={i.ocupacao || exemplo ? undefined : "Confira no edital ou visite a região"}
-            />
-            <Fato
-              icone={<IconeBalanca tamanho={I} />}
-              rotulo="Natureza"
-              valor={i.judicial === null ? semDado("f") : i.judicial ? "Judicial" : "Extrajudicial"}
-              vazio={i.judicial === null}
-              termo={i.judicial === null ? null : i.judicial ? "judicial" : vendaDireta ? "extrajudicial_venda_direta" : "extrajudicial"}
-              nota={i.judicial === null ? undefined : i.judicial ? "Venda determinada pela Justiça" : "Venda direta do credor ou do dono"}
-            />
-          </GradeFatos>
+          <div>
+            <Subtitulo className="mb-3">Venda e pagamento</Subtitulo>
+            <GradeFatos rotulo="Venda e pagamento" fatos={vendaPagamento} agrupar={agrupar} />
 
-          <div className="mt-4 rounded-2xl border border-nevoa/12 bg-tinta px-4 py-1">
-            <p className="pt-3 pb-1 text-[12.5px] leading-snug text-nevoa">Todas as praças</p>
-            {pracas.length === 0 ? (
-              <p className="pb-3 text-[15px] text-nevoa">{naoInformado("f").replace("informada", "informadas")}</p>
-            ) : (
-              <ol>
-                {pracas.map((p) => {
-                  const atual = p.numero === pracaAtual;
-                  const falta = faltaParaPraca(p.data, agora);
-                  return (
-                    <li key={p.numero} className="flex gap-3 border-t border-nevoa/10 py-3 first:border-t-0">
-                      <span
-                        aria-hidden="true"
-                        className={`mt-[7px] size-2.5 shrink-0 rounded-full ${atual ? "bg-latao shadow-[0_0_0_4px_rgba(201,162,77,.18)]" : "border border-nevoa/60"}`}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-3">
-                          <p className="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-luar">
-                            {rotuloNumeroPraca(p.numero)}
-                            {atual && (
-                              <span className="rounded-full bg-latao/15 px-2 py-0.5 text-[11px] font-semibold tracking-[0.06em] text-latao-texto uppercase ring-1 ring-latao/40">
-                                atual
-                              </span>
-                            )}
-                          </p>
-                          <p className={`shrink-0 text-right whitespace-nowrap tabular-nums ${p.valorMinimo !== null ? "text-[15px] font-semibold text-luar" : "text-[13px] text-nevoa"}`}>
-                            {p.valorMinimo !== null ? (
+            <div className="mt-4 rounded-2xl border border-nevoa/12 bg-tinta px-4 py-1">
+              <p className="pt-3 pb-1 text-[12.5px] leading-snug text-nevoa max-sm:text-[13px]">Todas as praças</p>
+              {pracas.length === 0 ? (
+                <p className="pb-3 text-[15px] text-nevoa">{naoInformado("f").replace("informada", "informadas")}</p>
+              ) : (
+                <ol>
+                  {pracas.map((p) => {
+                    const atual = p.numero === pracaAtual;
+                    const falta = faltaParaPraca(p.data, agora);
+                    return (
+                      <li key={p.numero} className="flex gap-3 border-t border-nevoa/10 py-3 first:border-t-0">
+                        <span
+                          aria-hidden="true"
+                          className={`mt-[7px] size-2.5 shrink-0 rounded-full ${atual ? "bg-latao shadow-[0_0_0_4px_rgba(201,162,77,.18)]" : "border border-nevoa/60"}`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <p className="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-luar">
+                              {rotuloNumeroPraca(p.numero)}
+                              {atual && (
+                                <span className="rounded-full bg-latao/15 px-2 py-0.5 text-[11px] font-semibold tracking-[0.06em] text-latao-texto uppercase ring-1 ring-latao/40">
+                                  atual
+                                </span>
+                              )}
+                            </p>
+                            <p className={`shrink-0 text-right whitespace-nowrap tabular-nums ${p.valorMinimo !== null ? "text-[15px] font-semibold text-luar" : "text-[13px] text-nevoa"}`}>
+                              {p.valorMinimo !== null ? (
+                                <>
+                                  <span className="sr-only">{vendaDireta ? "Preço: " : "Lance mínimo: "}</span>
+                                  {moeda(p.valorMinimo)}
+                                </>
+                              ) : (
+                                "valor não informado"
+                              )}
+                            </p>
+                          </div>
+                          <p className="mt-0.5 text-[13px] text-nevoa max-sm:text-sm">
+                            {p.data ? (
                               <>
-                                <span className="sr-only">{vendaDireta ? "Preço: " : "Lance mínimo: "}</span>
-                                {moeda(p.valorMinimo)}
+                                <span className="tabular-nums">{dataHora(p.data)}</span>
+                                {falta && <span className={falta.passou ? "" : "text-luar/80"}> · {falta.texto}</span>}
                               </>
                             ) : (
-                              "valor não informado"
+                              "data não informada pela fonte"
                             )}
                           </p>
                         </div>
-                        <p className="mt-0.5 text-[13px] text-nevoa">
-                          {p.data ? (
-                            <>
-                              <span className="tabular-nums">{dataHora(p.data)}</span>
-                              {falta && <span className={falta.passou ? "" : "text-luar/80"}> · {falta.texto}</span>}
-                            </>
-                          ) : (
-                            "data não informada pela fonte"
-                          )}
-                        </p>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Subtitulo className="mb-3">Documentação e processo</Subtitulo>
+            {reg.situacao === "pendente" && <RegistroPendente reg={reg} fonte={i.fonte.nome} />}
+            {reg.situacao === "lido" && (
+              <p className="-mt-1 mb-3 text-sm leading-snug text-nevoa sm:text-[13px]">
+                Lidos na ficha da {i.fonte.nome}
+                {reg.lidoEm ? <> em <span className="tabular-nums">{data(reg.lidoEm)}</span></> : null}
+                {reg.paginaFonte && (
+                  <>
+                    {" · "}
+                    <a href={reg.paginaFonte} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 ${LINK_TOQUE} ${LINK_INTERNO}`}>
+                      Abrir a ficha
+                      <IconeExterno tamanho={13} />
+                      <NovaAba />
+                    </a>
+                  </>
+                )}
+              </p>
             )}
+            <GradeFatos rotulo="Documentação e processo" fatos={documentacao} agrupar={agrupar} />
+          </div>
+
+          <div>
+            <Subtitulo className="mb-3">Descrição do anúncio</Subtitulo>
+            {i.descricao ? <Descricao texto={i.descricao} /> : <p className="text-[15px] text-nevoa">Descrição {semDado("f")}.</p>}
           </div>
         </div>
-
-        <div>
-          <Subtitulo className="mb-3">Documentação e processo</Subtitulo>
-          {reg.situacao === "pendente" && <RegistroPendente reg={reg} fonte={i.fonte.nome} />}
-          {reg.situacao === "lido" && (
-            <p className="-mt-1 mb-3 text-[13px] leading-snug text-nevoa">
-              Lidos na ficha da {i.fonte.nome}
-              {reg.lidoEm ? <> em <span className="tabular-nums">{data(reg.lidoEm)}</span></> : null}
-              {reg.paginaFonte && (
-                <>
-                  {" · "}
-                  <a href={reg.paginaFonte} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 ${LINK_INTERNO}`}>
-                    Abrir a ficha
-                    <IconeExterno tamanho={13} />
-                    <NovaAba />
-                  </a>
-                </>
-              )}
-            </p>
-          )}
-          <GradeFatos rotulo="Documentação e processo">
-            {reg.situacao !== "pendente" && (
-              <>
-                <Fato
-                  icone={<IconeDocumento tamanho={I} />}
-                  rotulo={reg.matriculas.length > 1 ? "Matrículas" : "Matrícula"}
-                  valor={matricula.valor}
-                  vazio={matricula.vazio}
-                  termo="matricula"
-                  nota={notaPdfs}
-                />
-                <Fato
-                  icone={<IconeDocumento tamanho={I} />}
-                  rotulo="Cartório e comarca"
-                  valor={reg.cartorio ?? semRegistro("m")}
-                  vazio={!reg.cartorio}
-                  termo="cartorio"
-                />
-                {(reg.situacao === "lido" || reg.inscricao) && (
-                  <Fato
-                    icone={<IconeEtiqueta tamanho={I} />}
-                    rotulo="Inscrição imobiliária"
-                    valor={reg.inscricao ?? semRegistro("f")}
-                    vazio={!reg.inscricao}
-                    termo="inscricao_imobiliaria"
-                    nota={reg.inscricao ? "Número do imóvel no IPTU" : undefined}
-                  />
-                )}
-                {(reg.situacao === "lido" || reg.averbacao) && (
-                  <Fato
-                    icone={<IconeCheck tamanho={I} />}
-                    rotulo="Averbação dos leilões negativos"
-                    valor={reg.averbacao ?? semRegistro("f")}
-                    vazio={!reg.averbacao}
-                    termo="averbacao_leiloes_negativos"
-                  />
-                )}
-              </>
-            )}
-            <Fato
-              icone={<IconePasta tamanho={I} />}
-              rotulo="Processo"
-              valor={i.numeroProcesso ?? (semProcesso ? "Não se aplica (venda extrajudicial)" : semDado())}
-              vazio={!i.numeroProcesso && !semProcesso}
-            />
-            <Fato
-              icone={<IconeLeiloeiro tamanho={I} />}
-              rotulo="Leiloeiro"
-              valor={i.leiloeiro ?? (siteLeiloeiro ? "Nome não informado pela fonte" : semLeiloeiro ? "Não há (venda direta)" : semDado())}
-              vazio={!i.leiloeiro && !semLeiloeiro}
-              termo="leiloeiro"
-              nota={
-                siteLeiloeiro ? (
-                  // área de toque de 44 px sem mudar a linha (como o (i) do glossário)
-                  <a
-                    href={siteLeiloeiro.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`relative inline-flex items-center gap-1 before:absolute before:-inset-y-3.5 before:inset-x-0 before:content-[''] pointer-fine:before:hidden ${LINK_INTERNO}`}
-                  >
-                    Site: {dominio(siteLeiloeiro.url)}
-                    <IconeExterno tamanho={13} />
-                    <NovaAba />
-                  </a>
-                ) : undefined
-              }
-            />
-            <Fato icone={<IconePredio tamanho={I} />} rotulo="Comitente (quem vende)" valor={i.comitente ?? semDado()} vazio={!i.comitente} termo="comitente" />
-          </GradeFatos>
-        </div>
-
-        <div>
-          <Subtitulo className="mb-3">Descrição do anúncio</Subtitulo>
-          {i.descricao ? <Descricao texto={i.descricao} /> : <p className="text-[15px] text-nevoa">Descrição {semDado("f")}.</p>}
-        </div>
-      </div>
+      </MaisDados>
     </Secao>
   );
 }

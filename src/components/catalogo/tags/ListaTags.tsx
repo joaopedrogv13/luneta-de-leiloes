@@ -52,7 +52,7 @@ export function ListaTags({
   const comRotuloRevisao = primeiraRevisao > 0 && (aberta || !limite);
 
   return (
-    <ul aria-label={rotulo} className={`flex flex-wrap items-center gap-x-1.5 gap-y-2 ${className}`}>
+    <ul aria-label={rotulo} className={`flex flex-wrap items-center gap-x-1.5 gap-y-2 pointer-coarse:gap-y-3 ${className}`}>
       {visiveis.map((t, i) => (
         <li key={`${t.slug}-${t.emRevisao ? "r" : "c"}`} className="flex max-w-full items-center gap-1.5">
           {comRotuloRevisao && i === primeiraRevisao && (

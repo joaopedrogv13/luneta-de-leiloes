@@ -10,6 +10,7 @@ import { LIMITES, multiplicador, PADRAO } from "@/lib/simulador/premissas";
 import { CENARIO_ROTULO, notaIr, palavrasPreco } from "@/lib/simulador/textos";
 import { TODOS_CENARIOS, type Ajustes, type CenarioFixo, type LinhaDesligavel } from "@/lib/simulador/tipos";
 import { BotaoEditar, CampoNumero, focar, IconeLapis, IconeMais, IconeOlhoFechado, IconeVoltar, Segmentado } from "./controles";
+import type { AbaSimulador } from "./AbasSimulador";
 import type { AlvoEditor } from "./Editores";
 
 const CHAVE_CENARIO: Record<CenarioFixo, "cenarioConservador" | "cenarioBase" | "cenarioOtimista"> = {
@@ -25,15 +26,20 @@ export const ID_DETALHE = "sim-detalhe-titulo";
  * os números-resumo (lucro total e anualizado); a comparação com uma aplicação; a cascata da venda ao lucro; e
  * a conta linha a linha. Cada linha tem um lápis discreto que abre o pop-up daquele tipo de despesa; dá para
  * tirar e religar linhas, criar custos ("+ Adicionar custo") e restaurar tudo.
+ * Até lg, as abas do simulador escolhem a parte: "Conta" (os ajustes, os números e a conta linha a linha) ou
+ * "Gráfico" (a cascata); no computador, tudo aparece.
  */
 export function Detalhe({
   r,
   aoEditar,
   atualizar,
+  aba = "conta",
 }: {
   r: ResultadoCompleto;
   aoEditar: (alvo: AlvoEditor, quem: HTMLElement | null) => void;
   atualizar: (mudar: (e: EstadoSimulador) => EstadoSimulador) => void;
+  /** a aba aberta no celular e no tablet */
+  aba?: AbaSimulador;
 }) {
   const d = r.detalhe!;
   const sim = d.sim;
@@ -56,6 +62,9 @@ export function Detalhe({
     });
 
   const grupos: GrupoConta[] = ["venda", "compra", "depois", "mensal"];
+  // até lg, cada aba mostra a sua parte
+  const soConta = aba === "grafico" ? "max-lg:hidden" : "";
+  const soGrafico = aba === "grafico" ? "" : "max-lg:hidden";
 
   return (
     <section
@@ -109,266 +118,273 @@ export function Detalhe({
       </p>
 
       {/* ------------------------------------------------------------ cenário, % da venda, prazo e lance */}
-      <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl border border-nevoa/15 bg-noite/50 p-3 sm:grid-cols-[1.1fr_1fr_0.9fr] sm:p-4">
-        <div className="col-span-2 min-w-0 sm:col-span-1">
-          <label htmlFor="sim-det-cenario" className="mb-1 block text-[12px] font-medium text-nevoa">
-            Cenário de venda
-          </label>
-          <select
-            id="sim-det-cenario"
-            value={sim.cenario}
-            onChange={(e) => {
-              const c = e.target.value as (typeof TODOS_CENARIOS)[number];
-              atualizar((x) => {
-                if (c === "personalizado" && !x.ajustes.vendaPersonalizada) {
-                  const v = Math.round((p.valorVenda ?? 0) / 1000) * 1000 || 1;
-                  return { ...x, ajustes: { ...x.ajustes, vendaPersonalizada: { modo: "valor", valor: v } }, celula: { ...x.celula, cenario: c } };
-                }
-                return { ...x, celula: { ...x.celula, cenario: c } };
-              });
-            }}
-            // 16 px no toque: o Safari do iPhone não amplia a página ao focar
-            className="h-11 w-full cursor-pointer rounded-xl border border-nevoa/30 bg-noite px-3 text-base font-medium text-luar hover:border-nevoa/50 focus-visible:border-latao-texto pointer-fine:h-10 pointer-fine:text-[15px]"
-          >
-            {TODOS_CENARIOS.map((c) => (
-              <option key={c} value={c} className="bg-tinta">
-                {CENARIO_ROTULO[c]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="min-w-0">
-          <label htmlFor="sim-det-venda" className="mb-1 block text-[12px] font-medium text-nevoa">
-            {sim.cenario === "personalizado" && p.vendaPersonalizada?.modo === "valor" ? "Valor da venda" : "% da venda"}
-          </label>
-          <PctVenda r={r} atualizar={atualizar} />
-          <p className="mt-1 text-[11.5px] leading-tight text-nevoa tabular-nums">= {moeda(sim.venda)}</p>
-        </div>
-        <div className="min-w-0">
-          <label htmlFor="sim-det-prazo" className="mb-1 block text-[12px] font-medium text-nevoa">
-            Prazo de venda
-          </label>
-          <CampoNumero
-            id="sim-det-prazo"
-            valor={sim.meses}
-            min={LIMITES.prazo[0]}
-            max={LIMITES.prazo[1]}
-            passo={1}
-            sufixo="meses"
-            aoMudar={(n) => atualizar((x) => ({ ...x, celula: { ...x.celula, meses: Math.round(n) } }))}
-            className="w-full"
-          />
-          <p className="mt-1 text-[11.5px] leading-tight text-nevoa">3 a 60 meses</p>
-        </div>
-        <div className="col-span-2 min-w-0 sm:col-span-3">
-          <p aria-hidden="true" className="mb-1 text-[12px] font-medium text-nevoa">{pal.Lance} usado na conta</p>
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            {fixo && d.qualLance === "minimo" ? (
-              // venda direta: só há o preço pedido (o preço não sobe); outro valor, para comparar, pelo lápis ao lado
-              <p className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl border border-nevoa/25 bg-noite px-3.5 text-[13px] pointer-fine:min-h-9">
-                <span className="font-semibold">Preço pedido</span>
-                <span className="font-semibold tabular-nums">{moeda(r.modelo.entrada.lance)}</span>
-              </p>
-            ) : (
-              <Segmentado<"minimo" | "teto" | "meu">
-                nome="sim-det-lance"
-                legenda={`${pal.Lance} usado na conta`}
-                legendaVisivel={false}
-                valor={d.qualLance}
-                tamanho="sm"
-                className="w-full min-w-0 flex-1"
-                aoMudar={(v) => {
-                  if (v === "meu") return;
-                  atualizar((x) => (v === "teto" ? { ...x, lanceDetalhe: "teto" } : { ...x, meuLance: null, lanceDetalhe: "meu" }));
-                }}
-                opcoes={[
-                  { valor: "minimo", rotulo: pal.Minimo, detalhe: moeda(r.modelo.entrada.lance) },
-                  ...(!fixo && r.teto !== null ? [{ valor: "teto" as const, rotulo: "Seu teto", detalhe: moeda(r.teto) }] : []),
-                  ...(d.qualLance === "meu" ? [{ valor: "meu" as const, rotulo: fixo ? "Seu preço" : "Seu lance", detalhe: moeda(sim.lance) }] : []),
-                ]}
-              />
-            )}
-            <button
-              type="button"
-              aria-haspopup="dialog"
-              onClick={editar({ editor: "lance" })}
-              className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 self-start rounded-full px-2 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline sm:self-auto pointer-fine:min-h-9"
+      <div className={soConta}>
+        <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl border border-nevoa/15 bg-noite/50 p-3 sm:grid-cols-[1.1fr_1fr_0.9fr] sm:p-4">
+          <div className="col-span-2 min-w-0 sm:col-span-1">
+            <label htmlFor="sim-det-cenario" className="mb-1 block text-[12px] font-medium text-nevoa">
+              Cenário de venda
+            </label>
+            <select
+              id="sim-det-cenario"
+              value={sim.cenario}
+              onChange={(e) => {
+                const c = e.target.value as (typeof TODOS_CENARIOS)[number];
+                atualizar((x) => {
+                  if (c === "personalizado" && !x.ajustes.vendaPersonalizada) {
+                    const v = Math.round((p.valorVenda ?? 0) / 1000) * 1000 || 1;
+                    return { ...x, ajustes: { ...x.ajustes, vendaPersonalizada: { modo: "valor", valor: v } }, celula: { ...x.celula, cenario: c } };
+                  }
+                  return { ...x, celula: { ...x.celula, cenario: c } };
+                });
+              }}
+              // 16 px no toque: o Safari do iPhone não amplia a página ao focar
+              className="h-11 w-full cursor-pointer rounded-xl border border-nevoa/30 bg-noite px-3 text-base font-medium text-luar hover:border-nevoa/50 focus-visible:border-latao-texto pointer-fine:h-10 pointer-fine:text-[15px]"
             >
-              <IconeLapis className="size-3" />
-              outro {pal.lance} e forma de pagamento
-            </button>
+              {TODOS_CENARIOS.map((c) => (
+                <option key={c} value={c} className="bg-tinta">
+                  {CENARIO_ROTULO[c]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="sim-det-venda" className="mb-1 block text-[12px] font-medium text-nevoa">
+              {sim.cenario === "personalizado" && p.vendaPersonalizada?.modo === "valor" ? "Valor da venda" : "% da venda"}
+            </label>
+            <PctVenda r={r} atualizar={atualizar} />
+            <p className="mt-1 text-[11.5px] leading-tight text-nevoa tabular-nums">= {moeda(sim.venda)}</p>
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="sim-det-prazo" className="mb-1 block text-[12px] font-medium text-nevoa">
+              Prazo de venda
+            </label>
+            <CampoNumero
+              id="sim-det-prazo"
+              valor={sim.meses}
+              min={LIMITES.prazo[0]}
+              max={LIMITES.prazo[1]}
+              passo={1}
+              sufixo="meses"
+              aoMudar={(n) => atualizar((x) => ({ ...x, celula: { ...x.celula, meses: Math.round(n) } }))}
+              className="w-full"
+            />
+            <p className="mt-1 text-[11.5px] leading-tight text-nevoa">3 a 60 meses</p>
+          </div>
+          <div className="col-span-2 min-w-0 sm:col-span-3">
+            <p aria-hidden="true" className="mb-1 text-[12px] font-medium text-nevoa">{pal.Lance} usado na conta</p>
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+              {fixo && d.qualLance === "minimo" ? (
+                // venda direta: só há o preço pedido (o preço não sobe); outro valor, para comparar, pelo lápis ao lado
+                <p className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl border border-nevoa/25 bg-noite px-3.5 text-[13px] pointer-fine:min-h-9">
+                  <span className="font-semibold">Preço pedido</span>
+                  <span className="font-semibold tabular-nums">{moeda(r.modelo.entrada.lance)}</span>
+                </p>
+              ) : (
+                <Segmentado<"minimo" | "teto" | "meu">
+                  nome="sim-det-lance"
+                  legenda={`${pal.Lance} usado na conta`}
+                  legendaVisivel={false}
+                  valor={d.qualLance}
+                  tamanho="sm"
+                  className="w-full min-w-0 flex-1"
+                  aoMudar={(v) => {
+                    if (v === "meu") return;
+                    atualizar((x) => (v === "teto" ? { ...x, lanceDetalhe: "teto" } : { ...x, meuLance: null, lanceDetalhe: "meu" }));
+                  }}
+                  opcoes={[
+                    { valor: "minimo", rotulo: pal.Minimo, detalhe: moeda(r.modelo.entrada.lance) },
+                    ...(!fixo && r.teto !== null ? [{ valor: "teto" as const, rotulo: "Seu teto", detalhe: moeda(r.teto) }] : []),
+                    ...(d.qualLance === "meu" ? [{ valor: "meu" as const, rotulo: fixo ? "Seu preço" : "Seu lance", detalhe: moeda(sim.lance) }] : []),
+                  ]}
+                />
+              )}
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                onClick={editar({ editor: "lance" })}
+                className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 self-start rounded-full px-2 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline sm:self-auto pointer-fine:min-h-9"
+              >
+                <IconeLapis className="size-3" />
+                outro {pal.lance} e forma de pagamento
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ------------------------------------------------------------ números-resumo */}
-      <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Destaque
-          rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"}
-          valor={moedaSinal(sim.lucro)}
-          tom={sim.lucro < 0 ? "grave" : "forte"}
-          nota={`em ${meses(sim.meses)}, ${notaIr(p)}`}
-        />
-        {/* o R$/ano é a média simples (lucro ÷ meses × 12) e o % ao ano conta juros compostos: dividir um pelo outro
-            não dá o %, então a nota diz como cada um foi feito */}
-        <Destaque
-          rotulo="Lucro anualizado"
-          valor={`${moedaSinal(sim.lucroAno)}`}
-          sufixo="/ano"
-          tom={sim.lucroAno < 0 ? "grave" : undefined}
-          nota={
-            <>
-              <span className="block">{sim.meses === 12 ? "venda em 12 meses: igual ao total" : `média: lucro ÷ ${sim.meses} × 12`}</span>
-              <span className="mt-0.5 block">
-                <strong className={`font-semibold ${sim.roiAA < 0 ? "text-grave-texto" : "text-luar"}`}>{pct(sim.roiAA)} ao ano</strong> em juros compostos
-                {r.meta.tipo === "roi_aa" ? ` · meta ${pct(r.meta.valor)}` : ""}
+        {/* ------------------------------------------------------------ números-resumo */}
+        <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <Destaque
+            rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"}
+            valor={moedaSinal(sim.lucro)}
+            tom={sim.lucro < 0 ? "grave" : "forte"}
+            nota={`em ${meses(sim.meses)}, ${notaIr(p)}`}
+          />
+          {/* o R$/ano é a média simples (lucro ÷ meses × 12) e o % ao ano conta juros compostos: dividir um pelo outro
+              não dá o %, então a nota diz como cada um foi feito */}
+          <Destaque
+            rotulo="Lucro anualizado"
+            valor={`${moedaSinal(sim.lucroAno)}`}
+            sufixo="/ano"
+            tom={sim.lucroAno < 0 ? "grave" : undefined}
+            nota={
+              <>
+                <span className="block">{sim.meses === 12 ? "venda em 12 meses: igual ao total" : `média: lucro ÷ ${sim.meses} × 12`}</span>
+                <span className="mt-0.5 block">
+                  <strong className={`font-semibold ${sim.roiAA < 0 ? "text-grave-texto" : "text-luar"}`}>{pct(sim.roiAA)} ao ano</strong> em juros compostos
+                  {r.meta.tipo === "roi_aa" ? ` · meta ${pct(r.meta.valor)}` : ""}
+                </span>
+              </>
+            }
+          />
+          <Destaque
+            rotulo={`Retorno em ${meses(sim.meses)}`}
+            valor={pct(sim.roi)}
+            tom={sim.roi < 0 ? "grave" : undefined}
+            nota={`${pct(sim.roiAM, 2)} ao mês${r.meta.tipo === "roi_periodo" ? ` · meta ${pct(r.meta.valor)}` : ""}`}
+          />
+          <Destaque rotulo="Dinheiro investido" valor={moeda(sim.capital)} nota={fin ? "entrada, parcelas e custos" : `${pal.lance} e custos`} />
+        </dl>
+
+        {p.aplicacaoAA > 0 ? (
+          <div className="group mt-3 flex items-start gap-2 rounded-xl bg-noite/60 py-2.5 pr-1.5 pl-3 text-sm leading-relaxed sm:text-[13px]">
+            <p className="min-w-0 flex-1">
+              <span className="text-nevoa">
+                Uma aplicação a {pct(p.aplicacaoAA)} ao ano renderia {moeda(sim.rendimentoAplicacao)} com o mesmo dinheiro no mesmo prazo:{" "}
               </span>
-            </>
-          }
-        />
-        <Destaque
-          rotulo={`Retorno em ${meses(sim.meses)}`}
-          valor={pct(sim.roi)}
-          tom={sim.roi < 0 ? "grave" : undefined}
-          nota={`${pct(sim.roiAM, 2)} ao mês${r.meta.tipo === "roi_periodo" ? ` · meta ${pct(r.meta.valor)}` : ""}`}
-        />
-        <Destaque rotulo="Dinheiro investido" valor={moeda(sim.capital)} nota={fin ? "entrada, parcelas e custos" : `${pal.lance} e custos`} />
-      </dl>
+              <strong className="font-semibold">
+                o imóvel rende {moeda(Math.abs(diferenca))} {diferenca >= 0 ? "a mais" : "a menos"}.
+              </strong>
+            </p>
+            <BotaoEditar rotulo="Editar a aplicação de comparação" onClick={editar({ editor: "aplicacao" })} destaque={p.aplicacaoAA !== PADRAO.aplicacaoAA} sempreVisivel={p.aplicacaoAA !== PADRAO.aplicacaoAA} />
+          </div>
+        ) : (
+          <button type="button" onClick={editar({ editor: "aplicacao" })} className="mt-3 inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8">
+            <IconeMais />
+            Comparar com uma aplicação
+          </button>
+        )}
 
-      {p.aplicacaoAA > 0 ? (
-        <div className="group mt-3 flex items-start gap-2 rounded-xl bg-noite/60 py-2.5 pr-1.5 pl-3 text-[13px] leading-relaxed">
-          <p className="min-w-0 flex-1">
-            <span className="text-nevoa">
-              Uma aplicação a {pct(p.aplicacaoAA)} ao ano renderia {moeda(sim.rendimentoAplicacao)} com o mesmo dinheiro no mesmo prazo:{" "}
-            </span>
-            <strong className="font-semibold">
-              o imóvel rende {moeda(Math.abs(diferenca))} {diferenca >= 0 ? "a mais" : "a menos"}.
-            </strong>
-          </p>
-          <BotaoEditar rotulo="Editar a aplicação de comparação" onClick={editar({ editor: "aplicacao" })} destaque={p.aplicacaoAA !== PADRAO.aplicacaoAA} sempreVisivel={p.aplicacaoAA !== PADRAO.aplicacaoAA} />
-        </div>
-      ) : (
-        <button type="button" onClick={editar({ editor: "aplicacao" })} className="mt-3 inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8">
-          <IconeMais />
-          Comparar com uma aplicação
-        </button>
-      )}
+      </div>
 
       {/* ------------------------------------------------------------ cascata */}
-      <h4 className="mt-6 text-[14px] font-semibold">Da venda ao {sim.lucro >= 0 ? "lucro" : "prejuízo"}</h4>
-      <p className="mt-0.5 text-[12.5px] text-nevoa">Cada barra parte de onde a anterior terminou; o percentual é sobre o valor da venda.</p>
-      <Cascata etapas={d.etapas} venda={sim.venda} />
+      <div className={soGrafico}>
+        <h4 className="mt-6 text-[14px] font-semibold max-lg:text-[16px]">Da venda ao {sim.lucro >= 0 ? "lucro" : "prejuízo"}</h4>
+        <p className="mt-0.5 text-sm text-nevoa sm:text-[12.5px]">Cada barra parte de onde a anterior terminou; o percentual é sobre o valor da venda.</p>
+        <Cascata etapas={d.etapas} venda={sim.venda} />
+      </div>
 
       {/* ------------------------------------------------------------ a conta, linha a linha */}
-      <div className="mt-7 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-        <h4 className="text-[16px] font-semibold">A conta, linha a linha</h4>
-        <p className="text-[12.5px] text-nevoa">
-          <span className="pointer-fine:hidden">Toque no lápis de uma linha para ajustar aquele custo.</span>
-          <span className="hidden pointer-fine:inline">Clique no lápis de uma linha para ajustar aquele custo.</span>
-        </p>
-      </div>
-      <div className="mt-2 rounded-2xl border border-nevoa/15">
-        {grupos.map((g) => {
-          const linhas = d.conta.filter((l) => l.grupo === g);
-          if (!linhas.length) return null;
-          const subtotal = linhas.reduce((t, l) => t + l.valor, 0);
-          return (
-            <section key={g} aria-label={GRUPO_ROTULO[g]} className="border-t border-nevoa/15 first:border-t-0">
-              {/* o subtotal fica na mesma coluna dos valores das linhas (à esquerda do lápis) */}
-              <div className="flex items-baseline justify-between gap-3 bg-noite/40 py-2 pr-[58px] pl-3 sm:pl-4 pointer-fine:pr-[46px] first:rounded-t-2xl">
-                <h5 className="text-[12px] font-semibold tracking-[0.1em] text-nevoa uppercase">
-                  {GRUPO_ROTULO[g]}
-                  {g === "mensal" ? ` · ${meses(sim.meses)}` : ""}
-                </h5>
-                <span className="text-[12.5px] font-semibold text-nevoa tabular-nums">{g === "venda" ? `fica ${moedaSinal(subtotal)}` : moedaSinal(subtotal)}</span>
-              </div>
-              <ul>
-                {linhas.map((l) => (
-                  <LinhaDaConta key={l.id} l={l} onEditar={editar(l.editor === "extra" ? { editor: "extra", extraId: l.extraId } : { editor: l.editor })} />
-                ))}
-              </ul>
-            </section>
-          );
-        })}
-        <dl className="border-t-2 border-nevoa/30">
-          <Total rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"} detalhe={`venda menos todos os custos, ${notaIr(p)}`} valor={moedaSinal(sim.lucro)} forte grave={sim.lucro < 0} />
-          <Total
-            rotulo="Lucro anualizado"
-            detalhe={sim.meses === 12 ? "venda em 12 meses: igual ao lucro total" : `média por ano: lucro total × 12 ÷ ${sim.meses} meses; o % ao ano conta juros compostos`}
-            valor={`${moedaSinal(sim.lucroAno)}/ano`}
-            extra={`${pct(sim.roiAA)} ao ano`}
-          />
-          <Total
-            rotulo="Dinheiro investido"
-            detalhe={fin ? "entrada + parcelas pagas + custos (sem o saldo quitado na venda)" : `${pal.lance} + custos de compra, regularização, reforma e meses`}
-            valor={moeda(sim.capital)}
-          />
-          <Total rotulo="Retorno no período" detalhe="lucro ÷ dinheiro investido" valor={pct(sim.roi)} />
-        </dl>
-      </div>
+      <div className={soConta}>
+        <div className="mt-7 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+          <h4 className="text-[16px] font-semibold">A conta, linha a linha</h4>
+          <p className="text-sm text-nevoa sm:text-[12.5px]">
+            <span className="pointer-fine:hidden">Toque no lápis de uma linha para ajustar aquele custo.</span>
+            <span className="hidden pointer-fine:inline">Clique no lápis de uma linha para ajustar aquele custo.</span>
+          </p>
+        </div>
+        <div className="mt-2 rounded-2xl border border-nevoa/15">
+          {grupos.map((g) => {
+            const linhas = d.conta.filter((l) => l.grupo === g);
+            if (!linhas.length) return null;
+            const subtotal = linhas.reduce((t, l) => t + l.valor, 0);
+            return (
+              <section key={g} aria-label={GRUPO_ROTULO[g]} className="border-t border-nevoa/15 first:border-t-0">
+                {/* o subtotal fica na mesma coluna dos valores das linhas (à esquerda do lápis) */}
+                <div className="flex items-baseline justify-between gap-3 bg-noite/40 py-2 pr-[58px] pl-3 sm:pl-4 pointer-fine:pr-[46px] first:rounded-t-2xl">
+                  <h5 className="text-[12px] font-semibold tracking-[0.1em] text-nevoa uppercase">
+                    {GRUPO_ROTULO[g]}
+                    {g === "mensal" ? ` · ${meses(sim.meses)}` : ""}
+                  </h5>
+                  <span className="text-[12.5px] font-semibold text-nevoa tabular-nums">{g === "venda" ? `fica ${moedaSinal(subtotal)}` : moedaSinal(subtotal)}</span>
+                </div>
+                <ul>
+                  {linhas.map((l) => (
+                    <LinhaDaConta key={l.id} l={l} onEditar={editar(l.editor === "extra" ? { editor: "extra", extraId: l.extraId } : { editor: l.editor })} />
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+          <dl className="border-t-2 border-nevoa/30">
+            <Total rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"} detalhe={`venda menos todos os custos, ${notaIr(p)}`} valor={moedaSinal(sim.lucro)} forte grave={sim.lucro < 0} />
+            <Total
+              rotulo="Lucro anualizado"
+              detalhe={sim.meses === 12 ? "venda em 12 meses: igual ao lucro total" : `média por ano: lucro total × 12 ÷ ${sim.meses} meses; o % ao ano conta juros compostos`}
+              valor={`${moedaSinal(sim.lucroAno)}/ano`}
+              extra={`${pct(sim.roiAA)} ao ano`}
+            />
+            <Total
+              rotulo="Dinheiro investido"
+              detalhe={fin ? "entrada + parcelas pagas + custos (sem o saldo quitado na venda)" : `${pal.lance} + custos de compra, regularização, reforma e meses`}
+              valor={moeda(sim.capital)}
+            />
+            <Total rotulo="Retorno no período" detalhe="lucro ÷ dinheiro investido" valor={pct(sim.roi)} />
+          </dl>
+        </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <button
-          type="button"
-          aria-haspopup="dialog"
-          onClick={editar({ editor: "novo" })}
-          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-dashed border-latao/60 px-4 text-[13.5px] font-semibold text-latao-texto transition-colors hover:border-latao hover:bg-latao/10 pointer-fine:min-h-10"
-        >
-          <IconeMais />
-          Adicionar custo
-        </button>
-        {r.adicionaveis.length > 0 && (
-          <p className="text-[12.5px] text-nevoa">Ex.: {r.adicionaveis.map((a) => a.rotulo.toLowerCase()).join(", ")}, ou um custo seu.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={editar({ editor: "novo" })}
+            className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-dashed border-latao/60 px-4 text-[13.5px] font-semibold text-latao-texto transition-colors hover:border-latao hover:bg-latao/10 pointer-fine:min-h-10"
+          >
+            <IconeMais />
+            Adicionar custo
+          </button>
+          {r.adicionaveis.length > 0 && (
+            <p className="text-sm text-nevoa sm:text-[12.5px]">Ex.: {r.adicionaveis.map((a) => a.rotulo.toLowerCase()).join(", ")}, ou um custo seu.</p>
+          )}
+        </div>
+
+        {d.retiradas.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-dashed border-nevoa/30 p-3 sm:p-4">
+            <p className="flex items-center gap-2 text-[13px] font-semibold">
+              <IconeOlhoFechado className="text-nevoa" />
+              Fora da conta ({d.retiradas.length})
+            </p>
+            <ul className="mt-1.5">
+              {d.retiradas.map((l) => (
+                <li key={l.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-nevoa/10 py-2 first:border-t-0">
+                  <span className="min-w-0 text-[13.5px]">
+                    <span className="text-nevoa line-through decoration-nevoa/50">{l.rotulo}</span>{" "}
+                    <span className="text-[12.5px] text-nevoa tabular-nums">(seria {moedaSinal(l.valor)})</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => religar(l.desligavel!)}
+                    className="-my-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8"
+                  >
+                    <IconeVoltar />
+                    Religar<span className="sr-only"> {l.rotulo}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {fin && (
+          <div className="mt-4 rounded-xl border border-nevoa/15 px-3 py-2.5 text-sm leading-relaxed sm:text-[13px]">
+            <p className="font-semibold">{fin.tipo === "banco" ? "Financiamento (tabela SAC)" : "Parcelamento da fonte"}</p>
+            <p className="mt-1 text-nevoa">
+              {fin.tipo === "banco" ? (
+                <>
+                  Entrada de {moeda(fin.entrada)} e {moeda(fin.financiado)} financiados a {pct(p.jurosAA)} ao ano ({pct(fin.taxaMensal, 2)} ao mês). Primeira
+                  parcela: {moeda(fin.primeiraParcela)}. Até a venda: {fin.parcelasPagas} parcelas, {moeda(fin.totalParcelas)} pagos ({moeda(fin.jurosPagos)} de
+                  juros). Saldo quitado com a venda: {moeda(fin.saldoDevedor)}.
+                </>
+              ) : (
+                <>
+                  Entrada de {moeda(fin.entrada)} e {moeda(fin.financiado)} em {fin.prazo} parcelas mensais corrigidas a {pct(p.parcelasCorrecaoAA)} ao ano
+                  (estimativa do índice). Primeira parcela: {moeda(fin.primeiraParcela)}. Até a venda: {fin.parcelasPagas} parcelas, {moeda(fin.totalParcelas)}{" "}
+                  pagos. Saldo quitado com a venda, já corrigido: {moeda(fin.saldoDevedor)}.
+                </>
+              )}
+            </p>
+          </div>
         )}
       </div>
-
-      {d.retiradas.length > 0 && (
-        <div className="mt-4 rounded-2xl border border-dashed border-nevoa/30 p-3 sm:p-4">
-          <p className="flex items-center gap-2 text-[13px] font-semibold">
-            <IconeOlhoFechado className="text-nevoa" />
-            Fora da conta ({d.retiradas.length})
-          </p>
-          <ul className="mt-1.5">
-            {d.retiradas.map((l) => (
-              <li key={l.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-nevoa/10 py-2 first:border-t-0">
-                <span className="min-w-0 text-[13.5px]">
-                  <span className="text-nevoa line-through decoration-nevoa/50">{l.rotulo}</span>{" "}
-                  <span className="text-[12.5px] text-nevoa tabular-nums">(seria {moedaSinal(l.valor)})</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => religar(l.desligavel!)}
-                  className="-my-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8"
-                >
-                  <IconeVoltar />
-                  Religar<span className="sr-only"> {l.rotulo}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {fin && (
-        <div className="mt-4 rounded-xl border border-nevoa/15 px-3 py-2.5 text-[13px] leading-relaxed">
-          <p className="font-semibold">{fin.tipo === "banco" ? "Financiamento (tabela SAC)" : "Parcelamento da fonte"}</p>
-          <p className="mt-1 text-nevoa">
-            {fin.tipo === "banco" ? (
-              <>
-                Entrada de {moeda(fin.entrada)} e {moeda(fin.financiado)} financiados a {pct(p.jurosAA)} ao ano ({pct(fin.taxaMensal, 2)} ao mês). Primeira
-                parcela: {moeda(fin.primeiraParcela)}. Até a venda: {fin.parcelasPagas} parcelas, {moeda(fin.totalParcelas)} pagos ({moeda(fin.jurosPagos)} de
-                juros). Saldo quitado com a venda: {moeda(fin.saldoDevedor)}.
-              </>
-            ) : (
-              <>
-                Entrada de {moeda(fin.entrada)} e {moeda(fin.financiado)} em {fin.prazo} parcelas mensais corrigidas a {pct(p.parcelasCorrecaoAA)} ao ano
-                (estimativa do índice). Primeira parcela: {moeda(fin.primeiraParcela)}. Até a venda: {fin.parcelasPagas} parcelas, {moeda(fin.totalParcelas)}{" "}
-                pagos. Saldo quitado com a venda, já corrigido: {moeda(fin.saldoDevedor)}.
-              </>
-            )}
-          </p>
-        </div>
-      )}
     </section>
   );
 }
@@ -439,7 +455,7 @@ function LinhaDaConta({ l, onEditar }: { l: LinhaConta; onEditar: (ev: { current
             <span className="rounded-full bg-latao/15 px-1.5 py-px text-[10.5px] font-semibold text-latao-texto">{l.editor === "extra" ? "seu custo" : "ajustado"}</span>
           )}
         </p>
-        <p className="mt-0.5 text-[12.5px] leading-snug text-nevoa">{l.formula}</p>
+        <p className="mt-0.5 text-[13px] leading-snug text-nevoa sm:text-[12.5px]">{l.formula}</p>
       </div>
       <p className={`shrink-0 text-right text-[14px] font-semibold whitespace-nowrap tabular-nums ${positivo ? "" : l.valor === 0 ? "text-nevoa" : ""}`}>
         {positivo ? moeda(l.valor) : moedaSinal(l.valor)}
@@ -454,7 +470,7 @@ function Total({ rotulo, detalhe, valor, extra, forte, grave }: { rotulo: string
     <div className="flex items-start justify-between gap-3 border-t border-nevoa/10 py-2.5 pr-[58px] pl-3 first:border-t-0 sm:pl-4 pointer-fine:pr-[46px]">
       <dt className="min-w-0">
         <span className={forte ? "text-[15px] font-bold" : "text-[14px] font-medium"}>{rotulo}</span>
-        {detalhe && <span className="block text-[12px] leading-snug text-nevoa">{detalhe}</span>}
+        {detalhe && <span className="block text-[13px] leading-snug text-nevoa sm:text-[12px]">{detalhe}</span>}
       </dt>
       <dd className={`shrink-0 text-right whitespace-nowrap tabular-nums ${forte ? "text-[16px] font-bold" : "text-[14px] font-semibold"} ${grave ? "text-grave-texto" : ""}`}>
         {valor}

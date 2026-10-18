@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Tela baixa (celular deitado, ~390 px de altura): pop-ups e janelas viram tela cheia, barras fixas encolhem.
+   Declarada depois dos tamanhos de tela, então `baixa:` vence `md:`/`lg:` quando os dois valem. */
+@custom-variant baixa (@media (max-height: 500px));
+
 /* ============================================================
    Tokens de design · Luneta de Leilões
    Noite, luar e latão. O latão é a cor de ação e dos selos; as cores de risco

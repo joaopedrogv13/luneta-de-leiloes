@@ -33,7 +33,9 @@ import { precoPorArea } from "@/components/catalogo/imovel/formato";
 const TOM: Record<TagDetalhe["severidade"], string> = { grave: s.grave, atencao: s.aten, positivo: s.pos, info: s.info };
 
 /** Trecho de evidência com no máximo ~260 caracteres (o relatório não é o anúncio). */
-function encurtar(t: string, max = 260) {
+function encurtar(bruto: string, max = 260) {
+  // "R$ 251.000,00" do texto da fonte não se parte entre "R$" e o número (com a letra de 14 px do celular, partia)
+  const t = bruto.replace(/R\$\s+(?=\d)/g, "R$\u00a0");
   if (t.length <= max) return t;
   const corte = t.lastIndexOf(" ", max);
   return `${t.slice(0, corte > max * 0.6 ? corte : max).trimEnd()}…`;
@@ -49,7 +51,20 @@ function encurtar(t: string, max = 260) {
  * premissas, região, alertas, avisos e fontes), que o navegador pagina: os blocos pequenos e cada grupo das tabelas
  * não se partem, os títulos não ficam sozinhos no pé da página e o cabeçalho das tabelas se repete.
  */
-export function Relatorio({ conjunto, plano, pagina, imprimir }: { conjunto: Conjunto; plano: Plano; pagina: PaginaImovel; imprimir: boolean }) {
+export function Relatorio({
+  conjunto,
+  plano,
+  pagina,
+  imprimir,
+  ajudaAberta = false,
+}: {
+  conjunto: Conjunto;
+  plano: Plano;
+  pagina: PaginaImovel;
+  imprimir: boolean;
+  /** "Como salvar o PDF" aberto (primeira visita, pelo cookie) */
+  ajudaAberta?: boolean;
+}) {
   const i = pagina.imovel;
   const exemplo = ehExemploRel(i);
   const entrada = entradaDoImovel(i);
@@ -66,7 +81,7 @@ export function Relatorio({ conjunto, plano, pagina, imprimir }: { conjunto: Con
   return (
     <div className={s.tela} data-relatorio-tela="">
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <BarraRelatorio voltar={rotaImovel(conjunto, i.id, plano)} imprimir={imprimir} />
+      <BarraRelatorio voltar={rotaImovel(conjunto, i.id, plano)} imprimir={imprimir} ajudaAberta={ajudaAberta} />
 
       <ProvedorRelatorio entrada={entrada} referencias={refs} plano={plano}>
         {/* sem margem em linha: o espaço acima da folha é só da tela (na impressão, 24 px a mais empurravam a capa) */}
@@ -274,7 +289,8 @@ function TabelaRegiao({ recortes, linhas, itbi, area }: { recortes?: RecorteRel[
         {titulo}
         <span> · R$ por m²{itbi ? "" : " (avaliação da fonte, não é preço de mercado)"}</span>
       </p>
-      <div className={s.rolagem}>
+      {/* rola de lado no celular: com o foco (Tab), as setas rolam a tabela */}
+      <div className={s.rolagem} tabIndex={0} role="region" aria-label={`${titulo} (tabela; role para o lado para ver todas as colunas)`}>
         <table className={s.tabela}>
           <caption className="sr-only">{titulo}, em R$ por m²</caption>
           <thead>

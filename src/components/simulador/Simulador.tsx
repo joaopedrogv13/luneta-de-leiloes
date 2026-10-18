@@ -2,7 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
+import { useMidia } from "@/components/catalogo/app/hooks";
 import { descricaoReferencia, mediaDe, TIPO_NA_FRASE } from "@/components/catalogo/imovel/formato";
+import { Popover } from "@/components/catalogo/ui/Popover";
 import { MODALIDADE_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
 import type { Plano, ReferenciaM2 } from "@/lib/catalogo/tipos";
 import { completarModelo } from "@/lib/simulador/completa";
@@ -10,6 +12,7 @@ import { area, moeda, porArea } from "@/lib/simulador/formato";
 import { LIMITES, montarModelo, type Modelo } from "@/lib/simulador/premissas";
 import { palavrasPreco } from "@/lib/simulador/textos";
 import type { Ajustes, EntradaSimulador } from "@/lib/simulador/tipos";
+import { AbasSimulador, idAba, useAbaSimulador } from "./AbasSimulador";
 import { CartaoResposta } from "./CartaoResposta";
 import { ComoUsar } from "./ComoUsar";
 import { Aviso, CampoPedido, FOCO_RESULTADO, IconeAtencao, IconeDocumento, IconeInfo } from "./controles";
@@ -39,7 +42,8 @@ export const AVISO_SIMULADOR =
  * Simulador de rentabilidade da página do imóvel. De cima para baixo: o cartão-resposta ("Seu lance máximo",
  * com a meta), o que conferir antes de decidir, a tabela de cenários × prazos e o Detalhe da célula escolhida,
  * que é o lugar único de ajuste (cada linha da conta abre o pop-up daquele tipo de despesa). No fim, o
- * relatório em PDF. Tudo vem de `simulacaoCompleta` (src/lib/simulador/completa.ts), a mesma conta do PDF.
+ * relatório em PDF. Celular e tablet (até lg): a tabela, a conta e o gráfico ficam em abas (AbasSimulador; a
+ * aberta fica salva), e no celular as perguntas do cartão abrem numa folha: o simulador cabia em ~6,5 telas. Tudo vem de `simulacaoCompleta` (src/lib/simulador/completa.ts), a mesma conta do PDF.
  * Os ajustes ficam no navegador, por imóvel (formato em src/lib/simulador/estado.ts).
  */
 export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorioHref }: SimuladorProps) {
@@ -49,6 +53,9 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
   const fixo = r.semDisputa;
   const [editor, setEditor] = useState<{ alvo: AlvoEditor; quem: HTMLElement | null } | null>(null);
   const [comoUsar, setComoUsar] = useState(false);
+  const [aba, setAba] = useAbaSimulador();
+  // no computador as três partes ficam abertas: sem os papéis de aba
+  const computador = useMidia("(min-width: 1024px)", false);
   const caminho = usePathname();
   // o plano da demonstração (?plano=lente) vai no próprio href: vale no clique do meio, em "Abrir em nova aba" e em
   // "Copiar link", que não passam por onClick
@@ -99,18 +106,31 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
           />
           <AvisoFixo />
           <Conferir modelo={modelo} ajustar={ajustar} aoEditarDesocupacao={(quem) => abrir({ editor: "desocupacao" }, quem)} />
-          <Matriz
-            r={r}
-            visao={r.visao}
-            aoSelecionar={(celula) => atualizar((e) => ({ ...e, celula }))}
-            aoMudarVisao={(visao) => atualizar((e) => ({ ...e, visao }))}
-            aoMudarMeuLance={(n) => atualizar((e) => ({ ...e, meuLance: n }))}
-            aoAjustar={ajustar}
-            aoComoUsar={() => setComoUsar(true)}
-            aoEditarVenda={() => abrir({ editor: "venda" }, document.activeElement as HTMLElement | null)}
-          />
-          <div id="sim-detalhe" className="scroll-mt-28">
-            <Detalhe r={r} aoEditar={abrir} atualizar={atualizar} />
+          <AbasSimulador aba={aba} aoMudar={setAba} className="lg:hidden" />
+          <div
+            id="sim-painel-tabela"
+            role={computador ? undefined : "tabpanel"}
+            aria-labelledby={computador ? undefined : idAba("tabela")}
+            className={aba === "tabela" ? "" : "max-lg:hidden"}
+          >
+            <Matriz
+              r={r}
+              visao={r.visao}
+              aoSelecionar={(celula) => atualizar((e) => ({ ...e, celula }))}
+              aoMudarVisao={(visao) => atualizar((e) => ({ ...e, visao }))}
+              aoMudarMeuLance={(n) => atualizar((e) => ({ ...e, meuLance: n }))}
+              aoAjustar={ajustar}
+              aoComoUsar={() => setComoUsar(true)}
+              aoEditarVenda={() => abrir({ editor: "venda" }, document.activeElement as HTMLElement | null)}
+            />
+          </div>
+          <div
+            id="sim-detalhe"
+            role={computador ? undefined : "tabpanel"}
+            aria-labelledby={computador ? undefined : idAba(aba === "tabela" ? "conta" : aba)}
+            className={`scroll-mt-28 ${aba === "tabela" ? "max-lg:hidden" : ""}`}
+          >
+            <Detalhe r={r} aoEditar={abrir} atualizar={atualizar} aba={aba} />
           </div>
         </>
       ) : (
@@ -120,12 +140,15 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
         </>
       )}
 
-      <div className="flex flex-col gap-4 rounded-3xl border border-nevoa/20 bg-tinta p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 in-data-[theme=light]:shadow-[0_1px_2px_rgba(15,24,48,.05)]">
+      <div className="flex flex-col gap-4 rounded-3xl border border-nevoa/20 bg-tinta p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 max-md:gap-3 max-md:p-4 in-data-[theme=light]:shadow-[0_1px_2px_rgba(15,24,48,.05)]">
         <div className="min-w-0">
           <p className="font-display text-[17px] leading-tight font-bold">Terminou a simulação?</p>
-          <p className="mt-1 text-[13.5px] leading-relaxed text-nevoa">
+          <p className="mt-1 text-[13.5px] leading-relaxed text-nevoa max-md:hidden">
             Exporte um relatório em PDF com tudo: a meta, {fixo ? "o lucro pelo preço pedido e a margem de segurança" : "o lance máximo"}, a tabela de
             cenários, a conta linha a linha e as premissas. Seus ajustes ficam guardados neste navegador, só para este imóvel.
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-nevoa md:hidden">
+            Relatório em PDF com a meta, a tabela, a conta e as premissas. Seus ajustes ficam neste navegador.
           </p>
         </div>
         <a
@@ -169,12 +192,37 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
   );
 }
 
+/**
+ * O aviso de que a simulação não é recomendação. No celular, numa linha (a frase inteira no (i), com o resto):
+ * as três linhas em 12,5 px empurravam a tabela para baixo.
+ */
 function AvisoFixo() {
   return (
-    <p className="flex gap-2 px-1 text-[12.5px] leading-relaxed text-nevoa">
-      <IconeInfo className="mt-0.5 size-3.5" />
-      {AVISO_SIMULADOR}
-    </p>
+    <>
+      <p className="flex gap-2 px-1 text-[12.5px] leading-relaxed text-nevoa max-md:hidden">
+        <IconeInfo className="mt-0.5 size-3.5" />
+        {AVISO_SIMULADOR}
+      </p>
+      {/* div (e não p): o pop-up do "Saiba mais" nasce aqui dentro */}
+      <div className="flex items-center gap-1.5 px-1 text-sm leading-snug text-nevoa md:hidden">
+        <IconeInfo className="size-3.5 shrink-0" />
+        <span>Simulação, não recomendação de investimento.</span>
+        <Popover
+          papel="note"
+          rotulo="Sobre a simulação"
+          largura="min(22rem, calc(100vw - 24px))"
+          gatilho={{
+            ariaLabel: "Mais sobre a simulação",
+            title: "Mais sobre a simulação",
+            className:
+              "relative -my-2 inline-flex min-h-11 shrink-0 cursor-pointer items-center px-1 text-[13px] font-semibold text-latao-texto underline-offset-4 hover:underline",
+            conteudo: "Saiba mais",
+          }}
+        >
+          <p className="p-4 text-sm leading-relaxed text-luar">{AVISO_SIMULADOR}</p>
+        </Popover>
+      </div>
+    </>
   );
 }
 

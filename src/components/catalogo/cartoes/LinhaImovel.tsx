@@ -45,7 +45,7 @@ export function LinhaImovel({
 
         <div className="flex min-w-0 flex-col px-3 pt-1.5 pb-3 [grid-area:info] @xl:px-5 @xl:pt-3 @xl:pb-5 @4xl:pt-6 @4xl:pr-4">
           <LinkTitulo imovel={imovel} hrefImovel={hrefImovel} onHover={onHover} como={tituloComo} className="text-[15px] @xl:text-[17px] @4xl:text-lg" />
-          <Local imovel={imovel} className="mt-1 @xl:mt-1.5" />
+          <Local imovel={imovel} compacto className="mt-1 @xl:mt-1.5" />
           <Fatos imovel={imovel} className="mt-2 @xl:mt-3.5" />
           <LinhaPraca imovel={imovel} className="mt-3 @max-xl:hidden" />
           {/* tags (até 3 + "+N") e selo dentro da coluna: a linha fica com a altura da foto */}

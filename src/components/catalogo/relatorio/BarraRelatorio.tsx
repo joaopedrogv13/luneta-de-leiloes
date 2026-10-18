@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import { CHAVE_AJUDA_PDF, gravarPreferencia } from "@/components/catalogo/imovel/preferencias";
 import { IconeImprimir, IconeVoltar } from "./icones";
 
 const espera = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
@@ -31,8 +32,13 @@ async function relatorioPronto(limite = 4000) {
  * ocupava quase metade da tela do celular). Com `?imprimir=1`, a impressão abre sozinha quando o relatório fica pronto
  * (e o parâmetro sai da URL, para recarregar não abrir de novo).
  */
-export function BarraRelatorio({ voltar, imprimir }: { voltar: string; imprimir: boolean }) {
+export function BarraRelatorio({ voltar, imprimir, ajudaAberta = false }: { voltar: string; imprimir: boolean; ajudaAberta?: boolean }) {
   const botao = useRef<HTMLButtonElement>(null);
+  // primeira visita (sem o cookie): a ajuda já veio aberta do servidor; marca como vista para as próximas. Antes,
+  // ela abria depois da hidratação (localStorage) e empurrava o relatório para baixo (CLS de 0,05 a 0,09)
+  useEffect(() => {
+    if (ajudaAberta) gravarPreferencia(CHAVE_AJUDA_PDF, "1", { cookie: true });
+  }, [ajudaAberta]);
 
   useEffect(() => {
     if (!imprimir) return;
@@ -89,7 +95,8 @@ export function BarraRelatorio({ voltar, imprimir }: { voltar: string; imprimir:
       </div>
       <div className="border-b border-nevoa/15 bg-noite/92 print:hidden">
         <div className="mx-auto max-w-[860px] px-4 py-1 sm:px-6">
-          <details className="group text-[12.5px] leading-relaxed text-nevoa">
+          {/* aberto na primeira visita (depois, fechado: abrir é um toque) */}
+          <details open={ajudaAberta || undefined} className="group text-sm leading-relaxed text-nevoa sm:text-[12.5px]">
             <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 font-medium text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8 [&::-webkit-details-marker]:hidden">
               Como salvar o PDF
               <span aria-hidden="true" className="transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none">

@@ -103,9 +103,9 @@ export function FotoImovel({
         className={`transition-opacity duration-300 motion-reduce:transition-none ${semFoto ? "opacity-100" : "opacity-45"}`}
       />
       {aviso && (
-        <p className={`absolute inset-x-0 bottom-[8%] px-4 text-center text-xs leading-snug font-medium text-nevoa ${enxutaNoCompacto ? "@max-xl:sr-only" : ""}`}>
+        <p className={`absolute inset-x-0 bottom-[8%] px-4 text-center text-[13px] leading-snug font-medium text-nevoa sm:text-xs ${enxutaNoCompacto ? "@max-xl:sr-only" : ""}`}>
           {aviso.titulo}
-          {aviso.detalhe && <span className="mt-0.5 block text-[11px] font-normal max-[380px]:hidden">{aviso.detalhe}</span>}
+          {aviso.detalhe && <span className="mt-0.5 block text-xs font-normal max-[380px]:hidden sm:text-[11px]">{aviso.detalhe}</span>}
         </p>
       )}
       {src && (

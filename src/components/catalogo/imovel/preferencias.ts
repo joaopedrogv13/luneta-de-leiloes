@@ -2,12 +2,18 @@
  * Preferências de tela da página do imóvel, guardadas no navegador (localStorage, com try/catch):
  * - o resumo fixo da direita recolhido (computador). Espelhado num cookie, para o servidor já desenhar a página
  *   com o resumo recolhido (sem ele "piscar" aberto antes de recolher), como a vista do catálogo;
- * - a barra do lance minimizada (celular).
+ * - a barra do lance minimizada (celular);
+ * - "Como salvar o PDF" já visto (relatório), também em cookie.
  * Sem "use client": o servidor lê o nome do cookie daqui; as funções de gravar só rodam no navegador.
  */
 
 export const CHAVE_RESUMO_LATERAL = "luneta-resumo-lateral";
 export const CHAVE_BARRA_LANCE = "luneta-barra-lance";
+/**
+ * "Como salvar o PDF" (relatório) já foi mostrado aberto neste navegador? Cookie, para o servidor desenhar a
+ * barra já aberta na primeira visita: aberta depois da hidratação, ela empurrava o relatório 89 px para baixo.
+ */
+export const CHAVE_AJUDA_PDF = "luneta-pdf-ajuda-vista";
 
 /** O valor do cookie/localStorage quando o resumo está recolhido. */
 export const RECOLHIDO = "recolhido";

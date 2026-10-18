@@ -29,6 +29,7 @@ import {
 } from "./formato";
 import { GraficoM2 } from "./GraficoM2";
 import { IconeInfo } from "./icones";
+import { MaisDados } from "./MaisDados";
 import { Secao } from "./partes";
 
 /**
@@ -62,6 +63,23 @@ function EscalaNiveis({ nivel }: { nivel: NivelComparacao }) {
   );
 }
 
+/** "Rua", "Rua e bairro", "Rua, bairro e cidade". */
+function listaNiveis(escopos: ReferenciaM2["escopo"][]) {
+  const nomes = escopos.map((e, k) => (k === 0 ? ROTULO_ESCOPO[e] : ROTULO_ESCOPO[e].toLowerCase()));
+  return nomes.length <= 1 ? (nomes[0] ?? "") : `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
+}
+
+/** Junta as linhas vizinhas sem referência e com o mesmo motivo numa só ("Rua e bairro: sem dados suficientes"). */
+function juntarSemDados<T extends { escopo: ReferenciaM2["escopo"]; ref: ReferenciaM2 | null; falta: string | null }>(linhas: T[]) {
+  const saida: { escopos: ReferenciaM2["escopo"][]; ref: ReferenciaM2 | null; falta: string | null }[] = [];
+  for (const l of linhas) {
+    const ultima = saida[saida.length - 1];
+    if (!l.ref && ultima && !ultima.ref && ultima.falta === l.falta && l.falta === "sem dados suficientes") ultima.escopos.push(l.escopo);
+    else saida.push({ escopos: [l.escopo], ref: l.ref, falta: l.falta });
+  }
+  return saida;
+}
+
 /** Linha da tabela: recorte, média e a diferença deste imóvel. */
 function Linha({
   rotulo,
@@ -87,19 +105,19 @@ function Linha({
       <th scope="row" className="py-3 pr-3 pl-4 text-left font-normal sm:pl-6">
         <span className="block text-[14px] leading-snug font-semibold text-luar">
           {rotulo}
-          {/* celular: o lugar desce para a linha de baixo (a coluna é estreita) */}
+          {/* celular: o lugar desce para a linha de baixo, numa linha só (o nome da rua ocupava 3); inteiro no title */}
           {lugar && (
-            <span className="block text-[13px] font-normal break-words text-nevoa sm:inline sm:text-[14px]">
+            <span title={lugar} className="block text-[13px] font-normal break-words text-nevoa max-sm:line-clamp-1 sm:inline sm:text-[14px]">
               <span className="hidden sm:inline"> · </span>
               {lugar}
             </span>
           )}
         </span>
-        {amostra && <span className="mt-0.5 block text-[12px] leading-snug text-nevoa tabular-nums">{amostra}</span>}
+        {amostra && <span className="mt-0.5 block text-[13px] leading-snug text-nevoa tabular-nums sm:text-[12px]">{amostra}</span>}
         {destaque && <span className="sr-only"> (usada na frase acima)</span>}
       </th>
       {falta ? (
-        <td colSpan={2} className="py-3 pr-4 text-right text-[13px] leading-snug text-nevoa sm:pr-6">
+        <td colSpan={2} className="py-3 pr-4 text-right text-sm leading-snug text-nevoa sm:pr-6 sm:text-[13px]">
           {falta}
         </td>
       ) : (
@@ -178,19 +196,25 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
   const grupoLeiloes = (
     <tbody>
       <tr className="border-t border-nevoa/15">
-        <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[12px] font-medium text-nevoa sm:px-6">
+        <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[13px] font-medium text-nevoa sm:px-6 sm:text-[12px]">
           Imóveis em leilão na base · média de avaliação
         </th>
       </tr>
-      {leiloes.map(({ escopo, ref, igualA }) => (
+      {juntarSemDados(
+        leiloes.map(({ escopo, ref, igualA }) => ({
+          escopo,
+          ref,
+          falta: ref ? (mediaDe(ref) === null ? "sem avaliações suficientes" : null) : faltaLeiloes(escopo, igualA),
+        })),
+      ).map(({ escopos, ref, falta }) => (
         <Linha
-          key={escopo}
-          rotulo={ROTULO_ESCOPO[escopo]}
-          lugar={lugarDe(escopo, ref)}
+          key={escopos.join("-")}
+          rotulo={listaNiveis(escopos)}
+          lugar={escopos.length === 1 ? lugarDe(escopos[0]!, ref) : null}
           amostra={ref ? `${numero(ref.amostra)} ${tipos}` : null}
           media={ref ? mediaDe(ref) : null}
           dif={ref ? compararComMedia(valor, mediaDe(ref)) : null}
-          falta={ref ? (mediaDe(ref) === null ? "sem avaliações suficientes" : null) : faltaLeiloes(escopo, igualA)}
+          falta={falta}
           destaque={ref !== null && ref === principal}
           m2={m2}
         />
@@ -200,7 +224,7 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
   const grupoItbi = (
     <tbody>
       <tr className="border-t border-nevoa/15">
-        <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[12px] font-medium text-nevoa sm:px-6">
+        <th scope="rowgroup" colSpan={3} className="bg-nevoa/[0.05] px-4 py-2 text-left text-[13px] font-medium text-nevoa sm:px-6 sm:text-[12px]">
           Transações reais (ITBI) · preço médio pago
           {itbi[0]?.periodo && <span className="whitespace-nowrap"> · {periodoCurto(itbi[0].periodo)}</span>}
         </th>
@@ -221,7 +245,7 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
         ))
       ) : (
         <tr className="border-t border-nevoa/10">
-          <td colSpan={3} className="px-4 py-3 text-[13px] leading-snug text-nevoa sm:px-6">
+          <td colSpan={3} className="px-4 py-3 text-sm leading-snug text-nevoa sm:px-6 sm:text-[13px]">
             {itbiSemComparacao
               ? itbiSemComparacao
               : v.cobertura?.cidadeTemItbi
@@ -284,38 +308,41 @@ export function SecaoRegiao({ imovel: i, vizinhanca: v }: { imovel: ImovelDetalh
         )}
 
         {!semReferencia && (
-          <div className="overflow-hidden rounded-3xl border border-nevoa/15 bg-tinta">
-            <table className="w-full border-collapse">
-              <caption className="sr-only">
-                Média do preço por {hectare ? "hectare" : "m²"} na rua, no bairro, na cidade e no estado, e a diferença para {valor !== null ? (avaliacao !== null ? "a avaliação" : "o lance") : "este imóvel"} deste imóvel
-              </caption>
-              <thead>
-                <tr className="text-[11px] leading-tight font-semibold tracking-[0.1em] text-nevoa uppercase">
-                  <th scope="col" className="pt-4 pr-3 pb-2.5 pl-4 text-left font-semibold sm:pl-6">
-                    Onde
-                  </th>
-                  <th scope="col" className="pt-4 pr-3 pb-2.5 text-right font-semibold">
-                    Média{hectare ? "/ha" : "/m²"}
-                  </th>
-                  <th scope="col" className="pt-4 pr-4 pb-2.5 text-right font-semibold sm:pr-6">
-                    {avaliacao !== null ? "Esta avaliação" : lance !== null ? "Este lance" : "Este imóvel"}
-                  </th>
-                </tr>
-              </thead>
-              {/* o grupo da referência da frase vem primeiro (o preço pago, quando há compras suficientes) */}
-              {principalItbi ? (
-                <>
-                  {grupoItbi}
-                  {grupoLeiloes}
-                </>
-              ) : (
-                <>
-                  {grupoLeiloes}
-                  {grupoItbi}
-                </>
-              )}
-            </table>
-          </div>
+          <MaisDados ate="md" rotulo="Comparar por rua, bairro e cidade" rotuloAberto="Fechar a comparação" className="mt-0!">
+            <div className="overflow-hidden rounded-3xl border border-nevoa/15 bg-tinta">
+              <table className="w-full border-collapse">
+                <caption className="sr-only">
+                  Média do preço por {hectare ? "hectare" : "m²"} na rua, no bairro, na cidade e no estado, e a diferença para {valor !== null ? (avaliacao !== null ? "a avaliação" : "o lance") : "este imóvel"} deste imóvel
+                </caption>
+                <thead>
+                  <tr className="text-[11px] leading-tight font-semibold tracking-[0.1em] text-nevoa uppercase">
+                    <th scope="col" className="pt-4 pr-3 pb-2.5 pl-4 text-left font-semibold sm:pl-6">
+                      Onde
+                    </th>
+                    <th scope="col" className="pt-4 pr-3 pb-2.5 text-right font-semibold">
+                      Média{hectare ? "/ha" : "/m²"}
+                    </th>
+                    <th scope="col" className="pt-4 pr-4 pb-2.5 text-right font-semibold sm:pr-6">
+                      Diferença
+                      <span className="sr-only"> {avaliacao !== null ? "desta avaliação" : lance !== null ? "deste lance" : "deste imóvel"}</span>
+                    </th>
+                  </tr>
+                </thead>
+                {/* o grupo da referência da frase vem primeiro (o preço pago, quando há compras suficientes) */}
+                {principalItbi ? (
+                  <>
+                    {grupoItbi}
+                    {grupoLeiloes}
+                  </>
+                ) : (
+                  <>
+                    {grupoLeiloes}
+                    {grupoItbi}
+                  </>
+                )}
+              </table>
+            </div>
+          </MaisDados>
         )}
 
         {refs.length > 0 && (

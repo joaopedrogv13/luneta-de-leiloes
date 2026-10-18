@@ -18,9 +18,13 @@ import { SecaoResumo } from "./SecaoResumo";
 import { SecaoSimulador } from "./SecaoSimulador";
 import { TopoImovel } from "./TopoImovel";
 import { GradeImovel, LateralRecolhivel, PilulaResumo } from "./ResumoRecolhivel";
+import styles from "./imovel.module.css";
 import { VoltarBusca } from "./VoltarBusca";
 
-/** Ordem das seções e da navegação: a localização antes do simulador; os parecidos no fim da página. */
+/**
+ * Ordem das seções e da navegação: a localização antes do simulador; os parecidos no fim da página. Os dados da
+ * fonte viraram o rodapé de Documentos (a âncora #fonte continua valendo).
+ */
 const SECOES: SecaoNav[] = [
   { id: "resumo", rotulo: "Resumo" },
   { id: "riscos", rotulo: "Riscos" },
@@ -28,7 +32,6 @@ const SECOES: SecaoNav[] = [
   { id: "simulador", rotulo: "Simulador" },
   { id: "regiao", rotulo: "Região" },
   { id: "documentos", rotulo: "Documentos" },
-  { id: "fonte", rotulo: "Fonte" },
   { id: "parecidos", rotulo: "Parecidos" },
 ];
 
@@ -39,7 +42,10 @@ const SECOES: SecaoNav[] = [
  *
  * Computador: galeria grande no topo; embaixo, o conteúdo à esquerda e o resumo fixo à direita, que a pessoa pode
  * recolher (o conteúdo ocupa a largura e uma pílula com o lance fica na barra das seções; a escolha fica salva).
- * Celular: uma coluna (título, resumo, seções) e a barra fixa no pé com o lance e "Ver anúncio" (minimizável).
+ * Tablet em pé: galeria e título lado a lado; o resumo do preço na largura toda, com duas colunas por dentro.
+ * Celular: uma coluna (galeria, o "cartão de decisão" com título, preço e ações, seções) e a barra fixa no pé com
+ * o lance e "Ver anúncio" (minimizável). O cabeçalho do site sai de cena ao rolar para baixo (TopoImovel).
+ * A grade (imovel.module.css) posiciona galeria, cabeçalho, resumo e conteúdo em cada largura.
  */
 export function PaginaImovel({
   conjunto,
@@ -113,20 +119,26 @@ export function PaginaImovel({
     <ProvedorImovel conjunto={conjunto} plano={plano} id={i.id}>
       <TopoImovel conjunto={conjunto} plano={plano} id={i.id} />
 
-      <main id="conteudo" tabIndex={-1} className="mx-auto max-w-[1280px] px-4 pb-16 outline-none sm:px-6 lg:px-8">
-        <div className="py-2.5 sm:py-4">
+      <main id="conteudo" tabIndex={-1} className="mx-auto max-w-[1280px] px-4 pb-16 outline-none sm:px-6 lg:px-8 2xl:max-w-[1440px]">
+        {/* no celular e em tela baixa, "voltar à busca" é o ícone do cabeçalho */}
+        <div className="py-4 max-sm:hidden baixa:hidden">
           <VoltarBusca conjunto={conjunto} plano={plano} />
         </div>
 
-        <Galeria
-          fotos={i.fotos}
-          tipo={i.tipo}
-          titulo={i.titulo}
-          semFotoTexto={exemplo ? "Exemplo fictício: sem fotos" : "A fonte não publicou fotos deste imóvel"}
-        />
+        <GradeImovel recolhidoNoServidor={resumoRecolhido} className="grid md:gap-y-6 sm:baixa:pt-4">
+          <div className={`min-w-0 ${styles.galeria}`}>
+            <Galeria
+              fotos={i.fotos}
+              tipo={i.tipo}
+              titulo={i.titulo}
+              semFotoTexto={exemplo ? "Exemplo fictício: sem fotos" : "A fonte não publicou fotos deste imóvel"}
+            />
+          </div>
 
-        <GradeImovel recolhidoNoServidor={resumoRecolhido} className="mt-6 grid gap-y-6 lg:mt-9">
-          <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+          {/* celular: o cabeçalho é a parte de cima do "cartão de decisão" (o resumo do preço é a de baixo) */}
+          <div
+            className={`min-w-0 ${styles.cabeca} max-md:mt-4 max-md:rounded-t-3xl max-md:border max-md:border-b-0 max-md:border-nevoa/20 max-md:bg-tinta max-md:px-5 max-md:pt-5 max-md:pb-4 lg:mt-3`}
+          >
             <CabecalhoImovel imovel={i} pracaPassou={!!falta?.passou} />
           </div>
 
@@ -134,11 +146,12 @@ export function PaginaImovel({
             <ResumoLateral d={resumo} />
           </LateralRecolhivel>
 
-          <div className="min-w-0 lg:col-start-1 lg:row-start-2">
-            {/* celular deitado (pouca altura): o cabeçalho deixa de ser fixo e a navegação cola no topo */}
+          <div className={`min-w-0 ${styles.conteudo} max-md:mt-6`}>
+            {/* celular deitado (pouca altura): o cabeçalho deixa de ser fixo e a navegação cola no topo; celular e
+                tablet: com o cabeçalho fora de cena (rolando para baixo), ela sobe para o topo */}
             <div
               data-topo-fixo=""
-              className="sticky top-14 z-30 -mx-4 border-b border-nevoa/15 bg-noite px-4 py-1.5 sm:top-16 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 [@media(max-height:500px)]:top-0"
+              className="sticky top-14 z-30 -mx-4 border-b border-nevoa/15 bg-noite px-4 py-1.5 transition-[top] duration-200 ease-luneta motion-reduce:transition-none sm:top-16 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 baixa:top-0 [html[data-topo-recolhido]_&]:top-0"
             >
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
@@ -148,7 +161,8 @@ export function PaginaImovel({
               </div>
             </div>
 
-            <div className="mt-8 [&>*+*]:mt-16 sm:[&>*+*]:mt-20">
+            {/* @container: as grades de dentro (fatos do resumo) seguem a largura da coluna, não a da tela */}
+            <div className="@container mt-8 [&>*+*]:mt-14 sm:[&>*+*]:mt-20">
               <SecaoResumo imovel={i} agora={agora} />
               <SecaoRiscos imovel={i} plano={plano} selosDesligados={pagina.selosDesligados} />
               <SecaoLocalizacao imovel={i} />
@@ -161,8 +175,8 @@ export function PaginaImovel({
         </GradeImovel>
       </main>
 
-      <footer className="border-t border-nevoa/15 px-4 pt-8 pb-28 text-[13px] leading-relaxed text-nevoa sm:px-6 lg:px-8 lg:pb-12">
-        <div className="mx-auto flex max-w-[1280px] flex-wrap items-start justify-between gap-x-8 gap-y-4">
+      <footer className="border-t border-nevoa/15 px-4 pt-8 pb-28 text-sm leading-relaxed text-nevoa sm:px-6 sm:text-[13px] lg:px-8 lg:pb-12">
+        <div className="mx-auto flex max-w-[1280px] flex-wrap items-start justify-between gap-x-8 gap-y-4 2xl:max-w-[1440px]">
           <div className="max-w-[72ch] space-y-2">
             <p>
               <strong className="font-semibold text-luar">Aviso:</strong> {AVISO_CLASSIFICACAO}

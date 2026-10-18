@@ -1,8 +1,8 @@
 # Luneta de Leilões · onde estamos e pendências
 
 Este é o arquivo central do projeto: **onde estamos, que dados temos, o que falta e o próximo passo**. Atualizado a cada
-entrega (última atualização: 18/10/2026, rodada 4, frente A2: nota de localização de 0 a 100, com os dados, o servidor e
-o contrato do site; a tela é da frente C).
+entrega (última atualização: 18/10/2026, rodada 4: dados e servidor da nota de localização de 0 a 100, responsividade da
+prévia no celular, tablet e celular deitado, coleta no PC do dono pronta; a tela da nota e os planos vêm a seguir).
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
@@ -408,6 +408,147 @@ R$/ha calculado do valor e da área; resumo com as várias matrículas, o site d
 rural; explicação própria das tags da demonstração; 404 com título e sem canonical da home; landing não é mais
 pré-carregada.
 
+### Rodada 4 · responsividade da prévia (18/10/2026)
+
+Pedido do dono: "Revise a responsividade da prévia, dá para melhorar a disposição das informações". Base: a auditoria
+`r4-auditoria-responsiva.md` (30 achados; nenhum dado novo, nada em `src/lib/catalogo`). Os 4 altos e os 13 médios foram
+feitos; dos baixos, os rápidos. Medido com o mesmo script antes e depois (Playwright, `next start`, toque emulado):
+
+| Medida | Antes | Depois |
+| --- | --- | --- |
+| Página do imóvel (casa de São Gonçalo), em telas | 360: 20,9 · 390: 17,9 · 430: 15,7 · 768: 11,9 · 834: 10,1 · 844×390: 30,8 | 360: 11,7 · 390: 10,6 · 430: 9,3 · 768: 7,7 · 834: 6,4 · 844×390: 19,1 |
+| Simulador no celular (390), em telas | 6,7 | 2,7 |
+| Onde aparece o preço (390 / 768 / 844×390) | 669 / 872 / 920 px | 587 / 543 / 421 px |
+| Barras fixas cobrindo a tela, lendo o imóvel (360 / 390 / 768 / 844×390) | 23% / 22% / 19% / 29% | 16% / 15% / 12% / 15% |
+| Catálogo: início do 1º imóvel (360 / 390 / 768 / 1024×768 / 844×390) | 309 / 257 / 379 / 307 / 327 px | 239 / 239 / 275 / 263 / 192 px |
+| Catálogo: altura do cartão no celular (360 / 390 / 430) | 570 / 575 / 605 px | 474 / 494 / 520 px |
+| Barra de filtros colada em 1024×768 | 22% da tela | 9% |
+| Texto corrido abaixo de 14 px no imóvel (390, caracteres) | 3.992 | 865 (notas de uma linha) |
+| Alvos de toque abaixo de 44 px (imóvel, 390) | 7 | 1 (o "Pular para o conteúdo", que só aparece no Tab) |
+
+Zero rolagem horizontal continua; nenhum número partido. Desktop de 1280 a 1920: mesma disposição (com o resumo da
+direita recolhido, o simulador ganhou duas colunas e o texto para em 880 px); a página fica 2% a 8% mais curta.
+
+**O que mudou, por página:**
+- **Imóvel, celular:**
+  - "Voltar à busca" virou um ícone ← no cabeçalho; o cabeçalho sai de cena ao rolar para baixo (volta ao subir) e a
+    navegação das seções sobe para o topo.
+  - **Cartão de decisão:** título com Favoritar e Compartilhar em ícones, local numa linha com "Ver endereço", selos,
+    preço grande, praça, "Ver anúncio" e "Simular" lado a lado e "Riscos e alertas".
+  - **"Em resumo"** com 6 fatos (área, quartos, vagas, preço por m², financiamento, ocupação) e "Ver todos os dados (N)"
+    abre o resto (no computador, tudo aberto como antes). Fatos sempre em 2 colunas (também em 360 px); os campos que a
+    fonte não informa ficam numa linha por grupo ("Não informados pela fonte: área total, FGTS…", cada um com o (i)).
+  - **Simulador:** a resposta primeiro; as três perguntas ("Quanto quer ganhar? 20% ao ano ✎", prazo, cenário) abrem
+    numa folha com os mesmos atalhos e a resposta ao vivo no rodapé; **abas Tabela · Conta · Gráfico** (a aberta fica
+    salva); a tabela mostra **um prazo por vez** em linhas largas (16 px); o aviso numa linha com "Saiba mais";
+    "Exportar PDF" no fim, mais curto. Nenhuma função saiu.
+  - **Região:** a tabela rua/bairro/cidade fica em "Comparar por rua, bairro e cidade" (aberta do tablet para cima), com
+    a rua numa linha, cabeçalho "Diferença" e as linhas sem dado juntas ("Rua e bairro: sem dados suficientes");
+    **portais com o seletor Rua | Bairro | Cidade** e 6 botões em 3 colunas (eram 18 botões; vale em todas as larguras).
+  - **Documentos:** "Dados da fonte" virou o rodapé do bloco, numa linha (a âncora `#fonte` continua; a navegação perdeu
+    a aba "Fonte").
+  - Texto corrido em 14 px no celular (simulador, região, riscos, localização, documentos, rodapé).
+- **Imóvel, tablet em pé (768 a 1023):** galeria (4:3) e título lado a lado; o resumo do preço na largura toda com duas
+  colunas por dentro (preço e praça | ações); fatos em 3 colunas; simulador com as abas.
+- **Imóvel, 1024 a 1279:** resumo da direita com 336 px (a coluna do conteúdo foi de 552 para 592 px); fatos em 2
+  colunas (a grade segue a largura da própria coluna); as seções que não cabem na navegação vão para "Mais ▾".
+- **Imóvel, computador:** com o resumo recolhido, Resumo/Riscos/Região/Documentos param em 880 px e o simulador fica
+  em duas colunas (perguntas à esquerda, resposta colada à direita); em 1920, a página vai a 1.440 px.
+- **Celular deitado (844×390 e qualquer tela até 500 px de altura):** pop-ups viram folha que sobe de baixo (o filtro
+  rápido abria sem a lista); as janelas do simulador ("Como usar", editores) ocupam a tela toda (o corpo tinha 148 px);
+  a barra do lance some e o preço fica numa pílula na barra das seções; no imóvel, faixa numa linha, "Voltar à busca"
+  como ícone no cabeçalho e a galeria até 62% da altura; no catálogo, faixa numa linha, sem o título, e a barra já
+  nasce em uma linha só.
+- **Catálogo (/previa e /assinante):**
+  - celular: a vista (Lista | Cards) foi para a linha da busca (em 360 px caía sozinha numa 3ª linha); cartão mais
+    compacto (foto 3:2, deságio só no selo da foto, 2 tags e "+N", "Preço de venda" na venda direta); bairro inteiro na
+    linha de baixo da lista compacta; pílulas de filtro com o fim esmaecido; **mapa em tela cheia** ("Ver no mapa" →
+    "Ver lista"), botões em linha, legenda no "?", o 1º toque num grupo mostra o cartão (o 2º aproxima);
+  - tablet em pé: a barra do celular (busca + "Filtros"; total, ordenar e vista; pílulas roláveis), sem os rápidos que
+    quebravam em 4 linhas; o título do cabeçalho sem a linha cortada;
+  - 1024 a 1279: busca de 280 px e 4 rápidos numa linha (Deságio e Quartos ficam em "Todos os filtros" até 1280); a
+    barra colada vira uma linha em telas até 820 px de altura;
+  - "×" dos rápidos, tags e "Plano Luneta" com 44 px no toque; "sem data" na linha estreita.
+- **Relatório no celular:** letra base de 14 px e nenhum rótulo abaixo de 11 px; a tabela de cenários vira um bloco por
+  cenário (sem "arraste para o lado"); "Como salvar o PDF" aberto na primeira visita. O PDF impresso não muda.
+
+**Adaptei ou deixei de fora (e por quê):**
+- **Tablet em pé continua abrindo na lista** (a proposta era cards em 2 colunas): o servidor não distingue tablet de
+  computador, e trocar a vista depois de carregar faria a lista inteira pular. A densidade é parecida (3 imóveis por
+  tela nos dois) e o seletor está à vista.
+- **"Em resumo", abas do simulador e folhas das perguntas só abaixo de lg (1024 px)**: no computador o dono já aprovou
+  a página aberta; lá a mudança foi só de largura (1024, recolhido, 1920).
+- **Mapa do celular:** sem a gaveta com carrossel de imóveis (o cartão da cidade já traz até 3 destaques e "Ver só esta
+  cidade"); bolha mínima de 32 px e raio de agrupamento maior não foram mexidos (mexem no agrupamento testado em
+  `agrupar.ts`).
+- **Opcionais/baixos não feitos:** cartões com 340 px de mínimo (R4-RESP-24), resumo lateral trocando "Simular" por
+  "Exportar PDF" com o simulador à vista (R4-RESP-29), parecidos em grade de 4 em 1920.
+- **Landing (R4-RESP-18, texto do topo encostando no globo no tablet):** fora da prévia; fica com a frente D (landing).
+- **Celular deitado:** o texto segue nos tamanhos do computador (a largura é de 844 px); só o que quebrava foi
+  corrigido.
+
+**Pendências desta parte:**
+- Conferir num iPhone e num Android de verdade (aqui tudo foi emulado; as fotos da Caixa não carregam neste ambiente,
+  então os prints mostram o desenho no lugar da foto, do mesmo tamanho).
+- Prints, medidas e folhas de contato: `scratchpad/prints/r4-B/` (antes, depois e `folhas/`); scripts em
+  `scratchpad/r4B/` (`medir.mjs`, `dobras.mjs`, `interacoes.mjs`, `extra.mjs`, `comparar.py`, `folhas.py`).
+
+#### Revisão adversarial da responsividade (18/10/2026)
+
+Testado num `next start` com os scripts da auditoria (`r4aud/`) nas 10 larguras e nos dois temas (220 combinações),
+mais: axe-core (WCAG 2.2 AA), o Tab pela página inteira (foco coberto pelas barras), CLS no carregamento e o PDF A4
+comparado, página por página, com um build de antes da rodada (0dde08b).
+
+**O que a frente B quebrou ou deixou pior, e o que foi feito:**
+- **Alta · celular deitado e qualquer tela até 500 px de altura** (também notebook com zoom de 200%): a barra do
+  catálogo perdeu a troca de vista (Lista | Cards), o botão do mapa (de 640 px de largura para cima, onde não há o
+  botão flutuante) e o total; com filtros, as pílulas também sumiam (só restava o número em "Filtros"). Agora a linha
+  única leva a vista e o mapa, o total (de 820 px de largura para cima) e, com filtro ativo, a fileira das pílulas
+  volta embaixo (cada uma com o ×, e "Limpar tudo").
+- **Média · mapa do computador:** de 1024 a 1440 a coluna do mapa tem menos de 560 px, e o modo "estreito" do celular
+  valia ali também: botões em linha, legenda escondida no "?" e o Brasil sem folga (as bolhas do Nordeste cortadas na
+  borda direita). O modo estreito agora vale só no toque; com mouse, o mapa ficou como antes da rodada. No celular, mais
+  folga à direita (as bolhas grandes do litoral encostavam na borda).
+- **Média · relatório:** "Como salvar o PDF" abria depois de carregar (lia o navegador) e empurrava o relatório 89 px:
+  CLS de 0,05 a 0,09 no computador (antes da rodada, 0,02 a 0,03). O servidor decide por um cookie e a primeira pintura
+  já sai aberta: CLS de 0,01 a 0,025.
+- **Média · teclado nas folhas da tela baixa:** a folha fica no fim da página; o Tab além do último controle ia para o
+  fim do documento e dava a volta pela página por trás da folha aberta. Agora o Tab (ou o Shift+Tab) que sai da folha
+  fecha e devolve o foco ao botão que a abriu.
+- **Baixa · mapa em tela cheia:** com o cartão de uma cidade aberto pelo toque, o Esc fechava o mapa inteiro; agora
+  fecha o cartão, e o segundo Esc fecha o mapa.
+- **Baixa · relatório no celular:** com a letra de 14 px, "R$ 251.000,00" de um trecho da fonte partia entre "R$" e o
+  número; as tabelas que rolam de lado não recebiam o foco (o axe acusava). Os dois corrigidos (as tabelas viraram
+  regiões com nome, alcançáveis pelo Tab).
+- **Baixa · alvos de toque:** o logo do cabeçalho do imóvel abaixo de 380 px ficou com 22 px de largura (o nome some
+  ali); a pílula do preço da tela baixa tinha 38 px; os itens de "Mais" na navegação, 40 px no toque. Todos com 44 px.
+
+**Conferido e sem problema:**
+- **PDF A4** (casa de São Gonçalo, LJ e apartamento de SP, gerados no celular e no computador): mesmas páginas, mesmo
+  texto e mesmos pixels que antes da rodada (só a hora do relatório muda).
+- Rolagem horizontal: nenhuma. Números partidos: só o do relatório (corrigido).
+- axe nos dois temas (360, 390, 768, 844×390, 1280; com "Ver todos os dados", as abas Conta e Gráfico e a comparação
+  da região abertas): nenhum problema de contraste nem de ARIA. Ficam os de antes: bolhas do mapa sobrepostas e o link
+  "PDF da matrícula" com 17 px de altura no mouse.
+- Teclado: "Ver todos os dados" e "Comparar" abrem pelo Enter e "Mostrar menos" devolve o foco ao botão; as abas do
+  simulador andam com as setas, Home e End; as folhas das perguntas e o mapa em tela cheia fecham com Esc e devolvem o
+  foco. O Tab pela página inteira (390, 768 e 844×390, para baixo e para cima) não parou nenhuma vez debaixo do
+  cabeçalho, da navegação das seções ou da barra do lance.
+- Simulador no celular: nenhuma função ficou fora de alcance (perguntas nas folhas; tabela, % dos cenários, "Como
+  usar", prazos e "meu lance" na aba Tabela; editores, "Adicionar custo" e "Restaurar" na aba Conta; o gráfico na aba
+  Gráfico; "Exportar PDF" no fim).
+- Computador (1280 a 1920): a mesma disposição; as diferenças são as anunciadas (seletor de portais em todas as
+  larguras, "Diferença" na tabela da região, os vazios agrupados numa linha). O CLS do imóvel no computador até caiu
+  (0,044–0,051 → 0,021–0,032; é a galeria trocando a foto que não carrega neste ambiente pelo desenho).
+
+**Fica para depois:**
+- Em 1024 a busca tem 280 px e o texto de exemplo sai cortado ("Cidade, bairro, estado ou |"); na tela baixa de 683 px
+  de largura, a busca fica com ~90 px.
+- Bolhas do mapa sobrepostas no Sudeste e no Nordeste (de antes; o agrupamento não foi mexido).
+- Conferir num celular de verdade.
+- Prints e medidas: `scratchpad/prints/r4-B-rev/` (`base/`, `fatias/`, `metricas/`, `axe/`, `tab/`, `cls/`, `pdf2/`,
+  `verifica/`, `lado/` com antes | depois); scripts em `scratchpad/r4Brev/`.
+
 ### Relatório em PDF (17/10/2026)
 
 `/previa/imovel/<id>/relatorio` e `/assinante/imovel/<id>/relatorio` (botão "Exportar PDF" no fim do simulador; nunca
@@ -428,7 +569,8 @@ indexado). Página A4 "corporativa" para imprimir ou salvar em PDF pelo próprio
 - **os números são os da tela:** o relatório lê os ajustes guardados neste navegador para o imóvel e faz a conta com a mesma
   função do simulador (`simulacaoCompleta`); conferido de ponta a ponta (meta trocada na tela = mesmo lance máximo no PDF);
 - cabeçalho e "Página X de Y" no Chrome e no Edge; nos outros navegadores o PDF sai sem eles. Papel sempre claro (mesmo com o
-  site no tema escuro), legível em preto e branco. No celular a folha vira coluna fluida (as tabelas largas rolam de lado).
+  site no tema escuro), legível em preto e branco. No celular a folha vira coluna fluida (desde a rodada 4, a tabela de
+  cenários vira um bloco por cenário).
   Em geral 5 a 6 páginas.
 
 Pendências do relatório:
