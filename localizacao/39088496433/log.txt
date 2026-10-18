@@ -1,0 +1,27 @@
+[02:00:16] osm: osmium-tool e shapely
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+osmium version 1.16.0
+[02:00:30] osm: baixando https://download.geofabrik.de/south-america/brazil-latest.osm.pbf
+[02:12:57] osm: 2.0G, dados de 2026-10-17T20:20:51Z
+[02:12:57] osm: tags-filter
+[02:13:57] osm: filtrado 15M; export geojsonseq
+[02:13:58] osm: 134M de geojsonseq; reduzindo às cidades da base
+1153 cidades da base (/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/saida/localizacao/cidades-base.csv)
+Gravado: /home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/localizacao/saida/osm-pois.csv.gz (246132 pontos: {'barca': 985, 'brt': 851, 'onibus': 114485, 'parque': 85407, 'playground': 6710, 'praca': 30402, 'terminal': 5198, 'trilho': 2094})
+[02:14:15] osm: ok (1.6M)
+[02:14:15] ibge: openpyxl e pypdf
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/localizacao/ibge.py", line 113
+    return [t for t in re.sub(r"<w:p[ >]", "\n<w:p ", xml).split("\n") if (t := re.sub(r"<[^>]+>", "", t).strip())]
+                                                                           ^
+SyntaxError: assignment expression cannot rebind comprehension iteration variable 't'
+[02:14:17] ibge: FALHOU
+[02:14:17] fim: 1 etapa(s) com falha
