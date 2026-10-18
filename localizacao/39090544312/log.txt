@@ -1,0 +1,57 @@
+[02:34:03] nota: dependências
+18 testes ok (casos-endereco.json: 87 endereços)
+[02:34:19] nota: entradas (sha256 contra manifesto.json)
+Cache: /home/runner/work/_temp/localizacao-cache · geocodebr: /home/runner/work/_temp/localizacao-cache/geocodebr
+Baixando geocodebr:municipio (0.2 MB) de https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio.parquet
+  ok em 0 s
+Baixando geocodebr:municipio_logradouro_localidade (87.2 MB) de https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio_logradouro_localidade.parquet
+  ok em 0 s
+Baixando cnefe_2022 (1263.5 MB) de https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/cnefe_2022.parquet
+  ok em 7 s
+Baixando statsgrid_2022 (619.1 MB) de https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/statsgrid_2022.parquet
+  ok em 3 s
+Baixando schools_2025 (18.6 MB) de https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/schools_2025.parquet
+  ok em 0 s
+Baixando healthfacilities_202604 (99.8 MB) de https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/healthfacilities_202604.parquet
+  ok em 0 s
+Baixando disasterriskareas_2010 (6.5 MB) de https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/disasterriskareas_2010.parquet
+  ok em 0 s
+Baixando censobr:2022_tracts_responsavelrenda (14.8 MB) de https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_responsavelrenda_v1.0.0.parquet
+  ok em 0 s
+Baixando censobr:2022_tracts_entorno (31.1 MB) de https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_entorno_v1.0.0.parquet
+  ok em 0 s
+Baixando censobr:2022_tracts_domicilio (115.5 MB) de https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_domicilio_v1.0.0.parquet
+  ok em 1 s
+Baixando censobr:2022_tracts_basico (12.4 MB) de https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_basico_v1.0.0.parquet
+  ok em 0 s
+Entradas conferidas: 11 arquivo(s), sha256 igual ao da referência.
+[02:34:34]   osm-pois.csv.gz: localizacao/39088496433/osm-pois.csv.gz
+[02:34:34] nota: pois.py
+  CNEFE: 56 s
+Gravado: /home/runner/work/_temp/localizacao-cache/nota/pois.parquet (12708247 pontos, 148 s): {'cnefe:ensino_cnefe': 231171, 'cnefe:estab': 10580593, 'cnefe:farmacia': 75426, 'cnefe:mercado': 429291, 'cnefe:padaria': 101163, 'cnefe:religioso': 515389, 'cnefe:saude_cnefe': 222637, 'cnes:saude': 147980, 'inep:escola_privada': 40499, 'inep:escola_publica': 117966, 'osm:barca': 985, 'osm:brt': 851, 'osm:onibus': 114485, 'osm:parque': 85407, 'osm:playground': 6710, 'osm:praca': 30402, 'osm:terminal': 5198, 'osm:trilho': 2094}
+[02:37:02] nota: nota.py
+Renda: V06006 (mediana confirmada no dicionário do IBGE)
+  domicílios do CNEFE em 8762586 quadradinhos (83097778 domicílios, 91 s)
+  grade 2022: 1268495 células habitadas, 138991506 moradores (2 s)
+  pontos de serviço: 12708247 em 18 categorias (1 s)
+  ITBI Fortaleza: 611 de 991 ruas com ponto no CNEFE
+  ITBI Recife: 584 de 682 ruas com ponto no CNEFE
+  ITBI Rio de Janeiro: 1362 de 2059 ruas com ponto no CNEFE
+  ITBI Porto Alegre: 963 de 1107 ruas com ponto no CNEFE
+  ITBI São Paulo: 4320 de 5223 ruas com ponto no CNEFE
+Entradas prontas (95 s); OSM: sim
+Traceback (most recent call last):
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/localizacao/nota.py", line 642, in <module>
+    sys.exit(principal())
+             ^^^^^^^^^^^
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/localizacao/nota.py", line 633, in principal
+    res = calcular(cidades, imoveis, codigos, caminho_pois, usar_v06006, com_validacao=not a.sem_validacao, alternativas=ALTERNATIVAS)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/localizacao/nota.py", line 379, in calcular
+    r = met.medir_cidade(c["caixa"], lat, lon, bins, pois, usar_v06006, faces.get(code, 0.0))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/localizacao/metricas.py", line 220, in medir_cidade
+    from scipy.spatial import cKDTree
+ModuleNotFoundError: No module named 'scipy'
+[02:38:38] nota: FALHOU
+[02:38:38] fim: 1 etapa(s) com falha
