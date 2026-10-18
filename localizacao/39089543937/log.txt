@@ -1,0 +1,12 @@
+[02:17:17] ibge: openpyxl e pypdf
+  tentativa 1 de https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/Agregados_por_setores_renda_responsavel_BR_csv.zip falhou: HTTPError: HTTP Error 404: Not Found
+  tentativa 2 de https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/Agregados_por_setores_renda_responsavel_BR_csv.zip falhou: HTTPError: HTTP Error 404: Not Found
+  tentativa 3 de https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/Agregados_por_setores_renda_responsavel_BR_csv.zip falhou: HTTPError: HTTP Error 404: Not Found
+  tentativa 1 de https://biblioteca.ibge.gov.br/visualizacao/livros/liv102277.pdf falhou: HTTPError: HTTP Error 403: Forbidden
+  tentativa 2 de https://biblioteca.ibge.gov.br/visualizacao/livros/liv102277.pdf falhou: HTTPError: HTTP Error 403: Forbidden
+  tentativa 3 de https://biblioteca.ibge.gov.br/visualizacao/livros/liv102277.pdf falhou: HTTPError: HTTP Error 403: Forbidden
+  FALHOU: HTTPError: HTTP Error 403: Forbidden
+
+RESULTADO: V06006 descrita como MEDIANA
+[02:18:40] ibge: ok
+[02:18:40] fim: 0 etapa(s) com falha

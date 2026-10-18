@@ -1,1 +1,1 @@
-execução 39088496433 · ref coleta-localizacao · etapa osm,ibge · 2026-10-18T02:14:17Z
+execução 39089543937 · ref coleta-localizacao · etapa ibge · 2026-10-18T02:18:41Z
