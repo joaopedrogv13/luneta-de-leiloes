@@ -3,7 +3,21 @@ import { AVISO_CLASSIFICACAO } from "@/content/avisos";
 import { SITE } from "@/content/site";
 import { MODALIDADE_ROTULO, numero, SELO_ROTULO, SEVERIDADE_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
-import type { Conjunto, PaginaImovel, Plano, TagDetalhe } from "@/lib/catalogo/tipos";
+import {
+  cidadePequena,
+  fraseFaixa,
+  frasePercentil,
+  NOTA_NAO_GARANTIA,
+  notaNaEscala,
+  OSM_ATRIBUICAO,
+  resumoTercos,
+  ROTA_METODO_LOCAL,
+  SEM_DADO_COMPONENTE,
+  seloPrecisao,
+  TERCO_CURTO,
+  textoRiscoSemAlerta,
+} from "@/lib/catalogo/nota-texto";
+import type { ComponenteLocal, Conjunto, PaginaImovel, Plano, TagDetalhe } from "@/lib/catalogo/tipos";
 import { BarraRelatorio } from "./BarraRelatorio";
 import {
   AVISO_SIMULADOR_REL,
@@ -153,9 +167,10 @@ export function Relatorio({
             <CustosRelatorio />
             <PremissasRelatorio />
             <Regiao pagina={pagina} />
+            <LocalizacaoRel pagina={pagina} plano={plano} />
             <Alertas pagina={pagina} plano={plano} />
 
-            <Secao numero="07" titulo="Avisos importantes" id="avisos">
+            <Secao numero="08" titulo="Avisos importantes" id="avisos">
               <ul className={s.avisos}>
                 <li>
                   <span className={s.forte}>{AVISO_SIMULADOR_REL}</span>
@@ -170,7 +185,7 @@ export function Relatorio({
               </ul>
             </Secao>
 
-            <Secao numero="08" titulo="Fontes e datas" id="fontes">
+            <Secao numero="09" titulo="Fontes e datas" id="fontes">
               {/* as fontes e o "Fim do relatório" não se separam: a linha final sozinha (ou só a última fonte, sem o título)
                   abria uma página quase vazia; a seção inteira, com o título, fecha o relatório */}
               <div className={s.inteira}>
@@ -213,6 +228,7 @@ export function Relatorio({
                     </dd>
                   </div>
                   <ItbiFonte pagina={pagina} />
+                  <FonteLocalizacao pagina={pagina} />
                   <div>
                     <dt>Simulação</dt>
                     <dd>
@@ -410,6 +426,160 @@ function ItbiFonte({ pagina }: { pagina: PaginaImovel }) {
 }
 
 // ---------------------------------------------------------------------------
+// 06 Localização (nota de localização; Luneta)
+// ---------------------------------------------------------------------------
+
+/** Os números principais de uma parte, com o comum na cidade: "Mercados a até 500 m: 8 (comum 10)". */
+function numerosDaParte(c: ComponenteLocal, max = 3) {
+  return c.indicadores
+    .slice(0, max)
+    .map((x) => `${x.rotulo}: ${x.valor}${x.comum !== null ? ` (comum ${x.comum})` : ""}`)
+    .join("; ");
+}
+
+function LocalizacaoRel({ pagina, plano }: { pagina: PaginaImovel; plano: Plano }) {
+  const i = pagina.imovel;
+  const loc = pagina.localizacao;
+  const exemplo = ehExemploRel(i);
+  if (plano === "lente" || pagina.travas.includes("localizacao")) {
+    return (
+      <Secao numero="06" titulo="Localização" id="localizacao">
+        <p className={s.p}>A nota de localização é do plano Luneta e não entra neste relatório.</p>
+      </Secao>
+    );
+  }
+  if (!loc) {
+    return (
+      <Secao numero="06" titulo="Localização" id="localizacao">
+        <p className={s.p}>Não há dados de localização para este imóvel.</p>
+      </Secao>
+    );
+  }
+  const cidade = loc.referencia?.nome ?? `${i.cidade}/${i.uf}`;
+  const pequena = cidadePequena(loc);
+  const comNota = !pequena && loc.nota !== null && (loc.situacao === "calculada" || loc.situacao === "aproximada");
+  const aproximada = comNota && loc.situacao === "aproximada";
+  const selo = seloPrecisao(loc, exemplo);
+  const usouOsm = loc.fontes.some((f) => /OpenStreetMap/i.test(f.nome));
+  return (
+    <Secao
+      numero="06"
+      titulo="Localização"
+      id="localizacao"
+      descricao="Nota de 0 a 100 para o entorno do imóvel, comparado com onde moram as pessoas da mesma cidade, com dados públicos (a maior parte de 2022)."
+    >
+      <div className={s.inteira}>
+        {comNota ? (
+          <div className={s.notaLocal}>
+            <p className={s.notaNumero}>
+              {aproximada ? "~" : ""}
+              {notaNaEscala(loc.nota!)}
+              <small>de 100</small>
+            </p>
+            <div>
+              <p className={s.fraseRegiao} style={{ marginTop: 0 }}>
+                {aproximada && loc.faixa ? fraseFaixa(loc.faixa, cidade) : frasePercentil(loc.nota!, cidade)}.
+              </p>
+              <p className={s.pequeno}>
+                {selo?.rotulo}
+                {aproximada ? `. O meio da faixa (${notaNaEscala(loc.nota!)}) vale para ordenar e filtrar; as partes foram medidas no centro do bairro.` : "."}
+                {exemplo ? " Exemplo fictício: a nota e os números foram inventados." : ""}
+              </p>
+            </div>
+          </div>
+        ) : pequena ? (
+          <>
+            <p className={s.fraseRegiao}>{resumoTercos(loc.componentes, cidade)}</p>
+            <p className={s.pequeno}>
+              Cidade pequena, sem nota de 0 a 100. {loc.motivo ?? ""} {selo ? `${selo.rotulo}.` : ""}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className={s.fraseRegiao}>{loc.situacao === "pendente" ? "A nota deste imóvel ainda não foi calculada." : "Sem nota de localização para este imóvel."}</p>
+            {loc.motivo && <p className={s.p}>{loc.motivo}</p>}
+          </>
+        )}
+      </div>
+
+      {(comNota || pequena) && (
+        <div className={s.inteira}>
+          {/* rola de lado no celular: com o foco (Tab), as setas rolam a tabela */}
+          <div className={s.rolagem} tabIndex={0} role="region" aria-label="As seis partes da nota de localização (tabela; role para o lado para ver todas as colunas)">
+          <table className={s.tabela} style={{ marginTop: "0.9em" }}>
+            <caption className="sr-only">As seis partes da nota de localização</caption>
+            <thead>
+              <tr>
+                <th scope="col">Parte</th>
+                <th scope="col" className={s.num}>
+                  {pequena ? "Posição" : "Nota"}
+                </th>
+                {!pequena && (
+                  <th scope="col" className={s.num}>
+                    Peso
+                  </th>
+                )}
+                <th scope="col">{aproximada ? "Números no centro do bairro" : "Números em volta"}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loc.componentes.map((c) => (
+                <tr key={c.chave}>
+                  <th scope="row">{c.rotulo}</th>
+                  <td className={s.num}>{c.terco ? TERCO_CURTO[c.terco] : c.nota === null ? "sem dado" : notaNaEscala(c.nota)}</td>
+                  {!pequena && <td className={s.num}>{c.nota === null ? "0%" : `${c.peso}%`}</td>}
+                  <td>
+                    {c.nota === null && !c.terco ? SEM_DADO_COMPONENTE : numerosDaParte(c) || "—"}
+                    {c.incompleto ? " (dado incompleto)" : ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      )}
+
+      <div className={s.inteira}>
+        {loc.alertas.length > 0 ? (
+          loc.alertas.map((a, k) => (
+            <p key={k} className={s.alertaLocal}>
+              <span className={s.forte}>{a.titulo}.</span> {a.texto}
+            </p>
+          ))
+        ) : (
+          <p className={s.p}>
+            <span className={s.forte}>{textoRiscoSemAlerta(loc).titulo}.</span> {textoRiscoSemAlerta(loc).texto}
+          </p>
+        )}
+        <p className={s.pequeno}>
+          {NOTA_NAO_GARANTIA} Como a nota é calculada: {SITE.url.replace(/\/$/, "")}
+          {ROTA_METODO_LOCAL}.
+          {usouOsm ? ` Contém dados do OpenStreetMap, ${OSM_ATRIBUICAO.texto} (${OSM_ATRIBUICAO.url.replace(/^https:\/\//, "")}).` : ""}
+        </p>
+      </div>
+    </Secao>
+  );
+}
+
+/** A linha "Nota de localização" de "Fontes e datas" (só quando a nota aparece no relatório). */
+function FonteLocalizacao({ pagina }: { pagina: PaginaImovel }) {
+  const loc = pagina.localizacao;
+  if (!loc || pagina.travas.includes("localizacao")) return null;
+  const exemplo = ehExemploRel(pagina.imovel);
+  return (
+    <div>
+      <dt>Nota de localização</dt>
+      <dd>
+        {exemplo
+          ? "Exemplo fictício: valores inventados para a demonstração."
+          : `${loc.fontes.map((f) => f.nome).join("; ")}. Cálculo de ${dataCurtaRel(loc.geradoEm) ?? loc.geradoEm}.`}
+      </dd>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 07 Principais alertas
 // ---------------------------------------------------------------------------
 
@@ -442,7 +612,7 @@ function Alertas({ pagina, plano }: { pagina: PaginaImovel; plano: Plano }) {
   const i = pagina.imovel;
   if (plano === "lente") {
     return (
-      <Secao numero="06" titulo="Principais alertas" id="alertas">
+      <Secao numero="07" titulo="Principais alertas" id="alertas">
         <p className={s.p}>
           As tags de risco (ocupação, dívidas, ações judiciais, matrícula e mais) e o selo são do plano Luneta e não entram neste relatório. Leia o edital com
           atenção antes de qualquer lance.
@@ -456,7 +626,7 @@ function Alertas({ pagina, plano }: { pagina: PaginaImovel; plano: Plano }) {
   const pendente = pagina.selosDesligados || i.seloPendente;
   return (
     <Secao
-      numero="06"
+      numero="07"
       titulo="Principais alertas"
       id="alertas"
       descricao="Análise automática dos dados publicados pela fonte. Cada alerta traz o que quer dizer e, quando há, o trecho que o originou."

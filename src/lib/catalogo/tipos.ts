@@ -309,6 +309,11 @@ export interface Facetas {
   comData?: number;
   /** todos os resultados coletados no mesmo dia (a ordem "Mais recentes" não muda nada) */
   coletaUnica?: boolean;
+  /**
+   * Luneta: quantos imóveis têm nota de localização a partir de cada valor, com os OUTROS filtros aplicados:
+   * `notaLocal[t]` = nota ≥ t (t de 0 a 100; `notaLocal[0]` = com nota). Vazio no Lente e sem facetas.
+   */
+  notaLocal?: number[];
 }
 
 /** Um ponto do mapa: os imóveis filtrados de uma cidade, agregados (a posição é a da cidade). */

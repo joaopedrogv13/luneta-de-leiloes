@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { BACK_TO_SITE } from "@/components/assinante/shared";
 import type { EntradaSimulador } from "@/components/simulador";
-import type { Conjunto, PaginaImovel as DadosPagina, Plano } from "@/lib/catalogo/tipos";
+import { cidadePequena, linhaResumoNota, ondeRisco } from "@/lib/catalogo/nota-texto";
+import type { Conjunto, PaginaImovel as DadosPagina, LocalizacaoImovel, Plano } from "@/lib/catalogo/tipos";
 import { CabecalhoImovel } from "./CabecalhoImovel";
 import { ProvedorImovel } from "./ContextoImovel";
 import { ehExemplo, faltaParaPraca } from "./formato";
@@ -34,6 +35,19 @@ const SECOES: SecaoNav[] = [
   { id: "documentos", rotulo: "Documentos" },
   { id: "parecidos", rotulo: "Parecidos" },
 ];
+
+/** A nota no resumo da direita: o número (ou "—"), a linha curta e o alerta de área de risco (null no Lente). */
+function resumoDaNota(loc: LocalizacaoImovel | null): DadosResumo["local"] {
+  if (!loc) return null;
+  const pequena = cidadePequena(loc);
+  const comNota = !pequena && loc.nota !== null && (loc.situacao === "calculada" || loc.situacao === "aproximada");
+  return {
+    nota: comNota ? loc.nota : null,
+    aproximada: comNota && loc.situacao === "aproximada",
+    linha: linhaResumoNota(loc),
+    risco: loc.alertas.length > 0 ? ondeRisco(loc.alertas[0]!.distanciaM, loc.precisao === "bairro") : null,
+  };
+}
 
 /**
  * Página do imóvel (/previa/imovel/[id] e /assinante/imovel/[id]). Componente do servidor: monta o layout e
@@ -91,6 +105,7 @@ export function PaginaImovel({
             revisao: contar((t) => t.emRevisao),
             revisaoGrave: contar((t) => t.emRevisao && t.severidade === "grave"),
           },
+    local: resumoDaNota(pagina.localizacao),
   };
 
   const entradaSimulador: EntradaSimulador = {
@@ -165,7 +180,7 @@ export function PaginaImovel({
             <div className="@container mt-8 [&>*+*]:mt-14 sm:[&>*+*]:mt-20">
               <SecaoResumo imovel={i} agora={agora} />
               <SecaoRiscos imovel={i} plano={plano} selosDesligados={pagina.selosDesligados} />
-              <SecaoLocalizacao imovel={i} />
+              <SecaoLocalizacao imovel={i} localizacao={pagina.localizacao} travada={pagina.travas.includes("localizacao")} />
               <SecaoSimulador imovel={entradaSimulador} referencias={pagina.vizinhanca.referencias} />
               <SecaoRegiao imovel={i} vizinhanca={pagina.vizinhanca} />
               <SecaoDocumentos imovel={i} />

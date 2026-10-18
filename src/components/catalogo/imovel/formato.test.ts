@@ -25,6 +25,8 @@ import {
   frasePercentil,
   idNaFonte,
   legendaPosicao,
+  linkPontoOsm,
+  pontoDaSecao,
   localRepetido,
   numeroDaPraca,
   ondeRecorte,
@@ -162,6 +164,36 @@ test("legenda do mapa mini conforme a precisão", () => {
   assert.equal(legendaPosicao("cidade"), "Posição aproximada (centro da cidade)");
   assert.equal(legendaPosicao(null), "Posição aproximada (centro da cidade)");
   assert.equal(legendaPosicao("rua"), "Posição aproximada (pela rua)");
+  // o ponto exato do CNEFE não é "informado pela fonte"
+  assert.equal(legendaPosicao("exata"), "Posição informada pela fonte");
+  assert.equal(legendaPosicao("exata", true), "Endereço localizado no número");
+  assert.match(textoPosicao({ precisaoGeo: "exata", cidade: "São Gonçalo", uf: "RJ", bairro: "Tribobó" }, true), /CNEFE 2022/);
+});
+
+test("ponto da seção: o mais preciso, e de onde veio o exato", () => {
+  const caixa = { fonte: { id: "caixa_csv", nome: "Caixa" } };
+  const lj = { fonte: { id: "leiloesjudiciais_api", nome: "Leilões Judiciais" } };
+  // a Caixa com o ponto do número (instantâneo já com o geocode): exato do CNEFE
+  assert.deepEqual(pontoDaSecao({ ...caixa, lat: -22.86, lon: -43.03, precisaoGeo: "exata" }, { lat: -22.86, lon: -43.03, precisao: "numero" }), {
+    lat: -22.86,
+    lon: -43.03,
+    precisao: "exata",
+    cnefe: true,
+  });
+  // o resumo ainda na sede e a nota com o ponto da rua: vale o da nota
+  assert.deepEqual(pontoDaSecao({ ...caixa, lat: -22.8, lon: -43.0, precisaoGeo: "cidade" }, { lat: -22.86, lon: -43.03, precisao: "rua" }), {
+    lat: -22.86,
+    lon: -43.03,
+    precisao: "rua",
+    cnefe: false,
+  });
+  // a Leilões Judiciais com o ponto da própria fonte: continua "informada pela fonte"
+  assert.equal(pontoDaSecao({ ...lj, lat: -23.6, lon: -46.7, precisaoGeo: "exata" }, null)!.cnefe, false);
+  // Lente (sem nota): o ponto do resumo
+  assert.deepEqual(pontoDaSecao({ ...caixa, lat: -22.86, lon: -43.03, precisaoGeo: "exata" }, null), { lat: -22.86, lon: -43.03, precisao: "exata", cnefe: true });
+  assert.equal(pontoDaSecao({ ...caixa, lat: null, lon: null, precisaoGeo: null }, null), null);
+  assert.equal(linkPontoOsm(-22.859741, -43.032906), "https://www.openstreetmap.org/?mlat=-22.85974&mlon=-43.03291#map=17/-22.85974/-43.03291");
+  assert.match(linkPontoOsm(-22.8, -43, true), /#map=15\//);
 });
 
 test("concordância com o tipo: casas no feminino (\"das casas\", \"todas as\", \"nenhuma das\")", () => {

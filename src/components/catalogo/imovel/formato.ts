@@ -4,7 +4,18 @@
  */
 import { fonteReferencia as fonteDaReferencia } from "../../../lib/catalogo/referencia";
 import { area, moeda, normalizar, numero, PRACA_ROTULO, UF_NOME } from "../../../lib/catalogo/rotulos";
-import type { ImovelResumo, LinkImovel, Praca, PracaDetalhe, ReferenciaM2, RegistroImovel, TipoImovel, TipoLink } from "../../../lib/catalogo/tipos";
+import type {
+  ImovelResumo,
+  LinkImovel,
+  LocalizacaoImovel,
+  Praca,
+  PracaDetalhe,
+  PrecisaoLocal,
+  ReferenciaM2,
+  RegistroImovel,
+  TipoImovel,
+  TipoLink,
+} from "../../../lib/catalogo/tipos";
 
 /** "não informado pela fonte" / "não informada pela fonte", pelo gênero do campo. */
 export function naoInformado(genero: "m" | "f" = "m") {
@@ -496,11 +507,45 @@ export function localRepetido(i: Pick<ImovelResumo, "bairro" | "cidade" | "uf"> 
   return e.includes(`${c}/${i.uf.toLowerCase()}`) || e.includes(`${c} - ${i.uf.toLowerCase()}`) || e.includes(`${c} ${i.uf.toLowerCase()}`);
 }
 
-/** Legenda curta do mapa mini, conforme a precisão: "Posição aproximada (pela rua)", "(centro da cidade)"... */
-export function legendaPosicao(p: ImovelResumo["precisaoGeo"]): string {
+const RANK_PRECISAO: Record<NonNullable<ImovelResumo["precisaoGeo"]>, number> = { exata: 4, rua: 3, cep: 2.5, bairro: 2, cidade: 1 };
+const PRECISAO_DO_GEOCODE: Record<PrecisaoLocal, NonNullable<ImovelResumo["precisaoGeo"]>> = { numero: "exata", rua: "rua", bairro: "bairro", cidade: "cidade" };
+
+/**
+ * O ponto da seção Localização: o mais preciso entre o do resumo e o da nota de localização (o geocode do CNEFE).
+ * `cnefe`: o ponto "exata" veio do endereço localizado no número pelo cadastro do IBGE, e não da fonte (a Caixa não
+ * publica coordenada; a Leilões Judiciais publica). null sem ponto nenhum.
+ */
+export function pontoDaSecao(
+  i: Pick<ImovelResumo, "lat" | "lon" | "precisaoGeo" | "fonte">,
+  loc: Pick<LocalizacaoImovel, "lat" | "lon" | "precisao"> | null,
+): { lat: number; lon: number; precisao: ImovelResumo["precisaoGeo"]; cnefe: boolean } | null {
+  const doLoc =
+    loc && loc.lat !== null && loc.lon !== null && loc.precisao !== null ? { lat: loc.lat, lon: loc.lon, precisao: PRECISAO_DO_GEOCODE[loc.precisao] } : null;
+  const doResumo = i.lat !== null && i.lon !== null ? { lat: i.lat, lon: i.lon, precisao: i.precisaoGeo } : null;
+  const rank = (p: ImovelResumo["precisaoGeo"]) => (p ? RANK_PRECISAO[p] : 0);
+  const usarLoc = doLoc && (!doResumo || rank(doLoc.precisao) > rank(doResumo.precisao));
+  const p = usarLoc ? doLoc : doResumo;
+  if (!p) return null;
+  const mesmoPonto = !!doLoc && Math.abs(doLoc.lat - p.lat) < 1e-4 && Math.abs(doLoc.lon - p.lon) < 1e-4;
+  const cnefe = p.precisao === "exata" && (i.fonte.id === "caixa_csv" || (loc?.precisao === "numero" && mesmoPonto));
+  return { ...p, cnefe };
+}
+
+/** O ponto no OpenStreetMap, com o marcador ("Ver o ponto no mapa"): zoom de rua (17), ou de bairro (15) no aproximado. */
+export function linkPontoOsm(lat: number, lon: number, aproximado = false): string {
+  const la = lat.toFixed(5);
+  const lo = lon.toFixed(5);
+  return `https://www.openstreetmap.org/?mlat=${la}&mlon=${lo}#map=${aproximado ? 15 : 17}/${la}/${lo}`;
+}
+
+/**
+ * Legenda curta do mapa mini, conforme a precisão: "Posição aproximada (pela rua)", "(centro da cidade)"... Com `cnefe`,
+ * o ponto exato veio do endereço localizado no cadastro do IBGE (e não da fonte).
+ */
+export function legendaPosicao(p: ImovelResumo["precisaoGeo"], cnefe = false): string {
   switch (p) {
     case "exata":
-      return "Posição informada pela fonte";
+      return cnefe ? "Endereço localizado no número" : "Posição informada pela fonte";
     case "rua":
       return "Posição aproximada (pela rua)";
     case "cep":
@@ -513,10 +558,10 @@ export function legendaPosicao(p: ImovelResumo["precisaoGeo"]): string {
 }
 
 /** Texto da posição no mapa conforme a precisão: "Posição aproximada: centro de Uberlândia/MG". */
-export function textoPosicao(i: Pick<ImovelResumo, "precisaoGeo" | "cidade" | "uf" | "bairro">): string {
+export function textoPosicao(i: Pick<ImovelResumo, "precisaoGeo" | "cidade" | "uf" | "bairro">, cnefe = false): string {
   switch (i.precisaoGeo) {
     case "exata":
-      return "Posição informada pela fonte";
+      return cnefe ? "Endereço localizado no número, no cadastro de endereços do IBGE (CNEFE 2022)" : "Posição informada pela fonte";
     case "rua":
       return "Posição aproximada: pela rua do endereço publicado";
     case "cep":

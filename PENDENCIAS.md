@@ -1,8 +1,9 @@
 # Luneta de Leilões · onde estamos e pendências
 
 Este é o arquivo central do projeto: **onde estamos, que dados temos, o que falta e o próximo passo**. Atualizado a cada
-entrega (última atualização: 18/10/2026, rodada 4: dados e servidor da nota de localização de 0 a 100, responsividade da
-prévia no celular, tablet e celular deitado, coleta no PC do dono pronta; a tela da nota e os planos vêm a seguir).
+entrega (última atualização: 18/10/2026, rodada 4: nota de localização de 0 a 100 com dados, servidor e **tela pronta**
+(página do imóvel, filtro, ordem, selo, PDF e a página pública `/metodologia/localizacao`), responsividade da prévia no
+celular, tablet e celular deitado, coleta no PC do dono pronta; os planos vêm a seguir).
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
@@ -747,9 +748,9 @@ Pendências da A1:
 - [ ] **Quem integra:** o banco (`base/dados/luneta.db`) não vai para o git. No banco principal, rodar
   `npm run base:geocode -- --arquivo base/saida/localizacao/geocode.json` antes do próximo `base:exportar -- --site`;
   senão o instantâneo volta para a sede.
-- [ ] **Site (frente C):** o mapa diz "Posição informada pela fonte" para toda precisão `exata`. Agora `exata` também é o
-  número achado no CNEFE: trocar o texto (por exemplo, "Posição pelo número do endereço (IBGE, CNEFE 2022)") ou exportar
-  a origem do ponto.
+- [x] **Site (frente C):** o mapa dizia "Posição informada pela fonte" para toda precisão `exata`. Agora, com o ponto do
+  CNEFE, diz "Endereço localizado no número, no cadastro de endereços do IBGE (CNEFE 2022)"; o da Leilões Judiciais
+  continua "informada pela fonte" (18/10/2026).
 - [ ] **Decisão sua:** bairro muito grande (desvio acima de 2,5 km, como Santa Cruz e Campo Grande no Rio) fica "cidade"
   quando a rua não casa (cerca de 1,1 mil imóveis). O centro do bairro está mais perto que a sede; dá para mostrá-lo como
   "bairro aproximado" no mapa sem dar nota.
@@ -797,10 +798,8 @@ em português simples para a página pública, está em `base/fontes/localizacao
   min; os arquivos saíram iguais byte a byte aos gerados aqui). A etapa `geocode` e o `tudo` ainda não rodaram lá.
 
 Pendências da A2:
-- [ ] **Site (frente C):** mostrar a nota (seção, (i), filtro, ordem, cartão, PDF) e a página "Como a nota é calculada" a
-  partir do README; a ordem "Melhor localização" ainda não está no menu (`OrdenarPor.tsx`); citar "© contribuidores do
-  OpenStreetMap" com o link sempre que a nota aparecer. Nas pontas, evitar "melhor que 100%" (33 imóveis arredondam para
-  100) e "melhor que 0%": por exemplo, "entre os mais bem localizados da cidade".
+- [x] **Site (frente C):** a nota na tela (seção, filtro, ordem, selo, resumo, PDF) e a página "Como a nota é calculada".
+  Feito em 18/10/2026: ver "C · a nota na tela" abaixo.
 - [ ] **Planos (frente D):** a tela da trava no Lente para `localizacao`, `regiao`, `portais`, `simulador` e `relatorio`
   (o servidor já não manda os dados) e os filtros avançados.
 - [ ] **Quem integra:** depois do `base:geocode` e do exportar no banco principal, rodar `pois.py` e `nota.py` (ou copiar
@@ -843,14 +842,83 @@ Conferido e sem problema:
 - **Textos:** nada de "garantia", "segura", "risco zero" ou "sem risco".
 
 Pendências da revisão:
-- [ ] **Frente C:** usar `riscoRaioM` no texto sem alerta ("nenhuma área de risco mapeada a menos de 100 m do imóvel";
-  com `coberturaRisco` e raio null: "a cidade tem áreas mapeadas, mas sem o endereço exato não conferimos"). Na
-  aproximada, deixar claro que as partes são do centro do bairro (o motivo já diz).
+- [x] **Frente C:** `riscoRaioM` no texto sem alerta ("Nenhuma área de risco mapeada a menos de 100 m do imóvel"; com
+  `coberturaRisco` e raio null: "não deu para conferir"); na aproximada, "As partes foram medidas no centro do bairro,
+  não no imóvel" (18/10/2026).
 - [ ] **Decisão sua:** a regra dos 10% do OSM conta agora só o território habitado da cidade. Bairro sem morador (zona
   industrial, avenida comercial) fica fora, e São Paulo cai de 0,62 para 0,47. Se quiser mais cidades com os pontos de
   ônibus do OSM, dá para baixar o limite ou contar até 300 m das áreas habitadas.
 - [ ] **Decisão sua (A1):** o imóvel cuja rua fica longe do bairro informado ganha a nota aproximada do bairro (398
   imóveis). Com o bairro "Centro" (29 deles), o "Centro" pode ser só o padrão da Caixa.
+
+**C · a nota na tela (18/10/2026): tela pronta.** O que aparece no plano Luneta (simples primeiro, detalhe num toque):
+- **Página do imóvel, seção Localização:** o cartão "Nota de localização" vem antes do mapa. Nele:
+  - o número grande num anel e a frase: "Melhor localizado que 22% dos moradores de São Gonçalo/RJ". Nas pontas, "Entre
+    os 1% mais bem localizados" ou "menos de 1%", nunca 100% nem 0%;
+  - o selo da precisão. Um toque explica cada caso: no número (±10 m), na rua, "Só no bairro: nota aproximada" (com a
+    faixa, "~59" e "48% a 70%") ou só na cidade;
+  - as 6 partes em barras, com a nota e o peso. Um toque abre o que é medido, os números com o comum na cidade
+    ("Mercados a até 500 m: 13 · comum na cidade: 8") e a fonte com a data. A parte sem dado mostra "sem dado nesta
+    cidade, peso redistribuído";
+  - a área de risco. O alerta do BATER diz onde procuramos ("até 100 m do imóvel"). Sem alerta, diz o que foi conferido.
+    Na cidade sem mapeamento: "isso não quer dizer que não haja risco". Nunca "sem risco";
+  - "Como a nota é calculada" e o rodapé com as fontes, incluindo "© colaboradores do OpenStreetMap" com o link. Que a
+    nota não é garantia, ele diz uma vez.
+- **Cidade pequena:** os terços ("acima da maioria") e o número principal de cada parte, sem nota de 0 a 100.
+- **Sem nota:** o motivo e o que ver no lugar: o endereço no Google Maps e o preço do m² da região.
+- **Mapa:** usa o ponto mais preciso, o do CNEFE. O texto "Posição informada pela fonte" virou "Endereço localizado no
+  número, no cadastro de endereços do IBGE (CNEFE 2022)". O link "Ver o ponto no OpenStreetMap" abre a coordenada.
+- **Resumo lateral** (no celular, o cartão de decisão): a nota pequena, a linha curta e o alerta de risco, com link para
+  a seção.
+- **Catálogo:**
+  - o filtro "Nota de localização": Qualquer, 40+, 60+ e 80+, cada um com a contagem, ou um valor livre de 1 a 100;
+  - a ordem "Melhor localização";
+  - o selo "Local 78" ("~45" na aproximada) no cartão e na linha. Quando não cabe ao lado do bairro e da cidade, ele
+    desce de linha em vez de cortar o bairro. No celular, fica na linha do bairro, e a cidade longa quebra ao lado do
+    ícone em vez de virar "Cocalzinho de Goiás/...";
+  - na URL, `notaLocalMin` e `ordem=localizacao`;
+  - no Lente, filtro, ordem e selo ficam escondidos. A trava visual é da frente D.
+- **PDF:** a seção 06 "Localização" tem a nota, a frase, a precisão, as 6 partes em tabela com os números, o alerta e as
+  fontes. No Lente, só a frase de que a nota é da Luneta. As seções seguintes passaram a 07, 08 e 09.
+- **Página pública `/metodologia/localizacao`:** estática. Entra nos buscadores e no sitemap só quando `SITE.indexable`
+  for verdadeiro. Explica:
+  - o que a nota responde, com a régua e os 100 moradores;
+  - como achamos o ponto: 49,4% no número, 15,1% na rua, 21,9% no bairro e 13,6% na cidade, lidos do arquivo;
+  - as 6 partes: o que entra, o raio, a fonte, a data e o peso. Os pesos vêm do arquivo, não de um texto;
+  - como vira a nota, com um exemplo;
+  - cidade pequena e bairro;
+  - áreas de risco;
+  - o que não entra (preço, crime, favela) e por quê;
+  - a conferência com o ITBI e o que ela não valida;
+  - limites, atualização, fontes e licenças, perguntas.
+
+  Quem vem de um imóvel (`?de=<id>`) vê "Voltar ao imóvel". No celular, o detalhe de cada parte abre num toque.
+- **Exemplos da /assinante:** o cartão diz "Exemplo fictício".
+- **Lente:** no lugar do cartão, uma chamada com uma prévia desenhada (não é a nota do imóvel) e "Conhecer a Luneta". Fica
+  em `ChamadaNotaLuneta.tsx`, pequeno, para a frente D trocar.
+- **Conferido no navegador** (`next start`, 360, 390, 768, 1024 e 1440 px, os dois temas), em 10 imóveis:
+  - o seu: 22 em São Gonçalo;
+  - 97 em São Paulo;
+  - aproximado em Santos;
+  - sem nota em Caldas;
+  - cidade pequena em Cocal do Sul;
+  - dentro de área de risco em Pelotas;
+  - risco a 90 m no Rio;
+  - lazer sem dado em Santa Luzia do Paruá;
+  - um exemplo;
+  - o Lente.
+
+  Em nenhum houve rolagem lateral, cartão vazando ou "sem risco", "risco zero", "100%" e "0%" na frase. O PDF A4 saiu
+  com a seção inteira numa página.
+
+Pendências da C:
+- [ ] **Frente D:** trocar `ChamadaNotaLuneta` pela chamada única do Lente. No Lente, mostrar o filtro e a ordem da nota
+  travados (hoje somem). Pôr na landing o link para `/metodologia/localizacao`.
+- [ ] **Decisão sua:** o mapa mini da página mostra o estado com o ponto, sem as ruas. Com o ponto no número, um mapa de
+  ruas mostraria o quarteirão: tiles do OSM com atribuição ou outro provedor, e o limite de uso entra na conta.
+- [ ] **Técnico:** os números da conferência com o ITBI na página do método estão em `src/lib/catalogo/metodologia.ts`
+  (`VALIDACAO_ITBI`), copiados de `medicao-nota.md`. Se o `nota.py` mudar a validação, atualizar ali, ou gravar a
+  validação no `localizacao.json.gz`. Os outros números da página vêm do arquivo, lidos no build.
 
 ### Ler cada leilão com IA: é viável?
 

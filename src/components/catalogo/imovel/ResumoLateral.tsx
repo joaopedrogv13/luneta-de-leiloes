@@ -7,7 +7,8 @@ import { data, dataHora, moeda, MODALIDADE_ROTULO, PRACA_ROTULO } from "@/lib/ca
 import type { ImovelResumo, Severidade } from "@/lib/catalogo/tipos";
 import { useImovel } from "./ContextoImovel";
 import { fraseDesagio } from "./formato";
-import { IconeCadeado, IconeCalculadora, IconeCalendario, IconeCompartilhar, IconeExterno, IconeSetaDireita } from "./icones";
+import { AnelNota } from "@/components/catalogo/localizacao/visual";
+import { IconeAlerta, IconeCadeado, IconeCalculadora, IconeCalendario, IconeCompartilhar, IconeExterno, IconeSetaDireita } from "./icones";
 import { CHAVE_BARRA_LANCE, gravarPreferencia, lerPreferencia } from "./preferencias";
 import { BotaoRecolher } from "./ResumoRecolhivel";
 
@@ -20,6 +21,11 @@ export interface DadosResumo extends Pick<ImovelResumo, "id" | "titulo" | "lance
   falta: { texto: string; passou: boolean } | null;
   /** quantas tags por gravidade (confirmadas) e em revisão (e, delas, as graves); null no plano Lente */
   riscos: { grave: number; atencao: number; positivo: number; info: number; revisao: number; revisaoGrave: number } | null;
+  /**
+   * Nota de localização, pequena, com o link para a seção: o número (null sem nota ou na cidade pequena), a linha curta
+   * e o alerta de área de risco. null no Lente e sem o dado.
+   */
+  local?: { nota: number | null; aproximada: boolean; linha: string; risco: string | null } | null;
 }
 
 /** Id do bloco de ações: a barra do celular aparece quando ele sai da tela. */
@@ -261,6 +267,35 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
             </span>
             <IconeCadeado tamanho={16} className="text-latao-texto" />
           </button>
+        )}
+        {d.local && (
+          <a
+            href="#localizacao"
+            className="group/local -mx-2 mt-1 flex min-h-11 items-center justify-between gap-3 rounded-xl px-2 py-1.5 text-sm no-underline transition-colors hover:bg-nevoa/[0.07]"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <AnelNota nota={d.local.nota} aproximada={d.local.aproximada} tamanho={40} />
+              <span className="min-w-0">
+                <span className="block font-medium text-luar">
+                  Nota de localização
+                  {d.local.nota !== null && (
+                    <span className="sr-only">
+                      : {d.local.aproximada ? "cerca de " : ""}
+                      {d.local.nota} de 100
+                    </span>
+                  )}
+                </span>
+                <span className="mt-0.5 block text-[13px] leading-snug text-nevoa">{d.local.linha}</span>
+                {d.local.risco && (
+                  <span className="mt-1 flex items-start gap-1.5 text-[13px] leading-snug font-medium text-aten">
+                    <IconeAlerta tamanho={14} className="mt-px" />
+                    {d.local.risco.charAt(0).toUpperCase() + d.local.risco.slice(1)}
+                  </span>
+                )}
+              </span>
+            </span>
+            <IconeSetaDireita tamanho={16} className="shrink-0 text-nevoa transition-transform duration-150 group-hover/local:translate-x-0.5 motion-reduce:transition-none" />
+          </a>
         )}
         <p className="mt-3 text-xs leading-snug text-nevoa max-sm:text-[13px]">
           {d.exemplo ? "Exemplo fictício, para mostrar a página." : `Fonte: ${d.fonteNome} · coletado em ${data(d.coletadoEm)}.`} Preços e datas mudam: confira o

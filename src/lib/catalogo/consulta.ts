@@ -831,6 +831,8 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
   let cFgts = 0;
   let cParc = 0;
   let cFoto = 0;
+  /** imóveis com cada nota de localização (0 a 100), com os outros filtros (só na Luneta) */
+  const cNota = new Int32Array(101);
   /** com data da praça; todos coletados no mesmo dia? (as ordens "Praça mais próxima" e "Mais recentes" avisam quando não ajudam) */
   let cData = 0;
   let primeiraColeta: string | null = null;
@@ -907,6 +909,11 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
     }
     if (okSelo && !okSelo[ix.selo[k]!]) m |= B_SELO;
     mascaras[k] = m;
+    // contagem da nota (o filtro da nota mínima mostra quantos daria cada valor): passa nos outros filtros
+    if (!lente && (m === 0 || m === B_NOTA_LOCAL)) {
+      const nota = v.notaLocal[k]!;
+      if (nota === nota) cNota[Math.min(100, Math.max(0, Math.round(nota)))]!++;
+    }
 
     // ---- facetas
     if (m === 0) {
@@ -1135,10 +1142,19 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
     comFoto: cFoto,
     comData: cData,
     coletaUnica: total > 0 && !variasColetas,
+    notaLocal: lente ? [] : acumuladoDeCima(cNota),
   };
 
   // sem facetas (o pedido do mapa): ~80 KB a menos na resposta
   return { total, pagina, porPagina, totalPaginas, itens, facetas: semFacetas ? FACETAS_VAZIAS : facetas, mapa, totalConjunto: n - vencidos, selosDesligados };
+}
+
+/** Soma de cima para baixo: saida[t] = quantos com valor ≥ t. */
+function acumuladoDeCima(c: Int32Array): number[] {
+  const saida = new Array<number>(c.length);
+  let soma = 0;
+  for (let t = c.length - 1; t >= 0; t--) saida[t] = soma += c[t]!;
+  return saida;
 }
 
 /** Atalho para a primeira página com a ordem padrão (testes e páginas simples). */

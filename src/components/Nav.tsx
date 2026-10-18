@@ -9,8 +9,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 /**
  * Menu mínimo (Como funciona, Níveis, Planos, Falar com advogado) com âncoras que deslizam até a seção.
  * Ao rolar > 64px a barra encolhe (64 → 56) e ganha borda. No celular, os links ficam num menu recolhível.
+ * `base`: fora da landing (ex.: a página do método da nota, "/"), as âncoras levam às seções da home ("/#planos").
  */
-export function Nav() {
+export function Nav({ base = "" }: { base?: string } = {}) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -37,7 +38,7 @@ export function Nav() {
       }`}
     >
       <nav aria-label="Principal" className="mx-auto flex h-full max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-8">
-        <a href="#topo" className="rounded-md text-luar no-underline" aria-label="Luneta de Leilões, voltar ao topo">
+        <a href={base ? "/" : "#topo"} className="rounded-md text-luar no-underline" aria-label={base ? "Luneta de Leilões, página inicial" : "Luneta de Leilões, voltar ao topo"}>
           <Logo />
         </a>
 
@@ -45,7 +46,7 @@ export function Nav() {
           {NAV_LINKS.map((l) => (
             <li key={l.href}>
               <a
-                href={l.href}
+                href={`${base}${l.href}`}
                 className="group relative whitespace-nowrap py-2 text-nevoa no-underline transition-colors hover:text-luar"
               >
                 {l.label}
@@ -67,7 +68,7 @@ export function Nav() {
             <span aria-hidden="true" className="size-3 rounded-full border-[1.5px] border-current" />
             {SUBSCRIBER_AREA.label}
           </Link>
-          <a href="#planos" className="btn-primary hidden !min-h-10 !px-4 !text-[13px] sm:inline-flex">
+          <a href={`${base}#planos`} className="btn-primary hidden !min-h-10 !px-4 !text-[13px] sm:inline-flex">
             Ver planos
           </a>
           <button
@@ -96,7 +97,7 @@ export function Nav() {
           {NAV_LINKS.map((l) => (
             <li key={l.href}>
               <a
-                href={l.href}
+                href={`${base}${l.href}`}
                 onClick={() => setOpen(false)}
                 className="block border-t border-nevoa/15 py-3.5 text-base font-medium text-luar no-underline"
               >

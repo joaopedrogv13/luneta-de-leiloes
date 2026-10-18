@@ -39,4 +39,4 @@ export interface PropsFiltros {
 }
 
 /** Seções do painel "Todos os filtros". */
-export type SecaoFiltro = "local" | "tipo" | "valores" | "caracteristicas" | "leilao" | "condicoes" | "riscos" | "selo" | "foto";
+export type SecaoFiltro = "local" | "nota" | "tipo" | "valores" | "caracteristicas" | "leilao" | "condicoes" | "riscos" | "selo" | "foto";

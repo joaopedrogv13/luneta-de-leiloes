@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { bairroUtil } from "@/lib/catalogo/rotulos";
+import { SeloNotaLista } from "../localizacao/SeloNotaLista";
 import { ListaTags } from "../tags/ListaTags";
 import { FotoImovel } from "./FotoImovel";
 import { IconeLocal } from "./icones";
@@ -54,14 +55,56 @@ export function LinkTitulo({
  * "Bairro · Cidade/UF" numa linha: quando não cabe, quem encolhe (com reticências) é o bairro; a cidade e a UF,
  * o que importa, ficam sempre inteiras. Bairro igual à cidade não se repete. `compacto` (a linha estreita da
  * lista no celular): a cidade em cima e o bairro inteiro na linha de baixo (cortado, ele virava "P…").
+ *
+ * A nota de localização (Luneta, "Local 78") fica na ponta da linha; quando bairro, cidade e nota não cabem juntos, a
+ * nota desce para a linha de baixo (não espreme o bairro). No compacto com bairro, ela vai para a linha do bairro.
  */
 export function Local({ imovel, className = "", compacto = false }: Pick<PropsImovel, "imovel"> & { className?: string; compacto?: boolean }) {
   const bairro = bairroUtil(imovel);
+  const temNota = imovel.notaLocal !== null;
+  const notaNoBairro = compacto && !!bairro && temNota;
   return (
-    <p className={`flex min-w-0 items-center gap-1.5 text-[13px] leading-snug text-nevoa max-sm:text-sm ${compacto ? "@max-xl:flex-wrap @max-xl:gap-y-0" : ""} ${className}`}>
+    <p className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[13px] leading-snug text-nevoa max-sm:text-sm ${className}`}>
+      {/* o grupo cresce até a ponta: com a nota na mesma linha, ela fica à direita; descendo, fica à esquerda */}
+      <span className={`flex max-w-full min-w-0 flex-[1_1_auto] items-center gap-1.5 ${compacto ? "@max-xl:flex-wrap @max-xl:gap-y-0" : ""}`}>
+        <Linha imovel={imovel} bairro={bairro} compacto={compacto} notaNoBairro={notaNoBairro} />
+      </span>
+      {temNota && (
+        <span className={`flex ${notaNoBairro ? "@max-xl:hidden" : ""}`}>
+          <SeloNotaLista imovel={imovel} />
+        </span>
+      )}
+    </p>
+  );
+}
+
+/** O conteúdo de Local: ícone, bairro e cidade (e, no compacto com bairro, a nota na linha do bairro). */
+function Linha({
+  imovel,
+  bairro,
+  compacto,
+  notaNoBairro,
+}: Pick<PropsImovel, "imovel"> & { bairro: string | null; compacto: boolean; notaNoBairro: boolean }) {
+  return (
+    <>
       <IconeLocal className="shrink-0 text-nevoa" />
-      {bairro && <span className={`min-w-0 truncate ${compacto ? "@max-xl:order-2 @max-xl:basis-full @max-xl:pl-[22px]" : ""}`}>{bairro}</span>}
-      <span className="max-w-full shrink-0 truncate">
+      {notaNoBairro && <span aria-hidden="true" className="hidden @max-xl:order-1 @max-xl:block @max-xl:basis-full" />}
+      {bairro && (
+        <span
+          className={`min-w-0 truncate ${
+            notaNoBairro
+              ? "@max-xl:order-2 @max-xl:flex-1 @max-xl:pl-[22px] @max-xl:whitespace-normal"
+              : compacto
+                ? "@max-xl:order-2 @max-xl:basis-full @max-xl:pl-[22px]"
+                : ""
+          }`}
+        >
+          {bairro}
+        </span>
+      )}
+      {/* compacto: cidade longa ("Cocalzinho de Goiás/GO") quebra ao lado do ícone em vez de ir sozinha para baixo e
+          cortar (base 0: a quebra de linha do flex olha o tamanho inteiro do texto, não o encolhido) */}
+      <span className={`max-w-full shrink-0 truncate ${compacto ? "@max-xl:min-w-0 @max-xl:shrink @max-xl:grow @max-xl:basis-0 @max-xl:whitespace-normal" : ""}`}>
         {bairro && (
           <span aria-hidden="true" className={compacto ? "@max-xl:hidden" : ""}>
             ·{" "}
@@ -70,7 +113,12 @@ export function Local({ imovel, className = "", compacto = false }: Pick<PropsIm
         {bairro && <span className="sr-only">, </span>}
         {imovel.cidade}/{imovel.uf}
       </span>
-    </p>
+      {notaNoBairro && (
+        <span className="hidden @max-xl:order-3 @max-xl:ml-auto @max-xl:flex @max-xl:self-start">
+          <SeloNotaLista imovel={imovel} />
+        </span>
+      )}
+    </>
   );
 }
 

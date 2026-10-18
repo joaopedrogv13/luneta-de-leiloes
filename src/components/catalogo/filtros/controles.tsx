@@ -5,7 +5,7 @@
  * painel "Todos os filtros" (mexem no rascunho). Cada um recebe os filtros atuais, as facetas e um
  * `aplicar` (ver useAplicador).
  */
-import type { ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import {
   NATUREZA_ROTULO,
   OCUPACAO_FILTRO_ROTULO,
@@ -24,7 +24,7 @@ import { MODALIDADE_ROTULO, PRACA_ROTULO, SELO_ROTULO, TIPO_ROTULO, numero } fro
 import { NAO_INFORMADO, type Facetas, type Filtros, type OpcaoFaceta, type Severidade } from "@/lib/catalogo/tipos";
 import { CampoFaixa, type AtalhoFaixa } from "../ui/CampoFaixa";
 import { Chips, type OpcaoChip } from "../ui/Chips";
-import { AJUDA, ROTULO } from "../ui/estilos";
+import { AJUDA, CAMPO, ROTULO } from "../ui/estilos";
 import { IconeSeveridade } from "../ui/icones";
 import { SelecaoMultipla, type OpcaoSelecao } from "../ui/SelecaoMultipla";
 import { TriEstado } from "../ui/TriEstado";
@@ -489,6 +489,83 @@ export function ControleSelo({ f, facetas, aplicar, desabilitado = false }: Prop
       vazio="Nenhum imóvel com selo nesta busca."
       onChange={(v) => aplicar("selo", (x) => ({ ...removerFiltro(x, "selo"), ...(v.length ? { selo: v.map(Number) as Filtros["selo"] } : {}) }))}
     />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Nota de localização (Luneta)
+// ---------------------------------------------------------------------------
+
+/** Mínimos prontos da nota de localização (o resto, a pessoa digita). */
+export const MINIMOS_NOTA = [40, 60, 80] as const;
+const ehPronto = (n: number | undefined) => n !== undefined && (MINIMOS_NOTA as readonly number[]).includes(n);
+
+/**
+ * Nota de localização mínima: "Qualquer", "40 ou mais", "60 ou mais", "80 ou mais" (com quantos imóveis cada um daria,
+ * pela faceta `notaLocal`) ou um valor livre de 1 a 100. Imóvel sem nota não passa no filtro.
+ */
+export function ControleNotaLocal({ f, facetas, aplicar }: PropsControle) {
+  const atual = f.notaLocalMin;
+  const contagem = facetas.notaLocal && facetas.notaLocal.length === 101 ? facetas.notaLocal : null;
+  const quantos = (t: number) => (contagem ? contagem[Math.min(100, Math.max(0, t))] : undefined);
+  const [texto, setTexto] = useState(atual !== undefined && !ehPronto(atual) ? String(atual) : "");
+  const [antes, setAntes] = useState(atual);
+  // o valor mudou por fora (chip, "Limpar", pílula): o campo acompanha, sem apagar o que a pessoa digita
+  if (atual !== antes) {
+    setAntes(atual);
+    const digitado = texto.trim() === "" ? undefined : Number(texto);
+    if (digitado !== atual) setTexto(atual !== undefined && !ehPronto(atual) ? String(atual) : "");
+  }
+  const definir = (n: number | undefined) =>
+    aplicar("notaLocal", (x) => ({ ...removerFiltro(x, "notaLocal"), ...(n !== undefined && n >= 1 ? { notaLocalMin: Math.min(100, Math.round(n)) } : {}) }));
+  const opcoes: OpcaoChip[] = [
+    { valor: "", rotulo: "Qualquer", neutro: true },
+    ...MINIMOS_NOTA.map((t) => ({ valor: String(t), rotulo: `${t} ou mais`, total: quantos(t) })),
+  ];
+  const escolhido = atual === undefined ? "" : ehPronto(atual) ? String(atual) : "livre";
+  const idCampo = useId();
+  return (
+    <div className="flex flex-col gap-3">
+      <Chips
+        rotulo="Nota de localização mínima"
+        multiplo={false}
+        permitirVazio={false}
+        ocultarZerados={false}
+        opcoes={opcoes}
+        valor={[escolhido]}
+        onChange={([v]) => {
+          setTexto("");
+          definir(v ? Number(v) : undefined);
+        }}
+      />
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <label htmlFor={idCampo} className="text-[13px] text-nevoa">
+          Ou digite a nota mínima (1 a 100):
+        </label>
+        <input
+          id={idCampo}
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={100}
+          step={1}
+          value={texto}
+          placeholder="ex.: 70"
+          onChange={(e) => {
+            const t = e.target.value;
+            setTexto(t);
+            const n = t.trim() === "" ? undefined : Number(t);
+            definir(n !== undefined && Number.isFinite(n) ? n : undefined);
+          }}
+          className={`${CAMPO} w-28!`}
+        />
+      </div>
+      {atual !== undefined && quantos(atual) !== undefined && (
+        <p className={AJUDA} aria-live="polite">
+          {textoImoveis(quantos(atual)!)} com nota {atual} ou mais nesta busca.
+        </p>
+      )}
+    </div>
   );
 }
 

@@ -1333,3 +1333,43 @@
     text-decoration: none;
   }
 }
+
+/* Localização: a nota grande ao lado da frase; o alerta de área de risco com borda (lê em preto e branco) */
+.notaLocal {
+  display: flex;
+  align-items: center;
+  gap: 1.3em;
+  margin-top: 0.9em;
+}
+.notaNumero {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 5.2em;
+  height: 5.2em;
+  border: 2.5pt solid var(--latao);
+  border-radius: 50%;
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.25em;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+.notaNumero small {
+  margin-top: 0.3em;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.5em;
+  font-weight: 500;
+  color: var(--suave);
+}
+.alertaLocal {
+  margin-top: 0.9em;
+  padding: 0.6em 0.9em;
+  border: 0.75pt solid var(--aten);
+  border-left-width: 3pt;
+  border-radius: 3px;
+  color: var(--texto);
+  break-inside: avoid;
+}

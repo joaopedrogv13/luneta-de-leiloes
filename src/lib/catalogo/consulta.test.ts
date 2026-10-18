@@ -341,6 +341,31 @@ test("facetas para as ordens: com data da praça e coleta num dia só; sem facet
   assert.ok(m.mapa.length > 0);
 });
 
+test("faceta da nota de localização: quantos a partir de cada nota, com os OUTROS filtros; vazia no Lente", () => {
+  const lista = [
+    imovel("n-1", { notaLocal: 85 }),
+    imovel("n-2", { notaLocal: 60 }),
+    imovel("n-3", { notaLocal: 40, tipo: "casa" }),
+    imovel("n-4", { notaLocal: 12 }),
+    imovel("n-5", { notaLocal: null }),
+  ];
+  const ix = criarIndice(lista);
+  const r = buscar(ix, busca(), { agora: AGORA });
+  assert.equal(r.facetas.notaLocal!.length, 101);
+  assert.equal(r.facetas.notaLocal![0], 4); // com nota
+  assert.equal(r.facetas.notaLocal![40], 3);
+  assert.equal(r.facetas.notaLocal![60], 2);
+  assert.equal(r.facetas.notaLocal![80], 1);
+  assert.equal(r.facetas.notaLocal![100], 0);
+  // o próprio filtro da nota não muda a contagem dela (como uma faixa); os outros, sim
+  const comFiltro = buscar(ix, busca({ notaLocalMin: 60 }), { agora: AGORA });
+  assert.equal(comFiltro.total, 2);
+  assert.equal(comFiltro.facetas.notaLocal![40], 3);
+  assert.equal(buscar(ix, busca({ tipo: ["apartamento"] }), { agora: AGORA }).facetas.notaLocal![40], 2);
+  // Lente: nada da nota sai
+  assert.deepEqual(buscar(ix, busca({}, { plano: "lente" }), { agora: AGORA }).facetas.notaLocal, []);
+});
+
 test("praça vencida há mais de 1 dia sai de tudo (o instantâneo fica no ar por dias)", () => {
   const ix = criarIndice([
     imovel("caixa-a", { dataPraca: "2026-10-12T13:00:00.000Z", desagio: 90 }),

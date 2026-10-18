@@ -4,11 +4,12 @@ import { Logo } from "@/components/ui/Logo";
 import { RichText } from "@/components/ui/RichText";
 
 /**
- * Rodapé com avisos legais (a classificação não é garantia; LGPD; preços podem mudar).
+ * Rodapé com avisos legais (a classificação não é garantia; LGPD; preços podem mudar). `base`: fora da landing, as
+ * âncoras levam às seções da home ("/#planos").
  * Abaixo de md, o respiro de baixo nunca é menor que a faixa da barra de atalhos (--cta-bar-space, que cresce
  * com a área segura): no fim da página o texto fica acima dela.
  */
-export function Footer() {
+export function Footer({ base = "" }: { base?: string } = {}) {
   return (
     <footer className="border-t border-nevoa/15 bg-noite px-5 pt-14 pb-[max(8rem,var(--cta-bar-space))] sm:px-10 md:pb-16">
       <div className="container-l grid gap-10 md:grid-cols-[1.1fr_0.7fr_1.6fr]">
@@ -20,7 +21,7 @@ export function Footer() {
           <ul className="flex flex-col gap-1 text-sm font-medium">
             {NAV_LINKS.map((l) => (
               <li key={l.href}>
-                <a href={l.href} className="inline-block py-1.5 text-nevoa no-underline hover:text-luar">
+                <a href={`${base}${l.href}`} className="inline-block py-1.5 text-nevoa no-underline hover:text-luar">
                   {l.label}
                 </a>
               </li>
@@ -31,12 +32,12 @@ export function Footer() {
               </Link>
             </li>
             <li>
-              <a href="#politica-de-privacidade" className="inline-block py-1.5 text-nevoa no-underline hover:text-luar">
+              <a href={`${base}#politica-de-privacidade`} className="inline-block py-1.5 text-nevoa no-underline hover:text-luar">
                 Política de privacidade <RichText text="[link]" />
               </a>
             </li>
             <li>
-              <a href="#termos-de-uso" className="inline-block py-1.5 text-nevoa no-underline hover:text-luar">
+              <a href={`${base}#termos-de-uso`} className="inline-block py-1.5 text-nevoa no-underline hover:text-luar">
                 Termos de uso <RichText text="[link]" />
               </a>
             </li>

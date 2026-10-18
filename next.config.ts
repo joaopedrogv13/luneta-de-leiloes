@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
     "/previa": [...CATALOGO, ...LOCALIZACAO],
     "/previa/**": [...CATALOGO, ...LOCALIZACAO],
     "/assinante/imovel/**": ITBI,
+    // a página do método lê os números da nota (estática: lidos no build; a lista segura uma renderização no servidor)
+    "/metodologia/localizacao": LOCALIZACAO,
   },
   images: {
     // Fotos reais dos imóveis (quando houver) saem em AVIF/WebP, nos tamanhos da moldura de lente.

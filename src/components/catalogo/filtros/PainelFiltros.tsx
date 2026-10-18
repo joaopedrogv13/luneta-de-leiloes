@@ -1,13 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import { chaveFiltros, contarGrupos, filtrosEfetivos, limparVazios, type GrupoFiltro } from "@/lib/catalogo/filtros-rotulos";
+import { ROTA_METODO_LOCAL } from "@/lib/catalogo/nota-texto";
 import { numero } from "@/lib/catalogo/rotulos";
 import type { Facetas, Filtros } from "@/lib/catalogo/tipos";
 import { contarFiltros } from "@/lib/catalogo/url";
 import { useMidia } from "../app/hooks";
 import { CampoData } from "../ui/CampoData";
-import { AJUDA } from "../ui/estilos";
+import { AJUDA, LINK } from "../ui/estilos";
 import { Folha, rolarPara } from "../ui/Folha";
 import { Girando, IconeCadeado } from "../ui/icones";
 import { semMovimento } from "../ui/useAdiado";
@@ -19,6 +21,7 @@ import {
   ControleFaixa,
   ControleLista,
   ControleMinimo,
+  ControleNotaLocal,
   ControleSelo,
   ControleSimNao,
   ControleTags,
@@ -31,6 +34,7 @@ import type { Aplicar } from "./useAplicador";
 
 export const SECOES: readonly { id: SecaoFiltro; rotulo: string; grupos: readonly GrupoFiltro[] }[] = [
   { id: "local", rotulo: "Localização", grupos: ["uf", "cidade", "bairro"] },
+  { id: "nota", rotulo: "Nota de localização", grupos: ["notaLocal"] },
   { id: "tipo", rotulo: "Tipo", grupos: ["tipo"] },
   { id: "valores", rotulo: "Valores", grupos: ["lance", "avaliacao", "desagio", "lanceM2"] },
   { id: "caracteristicas", rotulo: "Características", grupos: ["area", "quartos", "vagas"] },
@@ -209,6 +213,8 @@ export function PainelFiltros({
 
   const ativos = contarFiltros(rascunho);
   const lente = plano === "lente";
+  // a nota de localização é da Luneta: no Lente a seção some por enquanto (a tela da trava é da frente de planos)
+  const secoes = lente ? SECOES.filter((s) => s.id !== "nota") : SECOES;
   const props = { f: rascunho, facetas: facetasVivas, aplicar };
 
   const mostrar = () => {
@@ -252,14 +258,14 @@ export function PainelFiltros({
   const nav = (
     <nav aria-label="Seções dos filtros" className="relative md:hidden">
       <ul ref={navLista} className="relative flex gap-1.5 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {SECOES.map((s) => itemNav(s, false))}
+        {secoes.map((s) => itemNav(s, false))}
       </ul>
       <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-tinta" />
     </nav>
   );
   const navLateral = (
     <nav aria-label="Seções dos filtros" className="px-3 py-4">
-      <ul className="flex flex-col gap-1">{SECOES.map((s) => itemNav(s, true))}</ul>
+      <ul className="flex flex-col gap-1">{secoes.map((s) => itemNav(s, true))}</ul>
     </nav>
   );
 
@@ -332,6 +338,21 @@ export function PainelFiltros({
               />
             </Campo>
           </Secao>
+
+          {!lente && (
+            <Secao
+              uid={uid}
+              id="nota"
+              titulo="Nota de localização"
+              descricao="De 0 a 100: o entorno do imóvel comparado com onde moram as pessoas da mesma cidade. Imóveis sem nota (endereço só na cidade, cidade pequena, área rural) ficam de fora; a nota aproximada (só o bairro) conta pelo meio da faixa."
+            >
+              <ControleNotaLocal {...props} />
+              <Link href={ROTA_METODO_LOCAL} target="_blank" prefetch={false} className={`${LINK} -mt-2 self-start`}>
+                Como a nota é calculada
+                <span className="sr-only"> (abre em nova aba)</span>
+              </Link>
+            </Secao>
+          )}
 
           <Secao uid={uid} id="tipo" titulo="Tipo de imóvel">
             <ControleTipo {...props} />

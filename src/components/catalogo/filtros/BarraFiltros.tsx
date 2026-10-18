@@ -93,6 +93,8 @@ function ordensSemEfeito(facetas: Facetas, total: number): Partial<Record<Ordem,
   if (comData !== undefined && comData < Math.max(2, total * 0.05)) {
     saida.data = comData === 0 ? "Nenhum imóvel desta busca informa a data da praça" : `Só ${numero(comData)} ${comData === 1 ? "imóvel informa" : "imóveis informam"} a data da praça`;
   }
+  // nota de localização (Luneta): sem nenhuma nota na busca, a ordem não muda nada
+  if (facetas.notaLocal && facetas.notaLocal.length > 0 && facetas.notaLocal[0] === 0) saida.localizacao = "Nenhum imóvel desta busca tem nota de localização";
   return saida;
 }
 
