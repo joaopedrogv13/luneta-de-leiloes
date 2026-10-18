@@ -1,0 +1,67 @@
+# Ranking de localização (base/fontes/localizacao): as etapas que precisam de internet aberta (OSM da Geofabrik,
+# conferências no IBGE e no SGB) e, quando pedido, o pipeline inteiro.
+#
+# SÓ RODA QUANDO ACIONADO (workflow_dispatch: botão "Run workflow" ou
+# `gh workflow run base-localizacao.yml --ref <branch> -f etapa=osm`). O que roda está em
+# `base/fontes/localizacao/actions.sh` do ref escolhido (assim um branch de trabalho testa sem mexer neste arquivo).
+# Lê só dados abertos; não usa segredo nem faz commit no código. A saída (base/fontes/localizacao/saida/, sempre
+# pequena: o GitHub recusa arquivo acima de 100 MB) e o log são publicados no branch `coletas-dados`, pasta
+# localizacao/<run_id>/, porque daqui não se baixam artefatos (redirecionam para um blob bloqueado pelo proxy).
+name: Base - Localização
+
+on:
+  workflow_dispatch:
+    inputs:
+      etapa:
+        description: "tudo, ou lista separada por vírgula (ver base/fontes/localizacao/actions.sh)"
+        required: false
+        default: "tudo"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  localizacao:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Rodar base/fontes/localizacao/actions.sh
+        continue-on-error: true
+        env:
+          # o texto digitado no "Run workflow" entra por variável, nunca colado no script
+          ETAPA: ${{ inputs.etapa }}
+        run: |
+          set -o pipefail
+          mkdir -p base/fontes/localizacao/saida
+          if [ -f base/fontes/localizacao/actions.sh ]; then
+            bash base/fontes/localizacao/actions.sh "$ETAPA" 2>&1 | tee base/fontes/localizacao/saida/log.txt
+          else
+            echo "base/fontes/localizacao/actions.sh não existe no ref ${GITHUB_REF_NAME}" | tee base/fontes/localizacao/saida/log.txt
+          fi
+      - name: Publicar o resultado no branch coletas-dados
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ETAPA: ${{ inputs.etapa }}
+        run: |
+          set -e
+          PASTA="$RUNNER_TEMP/publicar"
+          rm -rf "$PASTA" && mkdir -p "$PASTA"
+          cd "$PASTA"
+          git init -q && git checkout -q -b coletas-dados
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if git fetch -q --depth 1 origin coletas-dados 2>/dev/null; then git checkout -q -B coletas-dados FETCH_HEAD; fi
+          DESTINO="localizacao/${{ github.run_id }}"
+          mkdir -p "$DESTINO"
+          # só arquivos até 95 MB (o resto fica listado no log)
+          find "$GITHUB_WORKSPACE/base/fontes/localizacao/saida" -maxdepth 1 -type f -size -95M -exec cp {} "$DESTINO/" \;
+          find "$GITHUB_WORKSPACE/base/fontes/localizacao/saida" -maxdepth 1 -type f -size +95M -printf "grande demais, não publicado: %f (%s bytes)\n" >> "$DESTINO/log.txt" || true
+          echo "execução ${{ github.run_id }} · ref ${GITHUB_REF_NAME} · etapa ${ETAPA} · $(date -u +%FT%TZ)" > localizacao/ultima-execucao.txt
+          git add -A
+          git -c user.name="luneta-coleta" -c user.email="actions@users.noreply.github.com" commit -q -m "Localização (execução ${{ github.run_id }}, ${ETAPA})" || echo "nada novo"
+          for i in 1 2 3; do git push -q origin coletas-dados && break; git fetch -q origin coletas-dados && git rebase -q FETCH_HEAD; done
