@@ -126,6 +126,17 @@ function codificacaoDoCabecalho(tipo: string | null): Codificacao {
   return "auto";
 }
 
+/**
+ * O motivo de baixo do "fetch failed" (o fetch do Node esconde em `cause`): " (ENOTFOUND)", " (ECONNREFUSED)",
+ * " (UNABLE_TO_VERIFY_LEAF_SIGNATURE)"... Sem ele, falta de internet e certificado não reconhecido parecem iguais.
+ */
+export function causaDoErro(erro: unknown): string {
+  const causa = (erro as { cause?: unknown } | null)?.cause as { code?: unknown; message?: unknown } | undefined;
+  if (!causa) return "";
+  if (typeof causa.code === "string" && causa.code) return ` (${causa.code})`;
+  return typeof causa.message === "string" && causa.message ? ` (${causa.message.slice(0, 120)})` : "";
+}
+
 async function lerCorpo(resposta: Response, maximo: number, url: string): Promise<Uint8Array> {
   const declarado = Number(resposta.headers.get("content-length"));
   if (Number.isFinite(declarado) && declarado > maximo) {
@@ -264,7 +275,7 @@ export function criarClienteHttp(config: ConfigHttp = {}): ClienteHttp {
         if (erro instanceof ErroHttp) throw erro;
         if (opcoes.sinal?.aborted) throw new ErroHttp("cancelado", url, "Coleta cancelada.", null, tentativa);
         const timeout = limite.signal.aborted;
-        const descricao = timeout ? `tempo esgotado (${limiteMs} ms)` : `falha de rede: ${(erro as Error).message}`;
+        const descricao = timeout ? `tempo esgotado (${limiteMs} ms)` : `falha de rede: ${(erro as Error).message}${causaDoErro(erro)}`;
         ultimoErro = new ErroHttp(timeout ? "timeout" : "rede", url, `${descricao} em ${url}`, null, tentativa);
         log(`${metodo} ${url} → ${descricao}`);
         if (tentativa < tentativas) await esperar(esperaDaTentativa(tentativa, null));

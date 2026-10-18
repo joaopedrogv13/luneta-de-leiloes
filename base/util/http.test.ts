@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { criarClienteHttp, ErroHttp, lerRetryAfter, USER_AGENT_PADRAO, type ConfigHttp } from "./http.ts";
+import { causaDoErro, criarClienteHttp, ErroHttp, lerRetryAfter, USER_AGENT_PADRAO, type ConfigHttp } from "./http.ts";
 
 type Rota = (init: RequestInit) => Response | Promise<Response>;
 
@@ -107,6 +107,19 @@ test("timeout por tentativa e erro de rede são retentados", async () => {
     { intervaloMinimoMs: 0 },
   );
   assert.equal(await quebrado.cliente.texto("https://fonte.test/rede"), "voltou");
+});
+
+test("erro de rede leva o motivo de baixo do \"fetch failed\" (DNS, conexão recusada, certificado)", async () => {
+  const comCausa = (code: string) => () => Promise.reject(Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("x"), { code }) }));
+  const { cliente } = ambiente(
+    { ...ROBOTS_LIVRE, "https://fonte.test/cert": comCausa("SELF_SIGNED_CERT_IN_CHAIN"), "https://fonte.test/dns": comCausa("ENOTFOUND") },
+    { intervaloMinimoMs: 0, tentativas: 1 },
+  );
+  await assert.rejects(cliente.texto("https://fonte.test/cert"), (e: unknown) => e instanceof ErroHttp && e.motivo === "rede" && /fetch failed \(SELF_SIGNED_CERT_IN_CHAIN\)/.test(e.message));
+  await assert.rejects(cliente.texto("https://fonte.test/dns"), (e: unknown) => e instanceof ErroHttp && /\(ENOTFOUND\)/.test(e.message));
+  assert.equal(causaDoErro(new TypeError("fetch failed")), "");
+  assert.equal(causaDoErro(Object.assign(new TypeError("fetch failed"), { cause: new Error("socket hang up") })), " (socket hang up)");
+  assert.equal(causaDoErro(null), "");
 });
 
 test("timeout por requisição sobrepõe o do cliente (arquivo grande)", async () => {

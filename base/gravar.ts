@@ -120,7 +120,7 @@ function dinheiro(valor: number | null | undefined): number | null {
 }
 
 /** Sem HTML, mascarado, com espaços simples e quebras de parágrafo preservadas; null se vazio. */
-function textoLimpo(valor: string | null | undefined): string | null {
+export function textoLimpo(valor: string | null | undefined): string | null {
   if (!valor) return null;
   const limpo = mascararDadosPessoais(semHtml(valor))
     .replace(/[ \t\f\v\r]+/g, " ")

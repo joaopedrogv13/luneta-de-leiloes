@@ -15,6 +15,10 @@
     "base:status": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/cli.ts status",
     "base:fichas": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/fontes/caixa/aplicar-fichas.ts",
     "base:testar": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"base/**/*.test.ts\"",
+    "coleta:pc": "node base/coleta-pc.mjs",
+    "coleta:pc:fichas": "node base/coleta-pc.mjs --etapas fichas",
+    "coleta:pc:bh": "node base/coleta-pc.mjs --etapas bh",
+    "coleta:pc:publicar": "node base/coleta-pc.mjs --so-publicar",
     "test:site": "node --import jiti/register --test \"src/**/*.test.ts\""
   },
   "dependencies": {

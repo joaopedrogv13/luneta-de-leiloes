@@ -17,7 +17,7 @@ e quartis de R$/m² por tipo) e descartam as linhas. Nenhum número de imóvel, 
 | Porto Alegre/RS | **temos** | 20.396 (out/2025 a out/2026) | base de cálculo | portal CKAN, um ZIP por ano | CC-BY no portal (a confirmar) | 233, 227 comparam: 178 / 191 / 227 |
 | Fortaleza/CE | **temos** | 23.635 (fev/2025 a fev/2026: o arquivo do portal é de fev/2026) | base de cálculo | portal CKAN, um CSV único | CC-BY | 94, só **22** comparam (casas e terrenos): 0 / 18 / 22 |
 | Recife/PE | **temos** | 16.952 (out/2025 a out/2026) | avaliação da prefeitura | portal CKAN, um CSV por ano | ODbL | 26, 26 comparam: 22 / 25 / 26 |
-| Belo Horizonte/MG | coleta pendente | — | portal CKAN da PBH: **HTTP 403 para o GitHub Actions** na API, nas páginas e no download direto (servidor fora do Brasil); não contornamos. O conector está pronto para rodar de uma rede no Brasil | CC-BY | 37 |
+| Belo Horizonte/MG | coleta pendente (pronta no PC do dono) | — | portal CKAN da PBH: **HTTP 403 para o GitHub Actions** na API, nas páginas e no download direto (servidor fora do Brasil); não contornamos. Roda do PC do dono com `node base/coleta-pc.mjs --etapas bh` (ver "Belo Horizonte pelo PC do dono") | CC-BY | 37 |
 | FipeZAP | precisa de autorização | — | índice de preço anunciado | uso depende da Fipe | — |
 | Salvador, Goiânia, Brasília, Curitiba, Florianópolis, Campinas, Niterói | sem dado aberto | — | pedir pela Lei de Acesso à Informação | — | — |
 
@@ -68,6 +68,35 @@ npm run test:site                                                  # confere os 
 
 Localmente (com rede para as prefeituras): `cd base/fontes/itbi && pip install dadosimob pandas numpy requests
 openpyxl && python sp.py saida/itbi-sp.json` (e `rio.py`, `recife.py`, `fortaleza.py`, `poa.py`, `bh.py`).
+
+### Belo Horizonte pelo PC do dono
+
+O portal da PBH recusa servidores fora do Brasil. No PC do dono, `node base/coleta-pc.mjs` (ou só BH:
+`node base/coleta-pc.mjs --etapas bh`; guia em [`base/COLETA-NO-PC.md`](../../COLETA-NO-PC.md)) roda
+`python bh.py <projeto>/coletas-pc/itbi/itbi-belo-horizonte.json.parcial` dentro de `base/fontes/itbi/` (os imports são
+irmãos do `bh.py`; no Windows, pelo `py -3` ou `python`), com `PYTHONIOENCODING=utf-8`. O `.parcial` só vira o
+`itbi-belo-horizonte.json` se o `bh.py` terminar bem e o JSON estiver inteiro (o `gravar` de `comum.py` escreve direto no
+arquivo: um Ctrl+C no meio deixaria um JSON cortado para o envio). Ele confere antes o Python 3.9+ e os pacotes
+(`pip install pandas numpy requests openpyxl`). O resultado vai ao branch `coletas-dados` em
+`itbi/itbi-belo-horizonte.json` e `itbi/log-belo-horizonte.txt`, no mesmo lugar e formato que o Actions publica, com
+`itbi/ultima-execucao.txt` = "PC do dono · etapa bh · <data>". Bloqueio é só a recusa do portal
+(`HTTP 403 em <url> (bloqueio: não contornado)`, de `comum.baixar`); erro de conexão ou proxy é "sem conexão", e
+certificado recusado (`SSLError`, antivírus que inspeciona HTTPS) tem aviso próprio.
+
+Para levar ao site, o mesmo de sempre:
+
+```bash
+git fetch origin coletas-dados
+rm -rf /tmp/coletas && mkdir -p /tmp/coletas && git archive origin/coletas-dados itbi | tar -x -C /tmp/coletas
+git show origin/coletas-dados:itbi/ultima-execucao.txt; tail -5 /tmp/coletas/itbi/log-belo-horizonte.txt
+python3 base/fontes/itbi/para_site.py --de /tmp/coletas/itbi      # grava base/saida/site/itbi/mg-belo-horizonte.json.gz (e os outros)
+npm run test:site
+```
+
+O `npm run test:site` confere a razão área do ITBI / área privativa da base em cada tipo: se BH publicar a área com a
+parte comum do prédio (como SP e Fortaleza), o teste falha até marcar `areaComComum` em `CIDADES_ITBI`
+(`src/lib/catalogo/itbi.ts`). Depois, a linha de BH na tabela de cobertura e a de "Situação" acima saem de "coleta
+pendente".
 
 ## Arquivos
 

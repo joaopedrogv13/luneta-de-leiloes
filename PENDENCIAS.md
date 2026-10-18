@@ -17,7 +17,7 @@ entrega (última atualização: 17/10/2026, correções integradas da rodada 3: 
 | Fonte | Como entra | O que temos no banco | Atualização |
 | --- | --- | --- | --- |
 | Caixa (lista oficial CSV) | arquivo público oficial (opção 1) | **21.226 imóveis** da lista de 08/10/2026: endereço, preço, avaliação, deságio, modalidade, financiamento, área, quartos, link e URL da foto | carga única, ainda não ao vivo (rede bloqueada neste ambiente) |
-| Caixa (página de cada imóvel) | leitura da página (opção 2 leve) | **0**: leitor pronto e testado em 2 páginas reais (matrícula, regras de condomínio e IPTU, FGTS, datas de leilão, edital) | precisa da rede |
+| Caixa (página de cada imóvel) | leitura da página (opção 2 leve) | **0**: leitor pronto e testado em 2 páginas reais (matrícula, regras de condomínio e IPTU, FGTS, datas de leilão, edital) | precisa de rede no Brasil: `node base/coleta-pc.mjs` no PC do dono (pronto para rodar) |
 | Leilões Judiciais (API MCP pública) | API documentada (opção 1) | **10 lotes de amostra** (vários leiloeiros), com fotos, edital, matrícula e laudo | conector pronto, nunca chamado ao vivo |
 | Radar de editais (PNCP, Diário da Justiça, DOU, Querido Diário) | APIs públicas (opção 1) | **0**: conectores prontos; DOU precisa de conta gratuita no INLABS | precisa da rede |
 | Itaú, C6, Bradesco, Santander, BB, prefeituras, Zukerman, Mega, Superbid… | **sem API pública**: raspagem (opção 2) | **0** | ainda não construído |
@@ -108,6 +108,66 @@ a busca, os filtros, a ordem e a paginação no servidor; "Estado: Minas Gerais"
      à Fipe pedindo autorização do FipeZAP; pedidos pela LAI nas capitais sem ITBI aberto;
    - **Querido Diário:** escrever à OKBR confirmando uso comercial (dados CC BY 4.0, mas os termos falam em "finalidade");
    - conferir no seu navegador as **fotos da Caixa** e o **PDF da matrícula** (daqui a rede não chega à Caixa).
+
+### Coleta no PC do dono (fichas da Caixa e ITBI de BH): **pronto para rodar** (17/10/2026; revisado em 18/10/2026)
+
+Duas fontes só abrem de uma internet no Brasil: as **fichas da Caixa** (matrícula, comarca, ofício, inscrição, averbação;
+o anti-robô barra o GitHub Actions) e o **ITBI de Belo Horizonte** (a prefeitura responde 403 fora do Brasil). Agora é
+um comando só, no seu PC (Windows, Mac ou Linux). Guia passo a passo, para quem não programa:
+**`base/COLETA-NO-PC.md`**.
+
+Passo a passo curto (você):
+1. Instalar uma vez: Node LTS (https://nodejs.org/pt-br/download), Git (https://git-scm.com/downloads) e Python 3
+   (https://www.python.org/downloads/, marcando "Add python.exe to PATH"); depois `pip install pandas numpy requests openpyxl`.
+2. Uma vez: `git clone https://github.com/joaopedrogv13/luneta-de-leiloes.git` e `cd luneta-de-leiloes` (não precisa de
+   `npm install`).
+3. Rodar (de preferência à noite, com o PC sem suspender): **`node base/coleta-pc.mjs`** (o mesmo no Windows e no Mac;
+   no Windows, evite o `npm run`: o PowerShell bloqueia o npm e o Ctrl+C se perde). Na primeira vez, o GitHub pede para
+   entrar na sua conta (para enviar o resultado).
+4. Leva ~15 h (21 mil fichas × ~2,5 s). Pode parar com Ctrl+C e rodar de novo depois: ele continua de onde parou.
+   Espere "pode fechar a janela" antes de fechar. Por estado: `node base/coleta-pc.mjs --uf RJ`. Só BH:
+   `node base/coleta-pc.mjs --etapas bh` (alguns minutos).
+5. Se aparecer **BLOQUEIO**: parar e tentar mais tarde (o programa mostra o horário; antes das 2 h ele nem tenta as
+   fichas). Nunca contornar (nada de VPN ou programa que imite navegador). **SEM CONEXÃO** é a internet, não bloqueio.
+6. Opcional: `claude remote-control` na pasta do projeto, para eu acompanhar e rodar daqui.
+
+O que o comando faz: confere Node 22.6+, Git e Python (e diz o que falta); baixa as fichas em ordem de prioridade (praça
+mais próxima, depois Leilão SFI, Licitação, Venda Online e Venda Direta) com o cliente educado (2 s entre páginas,
+robots.txt, para depois de 5 bloqueios seguidos e espera 2 h antes de pedir de novo); grava o `fichas.json` a cada 100
+fichas; roda o `bh.py`; e publica no branch `coletas-dados` (`pc/fichas/fichas.json`, sempre no mesmo lugar, o resumo,
+o log em `pc/<data>/` e `itbi/itbi-belo-horizonte.json`), por um clone temporário, sem mexer nos seus arquivos. As
+páginas HTML da Caixa ficam só no seu PC. Do meu lado, aplico com `npm run base:fichas`, `base:riscos`,
+`base:exportar -- --site` e `para_site.py` (passos em `base/fontes/caixa/README.md` e `base/fontes/itbi/README.md`).
+
+**Revisão adversarial (18/10/2026), corrigido antes de você rodar:**
+- Windows: o guia passa a usar `node base/coleta-pc.mjs` em vez de `npm run` (o PowerShell bloqueia o `npm` com a
+  política de execução padrão e engole o "--" das opções; e o Ctrl+C pelo npm devolvia o terminal enquanto a coleta
+  seguia gravando e enviando por trás). Saiu o `npm install` do guia (não é preciso e podia mexer no
+  `package-lock.json`, travando o `git pull` seguinte).
+- Windows: o Git para Windows vem com `core.autocrlf=true`, e o primeiro envio regravava com CRLF arquivos que o Actions
+  publicou no `coletas-dados` (visto num teste com essa configuração). O clone do envio agora desliga a conversão.
+- "Faltam N: rode de novo" aparecia para sempre quando o que faltava eram fichas com falha guardada por 7 dias (rodar de
+  novo não baixava nada). Agora o resumo separa o que falta de verdade das que "não abriram".
+- Duas janelas ao mesmo tempo na mesma pasta dobravam o ritmo de acesso à Caixa: agora a segunda recusa (trava com
+  "estou vivo" a cada 30 s; trava velha de PC desligado não prende).
+- Depois de um bloqueio de verdade, rodar de novo em seguida voltava a pedir à Caixa: agora há 2 h de pausa
+  (`--sem-pausa` só para quem trocou de rede). Sem internet não é mais chamado de bloqueio ("SEM CONEXÃO", sem pausa),
+  e o erro de rede diz a causa (DNS, conexão recusada, certificado); certificado recusado por antivírus tem aviso próprio
+  e o Node passa a confiar nos certificados do sistema (22.15+).
+- Arquivo cortado (queda de energia, Ctrl+C no meio do `bh.py`) não vai mais ao GitHub por cima do bom: cada JSON é
+  conferido antes do envio, o `fichas.json` quebrado é refeito dos HTML, o BH grava num `.parcial` e toda gravação da
+  coleta força o disco (fsync).
+- O `fichas.json` publicado fica sempre em `pc/fichas/` (uma cópia por dia faria o clone de cada envio crescer dezenas de
+  MB por dia).
+- O Ctrl+C duplo no meio do envio deixava um clone na pasta temporária; o log não tirava a pasta temporária do Windows
+  (que pode ter parte do nome do usuário); a conferência de 21 mil fichas na retomada ficava minutos sem dar sinal.
+
+Testado aqui sem a Caixa (a rede deste ambiente não chega lá): prioridade, retomada, regravação a partir dos HTML reais
+das fixtures, bloqueio, pausa, sem conexão, trava, Ctrl+C, opções e o envio num repositório git local (clone raso,
+rebase, conflito, sem login, autocrlf do Windows, JSON cortado, Ctrl+C duplo no envio); e o fluxo inteiro contra um
+servidor local que imita a Caixa, no Node 22.6.0, 22.22 e 24.10 (inclusive 20 mil fichas na retomada e o BH com um
+`bh.py` de teste interrompido no meio da gravação). **Não testado:** Windows de verdade (o Ctrl+C no console do
+Windows, o login do GitHub pelo navegador e o antivírus), a Caixa e o portal de BH ao vivo.
 
 ### Atualização: como funciona
 
@@ -270,7 +330,7 @@ o extrajudicial dos bancos. Ordem proposta:
   178 / 191 / 227 de 227; Recife 22 / 25 / 26 de 26; SP 7 / 14 / 32 de 32 (dos 490); Fortaleza 0 / 18 / 22 de 22
   (dos 94). Valor: declarado em SP e no Rio; base de cálculo da prefeitura em POA e Fortaleza; avaliação da prefeitura
   no Recife (a tabela de cobertura diz qual). **BH (37 imóveis): o portal da PBH devolve HTTP 403 ao GitHub Actions** (API, páginas e
-  download direto); o conector está pronto e precisa rodar de uma rede no Brasil. Licenças de SP, Rio e POA: a
+  download direto); o conector está pronto e roda no seu PC com `node base/coleta-pc.mjs --etapas bh` (ver "Coleta no PC do dono"). Licenças de SP, Rio e POA: a
   confirmar. Detalhes em `base/fontes/itbi/README.md`. Salvador, Goiânia, Brasília, Curitiba, Florianópolis, Campinas e
   Niterói: sem base aberta; pedir pela LAI.
 - **Preço do m² na base por RUA, BAIRRO, CIDADE e ESTADO:** a mesma rua (n ≥ 3, mesma cidade; 8.883 imóveis têm),
@@ -281,11 +341,11 @@ o extrajudicial dos bancos. Ordem proposta:
   recebeu o desafio anti-robô nas 5 fichas de teste; não contornamos). A página mostra "na página da Caixa" com o link.
   Caminho pronto: baixar as fichas de uma rede no Brasil (`base/fontes/caixa/baixar-fichas.ts`) e aplicar com
   `npm run base:fichas -- --arquivo fichas.json`; a exportação leva matrícula, comarca, ofício, inscrição, averbação e a
-  data ao site. **Decisão do dono:** de onde rodar as fichas (o PC dele, uma VPS no Brasil).
+  data ao site. **Decidido: no PC do dono**, com `node base/coleta-pc.mjs` (pronto para rodar; ver "Coleta no PC do dono").
   **Feito para o caso do dono (17/10/2026):** os dados do print dele (matrícula 868, São Gonçalo-RJ, 6º ofício, inscrição
   50334, averbado) estão em `base/fontes/caixa/fichas-manuais/2026-10-17-print-do-dono.json` (formato de
   `baixar-fichas.ts`, com o campo `origem`), aplicados com `npm run base:fichas` e exportados: a página mostra "Lidos na
-  ficha da Caixa em 17/10/2026". Para os outros ~21 mil, continua valendo rodar as fichas de uma rede no Brasil.
+  ficha da Caixa em 17/10/2026". Para os outros ~21 mil: `node base/coleta-pc.mjs` no seu PC.
 - **Tendência:** série IVG-R do Banco Central (SGS 21340, JSON), só nacional.
 - **FipeZAP** (56 cidades, mensal): consulta grátis, mas sem termos de uso comercial encontrados. **Pedir autorização à
   Fipe** antes de exibir; até lá, no máximo um link para o informe.
@@ -483,6 +543,8 @@ Rodada 3, correções integradas (17/10/2026), depois da revisão dos 16 pontos,
   ainda consegue render 20% ao ano") e se o preço pode ser trocado "para comparar" (hoje pode, com aviso).
 - [x] Matrícula 868 do caso do dono: aplicada a partir do print (ver "Matrícula da Caixa" acima). As demais dependem de
   rodar as fichas de uma rede no Brasil.
+- [ ] **Com você:** rodar a coleta no seu PC (`node base/coleta-pc.mjs`; guia em `base/COLETA-NO-PC.md`). Pronto para rodar:
+  as ~21 mil fichas da Caixa e o ITBI de BH. Depois eu aplico o que chegar no branch `coletas-dados`.
 - [ ] O JavaScript da página do imóvel subiu ~35 KB sem compressão (venda direta, custos em reais, margem). Dá para
   carregar o simulador com `next/dynamic` perto da seção (ele fica abaixo da dobra).
 
@@ -646,7 +708,8 @@ pelo valor real no arquivo de conteúdo.
   bairro, cidade): a `key` de lista na tela precisa levar a `fonte`.
 - [ ] ITBI: rua de nome próprio repetido em bairros diferentes da mesma cidade (duas "Rua São José" em SP) soma as duas;
   levar o bairro de cada rua no `agregar.py` e casar rua + bairro quando a rua aparecer em bairros distantes. BH (403
-  fora do Brasil) e as licenças de SP, Rio e POA continuam pendentes.
+  fora do Brasil: pronto para rodar no PC do dono, `node base/coleta-pc.mjs --etapas bh`) e as licenças de SP, Rio e POA continuam
+  pendentes.
 
 ## Antes de publicar: checagem e buscadores
 

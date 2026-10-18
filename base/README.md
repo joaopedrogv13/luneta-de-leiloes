@@ -41,8 +41,11 @@ npm run base:fichas -- --arquivo fichas.json               # aplica fichas da Ca
 **Fichas da Caixa lidas fora daqui.** A ficha (`detalhe-imovel.asp`) tem matrícula, comarca, ofício, inscrição imobiliária
 e averbação dos leilões negativos, que o CSV não traz. A rede deste ambiente não chega à Caixa, e servidores fora do
 Brasil recebem o desafio anti-robô (o workflow `base-fichas-caixa.yml` recebeu "perfdrive" nas 5 fichas de teste em
-17/10/2026; o coletor não contorna). Quem tiver acesso roda `node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts
---ids <id13,...>` (ou `--uf RJ --quantidade 200`) e aplica o `fichas.json` com `npm run base:fichas -- --arquivo fichas.json
+17/10/2026; o coletor não contorna). **No PC do dono, de uma internet no Brasil: `node base/coleta-pc.mjs`** baixa todas as
+fichas (com retomada) e o ITBI de Belo Horizonte e publica no branch `coletas-dados` (guia para quem não programa:
+[`COLETA-NO-PC.md`](COLETA-NO-PC.md); como aplicar o que volta: `fontes/caixa/README.md`, "Coleta no PC do dono"). Só
+baixar: `node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts --ids <id13,...>` (ou `--uf RJ --quantidade
+200`, ou `--todas [--uf RJ] [--limite N]`). Aplica-se o `fichas.json` com `npm run base:fichas -- --arquivo fichas.json
 [--banco ...] [--cache base/dados/caixa/detalhes.db | off]` (`base/fontes/caixa/aplicar-fichas.ts`): grava no imóvel a
 matrícula, o cartório, os extras da ficha (`comarca`, `oficio`, `inscricao_imobiliaria`, `averbacao_leiloes_negativos`,
 `matriculas`, `ficha_lida_em`), o PDF da matrícula, o FGTS e os editais quando a ficha descreve a oferta atual, refaz a
@@ -62,6 +65,12 @@ node --experimental-strip-types base/geo/atualizar.ts --simular         # confer
 node --experimental-strip-types base/geo/medir.ts --arquivo lista.csv   # cidades da fonte × municípios do IBGE
 node --experimental-strip-types base/dedup/medir.ts --arquivo lista.csv # cobertura e precisão da deduplicação
 ```
+
+**Coleta no PC do dono** (fichas da Caixa e ITBI de BH, que só abrem de rede no Brasil): `node base/coleta-pc.mjs`, com
+`--etapas fichas,bh`, `--uf`, `--limite`, `--sem-publicar`, `--so-publicar`, `--refazer-falhas`, `--sem-pausa`. Pelo npm
+é o mesmo (`npm run coleta:pc`, atalhos `coleta:pc:fichas`, `coleta:pc:bh` e `coleta:pc:publicar`), mas o guia usa o
+`node` direto: no Windows o PowerShell bloqueia o `npm` e engole o "--", e com o npm o Ctrl+C derruba só o shell dele.
+Guia: [`COLETA-NO-PC.md`](COLETA-NO-PC.md).
 
 Opções de `coletar`: `--uf`, `--arquivo` (ou `--fixture`), `--limite`, `--detalhes`. `<fonte>` aceita o id (`caixa_csv`) ou o apelido (`caixa`); `riscos --fonte` também. Em qualquer comando, `--banco <arquivo>` ou `LUNETA_DB` troca o banco; `LUNETA_USER_AGENT` troca o User-Agent. `base/dados/` é ignorada pelo git. As variáveis de cada conector estão no README dele.
 
@@ -234,6 +243,8 @@ base/
   exportar.ts         JSON completo; instantâneo do site (amostra no formato Listing e agregado por UF)
   status.ts           relatório
   cli.ts              linha de comando
+  coleta-pc.ts        coleta no PC do dono (fichas da Caixa + ITBI de BH + envio ao branch coletas-dados);
+                      coleta-pc.mjs confere o Node e o chama; guia em COLETA-NO-PC.md
   fontes/index.ts     registro de conectores (um import por conector) e apelidos da CLI
   fontes/caixa/       conector da Caixa (CSV, ficha, fotos, cache)
   fontes/leiloesjudiciais/  conector da Leilões Judiciais (MCP)

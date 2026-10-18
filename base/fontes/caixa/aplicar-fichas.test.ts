@@ -8,12 +8,13 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 import { executarColeta } from "../../coleta.ts";
 import { abrirBanco } from "../../db.ts";
 import { datasDasFichas, montarCatalogo, parteDoId, registroDaFicha } from "../../exportar.ts";
 import { gravarImoveis } from "../../gravar.ts";
 import { bancoEmMemoria, httpProibido, imovelExemplo } from "../../testes/apoio.ts";
-import { aplicarFichas, lerArquivoFichas, principal } from "./aplicar-fichas.ts";
+import { aplicarFichas, lerArquivoFichas, lidaEmDaFicha, principal } from "./aplicar-fichas.ts";
 import { abrirCacheDisco, cacheEmMemoria } from "./cache.ts";
 import { interpretarFicha } from "./ficha.ts";
 import { criarConectorCaixa } from "./index.ts";
@@ -73,6 +74,9 @@ test("aplicarFichas: matrícula, cartório, extras, PDF da matrícula, FGTS da f
   assert.equal(extras.ficha_lida_em, "2026-10-17");
   assert.ok(extras.desconto_fonte !== undefined, "os extras do CSV continuam");
   assert.equal(a.aceita_fgts, 0, "a ficha descreve a oferta do CSV: o FGTS dela vale");
+  const textos = JSON.parse(String(db.prepare("SELECT textos FROM imovel WHERE id = ?").get(Number(a.id))!.textos)) as { origem: string; texto: string }[];
+  assert.deepEqual(textos.map((t) => t.origem), ["ficha"], "o texto da ficha vai para as regras de risco (base:riscos)");
+  assert.match(textos[0]!.texto, /Condom[íi]nio|Tributos|FORMAS DE PAGAMENTO/i);
   assert.match(String(a.chave_dedup), /^mat:/, "com a matrícula, a chave de deduplicação é a da matrícula");
   const docs = db.prepare("SELECT tipo, url FROM documento WHERE imovel_id = ?").all(Number(a.id));
   assert.deepEqual(docs.map((d) => d.tipo), ["matricula"]);
@@ -172,6 +176,44 @@ test("linha de comando: --arquivo, banco e cache em disco; datasDasFichas lê o 
     const erros: string[] = [];
     assert.equal(principal(["--arquivo", ruim, "--banco", caminhoBanco, "--cache", "off"], () => undefined, (t) => erros.push(t)), 1, "arquivo ruim: código 1, sem pilha");
     assert.match(erros.join("\n"), /não é JSON/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("fichas.json da coleta no PC: dia de cada ficha (lida_em_por_id), CEP da ficha, e o .gz pela linha de comando", async () => {
+  assert.equal(FICHA_2026.cep?.length, 8, "a ficha real de 2026 traz o CEP");
+  const db = await banco();
+  const cache = cacheEmMemoria();
+  const doPc = {
+    lidas_em: "2026-10-17T10:00:00.000Z",
+    total: 2,
+    lida_em_por_id: { "0000010005120": "2026-10-19T02:15:00.000Z", "1444410505954": "data ruim" },
+    fichas: { "0000010005120": FICHA_2026, "1444410505954": { ...FICHA_2023, cep: "123" } },
+  };
+  assert.equal(lidaEmDaFicha(lerArquivoFichas(JSON.stringify(doPc)), "0000010005120"), "2026-10-19T02:15:00.000Z");
+  assert.equal(lidaEmDaFicha(doPc, "1444410505954"), doPc.lidas_em, "data inválida: vale a do arquivo");
+  assert.equal(lidaEmDaFicha(doPc, "0000000000001"), doPc.lidas_em);
+  assert.throws(() => lerArquivoFichas(JSON.stringify({ ...doPc, lida_em_por_id: [] })), /lida_em_por_id/);
+
+  const cep = (id13: string) => db.prepare("SELECT cep FROM imovel WHERE fonte_id = 'caixa_csv' AND id_na_fonte = ?").get(id13)!.cep;
+  const cepAntes = cep("1444410505954");
+  const r = aplicarFichas(db, doPc, { cache, agora: AGORA });
+  assert.deepEqual(r.aplicadas, ["0000010005120", "1444410505954"], "CEP fora do formato não derruba a transação");
+  assert.equal((JSON.parse(String(linha(db, "0000010005120").extras)) as Record<string, unknown>).ficha_lida_em, "2026-10-19");
+  assert.equal((JSON.parse(String(linha(db, "1444410505954").extras)) as Record<string, unknown>).ficha_lida_em, "2026-10-17");
+  assert.equal(cache.ler("0000010005120")?.ficha_em, "2026-10-19T02:15:00.000Z");
+  assert.equal(cep("0000010005120"), FICHA_2026.cep);
+  assert.equal(cep("1444410505954"), cepAntes, "CEP inválido não substitui o que havia");
+
+  const dir = mkdtempSync(join(tmpdir(), "fichas-gz-"));
+  try {
+    const gz = join(dir, "fichas.json.gz");
+    writeFileSync(gz, gzipSync(JSON.stringify(doPc)));
+    const saida: string[] = [];
+    const erro: string[] = [];
+    assert.equal(principal(["--arquivo", gz, "--banco", join(dir, "vazio.db"), "--cache", "off"], (t) => saida.push(t), (t) => erro.push(t)), 0, erro.join("\n"));
+    assert.match(saida.join("\n"), /Fichas lidas desde 2026-10-17T10:00:00.000Z: 0 aplicada/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

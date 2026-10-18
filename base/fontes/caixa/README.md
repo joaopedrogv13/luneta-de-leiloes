@@ -2,6 +2,10 @@
 
 Fonte: "Lista de Imóveis da Caixa", o CSV oficial publicado em `venda-imoveis.caixa.gov.br`. Opcionalmente lê a ficha de cada imóvel (`--detalhes`) e confere as fotos (HEAD).
 
+**Fichas de uma rede no Brasil:** o anti-robô barra os servidores de fora do Brasil (GitHub Actions). As ~21 mil fichas
+são baixadas no PC do dono com `node base/coleta-pc.mjs` (guia para quem não programa: [`base/COLETA-NO-PC.md`](../../COLETA-NO-PC.md))
+e aplicadas aqui (ver "Coleta no PC do dono" abaixo).
+
 ```bash
 npm run base:coletar -- caixa_csv                          # lista geral (rede)
 npm run base:coletar -- caixa_csv --uf SP                  # só o CSV de SP (marca removidos só em SP)
@@ -9,6 +13,9 @@ npm run base:coletar -- caixa_csv --arquivo lista.csv      # arquivo local, UTF-
 npm run base:coletar -- caixa_csv --uf AC --detalhes       # + fichas (2 s cada; só novas, alteradas ou vencidas)
 LUNETA_CAIXA_VERIFICAR_FOTOS=1 npm run base:coletar -- caixa_csv --uf AC   # + HEAD nas fotos
 node --experimental-strip-types base/fontes/caixa/medir.ts lista.csv       # cobertura do parser, modalidades, deságio
+node base/coleta-pc.mjs                                    # no PC do dono: todas as fichas (com retomada) + ITBI de BH + envio
+node --experimental-strip-types base/fontes/caixa/baixar-fichas.ts --todas --uf RJ --limite 100 --saida fichas   # só baixar
+npm run base:fichas -- --arquivo fichas.json               # aplica no banco as fichas baixadas (aceita .json.gz)
 ```
 
 | Variável | Efeito |
@@ -121,6 +128,93 @@ Rode `medir.ts` para refazer. Resultado com o CSV completo (cópia local, não v
 - Modalidades: Venda Direta Online 12.143 (57,2%); Leilão SFI 4.567 (21,5%); Venda Online 3.570 (16,8%); Licitação Aberta 946 (4,5%).
 - Deságio calculado: mediana 42,07%; p25 38,24%; p75 48,01%; p90 54,73%; máximo 90%. **Preço acima da avaliação em 2.039 imóveis** (9,6%; comparação em centavos): Leilão SFI 2.036, Venda Direta Online 2, Venda Online 1, com casos extremos (preço até 174× a avaliação). Preço igual à avaliação em 1.687. A coluna "Desconto" vale 0 em todos os 2.039 com preço acima e bate com o cálculo em todas as linhas com preço até a avaliação. Um caso de borda: o imóvel 1444417628245 (SC, Leilão SFI) tem preço 305.011,21 contra avaliação 305.000,00, deságio −0,0037%, que arredondado vira 0; por isso a medição compara preço e avaliação, não o deságio arredondado.
 - Coleta do CSV completo num banco temporário (arquivo SQLite, com cache): ~7,5 s, 21.226 novos, 0 inválidos.
+
+## Coleta no PC do dono (`node base/coleta-pc.mjs`)
+
+`base/coleta-pc.ts` (chamado por `base/coleta-pc.mjs`, que confere o Node antes; `npm run coleta:pc` é o mesmo) roda no
+PC do dono, de uma internet no Brasil, as fichas e o ITBI de BH, e publica o resultado no branch `coletas-dados`. Guia:
+[`base/COLETA-NO-PC.md`](../../COLETA-NO-PC.md). O guia usa o `node` direto, não o `npm run`: no Windows o PowerShell
+bloqueia o `npm` (política de execução) e engole o "--" das opções, e com o npm o Ctrl+C derruba só o shell dele (o
+terminal volta enquanto a coleta ainda grava e envia). Opções: `--etapas fichas,bh`, `--uf RJ`, `--limite N`,
+`--sem-publicar`, `--so-publicar`, `--refazer-falhas`, `--sem-pausa`, `--ajuda`. Tudo fica em `coletas-pc/` (ignorada
+pelo git), com o log em `coletas-pc/log.txt`. Uma coleta por vez: a trava `coletas-pc/.em-uso` (número do processo e um
+"estou vivo" a cada 30 s) faz uma segunda janela recusar, em vez de dobrar o ritmo de acesso à Caixa.
+
+**`baixar-fichas.ts`** (o mesmo arquivo que o workflow `base-fichas-caixa.yml` usa; `--ids` e `--uf --quantidade` continuam
+iguais):
+
+- `--todas`: todos os ids da Caixa do instantâneo (`base/saida/site/imoveis.json.gz`), ou só os da `--uf`, em ordem de
+  prioridade: primeiro os com data de praça mais próxima (coluna `dataPraca`, de ontem em diante), depois Leilão SFI,
+  Licitação Aberta (têm data, que a ficha traz), Venda Online e Venda Direta; no empate, a ordem do instantâneo. Hoje o
+  instantâneo não tem data de praça para a Caixa (o CSV não traz): vale a ordem por modalidade.
+- **Retomada:** o id cujo `<id13>.html` já está na pasta e é uma ficha válida desse imóvel é pulado (conferir 21 mil HTML
+  leva de meio minuto a alguns minutos; o progresso aparece a cada 2.000). A falha definitiva (página sem a ficha, HTTP
+  404/410) vai para `falhas.json` e é pulada por 7 dias (`--refazer-falhas` tenta de novo); erro de rede e bloqueio não
+  ficam. `--limite N`: no máximo N fichas novas por execução. O `resumo.json` separa o que falta de verdade (`restantes`,
+  que a próxima execução tenta) das falhas guardadas (`comFalhaGuardada`): o resumo da tela só manda "rodar de novo"
+  quando há o que baixar.
+- **`fichas.json` a cada 100 fichas, no fim e no Ctrl+C**, a partir de TODOS os HTML válidos da pasta (os das execuções
+  anteriores também): `{ lidas_em, total, lida_em_por_id, fichas }`. `lidas_em` é a leitura mais antiga; `lida_em_por_id`
+  dá o momento de cada ficha (a data do HTML). Todo arquivo é gravado num `.tmp`, forçado ao disco (fsync) e renomeado:
+  uma interrupção ou queda de energia perde no máximo a ficha em andamento. `--so-regravar` refaz o arquivo sem rede.
+- **Cliente educado, sem contornar nada:** 2 s entre páginas, robots.txt, User-Agent identificado. Desafio anti-robô,
+  robots.txt e HTTP 403/429 contam como bloqueio; 5 seguidos param tudo (parada `bloqueio`, código de saída 3), e a
+  coleta no PC só volta a pedir fichas 2 h depois (`pausaDoBloqueio`, lida do `resumo.json`; `--sem-pausa` para quem
+  trocou de rede). Sem conexão (robots.txt que não abre por erro de rede, ou 25 falhas de rede seguidas) é a parada
+  `sem_conexao` (código 5): não é recusa e não pede pausa. 25 falhas seguidas de outro tipo também param (`falhas`: a
+  página pode ter mudado; essas não vão para `falhas.json`). O erro de rede leva o código de baixo do "fetch failed"
+  (`ENOTFOUND`, `ECONNREFUSED`, `SELF_SIGNED_CERT_IN_CHAIN`...), e o certificado recusado (antivírus que inspeciona
+  HTTPS) tem aviso próprio. O lançador passa `--use-system-ca` quando o Node aceita (22.15+), para confiar nos
+  certificados do sistema como o navegador. O Ctrl+C cancela a ficha em andamento, grava o `fichas.json` e sai com 130
+  (dois sinais em menos de 2 s, como o npm repassa, contam como um).
+- Não importa o conector (`index.ts`, que traz o `node:sqlite`): roda em qualquer Node a partir do 22.6 (testado no
+  22.6.0, no 22.22 e no 24.10).
+
+**O que vai ao branch** (`publicar` em `coleta-pc.ts`, por um clone raso numa pasta temporária, sem mexer no branch do
+dono; commit "Coleta no PC (fichas da Caixa, ITBI BH) <data>"; push com 3 tentativas, rebase e, se houver conflito,
+o commit refeito em cima do branch novo):
+
+```
+pc/fichas/fichas.json          # todas as fichas da pasta, sempre no mesmo lugar (acima de 40 MB: fichas.json.gz)
+pc/fichas/resumo.json          # a última execução: ok, bloqueio, falha (com o motivo), pulados, restantes, parada
+pc/<AAAA-MM-DD>/log.txt        # o log desde o envio anterior (sem os caminhos do PC)
+itbi/itbi-belo-horizonte.json  # BH, no mesmo formato e lugar que o Actions publica
+itbi/log-belo-horizonte.txt
+itbi/ultima-execucao.txt       # "PC do dono · etapa bh · <data>", quando BH rodou bem
+```
+
+- O `fichas.json` fica num caminho fixo porque é cumulativo: uma cópia por dia faria o clone de cada envio (e o
+  repositório) crescer dezenas de MB por dia de coleta; as versões antigas ficam no histórico do branch.
+- Antes de copiar, cada JSON é conferido (`motivoJsonInvalido`): vazio, cortado ou sem os campos não vai, e o que já
+  está no branch fica; um `fichas.json` quebrado é refeito dos HTML antes do envio. O `bh.py` grava num `.parcial`, que
+  só vira o `itbi-belo-horizonte.json` se terminar bem.
+- Sem conversão de fim de linha: o clone usa `core.autocrlf=false` (o Git para Windows vem com `true`, que trocaria LF
+  por CRLF no checkout e levaria CRLF de volta aos arquivos que o Actions publicou).
+- A pasta temporária some no fim, também no Ctrl+C duplo (no `exit`); sobras com mais de 6 h (janela fechada no meio)
+  são apagadas no envio seguinte.
+- Os HTML da Caixa nunca são publicados: só o `fichas.json`, que já passa pela máscara LGPD do parser.
+
+### Fichas que voltaram do PC (aplicar aqui)
+
+O `fichas.json` é cumulativo e fica sempre em `pc/fichas/`: o do branch é o mais recente.
+
+```bash
+git fetch origin coletas-dados
+git ls-tree -r --name-only origin/coletas-dados pc/                          # fichas.json ou fichas.json.gz; datas dos logs
+git show origin/coletas-dados:pc/fichas/resumo.json | head -40               # parada, bloqueios, falhas, restantes
+git log -3 --format='%h %ci %s' origin/coletas-dados -- pc/fichas/            # quando chegou
+D=2026-10-20                                                                  # a data do último log em pc/
+git show origin/coletas-dados:pc/$D/log.txt | tail -40
+git show origin/coletas-dados:pc/fichas/fichas.json > /tmp/fichas.json        # ou fichas.json.gz > /tmp/fichas.json.gz
+npm run base:fichas -- --arquivo /tmp/fichas.json                             # aceita .json.gz (pelos bytes)
+npm run base:riscos                                                          # o texto da ficha já entra nas regras
+npm run base:exportar -- --site                                              # matrícula, comarca, ofício... e a data no site
+```
+
+`base:fichas` aceita os campos novos sem mudar o formato antigo: `lida_em_por_id` (o dia de cada ficha vai para
+`ficha_lida_em` e para o cache), o CEP da ficha (só com 8 dígitos; um CEP fora do formato fica de fora sem derrubar a
+transação) e o texto da ficha em `textos` (origem "ficha", como a coleta grava), quando a ficha descreve a oferta atual
+do CSV. Ficha de imóvel que não está mais no banco fica de fora (dita no resumo).
 
 ## Créditos
 
