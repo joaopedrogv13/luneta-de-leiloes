@@ -93,7 +93,8 @@ export function HeroScene() {
           />
         </div>
 
-        {/* Centro da lente: 66%/50% no desktop; no celular, entre o texto e o cartão (--lens-y, globals.css) */}
+        {/* Centro da lente: 66%/50% no desktop; no celular, entre o texto e o cartão (--lens-y, globals.css).
+            No tablet (640 a 1023 px) a lente fica menor (40% da largura) para não encostar no texto (R4-RESP-18). */}
         <div aria-hidden="true" className="absolute top-[var(--lens-y)] left-1/2 sm:top-1/2 sm:left-[66%]">
           {/* Luneta de latão: ocular + 3 tubos + objetiva */}
           <div data-h="scope" className="absolute top-0 left-0 origin-center">
@@ -127,13 +128,13 @@ export function HeroScene() {
         <div
           data-h="glow"
           aria-hidden="true"
-          className="pointer-events-none absolute top-[var(--lens-y)] left-1/2 size-[var(--lens)] -translate-x-1/2 -translate-y-1/2 rounded-full sm:top-1/2 sm:left-[66%] sm:size-[min(52cqw,62cqh)]"
+          className="pointer-events-none absolute top-[var(--lens-y)] left-1/2 size-[var(--lens)] -translate-x-1/2 -translate-y-1/2 rounded-full sm:top-1/2 sm:left-[66%] sm:size-[min(40cqw,56cqh)] lg:size-[min(52cqw,62cqh)]"
           style={{ boxShadow: LENS_GLOW }}
         />
 
         {/* Lente: moldura circular com anel de latão, mapa e retículo (fica noturna também no tema claro).
             O contêiner externo só posiciona (CSS responsivo); o GSAP anima apenas o interno. */}
-        <div className="absolute top-[var(--lens-y)] left-1/2 size-[var(--lens)] -translate-x-1/2 -translate-y-1/2 sm:top-1/2 sm:left-[66%] sm:size-[min(52cqw,62cqh)]">
+        <div className="absolute top-[var(--lens-y)] left-1/2 size-[var(--lens)] -translate-x-1/2 -translate-y-1/2 sm:top-1/2 sm:left-[66%] sm:size-[min(40cqw,56cqh)] lg:size-[min(52cqw,62cqh)]">
         <div
           data-h="lens"
           className="relative h-full w-full overflow-hidden rounded-full border-[6px] border-latao"
@@ -221,8 +222,9 @@ export function HeroScene() {
               href="#advogado"
               className="btn-ghost max-sm:min-h-11 max-sm:gap-1.5 max-sm:border-transparent max-sm:px-0 max-sm:underline max-sm:decoration-latao/60 max-sm:underline-offset-4"
             >
-              <span className="sm:hidden">{HERO.secondaryShort}</span>
-              <span className="max-sm:hidden">{HERO.secondary}</span>
+              {/* no tablet o texto curto também: o longo quebrava em 2 linhas na coluna de texto */}
+              <span className="lg:hidden">{HERO.secondaryShort}</span>
+              <span className="max-lg:hidden">{HERO.secondary}</span>
               <span aria-hidden="true" className="text-latao-texto sm:hidden">
                 →
               </span>

@@ -7,7 +7,7 @@ import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 /**
- * Menu mínimo (Como funciona, Níveis, Planos, Falar com advogado) com âncoras que deslizam até a seção.
+ * Menu mínimo (Como funciona, Níveis, Ferramentas, Planos, Falar com advogado) com âncoras que deslizam até a seção.
  * Ao rolar > 64px a barra encolhe (64 → 56) e ganha borda. No celular, os links ficam num menu recolhível.
  * `base`: fora da landing (ex.: a página do método da nota, "/"), as âncoras levam às seções da home ("/#planos").
  */
@@ -44,7 +44,8 @@ export function Nav({ base = "" }: { base?: string } = {}) {
 
         <ul className="hidden items-center gap-7 text-sm font-medium lg:flex">
           {NAV_LINKS.map((l) => (
-            <li key={l.href}>
+            // `largo`: só a partir de 1280 px (entre 1024 e 1279 não cabe ao lado dos botões); no menu do celular, sempre
+            <li key={l.href} className={l.largo ? "hidden xl:block" : undefined}>
               <a
                 href={`${base}${l.href}`}
                 className="group relative whitespace-nowrap py-2 text-nevoa no-underline transition-colors hover:text-luar"

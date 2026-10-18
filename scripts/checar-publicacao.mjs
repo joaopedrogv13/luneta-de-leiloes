@@ -128,7 +128,8 @@ function listarArquivos() {
     }
     for (const nome of nomes) {
       const caminho = `${pasta}/${String(nome).split("\\").join("/")}`;
-      if (/\.tsx?$/.test(caminho) && !caminho.endsWith(".d.ts")) arquivos.push(caminho);
+      // os testes (*.test.ts) não vão ao ar: o texto deles não é da página
+      if (/\.tsx?$/.test(caminho) && !caminho.endsWith(".d.ts") && !/\.test\.tsx?$/.test(caminho)) arquivos.push(caminho);
     }
   }
   return arquivos.sort();

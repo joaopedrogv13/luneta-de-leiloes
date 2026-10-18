@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const SELECTOR = "[data-reveal],[data-seal-card],[data-caution],[data-tags],[data-draw-x],[data-slide-up],[data-pulse],[data-count-to]";
+const SELECTOR = "[data-reveal],[data-seal-card],[data-caution],[data-tags],[data-cascade],[data-draw-x],[data-slide-up],[data-pulse],[data-count-to]";
 // Cascata das entradas: 80ms entre os 3 primeiros blocos que entram juntos; do 4º em diante, sem atraso extra.
 const STAGGER_MS = 80;
 const STAGGER_STEPS = 2;
@@ -30,9 +30,12 @@ function countUp(el: HTMLElement) {
  * (globals.css → "Animações de apoio") faz o resto com transições de opacity/transform:
  *  - [data-reveal]     entrada curta: fade + y 10 → 0 (0.45s), em cascata de até 3 itens (80ms) quando entram
  *                      juntos. FAQ, chamada final e formulário não usam: já aparecem prontos.
- *  - [data-seal-card]  os anéis dos selos são "desenhados" um a um (stroke-dashoffset, 150ms entre eles).
+ *  - [data-seal-card]  os anéis dos selos são "desenhados" um a um (stroke-dashoffset, 150ms entre eles); o arco
+ *                      parcial da nota de localização ([data-arc]) vai de 0 até a nota e as barras das partes
+ *                      ([data-bar]) crescem.
  *  - [data-caution]    o anel de atenção pulsa 2× e as tags surgem uma a uma.
  *  - [data-tags]       as tags de risco do cartão surgem uma a uma (70ms).
+ *  - [data-cascade]    as células da matriz do simulador (landing) entram em cascata ([data-cell], --cell-delay).
  *  - [data-draw-x]     a seta 1ª → 2ª praça se desenha (scaleX 0 → 1).
  *  - [data-slide-up]   o e-mail de alerta desliza de baixo com atraso.
  *  - [data-pulse]      o botão pulsa 1× ao entrar.

@@ -2,17 +2,19 @@
 
 import { useMemo, useState } from "react";
 import { LISTINGS, brl, type Listing } from "@/content/examples";
+import { FILTERS } from "@/content/site";
 import { BrazilMap } from "@/components/ui/BrazilMap";
 import { SEAL_NAMES } from "@/components/ui/Seal";
 
 type FilterKey = "sp" | "apto" | "des30" | "praca2" | "desoc";
 
-const FILTERS: { key: FilterKey; label: string; test: (l: Listing) => boolean }[] = [
+/** `luneta`: filtro avançado (praça e ocupação), do plano Luneta (src/lib/catalogo/planos.ts, FILTROS_LENTE). */
+const DEMO_FILTERS: { key: FilterKey; label: string; luneta?: boolean; test: (l: Listing) => boolean }[] = [
   { key: "sp", label: "Estado: SP", test: (l) => l.uf === "SP" },
   { key: "apto", label: "Tipo: apartamento", test: (l) => l.type === "apartamento" },
   { key: "des30", label: "Deságio ≥ 30%", test: (l) => l.desagio >= 30 },
-  { key: "praca2", label: "2ª praça", test: (l) => l.praca === "2ª praça" },
-  { key: "desoc", label: "Desocupado", test: (l) => l.desocupado },
+  { key: "praca2", label: "2ª praça", luneta: true, test: (l) => l.praca === "2ª praça" },
+  { key: "desoc", label: "Desocupado", luneta: true, test: (l) => l.desocupado },
 ];
 
 /**
@@ -24,7 +26,7 @@ export function FilterDemo() {
   const [hover, setHover] = useState<string | null>(null);
 
   const results = useMemo(
-    () => LISTINGS.filter((l) => FILTERS.every((f) => !on[f.key] || f.test(l))).sort((a, b) => b.desagio - a.desagio),
+    () => LISTINGS.filter((l) => DEMO_FILTERS.every((f) => !on[f.key] || f.test(l))).sort((a, b) => b.desagio - a.desagio),
     [on],
   );
   const ids = new Set(results.map((r) => r.id));
@@ -35,7 +37,7 @@ export function FilterDemo() {
         <fieldset>
           <legend className="text-[11px] font-semibold tracking-[0.14em] text-nevoa uppercase">Filtros</legend>
           <div className="mt-3 flex flex-wrap gap-2">
-            {FILTERS.map((f) => (
+            {DEMO_FILTERS.map((f) => (
               <button
                 key={f.key}
                 type="button"
@@ -51,6 +53,13 @@ export function FilterDemo() {
                   </span>
                 )}
                 {f.label}
+                {f.luneta && (
+                  <span className="ml-2 rounded-full border border-latao/50 px-1.5 py-0.5 text-[10px] leading-none font-semibold tracking-[0.08em] text-latao-texto uppercase">
+                    <span className="sr-only">(plano </span>
+                    {FILTERS.luneta}
+                    <span className="sr-only">)</span>
+                  </span>
+                )}
               </button>
             ))}
           </div>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FOOTER, NAV_LINKS, SITE, SUBSCRIBER_AREA } from "@/content/site";
+import { FOOTER, METODO_NOTA, NAV_LINKS, SITE, SUBSCRIBER_AREA } from "@/content/site";
 import { Logo } from "@/components/ui/Logo";
 import { RichText } from "@/components/ui/RichText";
 
@@ -29,6 +29,11 @@ export function Footer({ base = "" }: { base?: string } = {}) {
             <li>
               <Link href={SUBSCRIBER_AREA.href} className="inline-block py-1.5 text-nevoa no-underline hover:text-luar">
                 {SUBSCRIBER_AREA.label} (demonstração)
+              </Link>
+            </li>
+            <li>
+              <Link href={METODO_NOTA.href} prefetch={false} className="inline-block py-1.5 text-nevoa no-underline hover:text-luar">
+                {METODO_NOTA.label}
               </Link>
             </li>
             <li>

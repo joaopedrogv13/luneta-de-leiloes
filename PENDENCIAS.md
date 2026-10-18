@@ -2,8 +2,9 @@
 
 Este é o arquivo central do projeto: **onde estamos, que dados temos, o que falta e o próximo passo**. Atualizado a cada
 entrega (última atualização: 18/10/2026, rodada 4: nota de localização de 0 a 100 com dados, servidor e **tela pronta**
-(página do imóvel, filtro, ordem, selo, PDF e a página pública `/metodologia/localizacao`), responsividade da prévia no
-celular, tablet e celular deitado, coleta no PC do dono pronta; os planos vêm a seguir).
+(página do imóvel, filtro, ordem, selo, PDF e a página pública `/metodologia/localizacao`); landing com as novidades do
+plano Luneta ("Decida com números", "Nota de localização", tabela de planos em grupos, FAQ novo); responsividade da
+prévia no celular, tablet e celular deitado; coleta no PC do dono pronta; a trava visual dos planos vem a seguir).
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
@@ -103,7 +104,8 @@ a busca, os filtros, a ordem e a paginação no servidor; "Estado: Minas Gerais"
    `base/contatos/leiloesjudiciais-email.md`).
 6. **Decisões suas** pendentes (lista abaixo) para avançar no site (formulário, advogado, preços, título, página mais curta).
 7. **Catálogo novo (14/10/2026), decisões suas:**
-   - o **simulador** fica aberto no plano Lente ou só na Luneta? (hoje aberto; não está na tabela de planos da landing);
+   - ~~o **simulador** fica aberto no plano Lente ou só na Luneta?~~ Decidido na rodada 4: Luneta (a landing e a tabela de
+     planos já dizem isso; ver "Rodada 4 · site original");
    - a **meta padrão do simulador** (hoje 20% ao ano: com o lance mínimo só ~1 em 10 apartamentos/casas atinge; opções na
      seção "Página do imóvel");
    - **preço de mercado:** autorizar o próximo passo com ITBI (Rio e SP primeiro, dados abertos e grátis) e mandar e-mail
@@ -920,6 +922,89 @@ Pendências da C:
   (`VALIDACAO_ITBI`), copiados de `medicao-nota.md`. Se o `nota.py` mudar a validação, atualizar ali, ou gravar a
   validação no `localizacao.json.gz`. Os outros números da página vêm do arquivo, lidos no build.
 
+### Rodada 4 · site original (landing): o plano Luneta e as novidades (18/10/2026)
+
+Pedido: "Todas as novas implementações vão para o plano Luneta; arrume o site original adicionando as informações e o
+marketing." A landing de antes desta rodada está no branch `versao-site-v1`. A divisão dos planos é a da rodada 4
+(`src/lib/catalogo/planos.ts`): **Lente = encontrar; Luneta = decidir; Telescópio = a Luneta para a equipe.**
+
+**O que mudou na landing (`/`):**
+- **Duas seções novas** entre "Filtros e mapa" e "Dados de deságio" (a alternância de fundo continua):
+  - **"Decida com números"** (`#decida`, `src/components/sections/Decida.tsx`): o simulador de lance máximo, o preço do
+    m² com os leilões da base e as compras reais do ITBI em 5 capitais, o relatório em PDF e a página completa do imóvel,
+    com matrícula e glossário (esta, de todos os planos). A miniatura do simulador usa o exemplo fictício da
+    demonstração (apartamento na Vila Mariana, `ex-alvo-sp`): **"Dê no máximo R$ 362.178"**, calculado no build pelo
+    simulador de verdade (`src/lib/simulador`), com a matriz de 3 cenários × 4 prazos. O link "Ver este exemplo na
+    demonstração" abre a página do imóvel com o mesmo número.
+  - **"Nota de localização"** (`#localizacao`, `Localizacao.tsx`): o que é ("melhor localizado que X% dos moradores da
+    cidade"), os passos 01 a 03, a miniatura da nota do mesmo exemplo (91, com as seis partes e a linha de risco) e as
+    seis partes com os pesos **25/20/20/25/5/5**, lidos de `PESOS_PADRAO` (`src/lib/catalogo/localizacao.ts`), nunca
+    digitados. O link "Como a nota é calculada" vai para `/metodologia/localizacao` (a página é da frente C).
+  - São componentes do servidor, sem JavaScript novo no navegador. As animações são as do `MotionLayer`: entrada, número
+    contando, células da matriz em cascata, arco e barras da nota. Com menos movimento, tudo já aparece pronto.
+  - Os textos das duas ficam em `src/content/ferramentas.ts` (só no servidor; `site.ts` vai ao navegador).
+- **Tabela de planos em 4 grupos** (Encontrar · Decidir · Acompanhar · Equipe):
+  - **Lente:** todos os leilões, fotos e mapa, os 6 filtros (estado, cidade, tipo, faixa de preço, deságio e data), a
+    página do imóvel com os dados da fonte, a matrícula e o glossário, e os parecidos. Tags e selos aparecem desfocados.
+  - **Luneta:** tudo do Lente e mais tags e selos, filtros avançados, simulador, preço do m² com o ITBI, buscas nos
+    portais, nota de localização, PDF, favoritos com alerta de praça e prioridade com o advogado.
+  - **Telescópio:** tudo da Luneta, mais a base em planilha, vários usuários e suporte.
+  - Nos cartões, linhas com o mesmo rótulo curto viram uma só ("Tags de risco e selos", "Favoritos com alerta de praça").
+    A coluna da Luneta segue destacada entre os grupos.
+- **FAQ:** novas "O que o plano Lente inclui?", "O simulador diz quanto vou lucrar?" (não é promessa de lucro nem
+  recomendação de investimento), "De onde vem o preço do m²?" e "Como funciona a nota de localização?". A da garantia
+  virou "A classificação, a nota e o simulador são garantia?". As novas não têm placeholder e entram no JSON-LD.
+- **Textos:**
+  - Hero ("…reúne cada oportunidade, mostra o risco e faz a conta do lance") e a descrição da página;
+  - Solução: a página inteira do imóvel; saiu "sem você precisar ler cada edital";
+  - Filtros: o que é do Lente e o que é da Luneta;
+  - Planos: a frase de abertura e o público de cada plano ("decidir com mais informação", no lugar de "com segurança");
+  - "Por dentro": saiu **"Análise profissional, caso a caso… revisados para você"**. As tags são automáticas e ficam
+    "em revisão" até a auditoria do advogado; agora é "Cada leilão lido para você… com o trecho de onde veio cada
+    alerta";
+  - rodapé (o aviso do simulador e o da nota, e o link "Como a nota é calculada") e o JSON-LD.
+- **Menu:** "Ferramentas" (`#decida`) entre "Níveis" e "Planos". No computador, só a partir de 1280 px (entre 1024 e
+  1279 px não cabe ao lado dos botões); no menu do celular, sempre.
+- **R4-RESP-18 (hero no tablet):** de 640 a 1023 px a lente fica menor e o botão secundário usa o texto curto. O texto
+  não encosta mais na lente (folga de 29 a 35 px entre 700 e 844 px) e o cartão "Alvo" fica abaixo dela.
+- Na demonstração de filtros, "2ª praça" e "Desocupado" levam a marca "Luneta" (são filtros avançados).
+
+**Testes** (`src/content/site.test.ts`, 12 casos, no `test:site`):
+- a tabela é crescente (o que a Lente tem, a Luneta tem; o que a Luneta tem, o Telescópio tem) e vem em grupos;
+- cada recurso de `planos.ts` tem a sua linha, e o Lente não leva nenhum;
+- os filtros prometidos ao Lente são `FILTROS_LENTE`, e todo filtro do catálogo tem lugar na landing (dá erro de tipo se
+  faltar);
+- os pesos são `PESOS_PADRAO` e batem com o arquivo da nota; a renda é a V06006;
+- o lance máximo do exemplo é R$ 362.178 no motor real;
+- as 5 capitais do ITBI batem com os arquivos;
+- nenhuma palavra proibida ("risco zero", "garantido", "sugerido", "revisados para você", "sem risco"...);
+- os avisos de garantia e de recomendação; o aviso do simulador da landing é o mesmo da tela;
+- as âncoras do menu e a ordem das seções.
+
+O `check:publicacao` não lê mais os `*.test.ts` (não vão ao ar).
+
+**Conferido no navegador** (`next start`; 360, 390, 768, 1024 e 1440 px; dois temas; a página inteira rolada):
+- sem rolagem horizontal e sem erro no console;
+- todas as entradas animadas terminam, com os números finais certos (362.178 e 91);
+- axe sem violações nas seções novas, nos planos, no FAQ e no rodapé.
+
+Prints em `scratchpad/prints/r4-D2/`.
+
+**Decisões suas (landing):**
+- [ ] **Preço da Luneta** `R$ [129]` (continua placeholder): com a Luneta mais completa, rever.
+- [ ] **Número de compras do ITBI** em "Decida com números": hoje `[X]`. O total (~203 mil) é lido dos arquivos no build.
+  Publicar só depois de confirmar as licenças de São Paulo, do Rio de Janeiro e de Porto Alegre. Para ligar:
+  `DECIDA.mostrarTotalItbi = true` em `src/content/ferramentas.ts`.
+- [ ] **Link "Ferramentas" no menu:** manter (hoje a partir de 1280 px no computador, sempre no celular) ou tirar.
+
+**Falta (técnico):**
+- [ ] Depois da integração com a frente C: conferir o link "Como a nota é calculada" (seção e rodapé; até lá dá 404) e
+  que a página do imóvel da demonstração (`ex-alvo-sp`) mostra a mesma nota 91 da miniatura.
+- [ ] A miniatura da nota copia o visual do cartão da frente C, sem importar `src/components/catalogo/**`. Se o cartão
+  mudar, alinhar.
+- [ ] O aviso do simulador tem duas cópias: `src/content/avisos.ts` e `src/components/simulador/Simulador.tsx`. O teste
+  confere que dizem o mesmo; juntar quando alguém mexer no simulador.
+
 ### Ler cada leilão com IA: é viável?
 
 Sim: em vez de preencher à mão, um robô baixa a página e os documentos de cada leilão (página da Caixa, edital,
@@ -994,7 +1079,10 @@ pelo valor real no arquivo de conteúdo.
 - [ ] Abertura do hero: manter na primeira rolada (atual) ou automática, sem trava.
 - [ ] Título novo com "imóveis" e "risco" ("Leilões de imóveis de todo o Brasil. E o risco de cada um, na mira.").
 - [ ] Encurtar a página (Exemplos e Filtros dentro do Por dentro; Dados e Prova social só com números reais).
-- [ ] Preços, oferta de fundador, garantia (7 ou 30 dias) e Lente paga ou grátis.
+- [ ] Preços, oferta de fundador, garantia (7 ou 30 dias) e Lente paga ou grátis. Com a Luneta mais completa (rodada 4),
+  rever o `R$ [129]`.
+- [ ] Landing (rodada 4): publicar o número de compras do ITBI só depois das licenças de SP, Rio e POA; manter o link
+  "Ferramentas" no menu? (detalhes em "Rodada 4 · site original").
 
 **Com você, fora do código**
 - [ ] Liberar a rede do ambiente para as fontes de dados (Caixa, LeilãoMap, leiloeiros) ou colar links e textos.
@@ -1116,7 +1204,8 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
 | Planos · nota | `[7] dias para cancelar` | `site.ts` → `PLANS.note` |
 | Prova social · garantia | `[7] dias` | `site.ts` → `SOCIAL.guarantee` |
 | FAQ · "Os leilões de todo o Brasil estão aqui?" | `Hoje são [X] leiloeiros monitorados.` | `site.ts` → `FAQ.items[2].a` |
-| FAQ · "Posso cancelar quando quiser?" | `[7] dias para cancelar` | `site.ts` → `FAQ.items[6].a` |
+| FAQ · "Posso cancelar quando quiser?" | `[7] dias para cancelar` | `site.ts` → `FAQ.items[10].a` |
+| Decida com números · preço do m² | `preço pago em [X] compras registradas na prefeitura` (o total do ITBI, ~203 mil, sai dos arquivos; liga depois das licenças de SP, Rio e POA) | `ferramentas.ts` → `DECIDA.mostrarTotalItbi` |
 | Rodapé | links `Política de privacidade [link]` e `Termos de uso [link]` (hoje apontam para `#`) | `Footer.tsx` |
 | Rodapé | `[Razão social] · CNPJ [X]` | `site.ts` → `FOOTER.company` |
 

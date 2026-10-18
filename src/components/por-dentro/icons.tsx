@@ -66,6 +66,14 @@ const POINTS: Record<PointIconName, ReactNode> = {
       <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
     </>
   ),
+  // calculadora (o simulador de lance)
+  calc: (
+    <>
+      <rect x="5.5" y="3" width="13" height="18" rx="2.2" />
+      <path d="M8.5 6.5h7v3h-7z" />
+      <path d="M8.8 13.2h.01M12 13.2h.01M15.2 13.2h.01M8.8 16.8h.01M12 16.8h.01M15.2 16.8h.01" strokeWidth="2.2" />
+    </>
+  ),
 };
 
 export function PointIcon({ name, size = 20 }: { name: PointIconName; size?: number }) {

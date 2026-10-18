@@ -10,6 +10,8 @@ import { Levels } from "@/components/sections/Levels";
 import { Examples } from "@/components/sections/Examples";
 import { Pracas } from "@/components/sections/Pracas";
 import { Filters } from "@/components/sections/Filters";
+import { Decida } from "@/components/sections/Decida";
+import { Localizacao } from "@/components/sections/Localizacao";
 import { Stats } from "@/components/sections/Stats";
 import { Plans } from "@/components/sections/Plans";
 import { Lawyer } from "@/components/sections/Lawyer";
@@ -23,7 +25,10 @@ import { PlansTable } from "@/components/PlansTable";
 import { FEATURED_EXAMPLES } from "@/content/examples";
 import { JsonLd } from "@/components/JsonLd";
 
-/** Landing na ordem do blueprint (Passo 1 · Estrutura da página). */
+/**
+ * Landing na ordem do blueprint (Passo 1 · Estrutura da página), com as duas seções da rodada 4 (Decida com números e
+ * Nota de localização) entre Filtros e Dados: achar → decidir → onde fica → a base em números → planos.
+ */
 export default function Home() {
   return (
     <>
@@ -52,6 +57,9 @@ export default function Home() {
         </Examples>
         <Pracas />
         <Filters />
+        {/* rodada 4: as ferramentas do plano Luneta (fundo tinta e noite, mantendo a alternância) */}
+        <Decida />
+        <Localizacao />
         <Stats />
         <Plans>
           <PlansTable />

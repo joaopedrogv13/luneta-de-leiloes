@@ -3,12 +3,12 @@ import type { TitleParts } from "@/components/ui/Heading";
 /**
  * Textos da seção "Por dentro, depois de assinar" (dentro de "A solução").
  * A mesma lista aparece em duas visões: Lente (tudo num só lugar, riscos e selos desfocados) e
- * Luneta (análise caso a caso). A troca Lente → Luneta é animada por uma luneta que varre a lista.
+ * Luneta (riscos, selos e as contas para decidir). A troca Lente → Luneta é animada por uma luneta que varre a lista.
  */
 
 export type PlanView = "lente" | "luneta";
 
-export type PointIcon = "globe" | "filter" | "pin" | "scan" | "tag" | "rings" | "bell";
+export type PointIcon = "globe" | "filter" | "pin" | "scan" | "tag" | "rings" | "bell" | "calc";
 
 type Point = { icon: PointIcon; title: string; text: string };
 
@@ -37,38 +37,38 @@ export const POR_DENTRO = {
       },
       {
         icon: "pin",
-        title: "Fotos, mapa e link direto",
-        text: "Veja onde fica o imóvel e vá direto para o leilão no site do leiloeiro.",
+        title: "Fotos, mapa e a página do imóvel",
+        text: "Veja onde fica, leia os dados da fonte e a matrícula, com cada termo explicado, e vá direto ao leilão.",
       },
     ] satisfies readonly Point[],
     note: {
       title: "Riscos e selos desfocados",
-      text: "Na Lente você vê o desconto, mas não o que ele esconde.",
+      text: "Na Lente você vê o desconto, mas não o que ele esconde. As contas e a nota de localização são da Luneta.",
     },
     cta: "Ver o que a Luneta mostra",
   },
 
   luneta: {
     tab: "Luneta",
-    hint: "análise caso a caso",
-    kicker: "Plano Luneta · análise caso a caso",
-    headline: "Cada leilão analisado, com os riscos e as oportunidades à vista.",
-    text: "Tudo o que a Lente tem e mais uma análise profissional de cada caso da base, para você mirar só no que vale o lance.",
+    hint: "para decidir",
+    kicker: "Plano Luneta · para decidir",
+    headline: "Cada leilão lido, com os riscos à vista e as contas feitas.",
+    text: "Tudo o que a Lente tem e mais o que ajuda a decidir: os riscos de cada leilão, os selos, o simulador de lance, o preço da região e a nota de localização.",
     points: [
       {
         icon: "scan",
-        title: "Análise profissional, caso a caso",
-        text: "Ocupação, dívidas, processo, documentação e praça de cada leilão, revisados para você.",
+        title: "Cada leilão lido para você",
+        text: "Ocupação, dívidas, processo, documentação e praça, lidos nos dados da fonte, com o trecho de onde veio cada alerta.",
       },
       {
         icon: "tag",
-        title: "Os principais riscos em tags",
-        text: "Cor, ícone e texto: você bate o olho e sabe o que pesa contra o lance.",
+        title: "Riscos em tags, os melhores com selo",
+        text: "Cor, ícone e texto para o que pesa contra o lance; Promissor, Na Mira e Alvo para os casos que passam nos critérios.",
       },
       {
-        icon: "rings",
-        title: "As melhores oportunidades com selo",
-        text: "Os casos que passam nos critérios ganham os selos Promissor, Na Mira e Alvo.",
+        icon: "calc",
+        title: "Lance máximo, região e entorno",
+        text: "Até quanto vale dar de lance para a sua meta, o preço do m² ali perto e a nota de localização, de 0 a 100.",
       },
       {
         icon: "bell",

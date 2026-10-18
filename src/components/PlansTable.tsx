@@ -1,4 +1,4 @@
-import { PLANS, type PlanId } from "@/content/site";
+import { PLANS, type PlanFeature, type PlanId, type PlanValue } from "@/content/site";
 import { PlansCompare } from "@/components/PlansCompare";
 import { RichText } from "@/components/ui/RichText";
 
@@ -9,6 +9,30 @@ const PREV: Record<PlanId, PlanId | null> = { lente: null, luneta: "lente", tele
 // reading-flow (onde houver suporte) faz o Tab e o leitor de tela seguirem essa ordem visual.
 const LG_ORDER = ["lg:order-1", "lg:order-2", "lg:order-3"] as const;
 const CARDS = PLANS.plans.map((p, i) => ({ ...p, lgOrder: LG_ORDER[i] })).sort((a, b) => Number(b.featured) - Number(a.featured));
+
+/** Os grupos da tabela, na ordem das linhas (Encontrar · Decidir · Acompanhar · Equipe). */
+const GRUPOS = PLANS.features.reduce<{ grupo: PlanFeature["grupo"]; linhas: PlanFeature[] }[]>((acc, f) => {
+  const ultimo = acc[acc.length - 1];
+  if (ultimo?.grupo === f.grupo) ultimo.linhas.push(f);
+  else acc.push({ grupo: f.grupo, linhas: [f] });
+  return acc;
+}, []);
+
+/**
+ * As linhas de um cartão: o rótulo curto (`cartao`, ou o da tabela) e o valor no plano. Linhas com o mesmo rótulo curto
+ * viram uma só ("Tags de risco" e "Selos" → "Tags de risco e selos"), com o valor da primeira.
+ */
+function linhasDoCartao(features: readonly PlanFeature[], plano: PlanId): { rotulo: string; valor: PlanValue }[] {
+  const vistas = new Set<string>();
+  const saida: { rotulo: string; valor: PlanValue }[] = [];
+  for (const f of features) {
+    const rotulo = f.cartao ?? f.label;
+    if (vistas.has(rotulo)) continue;
+    vistas.add(rotulo);
+    saida.push({ rotulo, valor: f[plano] });
+  }
+  return saida;
+}
 
 /** Ícone do plano: o alcance do instrumento (lente 1 anel, luneta 2, telescópio 3). */
 function PlanIcon({ id }: { id: PlanId }) {
@@ -22,7 +46,7 @@ function PlanIcon({ id }: { id: PlanId }) {
   );
 }
 
-function Cell({ value, plan }: { value: boolean | "blur"; plan: string }) {
+function Cell({ value, plan }: { value: PlanValue; plan: string }) {
   if (value === true)
     return (
       <span className="inline-flex text-latao-texto">
@@ -65,7 +89,10 @@ export function PlansTable() {
           const prev = PREV[p.id];
           // abaixo de lg a Luneta vem antes da Lente: ali "Tudo da Lente" vira a lista do que a Lente tem
           const prevAfter = !!prev && CARDS.findIndex((c) => c.id === prev) > CARDS.findIndex((c) => c.id === p.id);
-          const highlights = PLANS.features.filter((f) => f[p.id] !== false && (!prev || f[prev] !== true));
+          const highlights = linhasDoCartao(
+            PLANS.features.filter((f) => f[p.id] !== false && (!prev || f[prev] !== true)),
+            p.id,
+          );
           return (
             <div
               key={p.id}
@@ -103,35 +130,36 @@ export function PlansTable() {
                   </li>
                 )}
                 {prevAfter &&
-                  PLANS.features
-                    .filter((f) => f[prev] === true)
-                    .map((f) => (
-                      <li key={`base-${f.label}`} className="flex gap-2.5 lg:hidden">
-                        <span aria-hidden="true" className="font-bold text-latao-texto">
-                          ✓
-                        </span>
-                        {f.label}
-                      </li>
-                    ))}
+                  linhasDoCartao(
+                    PLANS.features.filter((f) => f[prev] === true),
+                    prev,
+                  ).map((f) => (
+                    <li key={`base-${f.rotulo}`} className="flex gap-2.5 lg:hidden">
+                      <span aria-hidden="true" className="font-bold text-latao-texto">
+                        ✓
+                      </span>
+                      {f.rotulo}
+                    </li>
+                  ))}
                 {highlights.map((f) =>
-                  f[p.id] === "blur" ? (
-                    <li key={f.label} className="flex gap-2.5 text-nevoa">
+                  f.valor === "blur" ? (
+                    <li key={f.rotulo} className="flex gap-2.5 text-nevoa">
                       <span aria-hidden="true" className="font-bold text-latao-texto blur-[1.5px]">
                         ✓
                       </span>
                       <span>
                         <span className="blur-[1.2px]" aria-hidden="true">
-                          {f.label}
+                          {f.rotulo}
                         </span>
-                        <span className="sr-only">{f.label}</span> <span className="text-[11px]">(aparecem desfocados)</span>
+                        <span className="sr-only">{f.rotulo}</span> <span className="text-[11px]">(aparecem desfocados)</span>
                       </span>
                     </li>
                   ) : (
-                    <li key={f.label} className="flex gap-2.5">
+                    <li key={f.rotulo} className="flex gap-2.5">
                       <span aria-hidden="true" className="font-bold text-latao-texto">
                         ✓
                       </span>
-                      {f.label}
+                      {f.rotulo}
                     </li>
                   ),
                 )}
@@ -159,19 +187,32 @@ export function PlansTable() {
               ))}
             </tr>
           </thead>
-          <tbody>
-            {PLANS.features.map((f) => (
-              <tr key={f.label} className="border-b border-nevoa/10 last:border-0">
-                <th scope="row" className="px-5 py-3.5 font-normal text-luar sm:px-7">
-                  {f.label}
+          {GRUPOS.map((g) => (
+            <tbody key={g.grupo}>
+              <tr className="border-b border-nevoa/10">
+                <th scope="rowgroup" className="px-5 pt-6 pb-2 text-[11px] font-semibold tracking-[0.14em] text-latao-texto uppercase sm:px-7">
+                  {g.grupo}
                 </th>
+                {/* células vazias só para a coluna em destaque (Luneta) seguir sem corte entre os grupos */}
                 {PLANS.plans.map((p) => (
-                  <td key={p.id} className={`px-3 py-3.5 text-center ${p.featured ? "bg-latao/10" : ""}`}>
-                    <Cell value={f[p.id]} plan={p.name} />
-                  </td>
+                  <td key={p.id} aria-hidden="true" className={p.featured ? "bg-latao/10" : ""} />
                 ))}
               </tr>
-            ))}
+              {g.linhas.map((f) => (
+                <tr key={f.label} className="border-b border-nevoa/10">
+                  <th scope="row" className="px-5 py-3.5 font-normal text-luar sm:px-7">
+                    {f.label}
+                  </th>
+                  {PLANS.plans.map((p) => (
+                    <td key={p.id} className={`px-3 py-3.5 text-center ${p.featured ? "bg-latao/10" : ""}`}>
+                      <Cell value={f[p.id]} plan={p.name} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          ))}
+          <tbody>
             <tr className="border-t border-nevoa/20">
               <th scope="row" className="px-5 py-4 font-semibold sm:px-7">
                 Preço

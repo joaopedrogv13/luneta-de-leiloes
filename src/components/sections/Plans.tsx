@@ -9,7 +9,9 @@ export function Plans({ children }: { children?: ReactNode }) {
   return (
     <section id="planos" aria-labelledby="planos-titulo" className="section">
       <div className="container-l">
-        <SectionHeading id="planos-titulo" eyebrow={PLANS.eyebrow} parts={PLANS.title} />
+        <SectionHeading id="planos-titulo" eyebrow={PLANS.eyebrow} parts={PLANS.title}>
+          <p className="mt-5 max-w-[640px] text-base leading-relaxed text-nevoa sm:text-lg">{PLANS.lead}</p>
+        </SectionHeading>
         {children}
         <p className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-nevoa">
           Quer ver como fica depois de assinar?

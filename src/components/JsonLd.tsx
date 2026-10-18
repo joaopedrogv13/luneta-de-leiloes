@@ -25,7 +25,7 @@ export function JsonLd() {
     "@id": `${SITE.url}/#assinatura`,
     name: `Assinatura ${SITE.name}`,
     description:
-      "Assinatura que reúne os leilões de imóveis de todo o Brasil, trata os dados e classifica as oportunidades por risco com tags e selos (Promissor, Na Mira e Alvo).",
+      "Assinatura que reúne os leilões de imóveis de todo o Brasil, trata os dados, classifica as oportunidades por risco com tags e selos (Promissor, Na Mira e Alvo) e ajuda a decidir com simulador de lance máximo, preço do m² da região e nota de localização.",
     brand: { "@id": org["@id"] },
     image: `${SITE.url}/opengraph-image`,
     offers: plans.map((p) => ({
