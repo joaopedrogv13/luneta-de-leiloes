@@ -1,0 +1,61 @@
+[02:52:39] nota: dependências
+24 testes ok (casos-endereco.json: 87 endereços)
+[02:52:59] nota: entradas (sha256 contra manifesto.json)
+Cache: /home/runner/work/_temp/localizacao-cache · geocodebr: /home/runner/work/_temp/localizacao-cache/geocodebr
+Baixando geocodebr:municipio (0.2 MB) de https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio.parquet
+  ok em 0 s
+Baixando geocodebr:municipio_logradouro_localidade (87.2 MB) de https://github.com/ipea/padronizacao_cnefe/releases/download/v0.5.0/municipio_logradouro_localidade.parquet
+  ok em 1 s
+Baixando cnefe_2022 (1263.5 MB) de https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/cnefe_2022.parquet
+  ok em 8 s
+Baixando statsgrid_2022 (619.1 MB) de https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/statsgrid_2022.parquet
+  ok em 6 s
+Baixando schools_2025 (18.6 MB) de https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/schools_2025.parquet
+  ok em 0 s
+Baixando healthfacilities_202604 (99.8 MB) de https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/healthfacilities_202604.parquet
+  ok em 1 s
+Baixando disasterriskareas_2010 (6.5 MB) de https://github.com/ipea/geobr_prep_data/releases/download/v2.0.0/disasterriskareas_2010.parquet
+  ok em 0 s
+Baixando censobr:2022_tracts_responsavelrenda (14.8 MB) de https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_responsavelrenda_v1.0.0.parquet
+  ok em 0 s
+Baixando censobr:2022_tracts_entorno (31.1 MB) de https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_entorno_v1.0.0.parquet
+  ok em 0 s
+Baixando censobr:2022_tracts_domicilio (115.5 MB) de https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_domicilio_v1.0.0.parquet
+  ok em 1 s
+Baixando censobr:2022_tracts_basico (12.4 MB) de https://github.com/ipea/censobr_prep_data/releases/download/v1.0.0/2022_tracts_basico_v1.0.0.parquet
+  ok em 0 s
+Entradas conferidas: 11 arquivo(s), sha256 igual ao da referência.
+[02:53:21]   osm-pois.csv.gz: localizacao/39088496433/osm-pois.csv.gz
+[02:53:21] nota: pois.py
+  CNEFE: 65 s
+Gravado: /home/runner/work/_temp/localizacao-cache/nota/pois.parquet (12708247 pontos, 185 s): {'cnefe:ensino_cnefe': 231171, 'cnefe:estab': 10580593, 'cnefe:farmacia': 75426, 'cnefe:mercado': 429291, 'cnefe:padaria': 101163, 'cnefe:religioso': 515389, 'cnefe:saude_cnefe': 222637, 'cnes:saude': 147980, 'inep:escola_privada': 40499, 'inep:escola_publica': 117966, 'osm:barca': 985, 'osm:brt': 851, 'osm:onibus': 114485, 'osm:parque': 85407, 'osm:playground': 6710, 'osm:praca': 30402, 'osm:terminal': 5198, 'osm:trilho': 2094}
+[02:56:26] nota: nota.py
+Renda: V06006 (mediana confirmada no dicionário do IBGE)
+  domicílios do CNEFE em 8762586 quadradinhos (83097778 domicílios, 115 s)
+  grade 2022: 1268495 células habitadas, 138991506 moradores (2 s)
+  pontos de serviço: 12708247 em 18 categorias (1 s)
+  ITBI Fortaleza: 611 de 991 ruas com ponto no CNEFE
+  ITBI Recife: 584 de 682 ruas com ponto no CNEFE
+  ITBI Rio de Janeiro: 1362 de 2059 ruas com ponto no CNEFE
+  ITBI Porto Alegre: 963 de 1107 ruas com ponto no CNEFE
+  ITBI São Paulo: 4320 de 5223 ruas com ponto no CNEFE
+Entradas prontas (120 s); OSM: sim
+  [1/1153] Alta Floresta D'Oeste/RO: 1239 células, 1 imóveis (121 s)
+  [101/1153] Paraibano/MA: 272 células, 1 imóveis (126 s)
+  [201/1153] Campo Redondo/RN: 184 células, 2 imóveis (131 s)
+  [301/1153] Granito/PE: 336 células, 1 imóveis (134 s)
+  [401/1153] Dias d'Ávila/BA: 672 células, 1 imóveis (138 s)
+  [501/1153] Jequitaí/MG: 293 células, 1 imóveis (143 s)
+  [601/1153] Rio Bonito/RJ: 883 células, 5 imóveis (149 s)
+  [603/1153] Rio de Janeiro/RJ: 15882 células, 3225 imóveis (150 s)
+  [701/1153] Iperó/SP: 553 células, 3 imóveis (156 s)
+  [801/1153] São Caetano do Sul/SP: 341 células, 1 imóveis (162 s)
+  [807/1153] São Paulo/SP: 23601 células, 490 imóveis (164 s)
+  [901/1153] Primeiro de Maio/PR: 328 células, 1 imóveis (169 s)
+  [1001/1153] Encantado/RS: 533 células, 1 imóveis (173 s)
+  [1101/1153] Nobres/MT: 557 células, 1 imóveis (178 s)
+  [1153/1153] Brasília/DF: 19308 células, 63 imóveis (181 s)
+Nota calculada para 1153 cidades em 181 s
+Gravados: {'localizacao.json.gz': 631774, 'localizacao-osm.json.gz': 220906, 'localizacao-cidades.json.gz': 50668}
+[02:59:30] nota: ok
+[02:59:30] fim: 0 etapa(s) com falha
