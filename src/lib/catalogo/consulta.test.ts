@@ -470,3 +470,33 @@ test("desempenho: 21 mil imóveis, todas as facetas, abaixo de 60 ms", () => {
   tempos.sort((a, b) => a - b);
   assert.ok(tempos[3]! < 60, `mediana ${tempos[3]!.toFixed(1)} ms`);
 });
+
+test("área do mapa (bbox): só o ponto dentro do retângulo; sem ponto não passa; inválida não filtra; vale no Lente", () => {
+  // São Paulo capital (caixa-04 em -23,53/-46,63 e lj-10 em -23,6/-46,7); Campinas (-22,9/-47,06) fica de fora
+  const sp: Filtros = { bbox: [-46.8, -23.7, -46.5, -23.4] };
+  assert.deepEqual(ids(sp), ["caixa-04", "lj-10"]);
+  assert.deepEqual(ids(sp, { plano: "lente" }), ["caixa-04", "lj-10"], "a área vale no Lente");
+  // borda inclusiva
+  assert.deepEqual(ids({ bbox: [-46.63, -23.53, -46.6, -23.5] }), ["caixa-04"]);
+  // E com os outros filtros; a faceta de UF conta dentro da área
+  const r = buscar(IX, busca({ ...sp, tipo: ["apartamento"] }), { agora: AGORA });
+  assert.deepEqual(r.itens.map((i) => i.id).sort(), ["caixa-04", "lj-10"]);
+  assert.deepEqual(faceta(r, "uf"), { SP: 2 });
+  // imóvel sem coordenada nunca está numa área
+  const semPonto = criarIndice([...ITENS, { ...ITENS[3]!, id: "caixa-99", lat: null, lon: null }]);
+  assert.deepEqual(buscar(semPonto, busca(sp), { agora: AGORA }).itens.map((i) => i.id).sort(), ["caixa-04", "lj-10"]);
+  // retângulo ao contrário ou com NaN: não filtra (a URL já recusa; aqui é a defesa do servidor)
+  assert.equal(ids({ bbox: [-46.5, -23.7, -46.8, -23.4] }).length, ITENS.length);
+  assert.equal(ids({ bbox: [NaN, -23.7, -46.5, -23.4] }).length, ITENS.length);
+  // o mapa agregado por cidade (SVG) também segue a área
+  assert.deepEqual(buscar(IX, busca(sp), { agora: AGORA }).mapa.map((p) => p.chave), ["SP|São Paulo"]);
+});
+
+test("aoFiltrar: recebe a máscara de cada imóvel (0 = no resultado), a mesma regra da lista", () => {
+  const recebidas: Int32Array[] = [];
+  const r = buscar(IX, busca({ uf: ["SP"] }, { porPagina: 1 }), { agora: AGORA, facetas: false, mapa: false, aoFiltrar: (m) => recebidas.push(m) });
+  assert.equal(recebidas.length, 1);
+  const dentro = ITENS.filter((_, k) => recebidas[0]![k] === 0).map((i) => i.id).sort();
+  assert.deepEqual(dentro, ["caixa-04", "caixa-05", "lj-10"]);
+  assert.equal(r.total, 3);
+});

@@ -69,7 +69,8 @@ export function filtrosIguais(a: Filtros, b: Filtros) {
 export function chaveFiltros(f: Filtros) {
   const ordenado: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(limparVazios(f))) {
-    ordenado[k] = Array.isArray(v) ? [...v].map(String).sort() : v;
+    // a área do mapa é um retângulo (a ordem conta e são números), não uma lista
+    ordenado[k] = Array.isArray(v) && k !== "bbox" ? [...v].map(String).sort() : v;
   }
   return escreverBusca({ filtros: ordenado as Filtros }).toString();
 }
@@ -117,7 +118,8 @@ export type GrupoFiltro =
   | "lance" | "avaliacao" | "desagio" | "lanceM2" | "area" | "quartos" | "vagas"
   | "modalidade" | "praca" | "data"
   | "financiamento" | "fgts" | "parcelamento" | "ocupacao" | "natureza" | "fonte" | "comFoto"
-  | "semTags" | "comTags" | "selo" | "notaLocal";
+  | "semTags" | "comTags" | "selo" | "notaLocal"
+  | "bbox";
 
 /** Chaves de Filtros que cada grupo ocupa. */
 export const CHAVES_DO_GRUPO: Record<GrupoFiltro, readonly (keyof Filtros)[]> = {
@@ -147,6 +149,7 @@ export const CHAVES_DO_GRUPO: Record<GrupoFiltro, readonly (keyof Filtros)[]> = 
   comTags: ["comTags"],
   selo: ["selo"],
   notaLocal: ["notaLocalMin"],
+  bbox: ["bbox"],
 };
 
 /**
@@ -456,6 +459,8 @@ export function pilulas(f: Filtros, nomes?: NomesDasFacetas): Pilula[] {
   };
 
   if (f.q) add("q", `Busca: “${f.q}”`);
+  // a área do mapa ("Buscar nesta área") vista na lista ou nos cards: dá para tirar aqui
+  if (f.bbox) add("bbox", "Na área do mapa");
   p.push(...pilulasDeLugar("uf", f.uf, (v) => v));
   p.push(...pilulasDeLugar("cidade", f.cidade, nomeCidade));
   p.push(...pilulasDeLugar("bairro", f.bairro, nomeBairro));

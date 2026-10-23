@@ -10,7 +10,7 @@
  */
 import { filtrosEfetivos, limparVazios } from "../../../lib/catalogo/filtros-rotulos";
 import { type Conjunto, type Filtros, type Ordem, type Plano } from "../../../lib/catalogo/tipos";
-import { escreverBusca, type EstadoBusca, type Vista } from "../../../lib/catalogo/url";
+import { escreverBusca, type CameraMapa, type EstadoBusca, type Vista } from "../../../lib/catalogo/url";
 
 export const API_CATALOGO = "/api/catalogo";
 
@@ -26,7 +26,8 @@ export interface PedidoLista {
 export function canonico(f: Filtros): Filtros {
   const saida: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(limparVazios(f))) {
-    saida[k] = Array.isArray(v) ? [...v].sort((a, b) => String(a).localeCompare(String(b))) : v;
+    // listas são "qualquer um destes" (a ordem não importa); a área do mapa é um retângulo [oeste, sul, leste, norte]
+    saida[k] = Array.isArray(v) && k !== "bbox" ? [...v].sort((a, b) => String(a).localeCompare(String(b))) : v;
   }
   return saida as Filtros;
 }
@@ -70,11 +71,12 @@ export const urlApi = (consulta: string) => `${API_CATALOGO}?${consulta}`;
 
 /**
  * Endereço da página (o que vai na barra do navegador e no "Voltar à busca" da página do imóvel). A vista e o
- * mapa só entram quando a pessoa os escolheu (pela URL ou nos botões); o padrão de cada aparelho fica de fora.
+ * mapa só entram quando a pessoa os escolheu (pela URL ou nos botões); o padrão de cada aparelho fica de fora. Na vista
+ * de mapa, a câmera também (voltar do imóvel reabre o mapa no mesmo lugar).
  */
 export function enderecoPagina(
   caminho: string,
-  e: { filtros: Filtros; ordem: Ordem; pagina: number; plano: Plano; vista: Vista | null; mapa: boolean | null },
+  e: { filtros: Filtros; ordem: Ordem; pagina: number; plano: Plano; vista: Vista | null; mapa: boolean | null; camera?: CameraMapa | null },
 ): string {
   // escreverBusca já omite a ordem padrão, a página 1 e o plano Luneta
   const q = escreverBusca(e).toString();

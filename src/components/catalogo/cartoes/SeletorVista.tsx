@@ -9,17 +9,20 @@ const ALTURA = "min-h-11 pointer-fine:min-h-9";
 const OPCOES: { valor: Vista; rotulo: string; icone: ReactNode }[] = [
   { valor: "lista", rotulo: "Lista", icone: <IconeLista /> },
   { valor: "cards", rotulo: "Cards", icone: <IconeGrade /> },
+  { valor: "mapa", rotulo: "Mapa", icone: <IconeMapa /> },
 ];
 
 /**
- * Como ver os imóveis: controle segmentado "Lista | Cards" (botões com aria-pressed, ícone + texto) e, ao
- * lado, o botão "Mapa" que liga e desliga o mapa. O ativo usa o latão (único acento do site).
+ * Como ver os imóveis: controle segmentado "Lista | Cards | Mapa" (botões com aria-pressed, ícone + texto; "Mapa" é o
+ * mapa de verdade, com ruas e "Buscar nesta área") e, ao lado, nas vistas Lista e Cards, a chave do mapa resumido do
+ * Brasil (ao lado da lista ou no topo dos cards). O ativo usa o latão (único acento do site).
  */
 export function SeletorVista({
   vista,
   onVista,
   mapa,
   onMapa,
+  anterior = "cards",
   semMapa = false,
   semMapaCelular = false,
   apenasAlternar = false,
@@ -30,6 +33,8 @@ export function SeletorVista({
   onVista: (v: Vista) => void;
   mapa: boolean;
   onMapa: (visivel: boolean) => void;
+  /** na vista de mapa, a vista para onde o botão redondo (celular) volta */
+  anterior?: Exclude<Vista, "mapa">;
   /** esconde o botão do mapa (ex.: tela onde o mapa não cabe) */
   semMapa?: boolean;
   /** esconde o botão do mapa só no celular (lá o mapa tem o botão flutuante) */
@@ -40,7 +45,8 @@ export function SeletorVista({
   rotuloClassName?: string;
   className?: string;
 }) {
-  const outra = OPCOES.find((o) => o.valor !== vista)!;
+  // o botão redondo do celular troca entre lista e cards (o mapa tem o botão flutuante); no mapa, volta para a anterior
+  const outra = OPCOES.find((o) => o.valor === (vista === "lista" ? "cards" : vista === "cards" ? "lista" : anterior))!;
   if (apenasAlternar) {
     return (
       <button
@@ -91,18 +97,18 @@ export function SeletorVista({
           );
         })}
       </div>
-      {!semMapa && (
+      {!semMapa && vista !== "mapa" && (
         <button
           type="button"
           aria-pressed={mapa}
-          title="Mapa"
+          title={vista === "lista" ? "Mapa resumido ao lado da lista" : "Mapa resumido no topo dos cards"}
           onClick={() => onMapa(!mapa)}
           className={`inline-flex ${ALTURA} cursor-pointer items-center gap-2 rounded-full border px-3.5 text-[13px] leading-none font-medium transition-[background-color,border-color,color] duration-150 ease-luneta motion-reduce:transition-none ${semMapaCelular ? "max-sm:hidden" : ""} ${
             mapa ? "border-latao/70 bg-latao/15 text-latao-texto" : "border-nevoa/25 bg-tinta text-nevoa hover:border-nevoa/55 hover:text-luar"
           }`}
         >
           <IconeMapa />
-          <span className={rotuloClassName}>Mapa</span>
+          <span className={rotuloClassName}>{vista === "lista" ? "Mapa ao lado" : "Mapa no topo"}</span>
           <span aria-hidden="true" className={`ml-0.5 inline-flex h-4 w-7 items-center rounded-full p-0.5 transition-colors duration-150 ${mapa ? "bg-latao" : "bg-nevoa/30"}`}>
             <span className={`size-3 rounded-full bg-tinta shadow-sm transition-transform duration-150 ease-luneta motion-reduce:transition-none ${mapa ? "translate-x-3" : ""}`} />
           </span>

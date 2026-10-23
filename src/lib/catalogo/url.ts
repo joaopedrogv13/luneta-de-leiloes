@@ -5,11 +5,23 @@
  *
  *   /previa?uf=MG&tipo=apartamento&tipo=casa&lanceMax=300000&ordem=lance-asc&vista=cards&pagina=2
  */
-import { NAO_INFORMADO, ORDEM_PADRAO, type Conjunto, type Filtros, type Modalidade, type Ordem, type Plano, type TipoImovel } from "./tipos";
+import { NAO_INFORMADO, ORDEM_PADRAO, type CaixaGeo, type Conjunto, type Filtros, type Modalidade, type Ordem, type Plano, type TipoImovel } from "./tipos";
 import { lerPlano } from "./planos";
 
-export type Vista = "lista" | "cards";
+/**
+ * Como ver os imóveis. "mapa": o mapa de verdade (ruas, aproximação, "Buscar nesta área") ocupa a tela, com a lista ao
+ * lado (computador) ou numa folha embaixo (celular). Só lista e cards ficam salvos como preferência; o mapa é um modo de
+ * explorar, aberto pelo botão ou pela URL (`vista=mapa`).
+ */
+export type Vista = "lista" | "cards" | "mapa";
 export const VISTA_PADRAO: Vista = "lista";
+
+/** Câmera do mapa de verdade na URL (`centro=-23.55,-46.63&zoom=12.5`): para voltar e compartilhar. */
+export interface CameraMapa {
+  lat: number;
+  lon: number;
+  zoom: number;
+}
 
 export interface EstadoBusca {
   filtros: Filtros;
@@ -20,6 +32,8 @@ export interface EstadoBusca {
   /** mapa visível? null = padrão da vista */
   mapa: boolean | null;
   plano: Plano;
+  /** câmera da vista de mapa (null = enquadra os resultados) */
+  camera: CameraMapa | null;
 }
 
 const TIPOS: readonly TipoImovel[] = ["apartamento", "casa", "terreno", "comercial", "rural", "outro"];
@@ -95,6 +109,34 @@ function simNao(p: Entrada, chave: string): boolean | undefined {
   return v === "1" ? true : v === "0" ? false : undefined;
 }
 
+/** "oeste,sul,leste,norte" válido (dentro do globo, com largura e altura) ou undefined. */
+function caixa(p: Entrada, chave: string): CaixaGeo | undefined {
+  const v = um(p, chave);
+  if (!v || v.length > 120) return undefined;
+  const n = v.split(",").map((x) => (x.trim() === "" ? NaN : Number(x)));
+  if (n.length !== 4 || !n.every(Number.isFinite)) return undefined;
+  const [o, s, l, no] = n as CaixaGeo;
+  if (o < -180 || l > 180 || s < -90 || no > 90 || !(o < l) || !(s < no)) return undefined;
+  return [o, s, l, no];
+}
+
+/** "lat,lon" + zoom (0 a 22) válidos, ou null. */
+function camera(p: Entrada): CameraMapa | null {
+  const c = um(p, "centro");
+  const z = numero(p, "zoom");
+  if (!c || z === undefined || c.length > 60) return null;
+  const [lat, lon, ...resto] = c.split(",").map((x) => (x.trim() === "" ? NaN : Number(x)));
+  if (resto.length || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat!) > 85 || Math.abs(lon!) > 180) return null;
+  if (z < 0 || z > 22) return null;
+  return { lat: lat!, lon: lon!, zoom: z };
+}
+
+/** Número curto para a URL: até `casas` decimais, sem zeros à direita ("-46.63", não "-46.630000"). */
+export function curto(n: number, casas: number): string {
+  const t = n.toFixed(casas);
+  return t.includes(".") ? t.replace(/\.?0+$/, "") : t;
+}
+
 function dia(p: Entrada, chave: string): string | undefined {
   const v = um(p, chave);
   return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined;
@@ -155,17 +197,19 @@ export function lerBusca(p: Entrada): EstadoBusca {
   const notaLocalBruta = numero(p, "notaLocalMin");
   const notaLocalMin = notaLocalBruta === undefined ? undefined : Math.round(notaLocalBruta);
   if (notaLocalMin !== undefined && notaLocalMin >= 1 && notaLocalMin <= 100) f.notaLocalMin = notaLocalMin;
+  const bbox = caixa(p, "bbox");
+  if (bbox) f.bbox = bbox;
 
   const ordemBruta = um(p, "ordem");
   const ordem = ORDENS.includes(ordemBruta as Ordem) ? (ordemBruta as Ordem) : ORDEM_PADRAO;
   const pagina = Math.min(10_000, Math.max(1, Math.floor(numero(p, "pagina") ?? 1)));
   const vistaBruta = um(p, "vista");
-  const vista = vistaBruta === "lista" || vistaBruta === "cards" ? vistaBruta : null;
+  const vista = vistaBruta === "lista" || vistaBruta === "cards" || vistaBruta === "mapa" ? vistaBruta : null;
   const mapaBruto = um(p, "mapa");
   const mapa = mapaBruto === "1" ? true : mapaBruto === "0" ? false : null;
   // sem o parâmetro, a Luneta (a demonstração); valor desconhecido ou mal escrito, o Lente (planos.ts)
   const plano: Plano = lerPlano(um(p, "plano"));
-  return { filtros: f, ordem, pagina, vista, mapa, plano };
+  return { filtros: f, ordem, pagina, vista, mapa, plano, camera: camera(p) };
 }
 
 /** Escreve o estado numa URLSearchParams, sem os valores padrão (URL curta). */
@@ -183,11 +227,17 @@ export function escreverBusca(e: Partial<EstadoBusca> & { conjunto?: Conjunto })
   if (f.dataAte) p.set("dataAte", f.dataAte);
   for (const c of CAMPOS_SIM_NAO) if (f[c] !== undefined) p.set(c, f[c] ? "1" : "0");
   if (f.notaLocalMin !== undefined) p.set("notaLocalMin", String(f.notaLocalMin));
+  // 5 casas: ~1 m (a área muda a cada arrasto; a URL não precisa de mais)
+  if (f.bbox) p.set("bbox", f.bbox.map((x) => curto(x, 5)).join(","));
   if (e.ordem && e.ordem !== ORDEM_PADRAO) p.set("ordem", e.ordem);
   if (e.pagina && e.pagina > 1) p.set("pagina", String(e.pagina));
   if (e.vista) p.set("vista", e.vista);
   if (e.mapa !== undefined && e.mapa !== null) p.set("mapa", e.mapa ? "1" : "0");
   if (e.plano === "lente") p.set("plano", "lente");
+  if (e.camera) {
+    p.set("centro", `${curto(e.camera.lat, 5)},${curto(e.camera.lon, 5)}`);
+    p.set("zoom", curto(e.camera.zoom, 2));
+  }
   return p;
 }
 

@@ -148,7 +148,8 @@ const DO_LENTE: ReadonlySet<keyof Filtros> = new Set(FILTROS_LENTE);
 
 /** De que recurso é cada filtro: null = do Lente (todos os planos); tags, selo e nota têm recurso próprio. */
 export function recursoDoFiltro(chave: keyof Filtros): Recurso | null {
-  if (DO_LENTE.has(chave)) return null;
+  // a área do mapa ("Buscar nesta área") é da vista de mapa, que os dois planos têm: não é filtro avançado
+  if (DO_LENTE.has(chave) || chave === "bbox") return null;
   if (chave === "comTags" || chave === "semTags") return "tags";
   if (chave === "selo") return "selos";
   if (chave === "notaLocalMin") return "localizacao";

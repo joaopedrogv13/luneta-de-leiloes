@@ -9,11 +9,12 @@
  *   const pagina = await paginaImovel("previa", id, plano);    // null → notFound()
  */
 import "server-only";
-import { buscar as buscarNoIndice, POR_PAGINA_MAXIMO } from "./consulta";
+import { buscar as buscarNoIndice, paraPlano, POR_PAGINA_MAXIMO } from "./consulta";
 import { dadosDoConjunto } from "./dados";
 import { lerItbi, type DadosItbi } from "./itbi";
 import { montarPaginaImovel } from "./pagina";
-import type { Busca, Conjunto, PaginaImovel, Plano, ResultadoBusca, SobreConjunto } from "./tipos";
+import { montarPontos, type PontosCompactos } from "./pontos";
+import type { Busca, Conjunto, ImovelResumo, PaginaImovel, Plano, ResultadoBusca, SobreConjunto } from "./tipos";
 import { lerBusca } from "./url";
 
 export { lerBusca };
@@ -53,6 +54,65 @@ export async function buscar(busca: Busca, opcoes: { mapa?: boolean; facetas?: b
   const d = await dadosDoConjunto(busca.conjunto);
   const r = buscarNoIndice(d.indice, busca, { selosDesligados: d.selosDesligados, mapa: opcoes.mapa, facetas: opcoes.facetas });
   return { ...r, sobre: d.sobre };
+}
+
+/**
+ * Versão da lista de um conjunto, para o `k` dos pontos: um resumo (FNV-1a) dos ids na ordem, igual em toda instância
+ * que carregou os mesmos dados (a data de geração não serve: a dos exemplos é a hora em que a instância os montou).
+ */
+const versoes = new WeakMap<readonly ImovelResumo[], string>();
+function versaoDaLista(itens: readonly ImovelResumo[]): string {
+  let v = versoes.get(itens);
+  if (!v) {
+    let h = 0x811c9dc5;
+    for (const i of itens) {
+      for (let c = 0; c < i.id.length; c++) h = Math.imul(h ^ i.id.charCodeAt(c), 0x01000193);
+      h = Math.imul(h ^ 0x2c, 0x01000193);
+    }
+    v = `${itens.length.toString(36)}-${(h >>> 0).toString(36)}`;
+    versoes.set(itens, v);
+  }
+  return v;
+}
+
+/**
+ * Os pontos de TODOS os imóveis filtrados para o mapa de verdade (src/lib/catalogo/pontos.ts), com a mesma regra de
+ * filtros e de plano da lista (a passada de `buscar`). A área do mapa (`bbox`) não vale aqui: o mapa mostra tudo o que os
+ * filtros deixam, e a lista ao lado é que segue a área.
+ */
+export async function pontosDoMapa(busca: Busca): Promise<PontosCompactos> {
+  const d = await dadosDoConjunto(busca.conjunto);
+  const filtros = { ...busca.filtros };
+  delete filtros.bbox;
+  const passada: { mascaras: Int32Array | null } = { mascaras: null };
+  buscarNoIndice(d.indice, { ...busca, filtros, pagina: 1, porPagina: 1 }, {
+    selosDesligados: d.selosDesligados,
+    mapa: false,
+    facetas: false,
+    aoFiltrar: (m) => {
+      passada.mascaras = m;
+    },
+  });
+  if (!passada.mascaras) throw new Error("a busca não devolveu as máscaras dos filtros");
+  const desvios = d.desvios;
+  return montarPontos(d.indice, passada.mascaras, { conjunto: versaoDaLista(d.itens), raio: (k) => desvios[k] });
+}
+
+/**
+ * Os imóveis nas posições `ks` (o cartão do mapa), com o plano aplicado, na ordem pedida, e as posições aceitas (fora da
+ * lista é ignorada). null quando `versao` não é a do conjunto carregado (o navegador guardou pontos de outra versão:
+ * pede os pontos de novo).
+ */
+export async function itensPorPosicao(
+  conjunto: Conjunto,
+  versao: string,
+  ks: readonly number[],
+  plano: Plano,
+): Promise<{ ks: number[]; itens: ImovelResumo[] } | null> {
+  const d = await dadosDoConjunto(conjunto);
+  if (versao !== versaoDaLista(d.itens)) return null;
+  const validas = ks.filter((k) => Number.isInteger(k) && k >= 0 && k < d.itens.length);
+  return { ks: validas, itens: validas.map((k) => paraPlano(d.itens[k]!, plano)) };
 }
 
 /** ITBI (base/saida/site/itbi), lido uma vez por instância; um erro não fica guardado. */

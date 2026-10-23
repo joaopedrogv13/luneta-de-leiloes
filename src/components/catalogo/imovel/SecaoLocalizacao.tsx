@@ -12,7 +12,8 @@ import { NovaAba, Secao } from "./partes";
 
 /**
  * Seção 5, "Localização". Primeiro a nota de localização (plano Luneta; no Lente, o mapa e o endereço vêm antes e a
- * chamada curta da Luneta, RecursoLuneta "faixa", fica embaixo), depois o mapa mini com o ponto e o endereço. O ponto é o mais preciso que houver (o do geocode do CNEFE, que a
+ * chamada curta da Luneta, RecursoLuneta "faixa", fica embaixo), depois o mapa (MapLibre, com as ruas e o ponto ou a área
+ * de incerteza; sem WebGL, o mapa do Brasil em SVG) e o endereço. O ponto é o mais preciso que houver (o do geocode do CNEFE, que a
  * nota usa, ou o do resumo); com ele, "Ver o ponto no OpenStreetMap" abre a coordenada, e "Abrir no Google Maps" busca o
  * endereço publicado (sem endereço, bairro e cidade).
  */
@@ -76,7 +77,13 @@ export function SecaoLocalizacao({
       {nota && !travada && <div className="mb-5">{nota}</div>}
       <div className="grid gap-5 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:items-start">
         {ponto ? (
-          <MapaLocal ponto={ponto} notaPosicao={legendaPosicao(p!.precisao, p!.cnefe)} />
+          <MapaLocal
+            ponto={ponto}
+            notaPosicao={legendaPosicao(p!.precisao, p!.cnefe)}
+            precisao={p!.precisao}
+            // a incerteza do geocode (no Lente a nota não vem: o raio fica no padrão da precisão)
+            raio={!exemplo && localizacao?.desvioM ? localizacao.desvioM : null}
+          />
         ) : (
           <p className="rounded-3xl border border-nevoa/15 bg-tinta px-4 py-6 text-center text-[14px] text-nevoa">A fonte não informa a posição deste imóvel.</p>
         )}

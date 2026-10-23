@@ -39,12 +39,14 @@ const COMPLETO: EstadoBusca = {
     semTags: ["ocupado", "acao-judicial"],
     selo: [3, 2],
     notaLocalMin: 60,
+    bbox: [-44.06, -20.03, -43.85, -19.8],
   },
   ordem: "lance-asc",
   pagina: 3,
   vista: "cards",
   mapa: false,
   plano: "lente",
+  camera: { lat: -19.91, lon: -43.93, zoom: 12.5 },
 };
 
 test("ida e volta: escrever e ler devolve o mesmo estado (todos os filtros)", () => {
@@ -60,7 +62,7 @@ test("ida e volta: escrever e ler devolve o mesmo estado (todos os filtros)", ()
 test("padrões ficam fora da URL e voltam ao ler", () => {
   const vazio = escreverBusca({ filtros: {}, ordem: "desagio", pagina: 1, plano: "luneta", vista: null, mapa: null });
   assert.equal(vazio.toString(), "");
-  assert.deepEqual(lerBusca(vazio), { filtros: {}, ordem: "desagio", pagina: 1, vista: null, mapa: null, plano: "luneta" });
+  assert.deepEqual(lerBusca(vazio), { filtros: {}, ordem: "desagio", pagina: 1, vista: null, mapa: null, plano: "luneta", camera: null });
   assert.equal(escreverBusca({ conjunto: "previa", filtros: { uf: ["MG"] } }).toString(), "conjunto=previa&uf=MG");
 });
 
@@ -142,4 +144,35 @@ test("plano na URL: LENTE, espaço, vazio ou desconhecido ficam no Lente; sem o 
   assert.equal(lerBusca(new URLSearchParams("plano=luneta")).plano, "luneta");
   assert.equal(lerBusca(new URLSearchParams("uf=SP")).plano, "luneta");
   assert.equal(lerBusca({}).plano, "luneta");
+});
+
+test("vista de mapa: vista=mapa, a câmera (centro e zoom) e a área do mapa (bbox) na URL", () => {
+  const e = lerBusca(new URLSearchParams("vista=mapa&centro=-23.55052,-46.633308&zoom=12.25&bbox=-46.8,-23.7,-46.4,-23.4&uf=SP"));
+  assert.equal(e.vista, "mapa");
+  assert.deepEqual(e.camera, { lat: -23.55052, lon: -46.633308, zoom: 12.25 });
+  assert.deepEqual(e.filtros, { uf: ["SP"], bbox: [-46.8, -23.7, -46.4, -23.4] });
+  // 5 casas (~1 m) e sem zeros à direita: a URL fica curta a cada arrasto
+  assert.equal(
+    escreverBusca(e).toString(),
+    "uf=SP&bbox=-46.8%2C-23.7%2C-46.4%2C-23.4&vista=mapa&centro=-23.55052%2C-46.63331&zoom=12.25",
+  );
+  assert.deepEqual(escreverBusca({ filtros: { bbox: [-46.123456789, -23.5, -46.1, -23.4] } }).get("bbox"), "-46.12346,-23.5,-46.1,-23.4");
+  // a área não conta como filtro do painel (tem a chave "Buscar ao mover o mapa")
+  assert.equal(contarFiltros({ bbox: [-46.8, -23.7, -46.4, -23.4] }), 0);
+});
+
+test("vista de mapa: câmera e área inválidas são ignoradas, nunca quebram", () => {
+  for (const ruim of ["", "1,2,3", "a,b,c,d", "-46,-23,-47,-22", "-46,-22,-45,-23", "-200,-23,-45,-22", "-46,-95,-45,-22", "-46,-23,-46,-22", "1,2,3,4,5", ",-23,-45,-22"]) {
+    assert.equal(lerBusca(new URLSearchParams({ bbox: ruim })).filtros.bbox, undefined, ruim);
+  }
+  for (const q of ["centro=-23.5,-46.6", "zoom=12", "centro=-23.5&zoom=12", "centro=abc,def&zoom=3", "centro=-91,0&zoom=3", "centro=-23,-46&zoom=30", "centro=-23,-46&zoom=-1", "centro=1,2,3&zoom=4"]) {
+    assert.equal(lerBusca(new URLSearchParams(q)).camera, null, q);
+  }
+  assert.equal(lerBusca(new URLSearchParams("vista=mapas")).vista, null);
+});
+
+test("área do mapa vale nos dois planos (não é filtro avançado)", () => {
+  const f: Filtros = { uf: ["SP"], bbox: [-47, -24, -46, -23] };
+  assert.deepEqual(filtrosDoPlano(f, "lente"), f);
+  assert.deepEqual(filtrosForaDoPlano(f, "lente"), []);
 });

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { filtrosIguais } from "../../../lib/catalogo/filtros-rotulos";
 import { lerBusca } from "../../../lib/catalogo/url";
 import { canonico, chaveMapa, consultaContagem, consultaLista, consultaMapa, enderecoPagina } from "./consultas";
 
@@ -53,4 +54,14 @@ test("endereço da página: vista e mapa só quando escolhidos; sem nada, o cami
   // e a página lê de volta o mesmo estado
   const e = lerBusca(p);
   assert.deepEqual([e.pagina, e.vista, e.mapa, e.plano], [3, "cards", false, "lente"]);
+});
+
+test("área do mapa: a forma canônica não reordena o retângulo (nem o vira texto)", () => {
+  const bbox: [number, number, number, number] = [-46.8, -23.7, -46.4, -23.4];
+  assert.deepEqual(canonico({ bbox, uf: ["SP", "MG"] }), { bbox, uf: ["MG", "SP"] });
+  assert.match(consultaLista("previa", { filtros: { bbox }, ordem: "desagio", pagina: 1, plano: "luneta" }), /bbox=-46\.8%2C-23\.7%2C-46\.4%2C-23\.4/);
+  assert.ok(filtrosIguais({ bbox }, { bbox: [...bbox] }));
+  assert.ok(!filtrosIguais({ bbox }, { bbox: [-46.8, -23.7, -46.5, -23.4] }));
+  // a câmera da vista de mapa entra no endereço da página
+  assert.match(enderecoPagina("/previa", { filtros: {}, ordem: "desagio", pagina: 1, plano: "luneta", vista: "mapa", mapa: null, camera: { lat: -23.5, lon: -46.6, zoom: 12 } }), /vista=mapa&centro=-23\.5%2C-46\.6&zoom=12$/);
 });

@@ -6,9 +6,10 @@ import { filtrosEfetivos, filtrosIguais, gruposForaDoPlano, limparVazios, pilula
 import { ordemPermitida, pode, RECURSO_DA_ORDEM } from "@/lib/catalogo/planos";
 import { TOAST_FAVORITADO } from "@/lib/catalogo/produto";
 import { chaveUltimaBusca, rotaImovel, ROTA_LISTA } from "@/lib/catalogo/rotas";
-import { ORDEM_PADRAO, type Conjunto, type Facetas, type Filtros, type ImovelResumo, type Ordem, type Plano, type PontoMapa, type Recurso, type ResultadoBusca } from "@/lib/catalogo/tipos";
+import { ORDEM_PADRAO, type CaixaGeo, type Conjunto, type Facetas, type Filtros, type ImovelResumo, type Ordem, type Plano, type PontoMapa, type Recurso, type ResultadoBusca } from "@/lib/catalogo/tipos";
+import { plural } from "@/lib/catalogo/rotulos";
 import { quartosDaBusca, rotuloQuartosDaBusca, semQuartos } from "@/lib/catalogo/texto";
-import { lerBusca, type Vista } from "@/lib/catalogo/url";
+import { lerBusca, type CameraMapa, type Vista } from "@/lib/catalogo/url";
 import { AreaMapa } from "./app/AreaMapa";
 import { AvisoForaDoPlano, AvisoLente, Toast, type Mensagem } from "./app/Avisos";
 import s from "./app/catalogo.module.css";
@@ -25,6 +26,10 @@ import { BarraFiltros } from "./filtros";
 import { ProvedorPedirLuneta } from "./planos/convite";
 import { consumirVoltaPropria, depoisDoHistorico } from "./ui/historico";
 import { semMovimento } from "./ui/useAdiado";
+import { Explorar } from "./mapa-gl/Explorar";
+import { ESPIADA, FolhaMapa } from "./mapa-gl/FolhaMapa";
+import type { Folga } from "./mapa-gl/MapaGL";
+import { temWebGL } from "./mapa-gl/webgl";
 import { useBusca } from "./useBusca";
 import { useFavoritos } from "./useFavoritos";
 
@@ -51,6 +56,15 @@ const LARGURA_CARDS = "max-w-[1680px]";
 /** Botão flutuante do mapa no celular: altura + margem de baixo (o foco pelo Tab não para atrás dele). */
 const ESPACO_BOTAO_MAPA = 84;
 
+/** Vista de mapa: nada cobre o mapa no computador; no celular, a folha da lista espia embaixo. */
+const FOLGA_COLUNA: Folga = { cima: 0, baixo: 0, esq: 0, dir: 0 };
+const FOLGA_FOLHA: Folga = { cima: 0, baixo: ESPIADA, esq: 0, dir: 0 };
+
+/** Os filtros de lugar e o texto: mudando um deles na vista de mapa, a área antiga sai (o mapa enquadra o lugar novo). */
+const mudouLugar = (a: Filtros, b: Filtros) =>
+  JSON.stringify([a.uf, a.cidade, a.bairro, a.q]) !== JSON.stringify([b.uf, b.cidade, b.bairro, b.q]);
+const semArea = (f: Filtros): Filtros => (f.bbox ? limparVazios({ ...f, bbox: undefined }) : f);
+
 export interface PropsCatalogoApp {
   conjunto: Conjunto;
   /** o que o servidor desenhou (a primeira pintura chega pronta, sem esqueleto) */
@@ -62,6 +76,8 @@ export interface PropsCatalogoApp {
     chaveUrl: string;
     vista: Vista | null;
     mapa: boolean | null;
+    /** câmera da vista de mapa na URL */
+    camera?: CameraMapa | null;
   };
   /** preferência de vista e mapa do cookie (a do localStorage vale depois da hidratação) */
   preferencias: Preferencias;
@@ -90,11 +106,11 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   // Ao voltar pelo navegador, o Next pode montar a página antiga (do cache) com a URL nova: vale a URL.
   // Na hidratação a URL é a que o servidor leu, e o estado é o do servidor (o HTML bate).
   const [inicio] = useState(() => {
-    const doServidor = { pedido: servidor.pedido, vista: servidor.vista, mapa: servidor.mapa };
+    const doServidor = { pedido: servidor.pedido, vista: servidor.vista, mapa: servidor.mapa, camera: servidor.camera ?? null };
     if (typeof window === "undefined") return doServidor;
     const e = lerBusca(new URLSearchParams(window.location.search));
     if (chaveDoEstado(e) === servidor.chaveUrl) return doServidor;
-    return { pedido: { filtros: e.filtros, ordem: e.ordem, pagina: e.pagina, plano: e.plano }, vista: e.vista, mapa: e.mapa };
+    return { pedido: { filtros: e.filtros, ordem: e.ordem, pagina: e.pagina, plano: e.plano }, vista: e.vista, mapa: e.mapa, camera: e.camera };
   });
 
   // ---- vista e mapa: escolha explícita (URL ou botão) > preferência salva > padrão do aparelho ----
@@ -112,10 +128,18 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     }
   }, [celular]);
   const vista: Vista = vistaEscolhida ?? pref.vista ?? (celular ? "cards" : "lista");
+  /** vista de mapa (o mapa de verdade); `glFalhou`: sem WebGL, ela mostra o mapa do Brasil em SVG no lugar */
+  const emMapa = vista === "mapa";
+  const [glFalhou, setGlFalhou] = useState(false);
+  /** a lista na vista de mapa usa as linhas (compactas na coluna estreita: mais imóveis à vista); a vista para onde o botão do celular volta */
+  const [vistaAnterior, setVistaAnterior] = useState<Exclude<Vista, "mapa">>(() => (pref.vista === "lista" || pref.vista === "cards" ? pref.vista : celular ? "cards" : "lista"));
+  const vistaLista: Exclude<Vista, "mapa"> = emMapa ? "lista" : vista;
+  /** câmera da vista de mapa (vai para a URL a cada parada) */
+  const [cameraMapa, setCameraMapa] = useState<CameraMapa | null>(inicio.camera);
   /** null = padrão do aparelho (o CSS decide na primeira pintura: visível a partir de lg) */
   const mapaPedido = mapaEscolhido ?? pref.mapa;
-  const mapaVisivel = mapaPedido ?? computador;
-  const mapaNaColuna = vista === "lista" && computador;
+  const mapaVisivel = emMapa ? glFalhou : (mapaPedido ?? computador);
+  const mapaNaColuna = (vista === "lista" || emMapa) && computador;
   /** celular: o mapa em tela cheia, aberto pelo botão flutuante (não muda a preferência salva) */
   const [mapaCheio, setMapaCheio] = useState(false);
   const telaCheia = mapaCheio && celular;
@@ -137,7 +161,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
 
   // ---- URL, histórico e última busca (para o "Voltar à busca" da página do imóvel) ----
   const caminho = ROTA_LISTA[conjunto];
-  const endereco = enderecoPagina(caminho, { ...pedido, vista: vistaEscolhida, mapa: mapaEscolhido });
+  const endereco = enderecoPagina(caminho, { ...pedido, vista: vistaEscolhida, mapa: mapaEscolhido, camera: emMapa ? cameraMapa : null });
   /** a próxima mudança de URL cria uma entrada no histórico ("push") ou substitui a atual */
   const proximaEntrada = useRef<"push" | "replace">("replace");
   const marcarEntrada = useCallback(() => {
@@ -161,7 +185,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
       // sem sessionStorage: o "Voltar à busca" leva à lista sem filtros
     }
   }, [endereco, conjunto]);
-  const hrefPagina = (p: number) => enderecoPagina(caminho, { ...pedido, pagina: p, vista: vistaEscolhida, mapa: mapaEscolhido });
+  const hrefPagina = (p: number) => enderecoPagina(caminho, { ...pedido, pagina: p, vista: vistaEscolhida, mapa: mapaEscolhido, camera: emMapa ? cameraMapa : null });
 
   // "voltar" e "avançar" do navegador: a busca da URL volta para a tela
   const { restaurar } = busca;
@@ -173,6 +197,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
       restaurar({ filtros: e.filtros, ordem: e.ordem, pagina: e.pagina, plano: e.plano });
       setVistaEscolhida(e.vista);
       setMapaEscolhido(e.mapa);
+      if (e.camera) setCameraMapa(e.camera);
     };
     window.addEventListener("popstate", aoNavegar);
     return () => window.removeEventListener("popstate", aoNavegar);
@@ -268,6 +293,9 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     };
   }, []);
 
+  // ---- celular e tablet na vista de mapa: o mapa abaixo da barra e a lista numa folha por cima ----
+  const mapaNaFolha = emMapa && !glFalhou && !computador;
+
   // ---- paginação à vista (o botão flutuante do mapa sai do caminho dela e do rodapé) ----
   const fimDaLista = useRef<HTMLDivElement>(null);
   const [fimVisivel, setFimVisivel] = useState(false);
@@ -333,6 +361,24 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     },
     [mudarFiltros, marcarEntrada],
   );
+  /**
+   * Na vista de mapa a barra de filtros trabalha sem a área do mapa (ela é da chave "Buscar ao mover o mapa"): o que a
+   * barra muda volta com a área atual, menos quando muda o lugar ou o texto (aí a área sai, e o mapa enquadra o novo).
+   */
+  const comArea = useCallback(
+    (f: Filtros): Filtros => {
+      const atual = vigente.current.filtros;
+      return atual.bbox && !mudouLugar(atual, f) ? { ...f, bbox: atual.bbox } : semArea(f);
+    },
+    [],
+  );
+  const mudarFiltrosMapa = useCallback((f: Filtros) => mudarFiltros(comArea(f)), [mudarFiltros, comArea]);
+  const aplicarPainelMapa = useCallback((f: Filtros) => aplicarPainel(comArea(f)), [aplicarPainel, comArea]);
+  /** "Buscar nesta área" (ou a câmera parou com a chave ligada): a lista passa a mostrar só a área; sem subir a tela. */
+  const mudarArea = useCallback(
+    (area: CaixaGeo | null) => aplicarFiltros(limparVazios({ ...vigente.current.filtros, bbox: area ?? undefined })),
+    [aplicarFiltros],
+  );
   const onOrdem = useCallback(
     (o: Ordem) => {
       const mudou = vigente.current.ordem !== o;
@@ -349,6 +395,15 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
 
   // ---- vista e mapa (salvos no navegador e na URL) ----
   const escolherVista = (v: Vista) => {
+    if (v === vista) return;
+    if (v === "mapa") {
+      // o mapa é um modo de explorar: entra no histórico (o "voltar" volta à lista) e não vira a preferência salva
+      if (vista !== "mapa") setVistaAnterior(vista);
+      marcarEntrada();
+      setRecolhida(false);
+      setVistaEscolhida("mapa");
+      return;
+    }
     setVistaEscolhida(v);
     salvarPreferencias({ vista: v });
   };
@@ -362,7 +417,9 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
    * ?mapa=1), o botão o esconde.
    */
   const alternarMapaCelular = () => {
-    if (!mapaVisivel) setMapaCheio(true);
+    // com WebGL, o mapa de verdade (vista de mapa, com a lista na folha); sem ele, o mapa do Brasil em tela cheia
+    if (!mapaVisivel && temWebGL()) escolherVista("mapa");
+    else if (!mapaVisivel) setMapaCheio(true);
     else escolherMapa(false);
   };
 
@@ -426,16 +483,61 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
       hrefImovel={hrefImovel}
       className={className}
       recolhivel={variante === "faixa"}
+      // o mapa resumido leva ao mapa de verdade (no celular, o botão flutuante já leva)
+      onExplorar={emMapa || glFalhou ? undefined : () => escolherVista("mapa")}
     />
   );
 
   // Onde o mapa fica. Na primeira pintura (padrão do aparelho ainda não conhecido), o CSS decide:
-  // coluna a partir de lg; no celular, só se a pessoa ligou o mapa.
+  // coluna a partir de lg; no celular, só se a pessoa ligou o mapa. Na vista de mapa, nunca em faixa.
   const classeColuna = mapaPedido === false ? "hidden" : "hidden lg:block";
-  const classeFaixa =
-    vista === "lista" ? (mapaPedido === true ? "lg:hidden" : "hidden") : mapaPedido === true ? "" : mapaPedido === null ? "hidden lg:block" : "hidden";
+  const classeFaixa = emMapa
+    ? "hidden"
+    : vista === "lista"
+      ? mapaPedido === true
+        ? "lg:hidden"
+        : "hidden"
+      : mapaPedido === true
+        ? ""
+        : mapaPedido === null
+          ? "hidden lg:block"
+          : "hidden";
   const comColuna = vista === "lista" && mapaPedido !== false;
-  const largura = comColuna ? "" : vista === "lista" ? LARGURA_LISTA : LARGURA_CARDS;
+  const largura = comColuna || emMapa ? "" : vista === "lista" ? LARGURA_LISTA : LARGURA_CARDS;
+
+  // ---- vista de mapa (o mapa de verdade) ----
+  /** Sem WebGL (ou o contexto caiu): no computador, o mapa do Brasil na coluna; no celular, em tela cheia. */
+  const mapaFalhou = useCallback(() => {
+    setGlFalhou(true);
+    if (!window.matchMedia(CONSULTA_COMPUTADOR).matches) {
+      setVistaEscolhida(vistaAnterior);
+      setMapaCheio(true);
+    }
+  }, [vistaAnterior]);
+  const filtrarCidadeDoMapa = useCallback(
+    (chave: string) => {
+      marcarEntrada();
+      mudarFiltros(limparVazios({ ...vigente.current.filtros, uf: undefined, cidade: [chave], bairro: undefined, bbox: undefined }));
+    },
+    [mudarFiltros, marcarEntrada],
+  );
+  const explorar = (folga: Folga, compactoMapa: boolean) => (
+    <Explorar
+      conjunto={conjunto}
+      plano={plano}
+      filtros={filtros}
+      camera={cameraMapa}
+      folga={folga}
+      compacto={compactoMapa}
+      loja={loja}
+      hrefImovel={hrefImovel}
+      onCamera={setCameraMapa}
+      onArea={mudarArea}
+      onFiltrarCidade={filtrarCidadeDoMapa}
+      onFalhou={mapaFalhou}
+      totalLista={resultado ? total : null}
+    />
+  );
 
   const itens = resultado?.itens ?? [];
   const pilulasValendo = filtrosEfetivos(filtros, plano, selosDesligados);
@@ -450,6 +552,104 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     ...(ordemFora && RECURSO_DA_ORDEM[ordemFora] ? [RECURSO_DA_ORDEM[ordemFora]!] : []),
   ]);
   const semResultado = resultado !== null && !busca.carregando && total === 0;
+
+  /** A página de resultados (avisos, lista, paginação): na coluna da lista, sozinha, ou na folha do mapa (celular). */
+  const secao = (classeSecao: string) => (
+    <section id="resultados" aria-labelledby="titulo-resultados" className={classeSecao}>
+      <h2 id="titulo-resultados" ref={tituloLista} tabIndex={-1} className="sr-only">
+        {resultado ? `Resultados, página ${resultado.pagina} de ${resultado.totalPaginas}` : "Resultados"}
+      </h2>
+
+      <div className={`mx-auto flex flex-col gap-5 ${largura}`}>
+        {lente && <AvisoLente onAssinar={() => assinar("aviso")} />}
+
+        {(gruposFora.length > 0 || ordemFora || quartosFora.length > 0) && (
+          <AvisoForaDoPlano
+            filtros={[
+              ...pilulas(filtros, facetas)
+                .filter((p) => gruposFora.includes(p.grupo))
+                .map((p) => p.rotulo),
+              ...quartosFora.map((c) => `${rotuloQuartosDaBusca(c)} (na busca)`),
+            ]}
+            ordem={ordemFora}
+            onConhecer={(el) => onUpsell(el, recursosFora.size === 1 ? [...recursosFora][0] : null)}
+            onTirar={() => {
+              if (gruposFora.length || quartosFora.length) {
+                const sem = gruposFora.length ? removerGrupos(filtros, gruposFora) : filtros;
+                const q = quartosFora.length && sem.q ? semQuartos(sem.q) : sem.q;
+                mudarFiltros(limparVazios({ ...sem, q: q || undefined }));
+              }
+              if (ordemFora) onOrdem(ORDEM_PADRAO);
+            }}
+          />
+        )}
+
+        {mapaVisivel && !mapaNaColuna ? <div className={classeFaixa}>{mapa("faixa")}</div> : null}
+
+        {busca.erro && (
+          <div role="alert" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-grave/45 bg-grave/[0.07] px-4 py-3">
+            <p className="min-w-[200px] flex-1 text-sm text-luar">
+              <strong className="font-semibold">Não foi possível {resultado ? "atualizar a lista" : "carregar os imóveis"}.</strong> {busca.erro}
+            </p>
+            <button type="button" onClick={busca.tentarDeNovo} className="btn-ghost !min-h-11 !px-4 !text-[13px] pointer-fine:!min-h-10">
+              Tentar de novo
+            </button>
+          </div>
+        )}
+
+        {/* destino do "Pular para os resultados": a lista, depois do mapa em faixa */}
+        <div id="lista-imoveis" tabIndex={-1} className="scroll-mt-[calc(var(--topo-h)+16px)] outline-none">
+          {itens.length === 0 ? (
+            // nada a mostrar ainda: esqueletos (primeira carga sem dados, ou saindo do estado vazio
+            // para a busca nova); com erro, só o aviso acima; pronto e sem nada, o estado vazio
+            busca.erro ? null : semResultado && emMapa && filtros.bbox ? (
+              <VazioNaArea onBuscaInteira={() => mudarArea(null)} />
+            ) : semResultado ? (
+              <EstadoVazio
+                filtros={pilulasValendo}
+                nomes={facetas}
+                contar={busca.contar}
+                onChange={emMapa ? mudarFiltrosMapa : mudarFiltros}
+                onLimparTudo={() => mudarFiltros({})}
+              />
+            ) : (
+              <div className="@container">
+                <ListaEsqueletos vista={vistaLista} quantidade={6} className={vistaLista === "cards" ? GRADE_CARDS : LISTA_LINHAS} />
+              </div>
+            )
+          ) : (
+            // lista anterior esmaecida enquanto a nova chega, ou se a nova falhou (o aviso diz que não atualizou)
+            <div aria-busy={busca.carregando} data-desatualizada={busca.erro ? "" : undefined} className={`${s.lista} @container`}>
+              <ListaImoveis
+                itens={itens}
+                vista={vistaLista}
+                plano={planoDosDados}
+                conjunto={conjunto}
+                ehFavorito={ehFavorito}
+                onFavoritar={onFavoritar}
+                onUpsell={onUpsell}
+                loja={loja}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* a paginação entrando na tela tira o botão flutuante do mapa do caminho */}
+        <div ref={fimDaLista} aria-hidden="true" className="h-px" />
+        {resultado && total > 0 && (
+          <Paginacao
+            pagina={resultado.pagina}
+            totalPaginas={resultado.totalPaginas}
+            porPagina={resultado.porPagina}
+            total={total}
+            hrefDe={hrefPagina}
+            onIr={irParaPagina}
+            onTopo={() => irAoTopo(true)}
+          />
+        )}
+      </div>
+    </section>
+  );
 
   return (
     // os RecursoLuneta de dentro (painel de filtros) abrem a mesma janela da Luneta
@@ -493,7 +693,8 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
             >
               <div className={`mx-auto ${largura}`}>
                 <BarraFiltros
-                  filtros={filtros}
+                  // na vista de mapa, a área do mapa fica com a chave "Buscar ao mover o mapa" (sem pílula aqui)
+                  filtros={emMapa ? semArea(filtros) : filtros}
                   facetas={facetas}
                   total={total}
                   carregando={busca.carregando}
@@ -501,21 +702,22 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
                   selosDesligados={selosDesligados}
                   ordem={pedido.ordem}
                   onOrdem={onOrdem}
-                  onChange={mudarFiltros}
-                  onAplicarPainel={aplicarPainel}
+                  onChange={emMapa ? mudarFiltrosMapa : mudarFiltros}
+                  onAplicarPainel={emMapa ? aplicarPainelMapa : aplicarPainel}
                   onUpsell={onUpsell}
                   contar={busca.contar}
                   consultar={busca.consultar}
                   compacta={!!compacta}
                   // celular: Lista | Cards num ícone no fim da linha da busca (na linha do total, em 360 px, ele
                   // caía sozinho numa terceira linha)
-                  acoesBusca={<SeletorVista vista={vista} onVista={escolherVista} mapa={mapaVisivel} onMapa={escolherMapa} apenasAlternar />}
+                  acoesBusca={<SeletorVista vista={vista} onVista={escolherVista} mapa={mapaVisivel} onMapa={escolherMapa} anterior={vistaAnterior} apenasAlternar />}
                   acoes={
                     <SeletorVista
                       vista={vista}
                       onVista={escolherVista}
                       mapa={mapaVisivel}
                       onMapa={escolherMapa}
+                      anterior={vistaAnterior}
                       // no celular o mapa tem o botão flutuante: aqui só Lista | Cards, em ícones de 44 px
                       semMapaCelular
                       // em telas médias e no celular só os ícones (o nome fica para leitores de tela e na dica do mouse)
@@ -528,107 +730,42 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
             </div>
           </div>
 
-          {/* coluna do mapa: ~40% (36% em 1024 px, para a linha ainda caber com a foto ao lado) */}
-          <div className={comColuna ? "lg:grid lg:grid-cols-[minmax(0,1fr)_36%] xl:grid-cols-[minmax(0,1fr)_40%]" : ""}>
-            <section id="resultados" aria-labelledby="titulo-resultados" className="min-w-0 px-4 pt-3 pb-16 sm:px-6 sm:pt-5 lg:px-8">
-              <h2 id="titulo-resultados" ref={tituloLista} tabIndex={-1} className="sr-only">
-                {resultado ? `Resultados, página ${resultado.pagina} de ${resultado.totalPaginas}` : "Resultados"}
-              </h2>
-
-              <div className={`mx-auto flex flex-col gap-5 ${largura}`}>
-                {lente && <AvisoLente onAssinar={() => assinar("aviso")} />}
-
-                {(gruposFora.length > 0 || ordemFora || quartosFora.length > 0) && (
-                  <AvisoForaDoPlano
-                    filtros={[
-                      ...pilulas(filtros, facetas)
-                        .filter((p) => gruposFora.includes(p.grupo))
-                        .map((p) => p.rotulo),
-                      ...quartosFora.map((c) => `${rotuloQuartosDaBusca(c)} (na busca)`),
-                    ]}
-                    ordem={ordemFora}
-                    onConhecer={(el) => onUpsell(el, recursosFora.size === 1 ? [...recursosFora][0] : null)}
-                    onTirar={() => {
-                      if (gruposFora.length || quartosFora.length) {
-                        const sem = gruposFora.length ? removerGrupos(filtros, gruposFora) : filtros;
-                        const q = quartosFora.length && sem.q ? semQuartos(sem.q) : sem.q;
-                        mudarFiltros(limparVazios({ ...sem, q: q || undefined }));
-                      }
-                      if (ordemFora) onOrdem(ORDEM_PADRAO);
-                    }}
-                  />
-                )}
-
-                {mapaVisivel && !mapaNaColuna ? <div className={classeFaixa}>{mapa("faixa")}</div> : null}
-
-                {busca.erro && (
-                  <div role="alert" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-grave/45 bg-grave/[0.07] px-4 py-3">
-                    <p className="min-w-[200px] flex-1 text-sm text-luar">
-                      <strong className="font-semibold">Não foi possível {resultado ? "atualizar a lista" : "carregar os imóveis"}.</strong> {busca.erro}
-                    </p>
-                    <button type="button" onClick={busca.tentarDeNovo} className="btn-ghost !min-h-11 !px-4 !text-[13px] pointer-fine:!min-h-10">
-                      Tentar de novo
-                    </button>
-                  </div>
-                )}
-
-                {/* destino do "Pular para os resultados": a lista, depois do mapa em faixa */}
-                <div id="lista-imoveis" tabIndex={-1} className="scroll-mt-[calc(var(--topo-h)+16px)] outline-none">
-                  {itens.length === 0 ? (
-                    // nada a mostrar ainda: esqueletos (primeira carga sem dados, ou saindo do estado vazio
-                    // para a busca nova); com erro, só o aviso acima; pronto e sem nada, o estado vazio
-                    busca.erro ? null : semResultado ? (
-                      <EstadoVazio
-                        filtros={pilulasValendo}
-                        nomes={facetas}
-                        contar={busca.contar}
-                        onChange={mudarFiltros}
-                        onLimparTudo={() => mudarFiltros({})}
-                      />
-                    ) : (
-                      <div className="@container">
-                        <ListaEsqueletos vista={vista} quantidade={6} className={vista === "cards" ? GRADE_CARDS : LISTA_LINHAS} />
-                      </div>
-                    )
-                  ) : (
-                    // lista anterior esmaecida enquanto a nova chega, ou se a nova falhou (o aviso diz que não atualizou)
-                    <div aria-busy={busca.carregando} data-desatualizada={busca.erro ? "" : undefined} className={`${s.lista} @container`}>
-                      <ListaImoveis
-                        itens={itens}
-                        vista={vista}
-                        plano={planoDosDados}
-                        conjunto={conjunto}
-                        ehFavorito={ehFavorito}
-                        onFavoritar={onFavoritar}
-                        onUpsell={onUpsell}
-                        loja={loja}
-                      />
-                    </div>
-                  )}
+          {mapaNaFolha ? (
+            // celular e tablet: o mapa abaixo da barra e a lista numa folha que se puxa por cima dele
+            <FolhaMapa
+              barra={barraVisivel}
+              mapa={explorar(FOLGA_FOLHA, true)}
+              titulo={
+                <span className="block">
+                  <span className="block font-display text-[16px] leading-tight font-bold text-luar tabular-nums">
+                    {resultado ? plural(total, "imóvel", "imóveis") : "Imóveis"}
+                    {filtros.bbox ? " nesta área" : ""}
+                  </span>
+                  <span className="block text-[12.5px] text-nevoa">{filtros.bbox ? "A lista segue o mapa" : "Toda a busca"}</span>
+                </span>
+              }
+            >
+              {secao("min-w-0 pt-1")}
+            </FolhaMapa>
+          ) : emMapa ? (
+            // computador: a lista em cards à esquerda e o mapa de verdade (ou o do Brasil, sem WebGL) à direita
+            <div className="lg:grid lg:grid-cols-[minmax(400px,42%)_minmax(0,1fr)] xl:grid-cols-[minmax(440px,40%)_minmax(0,1fr)]">
+              {secao("min-w-0 px-4 pt-3 pb-16 sm:px-6 sm:pt-5 lg:px-6")}
+              <div className="sticky top-[var(--topo-h)] hidden h-[calc(100svh-var(--topo-h)-var(--faixa-v))] self-start border-l border-nevoa/12 lg:block">
+                {glFalhou ? mapa("painel") : explorar(FOLGA_COLUNA, false)}
+              </div>
+            </div>
+          ) : (
+            // coluna do mapa: ~40% (36% em 1024 px, para a linha ainda caber com a foto ao lado)
+            <div className={comColuna ? "lg:grid lg:grid-cols-[minmax(0,1fr)_36%] xl:grid-cols-[minmax(0,1fr)_40%]" : ""}>
+              {secao("min-w-0 px-4 pt-3 pb-16 sm:px-6 sm:pt-5 lg:px-8")}
+              {vista === "lista" && (
+                <div className={`${classeColuna} sticky top-[var(--topo-h)] h-[calc(100svh-var(--topo-h)-var(--faixa-v))] self-start border-l border-nevoa/12`}>
+                  {mapaVisivel && mapaNaColuna ? mapa("painel") : null}
                 </div>
-
-                {/* a paginação entrando na tela tira o botão flutuante do mapa do caminho */}
-                <div ref={fimDaLista} aria-hidden="true" className="h-px" />
-                {resultado && total > 0 && (
-                  <Paginacao
-                    pagina={resultado.pagina}
-                    totalPaginas={resultado.totalPaginas}
-                    porPagina={resultado.porPagina}
-                    total={total}
-                    hrefDe={hrefPagina}
-                    onIr={irParaPagina}
-                    onTopo={() => irAoTopo(true)}
-                  />
-                )}
-              </div>
-            </section>
-
-            {vista === "lista" && (
-              <div className={`${classeColuna} sticky top-[var(--topo-h)] h-[calc(100svh-var(--topo-h)-var(--faixa-v))] self-start border-l border-nevoa/12`}>
-                {mapaVisivel && mapaNaColuna ? mapa("painel") : null}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </main>
 
         {rodape}
@@ -640,6 +777,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
         {/* Celular: o mapa liga e desliga num botão flutuante (a barra fixa fica com duas linhas só); sai do caminho
             quando a paginação aparece. Abaixo dos pop-ups (z-20): um pop-up de filtro, de ordem ou de tag que desce
             até o pé da tela fica por cima dele, e o botão some enquanto houver um aberto. */}
+        {!emMapa && (
         <button
           type="button"
           onClick={alternarMapaCelular}
@@ -652,11 +790,27 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
           {mapaVisivel ? <IconeLista /> : <IconeMapa />}
           {mapaVisivel ? "Esconder mapa" : "Ver no mapa"}
         </button>
+        )}
 
         <UpgradeModal open={upgradeAberto} recurso={recursoUpgrade} openerRef={abridorUpgrade} onClose={fecharUpgrade} onUpgrade={() => assinar("modal")} />
         <Toast mensagem={mensagem} />
       </div>
     </ProvedorPedirLuneta>
+  );
+}
+
+/** Vista de mapa, nenhum imóvel na área visível (com resultados fora dela). */
+function VazioNaArea({ onBuscaInteira }: { onBuscaInteira: () => void }) {
+  return (
+    <div className="rounded-3xl border border-nevoa/15 bg-tinta px-5 py-7 text-center">
+      <p className="font-display text-[17px] font-bold text-luar">Nenhum imóvel nesta parte do mapa</p>
+      <p className="mx-auto mt-1.5 max-w-[340px] text-[14px] leading-relaxed text-nevoa">
+        Afaste o mapa ou arraste para outra região. A lista segue o que está à vista.
+      </p>
+      <button type="button" onClick={onBuscaInteira} className="btn-outline mt-4 !min-h-11 !px-5 !text-[14px]">
+        Ver a busca inteira
+      </button>
+    </div>
   );
 }
 
@@ -729,8 +883,16 @@ const ItemImovel = memo(function ItemImovel({
   eager: boolean;
 }) {
   const cidade = `${imovel.uf}|${imovel.cidade}`;
-  const ativo = useAcesoPeloMapa(loja, cidade);
-  const onHover = useCallback((id: string | null) => loja.definirDaLista(id ? cidade : null), [loja, cidade]);
+  const ativo = useAcesoPeloMapa(loja, cidade, imovel.id);
+  const { lat, lon } = imovel;
+  const onHover = useCallback(
+    (id: string | null) => {
+      loja.definirDaLista(id ? cidade : null);
+      // mapa de verdade: o ponto deste imóvel ganha o anel de destaque
+      loja.definirImovel(id && lat !== null && lon !== null ? { id, lat, lon } : null);
+    },
+    [loja, cidade, lat, lon],
+  );
   const props = { imovel, plano, hrefImovel: href, favorito, onFavoritar, onUpsell, onHover, ativo, eager };
   return vista === "cards" ? <CartaoImovel {...props} /> : <LinhaImovel {...props} />;
 });

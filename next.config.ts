@@ -20,6 +20,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   outputFileTracingIncludes: {
     "/api/catalogo": [...CATALOGO, ...LOCALIZACAO],
+    // os pontos do mapa de verdade e o cartão do mapa (src/app/api/catalogo/pontos)
+    "/api/catalogo/**": [...CATALOGO, ...LOCALIZACAO],
     "/previa": [...CATALOGO, ...LOCALIZACAO],
     "/previa/**": [...CATALOGO, ...LOCALIZACAO],
     "/assinante/imovel/**": ITBI,

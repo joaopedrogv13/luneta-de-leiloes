@@ -243,7 +243,16 @@ export interface Filtros {
   selo?: Exclude<Selo, 0>[];
   /** Luneta: nota de localização mínima (0 a 100); imóvel sem nota não passa */
   notaLocalMin?: number;
+  /**
+   * "Buscar nesta área" (vista de mapa): só os imóveis cujo ponto no mapa cai no retângulo [oeste, sul, leste, norte],
+   * em graus. Vale nos dois planos (não é filtro avançado). O ponto é o da precisão do imóvel: no aproximado (bairro,
+   * cidade), o centro da área de incerteza. Imóvel sem ponto não passa.
+   */
+  bbox?: CaixaGeo;
 }
+
+/** Retângulo do mapa: [oeste, sul, leste, norte] (longitude e latitude em graus). */
+export type CaixaGeo = [number, number, number, number];
 
 export type Ordem =
   | "desagio" // maior deságio (padrão)
