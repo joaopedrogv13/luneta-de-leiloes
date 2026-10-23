@@ -211,7 +211,7 @@ const tamanhoBloqueio = (degraus: readonly number[]) => porQuantidade(degraus, (
 /**
  * Círculo de incerteza (bairro) só até este raio na tela (px): de perto ele passaria da tela, sem dizer mais nada (o
  * imóvel está em algum lugar da tela inteira), e dezenas deles, um sobre o outro, pesam na placa de vídeo do celular
- * (no Rio, no zoom 16, eram 169 círculos com raio mediano de 760 px; 2 quadros por segundo na medição do Actions).
+ * (no Rio, no zoom 16, eram 169 círculos com raio mediano de 760 px, cada um pintado por inteiro).
  * Filtro e opacidade valem por zoom inteiro (o do ladrilho; no meio, a placa de vídeo interpola): de INICIO_SUMIR até
  * este raio ele vai sumindo e, no zoom inteiro em que passa dele, já está transparente e sai do desenho. O rótulo
  * "N imóveis no bairro" continua no centro (e abre o cartão). Na página do imóvel (um só, `fx`), o círculo fica sempre.

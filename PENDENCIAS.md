@@ -1283,18 +1283,26 @@ do **OpenFreeMap** (grátis, sem chave). `package.json` e `package-lock.json` ga
 - **Desempenho:** os pontos entram no mapa (`setData`) só quando os filtros mudam; arrastar e aproximar não passam pelo
   React (o MapLibre desenha na placa de vídeo e agrupa num worker); o cartão preso acompanha o mapa mexendo só na posição;
   a área visível sai uma vez por movimento. O círculo do bairro some entre 140 e 220 px de raio e sai do desenho por
-  zoom: no Rio, no zoom 16, eram 169 círculos com raio mediano de 760 px, um sobre o outro.
+  zoom: no Rio, no zoom 16, seriam 169 círculos com raio mediano de 760 px, um sobre o outro. As bolhas têm até 28 px de
+  raio e se agrupam num raio de 60 px (no celular, com 42 a 50 px, elas se cobriam).
 - **Medição no Actions** (Chromium sem placa de vídeo: o WebGL roda no SwiftShader, na CPU, e os quadros por segundo são
   piores que os de qualquer celular; vale a comparação com e sem as camadas dos imóveis):
 
-  | Percurso (1440×900) | 1ª rodada (40033977496): com imóveis / sem | Depois da correção (40036326671): com / sem |
+  | Percurso (1440×900), quadros/s | 1ª rodada (40033977496): com imóveis / sem | Última (40037083842): com / sem |
   | --- | --- | --- |
-  | Brasil → São Paulo (voo de 3 s) | 16 / 12 quadros/s | [X] |
-  | arrasto São Paulo → Rio (2 s) | 6 / 8 | [X] |
-  | Rio, zoom 12 → 16 (1,5 s) | **2** / 12 (1 tarefa de 1,9 s) | [X] |
+  | Brasil → São Paulo (voo de 3 s) | 16 / 12 | 14 / 15 |
+  | arrasto São Paulo → Rio (2 s) | 6 / 8 | 6 / 6 |
+  | Rio, zoom 12 → 16 (1,5 s), 1ª vez na sessão | 2 / 12 | 1 / 8 |
+  | Rio, zoom 12 → 16, de novo (ladrilhos já baixados) | — | **12 / 11**, sem tarefa longa |
 
-  Na 1ª rodada: pontos na tela 2,7 s depois de abrir a página; `setData` dos 9.741 lugares até desenhar, 793 ms; pedido
-  dos pontos, 14 ms (538 KB, brotli).
+  O tranco de ~1,8 s na primeira ida ao zoom de rua não vem das camadas dos imóveis: repetido com tudo baixado, escondendo
+  uma camada por vez, todas as combinações deram 11 a 12 quadros/s e nenhuma tarefa longa (só os preços, só os
+  círculos, sem nada). É o custo de primeira vez (ladrilhos novos e os programas da placa de vídeo, que no SwiftShader são
+  compilados na CPU); como a medição "com imóveis" vem antes da "sem", só ela paga. O sumiço dos círculos grandes de
+  perto não muda esse número no SwiftShader; ele evita pintar dezenas de círculos maiores que a tela, um sobre o outro,
+  na placa de vídeo do celular. Última rodada: pontos na tela 2,4 s depois de abrir a página; `setData` dos
+  9.741 lugares até desenhar, 480 ms; pedido dos pontos, 13 ms (538 KB, brotli). Rodadas: 40033977496, 40036326671 e
+  40037083842 (prints em `coletas-dados`, `prints/<id>/`).
 - **Prints:** `git push -f origin HEAD:acoes-mapa` e `gh workflow run site-prints.yml --ref acoes-mapa -f roteiro=mapa`
   (roteiro em `scripts/prints/actions.mjs`); os PNGs e o `relatorio.txt` vão para o branch `coletas-dados`, pasta
   `prints/<id da rodada>/`. Daqui (este ambiente) a rede não chega aos ladrilhos; no Actions, sim.
