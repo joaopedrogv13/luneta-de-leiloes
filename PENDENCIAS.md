@@ -1345,7 +1345,11 @@ o zoom ele vai filtrando os casos; com zoom, mostra o nome da rua". A revisão t
 9f7d20c a 865961b): desempenho com a CPU 4× mais lenta, memória depois de 50 zooms, troca de filtros e de tema, voltar e
 avançar, "Buscar nesta área" (vazia, no limite do Brasil, com texto), Lente × Luneta, teclado, celular deitado, sem WebGL,
 CLS, peso do JS da lista, precisão do endereço e créditos. Conferido com `next start` + Playwright aqui (sem os ladrilhos:
-o proxy bloqueia) e com os ladrilhos de verdade no Actions (roteiro `revisao` em `scripts/prints/actions.mjs`).
+o proxy bloqueia) e com os ladrilhos de verdade no Actions (roteiro `revisao` em `scripts/prints/actions.mjs`; rodadas
+40041271354, com o roteiro `mapa` inteiro, e 40042226074; prints em `coletas-dados`, `prints/<id>/`). Nos prints: nomes de
+rua a partir do zoom 13–14,5 nos dois temas (Rua Boqueirão, Rua Sabedoria, Avenida Abílio Augusto Távora em Nova Iguaçu;
+Rua da Assembléia, Rua da Carioca e Avenida República do Chile no Centro do Rio), cores do fundo e dos balões coerentes com o site no claro e no
+escuro; o número das casas (zoom 17,5) só aparece onde o OpenStreetMap tem o dado (em Nova Iguaçu, não tem).
 
 **Achados e correções** (todos com o código no commit da revisão; os números de CPU 4× são do Chromium daqui, sem placa de
 vídeo):
@@ -1365,15 +1369,19 @@ vídeo):
    de 7 px. Raio mínimo de 300 m no bairro (`raioDoNivel`, com teste); o imóvel de bairro sob o mouse na lista acende a área
    do bairro, não um anel no centro; na cidade, um anel largo em volta do marcador "sem endereço exato".
 5. **Médio · notebook de 768 px de altura (1366×768, 1024×768):** com o cabeçalho que rola junto, a coluna do mapa passava
-   ~110 px do pé da tela: legenda, escala e créditos fora da tela até rolar. A conta da altura agora desconta o cabeçalho
-   à vista.
+   ~110 px do pé da tela: legenda, escala e créditos fora da tela até rolar (e 1 px em toda tela, pelo marco de 1 px acima
+   da barra). A conta da altura agora desconta tudo o que está à vista acima da barra; conferido no Actions: créditos à
+   vista em 1366×768 e 844×390. Ao rolar a lista, a coluna cresce junto com o cabeçalho saindo (CLS 0,008 em 1366×768;
+   0,002 em 1440×900, como já era com a faixa de aviso).
 6. **Médio · celular deitado (844×390):** a folha espiava 132 px de um mapa de 212, os botões de Brasil e minha região
    ficavam embaixo dela, a escala caía em cima da chave e os créditos sumiam. Agora a folha espia só o título (78 px, por
    consulta de mídia: sem pulo), e os botões vão para uma linha no alto.
 7. **Médio · desempenho na parada do mapa (CPU 4×, celular):** depois de cada arrasto, a lista nova travava o thread
    principal por 215–260 ms (React) + 37–136 ms (layout dos 24 cartões, quase todos escondidos sob a folha). Agora o
    resultado da vista de mapa é desenhado em segundo plano (`useDeferredValue`) e os cartões fora da tela não têm layout
-   (`content-visibility`): 105–140 ms + 43–54 ms. Arrastar e aproximar continuam fora do React.
+   (`content-visibility`): 105–140 ms + 43–54 ms. No Actions (CPU 4×, com os ladrilhos), as tarefas longas depois de três
+   paradas seguidas ficaram em [103, 115], [64, 51] e [56, 73] ms (antes: [216, 100] na primeira). Arrastar e aproximar
+   continuam fora do React.
 8. **Baixo · CLS da folha no tablet (até 0,10):** a folha nascia no topo padrão e descia ~120 px quando a barra era medida
    um quadro depois; agora a medida sai antes da pintura (CLS 0 em 390, 667×375, 768, 844×390, 1366).
 9. **Baixo · sem WebGL o MapLibre (1 MB, 287 KB gzip) era baixado mesmo assim:** agora o teste vem antes; sem WebGL, cai no
