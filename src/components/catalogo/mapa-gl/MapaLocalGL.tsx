@@ -80,7 +80,7 @@ export default function MapaLocalGL({
         type: "FeatureCollection",
         features:
           a.nivel === 1
-            ? [{ type: "Feature", properties: { nv: 1, r0: raioPixelZ0(raioDoNivel(1, a.raio), a.lat) }, geometry: { type: "Point", coordinates: [a.lon, a.lat] } }]
+            ? [{ type: "Feature", properties: { nv: 1, r0: raioPixelZ0(raioDoNivel(1, a.raio), a.lat), anel: 0 }, geometry: { type: "Point", coordinates: [a.lon, a.lat] } }]
             : [],
       });
     };

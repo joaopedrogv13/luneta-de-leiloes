@@ -229,7 +229,7 @@ export function Explorar({
             onClick={() => onArea(null)}
             className={`${s.vidro} pointer-events-auto inline-flex min-h-11 items-center rounded-full px-3.5 text-[13px] font-medium text-nevoa hover:text-luar pointer-fine:min-h-10`}
           >
-            Ver a busca inteira{pontos ? ` (${numero(pontos.total)})` : ""}
+            Ver a busca inteira{pontos ? ` (${numero(pontos.total + pontos.semPonto)})` : ""}
           </button>
         )}
       </div>

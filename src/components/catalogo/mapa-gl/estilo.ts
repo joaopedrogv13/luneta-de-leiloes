@@ -513,7 +513,8 @@ function camadasImoveis(tema: TemaMapa): LayerSpecification[] {
     id: "lu-destaque",
     type: "circle",
     source: FONTES.destaque,
-    filter: ["!=", ["get", "nv"], 2],
+    // `anel: 0` (página do imóvel): só a área, sem o anel cortando o balão do preço
+    filter: ["all", ["!=", ["get", "nv"], 2], ["!=", ["coalesce", ["get", "anel"], 1], 0]],
     paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, ["case", ["==", ["get", "nv"], 3], 26, 13], 16, ["case", ["==", ["get", "nv"], 3], 27, 17]],
       "circle-color": "rgba(0,0,0,0)",

@@ -8,8 +8,10 @@ prévia no celular, tablet e celular deitado; coleta no PC do dono pronta; **a t
 recurso da Luneta vira uma chamada no mesmo lugar, e os filtros avançados ficam com cadeado; ver "Rodada 4 · a trava dos
 planos"; **revisão final da rodada 4**: 44 achados de três revisores corrigidos ou anotados, a landing sem promessa que o
 produto ainda não cumpre e a nota recalculada; ver "Rodada 4 · revisão final"). Rodada 5 (23/10/2026): **mapa de
-verdade** no catálogo e na página do imóvel (ruas, agrupamentos, preços de perto, "Buscar ao mover o mapa"); ver "Rodada 5
-· mapa de verdade".
+verdade** no catálogo e na página do imóvel (ruas, agrupamentos, preços de perto, "Buscar ao mover o mapa"), já com a
+**revisão adversarial** (11 achados corrigidos: a lista não perde mais imóveis ao abrir o mapa, o "voltar" reabre o mesmo
+lugar, o Lente não ganha o filtro de quartos pelo mapa, bairro nunca como ponto, celular deitado e notebook de 768 px);
+ver "Rodada 5 · mapa de verdade" e "Rodada 5 · mapa: revisão adversarial".
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
@@ -1253,14 +1255,17 @@ do **OpenFreeMap** (grátis, sem chave). `package.json` e `package-lock.json` ga
   cada endereço com o lance num balão** ("R$ 43 mil", ou "3 imóveis" no mesmo prédio). Nomes das avenidas a partir do
   zoom 13, das ruas a partir do 14,5, número das casas a partir do 17,5; estações de trem e metrô a partir do 13; os demais
   pontos de interesse, discretos, a partir do 16. Os nomes de cidade do fundo desviam das bolhas (não ficam cortados).
-- **"Buscar ao mover o mapa"** (ligado por padrão): a lista ao lado mostra só os imóveis da área visível (filtro `bbox`
-  na URL, aplicado no servidor, nos dois planos). Desligado: "Buscar nesta área" e "Ver a busca inteira (N)". O centro e
-  o zoom vão na URL (`centro=lat,lon&zoom=`): o link e o "voltar" reabrem o mesmo lugar.
+- **"Buscar ao mover o mapa"** (ligado por padrão): depois que a pessoa mexe no mapa (arrastar, pinça, roda, teclado ou
+  os botões), a lista ao lado mostra só os imóveis da área visível (filtro `bbox` na URL, aplicado no servidor, nos dois
+  planos). Ao abrir o mapa ou trocar de lugar na busca, a lista é a busca inteira (o enquadramento automático não vira
+  área). Desligado: "Buscar nesta área" e "Ver a busca inteira (N)". O centro e o zoom vão na URL
+  (`centro=lat,lon&zoom=`): o link e o "voltar" reabrem o mesmo lugar, com a mesma área.
 - **Cartão do lugar:** ao passar o mouse (foto, lance, deságio, bairro, link) e preso ao clicar ou tocar. O mouse num
   cartão da lista acende o ponto no mapa, e o lugar no mapa acende os cartões da lista.
-- **Precisão do endereço, nunca um alfinete falso:** no número ou na rua, o ponto; **só o bairro**, um círculo ("em algum
-  ponto do círculo"), que some de perto e deixa o rótulo "N imóveis no bairro"; **só a cidade**, o marcador "sem
-  endereço exato" no centro, com "N imóveis sem endereço exato em <cidade>" e "Ver os N na lista" no cartão.
+- **Precisão do endereço, nunca um alfinete falso:** no número ou na rua, o ponto (na rua, aberto no cartão ou na página
+  do imóvel, com a área de incerteza em volta); **só o bairro**, um círculo de pelo menos 300 m ("em algum ponto do
+  círculo"), que some de perto e deixa o rótulo "N imóveis no bairro"; **só a cidade**, o marcador "sem endereço exato" no
+  centro, com "N imóveis sem endereço exato em <cidade>" e "Ver os N na lista" no cartão.
 - **Botões:** aproximar, afastar, ver o Brasil e "minha região" (localização do navegador, só ao clicar; a posição não é
   enviada ao site). Teclado: setas, + e −, Esc fecha o cartão. Leitor de tela: o mapa tem descrição, e a lista é a
   alternativa completa.
@@ -1332,6 +1337,64 @@ do **OpenFreeMap** (grátis, sem chave). `package.json` e `package-lock.json` ga
 - [ ] O worker do MapLibre sai sem compressão no `next start` (na Vercel a CDN comprime).
 - [ ] O print da folha do celular no Chromium sem placa de vídeo saía com faixas brancas (partes da página não pintadas
   pelo SwiftShader); com a rasterização na CPU (como no roteiro agora) some. Conferir num celular.
+
+### Rodada 5 · mapa: revisão adversarial (23/10/2026)
+
+Pedido do dono (ponto 14): "o mapa no estado da arte, muito responsivo, rápido, respondendo bem aos zooms; de acordo com
+o zoom ele vai filtrando os casos; com zoom, mostra o nome da rua". A revisão tentou quebrar o mapa da frente M (commits
+9f7d20c a 865961b): desempenho com a CPU 4× mais lenta, memória depois de 50 zooms, troca de filtros e de tema, voltar e
+avançar, "Buscar nesta área" (vazia, no limite do Brasil, com texto), Lente × Luneta, teclado, celular deitado, sem WebGL,
+CLS, peso do JS da lista, precisão do endereço e créditos. Conferido com `next start` + Playwright aqui (sem os ladrilhos:
+o proxy bloqueia) e com os ladrilhos de verdade no Actions (roteiro `revisao` em `scripts/prints/actions.mjs`).
+
+**Achados e correções** (todos com o código no commit da revisão; os números de CPU 4× são do Chromium daqui, sem placa de
+vídeo):
+1. **Alto · a lista perdia imóveis ao abrir o mapa.** Com "Buscar ao mover o mapa" ligado, o enquadramento automático
+   (percentis 2 a 98 dos pontos) virava a área da lista: abrir o Brasil escondia 12 imóveis no computador e **254 no
+   celular** (o oeste do país não cabia), sem aviso. Agora só o movimento da pessoa (gesto, teclado, botões, clique no
+   agrupamento) vira a área (`movimentoDaPessoa`, com teste); abrir, trocar de lugar ou voltar no histórico mostram a busca
+   inteira. Link antigo com a área e sem a câmera abre o mapa na área.
+2. **Alto · Lente ganhava um filtro da Luneta pelo mapa.** Os pontos eram pedidos sem o plano (o servidor entende a
+   Luneta): "casa 2 quartos" na busca filtrava os quartos no mapa do Lente (5.624 no mapa contra 7.896 na lista). O plano vai
+   no pedido e na chave quando muda os pontos (`consultaPontos`, `chaveMapa`, com teste). O mesmo valia para a chave do mapa
+   do Brasil em SVG.
+3. **Médio · voltar no histórico com o mapa aberto** reenquadrava o Brasil e a lista virava o Brasil inteiro: agora o mapa
+   pula para a câmera daquela entrada e a lista volta à área dela (conferido: arrastar em SP → buscar "Recife" → voltar =
+   SP, 279 imóveis).
+4. **Médio · "só o bairro" parecia endereço exato.** 30 lugares de bairro com desvio de 10 a 50 m na base viravam um ponto
+   de 7 px. Raio mínimo de 300 m no bairro (`raioDoNivel`, com teste); o imóvel de bairro sob o mouse na lista acende a área
+   do bairro, não um anel no centro; na cidade, um anel largo em volta do marcador "sem endereço exato".
+5. **Médio · notebook de 768 px de altura (1366×768, 1024×768):** com o cabeçalho que rola junto, a coluna do mapa passava
+   ~110 px do pé da tela: legenda, escala e créditos fora da tela até rolar. A conta da altura agora desconta o cabeçalho
+   à vista.
+6. **Médio · celular deitado (844×390):** a folha espiava 132 px de um mapa de 212, os botões de Brasil e minha região
+   ficavam embaixo dela, a escala caía em cima da chave e os créditos sumiam. Agora a folha espia só o título (78 px, por
+   consulta de mídia: sem pulo), e os botões vão para uma linha no alto.
+7. **Médio · desempenho na parada do mapa (CPU 4×, celular):** depois de cada arrasto, a lista nova travava o thread
+   principal por 215–260 ms (React) + 37–136 ms (layout dos 24 cartões, quase todos escondidos sob a folha). Agora o
+   resultado da vista de mapa é desenhado em segundo plano (`useDeferredValue`) e os cartões fora da tela não têm layout
+   (`content-visibility`): 105–140 ms + 43–54 ms. Arrastar e aproximar continuam fora do React.
+8. **Baixo · CLS da folha no tablet (até 0,10):** a folha nascia no topo padrão e descia ~120 px quando a barra era medida
+   um quadro depois; agora a medida sai antes da pintura (CLS 0 em 390, 667×375, 768, 844×390, 1366).
+9. **Baixo · sem WebGL o MapLibre (1 MB, 287 KB gzip) era baixado mesmo assim:** agora o teste vem antes; sem WebGL, cai no
+   mapa SVG sem baixar nada do mapa (conferido com `--disable-webgl`, no computador e no celular).
+10. **Baixo · teclado:** no computador o mapa vinha depois dos 24 cartões (~50 Tabs): novo atalho "Pular para o mapa" (2
+    Tabs, Enter, foco no mapa; + e − aproximam, setas movem, Esc fecha o cartão).
+11. **Baixo:** pontos pedidos de novo sem o cache HTTP quando o catálogo muda (409 no cartão); "Ver a busca inteira (N)"
+    conta também os imóveis sem posição; o zoom do mapa da página do imóvel respeita "reduzir movimento".
+
+**Conferido sem achado:** memória depois de 50 zooms (14,5 → 16,8 MB de heap, mesmo número de ouvintes); trocar o tema não
+mexe na câmera nem nos imóveis (9 lugares antes e depois); "Buscar nesta área" com a chave desligada (aparece só depois de
+arrastar; "Ver a busca inteira" tira a área); área no mar mostra "Nenhum imóvel nesta parte do mapa"; texto novo com área
+tira a área; bbox fora do Brasil, invertida ou fora do globo é ignorada no servidor; `/api/catalogo/pontos/itens` no Lente
+sem tags, selo e nota; a lista, os cards e a landing não baixam o MapLibre (só a vista de mapa e a página do imóvel perto do
+mapa).
+
+**Falta:**
+- [ ] O desenho da lista nova ainda ocupa 105–140 ms do thread principal com a CPU 4× (uma tarefa só: a parte que o React
+  não fatia). Se no celular de verdade o mapa engasgar logo depois de soltar o dedo, o próximo passo é desenhar a lista da
+  folha só quando ela for puxada (na espiada só o título aparece).
+- [ ] Conferir num celular de verdade: pinça, folha, celular deitado e a parada do mapa.
 
 ### Ler cada leilão com IA: é viável?
 

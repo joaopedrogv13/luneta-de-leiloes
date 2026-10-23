@@ -258,11 +258,11 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
       // o marco (1 px logo acima da barra) passou por baixo do cabeçalho fixo: a barra está colada
       const estaColada = marco.getBoundingClientRect().bottom < cabFixo.current + 0.5;
       setColada(estaColada);
-      // Faixa de aviso ainda à vista acima do cabeçalho fixo (topo da página): a coluna do mapa encolhe o
-      // mesmo tanto, para caber inteira na tela (com a legenda) desde a primeira pintura.
-      // Com o cabeçalho que rola junto (tela baixa, como 1366×768), o que ainda está à vista dele também conta: sem isso a
-      // coluna do mapa passava ~110 px do pé da tela (legenda, escala e créditos fora da tela até rolar).
-      const faixa = Math.max(0, Math.round(cabFixo.current ? c.getBoundingClientRect().top : c.getBoundingClientRect().bottom));
+      // O que ainda está à vista acima da barra e não fica fixo (a faixa de aviso e o marco; com o cabeçalho que rola
+      // junto, em tela baixa como 1366×768, ele também): a coluna do mapa encolhe o mesmo tanto, para caber inteira na
+      // tela (legenda, escala e créditos) desde a primeira pintura. Sem o cabeçalho na conta, ela passava ~110 px do pé
+      // da tela; sem o marco e o arredondamento para cima, 1 px.
+      const faixa = Math.max(0, Math.ceil(marco.getBoundingClientRect().bottom - cabFixo.current));
       if (faixa !== faixaAntes) {
         faixaAntes = faixa;
         r.style.setProperty("--faixa-v", `${faixa}px`);
