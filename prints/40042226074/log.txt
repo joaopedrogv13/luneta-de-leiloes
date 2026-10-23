@@ -1,0 +1,27 @@
+
+added 2 packages in 712ms
+      {"centro":"-23.550,-46.630","zoom":"11.30","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"} {"visivel":true,"texto":"OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap"}
+ok   tela 844x390 escuro (5.5 s)
+      {"centro":"-22.796,-43.578","zoom":"16.00","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"} {"visivel":true,"texto":"OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap"}
+ok   tela 844x390 claro (4.0 s)
+      {"centro":"-23.550,-46.630","zoom":"11.30","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"} {"visivel":true,"texto":"OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap"}
+ok   tela 1366x768 escuro (4.3 s)
+      {"centro":"-18.229,-42.758","zoom":"3.11","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"} {"visivel":true,"texto":"OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap"}
+ok   tela 1366x768 claro (4.4 s)
+ok   casas z17.6 escuro (4.1 s)
+ok   casas z17.6 claro (4.5 s)
+      {"centro":"-17.890,-43.338","zoom":"3.58","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"}
+ok   abrir o Brasil 1440 (4.4 s)
+      {"centro":"-21.751,-42.683","zoom":"3.06","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"}
+ok   abrir o Brasil 390 (4.2 s)
+      antes -22.796,-43.578 16.00 139 depois -22.796,-43.578 16.00 139
+ok   tema com o mapa aberto (6.7 s)
+      arrastou {"centro":"-23.550,-46.548","zoom":"11.00","bbox":"-46.6957,-23.65586,-46.39941,-23.44405","q":null,"lista":"Resultados, página 1 de 13","contagem":"21.229 imóveis"}
+      recife   {"centro":"-8.055,-34.906","zoom":"10.91","bbox":null,"q":"Recife","lista":"Resultados, página 1 de 2","contagem":"21.229 imóveis"}
+      voltou   {"centro":"-23.550,-46.548","zoom":"11.00","bbox":"-46.6957,-23.65586,-46.39941,-23.44405","q":null,"lista":"Resultados, página 1 de 13","contagem":"21.229 imóveis"}
+ok   voltar no histórico (15.4 s)
+      {"pedidoDosPontos":"http://localhost:3000/api/catalogo/pontos?conjunto=previa&q=casa+2+quartos&plano=lente","noMapa":7893,"contagem":"21.229 imóveis"}
+ok   Lente: 2 quartos na busca (4.4 s)
+ok   imóvel na rua (4.7 s)
+      tarefas longas (ms) depois de cada parada: [[103,115],[64,51],[56,73]]
+ok   parada com a lista (CPU 4x) (14.2 s)
