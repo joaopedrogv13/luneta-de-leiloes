@@ -1,0 +1,5 @@
+▲ Next.js 16.4.0
+- Local:         http://localhost:3000
+- Network:       http://10.1.0.138:3000
+✓ Ready in 104ms
+✓ Running next.config.ts took 38ms
