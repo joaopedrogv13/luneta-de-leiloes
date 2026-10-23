@@ -1407,6 +1407,89 @@ disparada (tecla ↓), porque sozinha ela não rodava.
 - **axe** (WCAG 2.2 AA), 390 e 1440, dois temas: sem violações no hero, praças, planos, especialista, chamada final,
   cartão "Cuidado" e nota da landing, nem no botão de voltar e na opção do favorito da demonstração.
 
+### Rodada 5 · landing (frente F): "Ajuste o foco" com 150 imóveis fictícios (23/10/2026)
+
+Pedido do dono (9): "deixe uma simulação com dados fictícios, porém com muito mais dados e muito mais responsiva, com
+mais tipos de filtros, igual estava na prévia". A seção "Ajuste o foco. A lista responde na hora." deixou de filtrar os
+6 exemplos e virou uma demonstração com **150 imóveis fictícios** e os filtros da prévia.
+
+**Os dados** (`src/lib/demo-foco/dados.ts`; fictícios, sempre os mesmos, gerados no navegador a partir de uma semente):
+- 31 cidades reais em 17 UFs, com bairros reais (São Paulo 20 imóveis, Rio 14, BH 9, Brasília 8…);
+- preço = R$/m² típico da cidade (referência fictícia arredondada) × nível do bairro × tipo (casa 0,8; terreno, o m²
+  do lote); deságio pela praça (1ª 5–30%, 2ª 35–60%, única 15–50%; ocupado +4 pontos); lance abaixo da avaliação;
+- quartos e área conforme o tipo (comercial e terreno sem quartos), ocupação, financiamento (raro em terreno);
+- nota de localização fictícia que acompanha o nível do bairro, e ~1 em 10 sem nota (sem endereço preciso, como na
+  base);
+- **metrô** só nas 7 capitais com metrô (SP, RJ, BH, DF, Recife, Salvador, Fortaleza), nos bairros que têm estação de
+  verdade e só com endereço preciso: 37 imóveis a até 1 km. Porto Alegre ficou sem: o Trensurb é trem (a decisão (11)
+  separa metrô, trem e VLT).
+- Na tela: selo "Demonstração · 150 imóveis fictícios", a frase "Cidades e bairros reais; preços, praças, notas e
+  distâncias inventados" e o total "de 150 imóveis fictícios".
+
+**Os filtros** (`src/lib/demo-foco/busca.ts` + `src/components/sections/foco/`), com as mesmas peças da prévia (lista com
+busca, chips com contagem, faixa com barrinhas, Qualquer/Sim/Não, folha):
+- estado e cidade (vários), tipo (vários), preço, deságio e área (faixas com histograma, cursores, campos e atalhos),
+  praça, quartos, ocupação, financiamento, nota de localização e "Metrô perto" (um toque);
+- busca por texto sem acento ("tatuape 2 quartos": o "2" vai com "quartos", não com "2ª praça"); 5 ordens (Melhor
+  localização com o selo); o total corre até o número novo; "Limpar"; × em cada botão; lista vazia sugere tirar o
+  filtro que mais devolve imóveis;
+- as contagens de cada opção valem com os outros filtros (tocar dá exatamente aquele número), como na prévia;
+- **selo Luneta pela regra do produto** (`FILTROS_LENTE` em `planos.ts`): além dos quatro pedidos (ocupação,
+  financiamento, nota e metrô), praça, quartos e área também são da Luneta no produto, então levam o selo (é o que já
+  dizem o texto da seção e a tabela de planos). Na demonstração, todos funcionam;
+- computador: botões rápidos com pop-up (como na prévia) e "Todos os filtros" (folha à direita); celular e tablet: os
+  botões numa linha que rola de lado, cada um abre a folha na seção dele, com "Ver N imóveis" no rodapé;
+- lista com animação (quem continua desliza, quem entra sobe; parada enquanto se arrasta um cursor; sem animação com
+  "reduzir movimento"); no celular, 6 por vez com "Mostrar mais"; do tablet para cima, rola dentro do quadro;
+- mapinha por estado: as bolhas crescem, encolhem e apagam; passar o mouse num imóvel acende o estado, passar numa bolha
+  acende os imóveis dela, clicar filtra o estado (pelo teclado, o mesmo filtro está em "Estado").
+
+**Carregamento**: o código e os dados só vêm quando a seção está a 1.200 px da tela (`IntersectionObserver` + `import()`,
+sem o `next/dynamic`, cujo carregador custava 3,6 KB no JS inicial). Antes disso fica a **moldura**
+(`foco/Moldura.tsx`, componente de servidor, já no HTML), feita com a mesma casca (`foco/Casca.tsx`): a troca muda
+**0 px** de altura em 360, 390, 768, 1024, 1280 e 1440 (importa para o "Voltar à apresentação" e para os links #planos).
+Sem o pedaço (rede caiu), a moldura fica, sem erro.
+
+**Medido** (`next start` do 3736c2e e desta frente, intercalados, 7 rodadas; scripts em `scratchpad/r5F/`):
+
+| | Antes (3736c2e) | Depois (frente F) |
+| --- | --- | --- |
+| JS inicial da landing (scripts do HTML, gzip) | 218,0 KB | 217,0 KB |
+| JS baixado ao abrir (rede) | 206,5 KB | 205,4 KB |
+| JS que chega perto da seção (4 pedaços) | 0 (estava no inicial) | ~42 KB |
+| HTML de / (gzip) | 79,4 KB | 82,4 KB (a moldura vai pronta no HTML) |
+| LCP no celular, CPU 4× (mediana) | 356 ms | 340 ms |
+| LCP no computador (mediana) | 256 ms | 216 ms |
+| CLS rolando do topo até depois da seção | 0 | 0 |
+
+O LCP é o hero nos dois casos; as diferenças ficam dentro da variação. Filtrar, ordenar e contar os 150 leva menos de
+1 ms (teste).
+
+**Testes**: `src/lib/demo-foco/dados.test.ts` (determinismo, preço pelo m² da cidade e do bairro, deságio pela praça,
+quartos e área pelo tipo, metrô só onde há, nota, escalas das faixas, distância entre as bolhas do mapinha) e
+`busca.test.ts` (cada filtro, combinações, contagens com os outros filtros, histogramas, ordens, estado tira as cidades
+de fora, sugestão da lista vazia, resumos dos botões, selo Luneta, velocidade). `npm run test:site`: 292 testes passando.
+
+**Navegador** (Playwright; prints em `scratchpad/prints/r5-F/`): 360, 390, 768, 1024 e 1440 nos dois temas, a moldura
+(390 escuro, 1440 claro) e as interações (`interacao/`): pop-up de preço (tocar numa barrinha filtra; Esc fecha e volta
+o foco ao botão), × limpa, metrô (37), bolha de SP no mapa, hover na lista acende o estado, ordem por nota, lista vazia
+com sugestão, folha "Todos os filtros", teclado (Tab até "Estado", Enter abre com o foco na busca, "bahia" + Enter
+filtra), celular (6 linhas, "Mostrar mais", o botão "Deságio" abre a folha na seção, "≥ 40%", "Ver 79 imóveis" igual
+ao total da lista), sem rolagem lateral e sem erro no console. **axe** (WCAG 2.2 AA), 390 e 1440, dois temas: sem
+violações (quadro inicial, com metrô, pop-up e folha).
+
+**Pendências desta frente**:
+- **Metrô**: o botão "Metrô perto" da demonstração vale o filtro "Metrô a até 1 km" que a frente do metrô (decisão
+  (11)) põe nos filtros avançados do produto. Quando ele entrar, pôr o filtro em `FILTROS_PROMETIDOS` (`planos.ts`) e
+  trocar `metro: null` em `FILTRO_DO_CATALOGO` (`src/lib/demo-foco/busca.ts`) pela chave do catálogo; se ele não entrar,
+  tirar o botão da demonstração (`RAPIDOS_LUNETA` em `foco/FocoDemo.tsx` e o "Metrô perto" de `foco/Moldura.tsx`).
+- Os R$/m² das cidades em `dados.ts` são referências fictícias arredondadas: não usar como dado.
+- O mapinha é por estado, não por cidade (com 150 imóveis, cidades vizinhas como São Paulo e Campinas se encostariam);
+  o mapa de verdade (MapLibre, com ruas e zoom) é o da prévia e da área do assinante.
+- Técnico: o `next build` deste ambiente para na primeira vez com o aviso "Your version of Next.js is affected by a
+  known security vulnerability" (Next 16.4.0) e passa ao repetir. Vale avaliar a atualização do Next (`next upgrade`)
+  antes do lançamento; não foi feita aqui.
+
 ### Ler cada leilão com IA: é viável?
 
 Sim: em vez de preencher à mão, um robô baixa a página e os documentos de cada leilão (página da Caixa, edital,
@@ -1626,7 +1709,9 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
 - **Cartão do Alvo no hero** (deságio contando até 48%) e **praças** (apartamento em Campinas/SP, R$ 400.000 → R$ 200.000,
   e o aviso "Seu favorito foi para a 2ª praça"): fictícios, rotulados.
 - **"Por dentro, depois de assinar"** e **área do assinante** (`/assinante`): usam os mesmos exemplos fictícios.
-- **Demo de filtros e mapa**: filtra só os 6 exemplos fictícios ("N de 6 exemplos fictícios encontrados").
+- **Demo de filtros e mapa** ("Ajuste o foco"): 150 imóveis fictícios gerados (`src/lib/demo-foco`), rotulados
+  "Demonstração · 150 imóveis fictícios"; cidades e bairros reais, preço, praça, ocupação, nota e metrô inventados
+  (rodada 5, frente F).
 - **Respostas do FAQ**: o blueprint só traz as perguntas; as respostas vieram do handoff do Claude Design. Revisar com o advogado parceiro.
 
 ## Pendências antes de publicar (blueprint, "Pontos de atenção")

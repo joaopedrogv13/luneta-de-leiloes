@@ -242,6 +242,17 @@ export const FILTERS = {
   text: `No plano Lente, filtre por ${FILTROS_DO_LENTE}, e veja o resultado em lista, em cards ou no mapa. Na Luneta, também por ${FILTROS_DA_LUNETA}.`,
   /** rótulo dos filtros da demonstração que são do plano Luneta */
   luneta: "Luneta",
+  /**
+   * A demonstração da seção (rodada 5, ponto 9): 150 imóveis fictícios (src/lib/demo-foco), carregados quando a seção
+   * chega perto da tela. Tudo marcado como fictício.
+   */
+  demo: {
+    selo: "Demonstração",
+    subtitulo: "Cidades e bairros reais; preços, praças, notas e distâncias inventados. Mexa à vontade.",
+    nota: "Os imóveis desta demonstração são fictícios, gerados só para mostrar os filtros. No produto, os filtros rodam sobre a base real de leilões.",
+    lunetaAjuda: "Filtros avançados do plano Luneta. Nesta demonstração, todos funcionam.",
+    carregando: "Carregando a demonstração com 150 imóveis fictícios…",
+  },
 } as const;
 
 export const STATS = {
