@@ -1,0 +1,53 @@
+
+added 2 packages in 1s
+      {"url":"/previa?bbox=-68.67376%2C-35.4826%2C-18.01416%2C1.62776&vista=mapa&centro=-17.88606%2C-43.34396&zoom=3.58","zoom":"3.58","lista":"Resultados, página 1 de 885"} 
+ok   mapa brasil 1440 escuro (7.5 s)
+      {"url":"/previa?bbox=-68.67376%2C-35.4826%2C-18.01416%2C1.62776&vista=mapa&centro=-17.88606%2C-43.34396&zoom=3.58","zoom":"3.58","lista":"Resultados, página 1 de 885"} 
+ok   mapa brasil 1440 claro (5.7 s)
+      {"url":"/previa?bbox=-59.08874%2C-34.78459%2C-26.27674%2C3.66002&vista=mapa&centro=-21.75056%2C-42.68274&zoom=3.06","zoom":"3.06","lista":"Resultados, página 1 de 874"} 
+ok   mapa brasil 390 escuro (5.1 s)
+      {"url":"/previa?bbox=-59.08874%2C-34.78459%2C-26.27674%2C3.66002&vista=mapa&centro=-21.75056%2C-42.68274&zoom=3.06","zoom":"3.06","lista":"Resultados, página 1 de 874"} 
+ok   mapa brasil 390 claro (4.7 s)
+      {"url":"/previa?bbox=-46.75033%2C-23.63625%2C-46.50967%2C-23.46369&vista=mapa&centro=-23.55%2C-46.63&zoom=11.3","zoom":"11.30","lista":"Resultados, página 1 de 6"} 
+ok   mapa capital-sp 1440 escuro (5.7 s)
+      {"url":"/previa?bbox=-46.75033%2C-23.63625%2C-46.50967%2C-23.46369&vista=mapa&centro=-23.55%2C-46.63&zoom=11.3","zoom":"11.30","lista":"Resultados, página 1 de 6"} 
+ok   mapa capital-sp 1440 claro (5.8 s)
+      {"url":"/previa?bbox=-46.68438%2C-23.59511%2C-46.57562%2C-23.47111&vista=mapa&centro=-23.55%2C-46.63&zoom=11.3","zoom":"11.30","lista":"Resultados, página 1 de 3"} 
+ok   mapa capital-sp 390 escuro (4.7 s)
+      {"url":"/previa?bbox=-46.68438%2C-23.59511%2C-46.57562%2C-23.47111&vista=mapa&centro=-23.55%2C-46.63&zoom=11.3","zoom":"11.30","lista":"Resultados, página 1 de 3"} 
+ok   mapa capital-sp 390 claro (4.5 s)
+      {"url":"/previa?bbox=-43.58213%2C-22.79884%2C-43.57287%2C-22.79216&vista=mapa&centro=-22.7955%2C-43.5775&zoom=16","zoom":"16.00","lista":"Resultados, página 1 de 7"} 
+ok   mapa rua-rj-z16 1440 escuro (5.9 s)
+      {"url":"/previa?bbox=-43.58213%2C-22.79884%2C-43.57287%2C-22.79216&vista=mapa&centro=-22.7955%2C-43.5775&zoom=16","zoom":"16.00","lista":"Resultados, página 1 de 7"} 
+ok   mapa rua-rj-z16 1440 claro (5.5 s)
+      {"url":"/previa?bbox=-43.57959%2C-22.79725%2C-43.57541%2C-22.79245&vista=mapa&centro=-22.7955%2C-43.5775&zoom=16","zoom":"16.00","lista":"Resultados, página 1 de 2"} 
+ok   mapa rua-rj-z16 390 escuro (4.2 s)
+      {"url":"/previa?bbox=-43.57959%2C-22.79725%2C-43.57541%2C-22.79245&vista=mapa&centro=-22.7955%2C-43.5775&zoom=16","zoom":"16.00","lista":"Resultados, página 1 de 2"} 
+ok   mapa rua-rj-z16 390 claro (4.3 s)
+      {"url":"/previa?bbox=-43.18216%2C-22.91347%2C-43.16364%2C-22.90013&vista=mapa&centro=-22.9068%2C-43.1729&zoom=15","zoom":"15.00","lista":"Resultados, página 1 de 1"} 
+ok   mapa bairros-rj-z15 1440 escuro (5.4 s)
+      {"url":"/previa?bbox=-43.18216%2C-22.91347%2C-43.16364%2C-22.90013&vista=mapa&centro=-22.9068%2C-43.1729&zoom=15","zoom":"15.00","lista":"Resultados, página 1 de 1"} 
+ok   mapa bairros-rj-z15 1440 claro (5.4 s)
+      {"url":"/previa?bbox=-43.17708%2C-22.91029%2C-43.16872%2C-22.9007&vista=mapa&centro=-22.9068%2C-43.1729&zoom=15","zoom":"15.00","lista":"Resultados, página 1 de 1"} 
+ok   mapa bairros-rj-z15 390 escuro (4.6 s)
+      {"url":"/previa?bbox=-43.17708%2C-22.91029%2C-43.16872%2C-22.9007&vista=mapa&centro=-22.9068%2C-43.1729&zoom=15","zoom":"15.00","lista":"Resultados, página 1 de 1"} 
+ok   mapa bairros-rj-z15 390 claro (4.7 s)
+ok   cartão no mapa escuro (9.7 s)
+ok   cartão no mapa claro (9.8 s)
+ok   folha do celular (6.0 s)
+      sem erros
+ok   imóvel numero 1440 escuro (7.3 s)
+      sem erros
+ok   imóvel numero 1440 claro (7.3 s)
+      sem erros
+ok   imóvel numero 390 escuro (6.8 s)
+      sem erros
+ok   imóvel numero 390 claro (6.6 s)
+      sem erros
+ok   imóvel bairro 1440 escuro (5.0 s)
+      sem erros
+ok   imóvel bairro 390 claro (4.3 s)
+ok   assinante 1440 (6.2 s)
+ok   assinante 390 (6.0 s)
+     desempenho {"ateOsPontosMs":2414,"comImoveis":{"zoomBrasilAteSP":{"fps":14,"p95ms":183,"longas":2},"arrastoSPateRio":{"fps":6,"p95ms":417,"longas":0},"zoomAteRua":{"fps":1,"p95ms":1833,"longas":3}},"semImoveis":{"zoomBrasilAteSP":{"fps":15,"p95ms":133,"longas":0},"arrastoSPateRio":{"fps":6,"p95ms":283,"longas":0},"zoomAteRua":{"fps":8,"p95ms":350,"longas":0}},"porCamada":{"todasDeNovo":{"fps":12,"p95ms":150,"longas":0,"duracoesLongas":[]},"semPrecos":{"fps":11,"p95ms":133,"longas":0,"duracoesLongas":[]},"semSimbolos":{"fps":12,"p95ms":217,"longas":0,"duracoesLongas":[]},"semCirculos":{"fps":11,"p95ms":150,"longas":0,"duracoesLongas":[]},"nenhuma":{"fps":11,"p95ms":233,"longas":0,"duracoesLongas":[]},"todasDeNovo2":{"fps":11,"p95ms":233,"longas":0,"duracoesLongas":[]}},"setDataAteDesenharMs":480,"lugares":9741,"webgl":"WebKit WebGL","pedidoDosPontos":{"ms":13,"bytesDescomprimidos":538581,"codificacao":"br"}}
+ok   desempenho (46.0 s)
