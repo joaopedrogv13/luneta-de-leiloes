@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "coletas-dados": false,
-      "coleta-localizacao": false
+      "coleta-localizacao": false,
+      "acoes-*": false
     }
   }
 }

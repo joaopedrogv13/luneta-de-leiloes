@@ -1,0 +1,69 @@
+# Prints do site com internet aberta (ex.: o mapa com as ruas, cujos tiles não abrem no ambiente de desenvolvimento).
+#
+# SÓ RODA QUANDO ACIONADO: `gh workflow run site-prints.yml --ref <branch>`. Faz o build do ref escolhido, sobe o
+# `next start` na porta 3000 e roda `scripts/prints/actions.mjs` desse ref (Playwright + Chromium; o script decide as
+# páginas, as larguras e os temas e grava PNGs em prints-saida/). Os PNGs e o log vão para o branch `coletas-dados`,
+# pasta prints/<run_id>/ (os artefatos do Actions não abrem no ambiente de desenvolvimento). Não usa segredo.
+name: Site - prints
+
+on:
+  workflow_dispatch:
+    inputs:
+      roteiro:
+        description: "argumento livre passado ao scripts/prints/actions.mjs (ex.: mapa)"
+        required: false
+        default: "tudo"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prints:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Dependências e build
+        run: |
+          npm ci
+          npx next build
+      - name: Prints
+        continue-on-error: true
+        env:
+          ROTEIRO: ${{ inputs.roteiro }}
+        run: |
+          set -o pipefail
+          mkdir -p prints-saida
+          npx --yes playwright@1 install --with-deps chromium > prints-saida/log-instalacao.txt 2>&1 || true
+          (npx next start -p 3000 > prints-saida/log-servidor.txt 2>&1 &)
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/ && break; sleep 1; done
+          if [ -f scripts/prints/actions.mjs ]; then
+            node scripts/prints/actions.mjs "$ROTEIRO" 2>&1 | tee prints-saida/log.txt
+          else
+            echo "scripts/prints/actions.mjs não existe no ref ${GITHUB_REF_NAME}" | tee prints-saida/log.txt
+          fi
+      - name: Publicar no branch coletas-dados
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROTEIRO: ${{ inputs.roteiro }}
+        run: |
+          set -e
+          PASTA="$RUNNER_TEMP/publicar"
+          rm -rf "$PASTA" && mkdir -p "$PASTA"
+          cd "$PASTA"
+          git init -q && git checkout -q -b coletas-dados
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if git fetch -q --depth 1 origin coletas-dados 2>/dev/null; then git checkout -q -B coletas-dados FETCH_HEAD; fi
+          DESTINO="prints/${{ github.run_id }}"
+          mkdir -p "$DESTINO"
+          find "$GITHUB_WORKSPACE/prints-saida" -maxdepth 2 -type f -size -20M -exec cp {} "$DESTINO/" \; || true
+          echo "execução ${{ github.run_id }} · ref ${GITHUB_REF_NAME} · roteiro ${ROTEIRO} · $(date -u +%FT%TZ)" > prints/ultima-execucao.txt
+          git add -A
+          git -c user.name="luneta-coleta" -c user.email="actions@users.noreply.github.com" commit -q -m "Prints (execução ${{ github.run_id }}, ${ROTEIRO})" || echo "nada novo"
+          for i in 1 2 3; do git push -q origin coletas-dados && break; git fetch -q origin coletas-dados && git rebase -q FETCH_HEAD; done
