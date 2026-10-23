@@ -66,7 +66,7 @@ export function UpgradeModal({
           {t.titulo} <em className="accent text-latao-texto">Luneta</em>.
         </h2>
         <p id="upgrade-texto" className="text-sm leading-relaxed text-nevoa">
-          {t.texto} <RichText text={`R$ ${LUNETA_PRICE}/mês`} />, cancele quando quiser.
+          {t.texto} <RichText text={`R$ ${LUNETA_PRICE}/mês`} />, cancele grátis em até 7 dias.
         </p>
         <button ref={primary} type="button" onClick={onUpgrade} className="btn-primary mt-1 w-full">
           Assinar Luneta

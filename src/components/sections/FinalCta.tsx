@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { FINAL_CTA } from "@/content/site";
 import { Title } from "@/components/ui/Heading";
+import { SeloCancelamento } from "@/components/ui/SeloCancelamento";
 
 /** Chamada final + formulário curto (nome, e-mail, WhatsApp). Sem animação de entrada: os dois já aparecem prontos. */
 export function FinalCta({ children }: { children?: ReactNode }) {
@@ -19,6 +20,10 @@ export function FinalCta({ children }: { children?: ReactNode }) {
           <a href="#planos" data-pulse className="btn-primary mt-8 !min-h-[52px] !px-7 !text-base shadow-[0_0_40px_rgba(201,162,77,.35)]">
             {FINAL_CTA.cta}
           </a>
+          {/* rodada 5, ponto 13 */}
+          <div className="mt-4">
+            <SeloCancelamento />
+          </div>
         </div>
         {children}
       </div>

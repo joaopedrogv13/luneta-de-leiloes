@@ -112,7 +112,7 @@ export function AcoesTitulo({
   const { plano, ehFavorito, alternarFavorito, pedirLuneta } = useImovel();
   return (
     <div className={`flex shrink-0 items-center gap-2 ${className}`}>
-      <BotaoFavoritar imovel={imovel} plano={plano} favorito={ehFavorito(imovel.id)} onFavoritar={alternarFavorito} onUpsell={pedirLuneta} icone />
+      <BotaoFavoritar imovel={imovel} plano={plano} favorito={ehFavorito(imovel.id)} onFavoritar={alternarFavorito} onUpsell={pedirLuneta} icone abrirComAncora />
       <Compartilhar titulo={imovel.titulo} icone />
     </div>
   );
@@ -251,6 +251,7 @@ export function ResumoLateral({ d }: { d: DadosResumo }) {
             onFavoritar={alternarFavorito}
             onUpsell={pedirLuneta}
             className="w-full"
+            abrirComAncora
           />
           <Compartilhar titulo={d.titulo} className="w-full" />
         </div>

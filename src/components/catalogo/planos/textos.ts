@@ -17,7 +17,7 @@ export interface TextoConvite {
 /** A janela sem recurso (o aviso do topo da lista, "Conhecer a Luneta" do resumo). */
 export const CONVITE_PADRAO: TextoConvite = {
   titulo: "Estes recursos são da",
-  texto: `Tags de risco e selos, simulador de lance máximo, preço do m² da região, nota de localização, relatório em PDF, filtros avançados, ${FAVORITOS_ROTULO} e prioridade no contato com advogado.`,
+  texto: `Tags de risco e selos, simulador de lance máximo, preço do m² da região, nota de localização, relatório em PDF, filtros avançados, ${FAVORITOS_ROTULO} e prioridade para falar com um especialista.`,
 };
 
 export const CONVITE: Record<Recurso, TextoConvite> = {

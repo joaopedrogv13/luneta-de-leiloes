@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { PLANS, SUBSCRIBER_AREA } from "@/content/site";
 import { SectionHeading } from "@/components/ui/Heading";
 import { RichText } from "@/components/ui/RichText";
+import { SeloCancelamento } from "@/components/ui/SeloCancelamento";
 
 /** Planos e preços: Lente, Luneta (destacada) e Telescópio. */
 export function Plans({ children }: { children?: ReactNode }) {
@@ -11,6 +12,8 @@ export function Plans({ children }: { children?: ReactNode }) {
       <div className="container-l">
         <SectionHeading id="planos-titulo" eyebrow={PLANS.eyebrow} parts={PLANS.title}>
           <p className="mt-5 max-w-[640px] text-base leading-relaxed text-nevoa sm:text-lg">{PLANS.lead}</p>
+          {/* rodada 5, ponto 13: o cancelamento grátis em destaque antes dos preços (e de novo sob cada botão) */}
+          <SeloCancelamento className="mt-6" />
         </SectionHeading>
         {children}
         <p className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-nevoa">

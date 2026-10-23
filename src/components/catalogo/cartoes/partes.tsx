@@ -4,8 +4,10 @@ import { useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { Seal } from "@/components/ui/Seal";
 import { area, local, moeda, moedaCurta, MODALIDADE_ROTULO, numero, PRACA_ROTULO, SELO_ROTULO } from "@/lib/catalogo/rotulos";
 import { pode } from "@/lib/catalogo/planos";
+import { PRODUTO } from "@/lib/catalogo/produto";
 import type { ImovelResumo, Plano, Recurso } from "@/lib/catalogo/tipos";
 import { quandoPraca } from "./datas";
+import { FavoritoComAlerta } from "./FavoritoAlerta";
 import { IconeArea, IconeCadeado, IconeCalendario, IconeCoracao, IconeQuarto, IconeRegua, IconeVaga } from "./icones";
 
 /** Props comuns de cartão e linha. */
@@ -230,9 +232,11 @@ export function SeloImovel({ imovel, plano, tamanho = 30 }: { imovel: Pick<Imove
 }
 
 /**
- * Favoritar. Luneta: alterna (aria-pressed; o rótulo fica igual e o coração enche). Lente: cadeado, abre o
- * convite à Luneta. Fica por cima do link do cartão (z-10) e não navega. `icone`: só o coração, num botão
- * redondo de 40 px (44 no toque), para o canto do cartão, como nos portais de imóveis.
+ * Favoritar. Luneta: com o alerta de praça no produto (PRODUTO.alertaPraca, rodada 5), o coração favorita e abre a
+ * opção "Avisar por e-mail quando a praça mudar" (FavoritoComAlerta); sem ele, só alterna (aria-pressed; o rótulo fica
+ * igual e o coração enche). Lente: cadeado, abre o convite à Luneta. Fica por cima do link do cartão (z-10) e não
+ * navega. `icone`: só o coração, num botão redondo de 40 px (44 no toque), para o canto do cartão, como nos portais
+ * de imóveis. `abrirComAncora`: na chegada com #alerta-praca, a opção já abre (página do imóvel).
  */
 export function BotaoFavoritar({
   imovel,
@@ -242,6 +246,7 @@ export function BotaoFavoritar({
   onUpsell,
   icone = false,
   className = "",
+  abrirComAncora = false,
 }: {
   /** com o local e o lance, o nome acessível distingue um imóvel do outro na lista */
   imovel: Pick<ImovelResumo, "id" | "titulo"> & Partial<Pick<ImovelResumo, "bairro" | "cidade" | "uf" | "lance">>;
@@ -251,6 +256,7 @@ export function BotaoFavoritar({
   onUpsell: (opener: HTMLElement, recurso?: Recurso | null) => void;
   icone?: boolean;
   className?: string;
+  abrirComAncora?: boolean;
 }) {
   // favoritos são da Luneta: no Lente, o cadeado e a janela da Luneta
   const lente = !pode(plano, "favoritos");
@@ -263,6 +269,28 @@ export function BotaoFavoritar({
   };
   const { cidade, uf, lance } = imovel;
   const complemento = cidade && uf && lance !== undefined ? complementoSr({ bairro: imovel.bairro ?? null, cidade, uf, lance }) : "";
+  const classeIcone = (on: boolean) =>
+    `relative z-10 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-[background-color,border-color,color,scale] duration-150 ease-luneta active:scale-[0.92] motion-reduce:transition-none pointer-fine:size-10 ${
+      on ? "border-latao/80 bg-latao/15 text-latao" : "border-nevoa/30 bg-tinta/80 text-nevoa hover:border-latao hover:text-luar"
+    } ${className}`;
+  const classeTexto = (on: boolean) =>
+    `relative z-10 inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-3.5 text-[13px] leading-none font-medium whitespace-nowrap transition-[background-color,border-color,color,scale] duration-150 ease-luneta active:scale-[0.96] motion-reduce:transition-none pointer-fine:min-h-9 ${
+      on ? "border-latao/80 bg-latao/15 text-latao-texto hover:bg-latao/22" : "border-nevoa/35 text-nevoa hover:border-latao hover:text-luar"
+    } ${className}`;
+  if (!lente && PRODUTO.alertaPraca) {
+    return (
+      <FavoritoComAlerta
+        id={imovel.id}
+        titulo={imovel.titulo}
+        complemento={complemento}
+        favorito={favorito}
+        onFavoritar={onFavoritar}
+        icone={icone}
+        classeBotao={icone ? classeIcone : classeTexto}
+        abrirComAncora={abrirComAncora}
+      />
+    );
+  }
   if (icone) {
     return (
       <button
@@ -271,9 +299,7 @@ export function BotaoFavoritar({
         aria-pressed={lente ? undefined : ligado}
         aria-haspopup={lente ? "dialog" : undefined}
         title={lente ? "Favoritar (plano Luneta)" : ligado ? "Favorito" : "Favoritar"}
-        className={`relative z-10 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-[background-color,border-color,color,scale] duration-150 ease-luneta active:scale-[0.92] motion-reduce:transition-none pointer-fine:size-10 ${
-          ligado ? "border-latao/80 bg-latao/15 text-latao" : "border-nevoa/30 bg-tinta/80 text-nevoa hover:border-latao hover:text-luar"
-        } ${className}`}
+        className={classeIcone(ligado)}
       >
         <IconeCoracao cheio={ligado} size={18} />
         {lente && (
@@ -294,9 +320,7 @@ export function BotaoFavoritar({
       onClick={clicar}
       aria-pressed={lente ? undefined : ligado}
       aria-haspopup={lente ? "dialog" : undefined}
-      className={`relative z-10 inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-3.5 text-[13px] leading-none font-medium whitespace-nowrap transition-[background-color,border-color,color,scale] duration-150 ease-luneta active:scale-[0.96] motion-reduce:transition-none pointer-fine:min-h-9 ${
-        ligado ? "border-latao/80 bg-latao/15 text-latao-texto hover:bg-latao/22" : "border-nevoa/35 text-nevoa hover:border-latao hover:text-luar"
-      } ${className}`}
+      className={classeTexto(ligado)}
     >
       {lente ? <IconeCadeado size={13} /> : <IconeCoracao cheio={ligado} size={15} className={ligado ? "text-latao" : ""} />}
       Favoritar

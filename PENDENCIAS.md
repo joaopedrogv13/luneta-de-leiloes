@@ -192,7 +192,7 @@ Não existe "tempo real" nas fontes: cada uma publica no seu ritmo, e a base bus
 | Leilões Judiciais | a cada 6 h | lances e status mudam ao longo do dia |
 | Radar de editais | 1× por dia | publicações diárias |
 | Leilões com praça hoje ou amanhã | a cada 1 h | pegar suspensão, adiamento e resultado |
-| Alerta de 2ª praça | depois de cada coleta | compara a praça de cada favorito com a coleta anterior |
+| Alerta de mudança de praça | depois de cada coleta | compara a praça, a data, o lance mínimo e o status de cada favorito com a coleta anterior (ver "Back-end: favoritos e alerta de mudança de praça") |
 
 Onde rodar (decisão sua): (a) **Vercel Cron** com a função na região de São Paulo gravando num Postgres gerenciado (Neon ou
 Supabase): é o caminho natural quando o site for ler do banco; limites do plano grátis a confirmar na documentação da
@@ -1225,7 +1225,9 @@ o commit da trava dos planos (D1). Conferido com `next start` (porta 3330), Play
 - [ ] **Animação "Por dentro" no Lente:** ela ainda borra as tags dos exemplos (metáfora). Manter, ou trocar por cartões sem
   tags com o cadeado (mais fiel ao produto)?
 - [ ] **Ligar `PRODUTO.leituraDoEdital`** quando as fichas da Caixa e a leitura do edital entrarem na base (o teste confere a
-  proporção). **Ligar `PRODUTO.alertaPraca`** quando houver login e envio de e-mail.
+  proporção). ~~**Ligar `PRODUTO.alertaPraca`** quando houver login e envio de e-mail.~~ Ligado no marketing pelo dono
+  na rodada 5 (23/10/2026); o envio depende do back-end (`PRODUTO.envioDeEmail`, "Back-end: favoritos e alerta de
+  mudança de praça").
 - [ ] **ITBI de SP, Rio e POA** aparece na Luneta (prévia e demonstração) com "licença a confirmar com a prefeitura".
   Confirmar as licenças (base/FONTES.md) ou segurar essas três cidades atrás da mesma decisão do total (`mostrarTotalItbi`).
 - [ ] **"Atualizada todos os dias"** (hero, "Por dentro" e FAQ) é a promessa do lançamento; hoje a base é uma carga só.
@@ -1237,6 +1239,173 @@ o commit da trava dos planos (D1). Conferido com `next start` (porta 3330), Play
 - [ ] Testar a trava no `<body>` no Safari do iPhone (a propagação do overflow é a mesma do `<html>`, mas não houve iPhone).
 - [ ] Recálculo da nota encadeado na atualização da base (hoje manual; o texto diz isso).
 - [ ] O relatório ainda cresce ~45 px quando a simulação adiada chega (CLS 0,006).
+
+### Rodada 5 · landing (frente L): abertura automática, especialista, alerta de praça, 7 dias e a volta da demonstração (23/10/2026)
+
+Pedidos do dono atendidos aqui: (1) a animação inicial roda sozinha, (2) "advogado" virou "especialista", (8) mais foco
+nos favoritos com aviso de mudança de praça, (10) todo "ver na demonstração" vai direto à área certa e tem o botão de
+voltar, (12) saiu "Suporte dedicado", (13) "Cancele grátis em até 7 dias" em destaque. O site antes desta rodada está
+no branch `versao-site-v2`.
+
+**(1) A abertura do hero roda sozinha** (`HeroMotion.tsx`):
+- ao abrir ou recarregar a página no topo, a luneta chega ao alvo sozinha (~2,5 s), sem esperar a rolagem e sem travar
+  a página (a trava de rolagem e a dica "Role para mirar" saíram);
+- o GSAP é pedido assim que a página hidrata (antes era no ócio, à espera do gesto); a etapa 1 fica pelo menos 0,45 s na
+  tela antes de a luneta se mover; aba aberta em segundo plano espera ficar visível;
+- não roda (vai direto ao estado final) com menos movimento, sem JavaScript, na página aberta já rolada, na volta da
+  demonstração e se o GSAP não chegar em 2,2 s; Esc pula; rolar até o hero quase sair da tela também;
+- o número do cartão do Alvo conta com largura fixa (2 algarismos tabulares): sem deslocamento de layout.
+- **Medido**: o LCP ficou igual (dentro da variação) e o CLS foi a 0; ver "Rodada 5 · landing: LCP, CLS e navegador".
+
+**(2) Advogado → especialista, no site todo:** menu ("Falar com especialista", âncora `#especialista`), hero, seção
+"Consultoria com especialista" ("Quero falar com um especialista"), formulário (assunto "Falar com um especialista"),
+barra do celular ("Especialista"), tabela de planos ("Prioridade para falar com um especialista"), janela da Luneta,
+FAQ ("Como falo com um especialista?"), descrição do site, avisos ("não substitui a avaliação de um especialista":
+landing, rodapé, página do imóvel, relatório, "Por dentro"), textos das tags ("com um especialista"), PDF ("de
+preferência, converse com um especialista") e "critérios dos selos em definição com o especialista parceiro". A linha
+da OAB: "Quando o especialista for advogado, a publicidade segue as regras da OAB." Ficaram de propósito: os
+comentários internos ("advogado parceiro") e, no simulador, o custo "a ação na Justiça (advogado e custas)", que é o
+honorário da ação de despejo, não um contato. O teste varre `src/` e só aceita essas duas exceções.
+
+**(8) Favoritos e aviso de mudança de praça:**
+- `PRODUTO.alertaPraca` ligado (decisão do dono). Novo `PRODUTO.envioDeEmail` (hoje `false`): o marketing promete o
+  alerta, a demonstração diz a verdade sobre o envio.
+- Landing: a seção "Primeira e segunda praça" (`#pracas`) ganhou o e-mail de exemplo ("Seu favorito foi para a 2ª
+  praça", com o novo lance mínimo e a data) e o bloco "Como funciona o alerta de praça" em 3 passos (marque o
+  favorito → a Luneta confere a cada atualização → você recebe o e-mail com o novo lance mínimo e a data), com "Ver o
+  favorito com aviso na demonstração" e "Confira sempre o edital".
+- FAQ "Como recebo o aviso quando a praça muda?" (logo depois de "O que é primeira e segunda praça?"); na tabela de
+  planos, "Alerta por e-mail quando a praça de um favorito muda: 2ª praça, nova data ou novo lance mínimo" (Luneta e
+  Telescópio); no cartão, "Favoritos com alerta de praça"; "Por dentro" e a janela da Luneta falam do alerta.
+- Demonstração (`FavoritoAlerta.tsx`): o coração favorita e abre a opção **"Avisar por e-mail quando a praça mudar"**
+  (desligada: e-mail é consentimento), com a explicação e "Demonstração: a preferência fica só neste navegador; o envio
+  de e-mails começa no lançamento". Nos favoritos, o coração abre a mesma janelinha com "Tirar dos favoritos". O sino
+  aparece no coração com o aviso ligado. Nada é coletado: a preferência fica no `localStorage`
+  (`luneta-alerta-praca`). O link da landing (`#alerta-praca`) já abre a opção na chegada.
+- O que o back-end precisa fazer: seção "Back-end: favoritos e alerta de mudança de praça" logo abaixo.
+
+**(10) "Ver na demonstração" vai direto, e "Voltar à apresentação" volta ao mesmo ponto** (`src/lib/apresentacao.ts`,
+`SaidaDaApresentacao.tsx` na landing, `VoltarApresentacao.tsx` na demonstração e na página do método):
+- os links da landing para a demonstração, todos com a área certa: "Ver este exemplo" (Decida) →
+  `ex-alvo-sp#simulador` (o simulador com a conta); "Ver esta nota na demonstração" (Nota de localização, novo) →
+  `ex-alvo-sp#localizacao`; "Ver um caso assim na demonstração" (cartão "Cuidado", novo) → `ex-semselo-rj#riscos` (−55%
+  com três riscos graves); "Abrir na demonstração" sob cada cartão de Exemplos (novo) → a página do exemplo; "Ver o
+  favorito com aviso" (Praças, novo) → `ex-namira-pr#alerta-praca`; e os que já iam à lista (`/assinante`: "Por
+  dentro", Planos, menu, rodapé) e ao método da nota;
+- na demonstração, o botão fixo e discreto "← Voltar à apresentação" (canto de baixo à esquerda; sobe sozinho acima da
+  barra do lance e do "Ver no mapa" no celular) só aparece para quem veio da landing por um desses links (registro na
+  `sessionStorage` da aba, vale 12 h); quem entra direto não vê;
+- a volta: na primeira página depois da landing, `history.back()`; depois de navegar na demonstração, um link para "/"
+  sem rolar; nos dois casos a landing devolve o link clicado ao mesmo lugar da tela (se a página mudou de altura, o link
+  é que manda), ou a mesma rolagem quando o link era do menu fixo; o hero já vem pronto;
+- a chegada com âncora confere a posição por até 3 s: no Chrome, quando a página do imóvel chegava aos pedaços (o
+  esqueleto do carregamento encolhe a página), o navegador devolvia a rolagem antiga da landing e a página parava no
+  simulador em vez de nos riscos (1 em ~4 idas);
+- é um link de verdade: Tab, Enter, clique do meio (abre a landing do começo numa aba nova); some na impressão e no
+  relatório em PDF.
+
+**(12)** Saiu "Suporte dedicado" (a tabela e os cartões; o Telescópio fica com a base em planilha e vários usuários).
+
+**(13) "Cancele grátis em até 7 dias":** selo (escudo com o visto) logo abaixo do "Ver planos" no hero (no celular, uma
+linha sem moldura, e a lente cede o mesmo espaço), em pílula antes dos preços e sob o botão de cada um dos três planos,
+sob "Começar agora" na chamada final, como segunda linha do "Ver planos" da barra do celular, na nota dos planos, em "Por dentro" e
+na janela da Luneta. Prova social: "7 dias para cancelar grátis". FAQ "Posso cancelar quando quiser?" subiu para a 3ª
+posição: "Nos primeiros 7 dias depois de assinar, o cancelamento é grátis: é o direito de arrependimento das compras pela
+internet (Código de Defesa do Consumidor, art. 49). Depois desse prazo, você também pode cancelar quando quiser." O
+`[7]` perdeu os colchetes em todo lugar; sem pagamento ainda, nada promete reembolso de outro jeito (o teste confere).
+
+**Testes** (`npm run -s test:site`): `site.test.ts` ganhou 5 casos (nenhuma frase da tela com "advogado"; sem "Suporte
+dedicado"; o selo e o FAQ dos 7 dias sem colchete nem promessa a mais; o alerta no marketing com a demonstração
+honesta e esta seção no PENDENCIAS; os links da landing apontam para exemplos e seções que existem) e
+`src/lib/apresentacao.test.ts` (3 casos: destinos, o registro e a conta da volta).
+
+**Conferido no navegador** (`next start`, Playwright; prints em `scratchpad/prints/r5-L/`): ver "Rodada 5 · landing:
+LCP, CLS e navegador".
+
+**Decisões suas:**
+- [ ] O selo do hero no celular é uma linha simples (a pílula com moldura não cabe sem cobrir a lente em telas de 360 a
+  375 px de largura); no computador e no tablet, a pílula.
+- [ ] "Falar com especialista": o especialista é advogado? Se for, a linha da OAB vale; se não, ela pode sair.
+- [ ] O selo também sob "Assinar Luneta" de "Decida com números"? (hoje não: ficou nos botões que o pedido lista)
+
+**Falta (técnico):**
+- [ ] O back-end do alerta (seção abaixo) antes de tirar o "demonstração" do texto do favorito: com o envio de verdade,
+  `PRODUTO.envioDeEmail = true` troca os textos sozinho.
+- [ ] A volta da demonstração foi testada no Chromium (desktop e celular emulado). Conferir no Safari do iPhone (o
+  `history.back()` e a `sessionStorage` com a aba restaurada do bfcache).
+
+### Back-end: favoritos e alerta de mudança de praça (obrigatório antes do lançamento)
+
+A landing promete, desde a rodada 5 (decisão do dono), que o assinante Luneta marca os favoritos e **recebe um e-mail
+quando a praça muda** (2ª praça, nova data ou novo lance mínimo), "com o novo lance mínimo e a data". Hoje isso só
+existe na demonstração, no navegador (`PRODUTO.envioDeEmail = false`). Antes de lançar (e antes de tirar o
+"demonstração" do texto), o back-end precisa de:
+
+1. **Contas e login** (FASE1-SITE, passo 5): o e-mail do assinante confirmado (link de confirmação), o plano da sessão
+   (`planos.ts` já recebe o plano) e a exclusão da conta.
+2. **Favoritos no servidor**: tabela `favorito (usuario_id, imovel_id, criado_em, avisar_por_email, avisado_em)`; a
+   lista do navegador (`luneta-favoritos:*` e `luneta-alerta-praca`) é importada no primeiro login. Limite por conta (ex.:
+   500), como hoje no navegador.
+3. **Histórico de praça de cada imóvel, gravado por quem atualiza a base** (é isso que permite detectar a mudança):
+   a cada coleta, para cada imóvel, guardar praça (1ª, 2ª, única), data e hora da praça, lance mínimo, status (ativo,
+   vendido, retirado, suspenso) e a data da coleta, numa tabela `praca_historico` (ou eventos `praca_mudou`), sem
+   apagar o anterior. A coleta da Caixa hoje sobrescreve o imóvel: precisa guardar o "antes".
+4. **Comparação a cada atualização da base** (depois de cada coleta; agenda em "Atualização: como funciona"): para cada
+   favorito com aviso ligado, comparar a última leitura com a anterior e gerar um evento quando mudar a praça (1ª → 2ª),
+   a data ou a hora da praça, o lance mínimo, ou o status (vendido, retirado, suspenso: avisar e parar de acompanhar).
+   Imóvel que sumiu da fonte = "retirado ou vendido, confira no site do leiloeiro", nunca "vendido" sem confirmação.
+   Um evento por mudança (idempotente: a mesma mudança não gera dois e-mails se a coleta rodar de novo).
+5. **Fila de e-mails** com provedor transacional (ex.: Amazon SES, Resend, Postmark; custo e escolha: decisão do
+   dono): modelo "Seu favorito foi para a 2ª praça" com o imóvel, o novo lance mínimo, a data e o link da página;
+   agrupar as mudanças do dia num e-mail só por pessoa; limite de envio por pessoa e por dia; novas tentativas com
+   espera; registro do que foi enviado (`avisado_em`).
+6. **LGPD e consentimento**: o aviso só com a opção ligada pela pessoa (nunca ligado por padrão), registro do
+   consentimento (quando e o texto aceito), link de descadastro de um clique em todo e-mail (desliga o aviso daquele
+   imóvel ou de todos), política de privacidade publicada antes, e e-mails só com o necessário (sem dados de terceiros:
+   nada de nome de ocupante ou devedor, a máscara LGPD da base vale para o e-mail).
+7. **Testes**: a comparação (mudou a praça, a data, o lance; vendido; sumiu; nada mudou), a idempotência, o agrupamento
+   diário, o descadastro, o limite de envio e o texto (sem "risco zero", "confira o edital").
+8. **Tela**: a lista "Meus favoritos" com a praça atual e o histórico de cada um ("1ª praça em 14/11 → 2ª praça em
+   28/11, lance de R$ 400 mil para R$ 200 mil"); com o envio ligado, `PRODUTO.envioDeEmail = true` tira o
+   "demonstração" do texto do favorito.
+
+Quem atualiza a base (frente de dados): **gravar o histórico de praça (item 3) a partir da próxima coleta**, mesmo
+antes do login existir; sem o histórico, a primeira comparação só começa depois de duas coletas.
+
+### Rodada 5 · landing: LCP, CLS e navegador
+
+**LCP e CLS da landing** (`next start` de `origin/main` e desta frente lado a lado, intercalados, 9 rodadas de cada;
+celular 390 × 844 com a CPU 4× mais lenta; computador 1440 × 900; scripts `scratchpad/r5L/vitals-ab.mjs`):
+
+| | Antes (main) | Depois (frente L) |
+| --- | --- | --- |
+| LCP no celular (mediana) | 364 ms | 372 ms |
+| LCP no computador (mediana) | 228 ms | 232 ms |
+| CLS (pior rodada, com a intro rodando) | 0,0006 (o número do Alvo contando) | 0 |
+
+O LCP é o título do hero nos dois casos, pintado antes da hidratação; as diferenças ficam dentro da variação entre
+rodadas (numa primeira série de 7, o "depois" saiu melhor: 380 × 384 ms e 272 × 288 ms). O GSAP é pedido depois da
+primeira pintura (~0,9 s no celular lento), sem disputar com ela. O "antes" só mostra o CLS da intro quando ela é
+disparada (tecla ↓), porque sozinha ela não rodava.
+
+**Navegador** (`next start`, Playwright, Chromium; prints em `scratchpad/prints/r5-L/`):
+- **Hero** (`hero/`): 360 × 640, 360 × 780, 375 × 667, 390 × 844, 768, 1024 e 1440, nos dois temas: a cena roda sozinha
+  (1,5 s depois de abrir está no meio; aos 4 s, no fim, com o 48%), sem rolagem lateral nem erro no console. No celular,
+  a folga entre o texto e a lente é a mesma de antes (3 a 5 px a 360, 23 px a 375, 19 px a 390); "Ver planos" e "Falar
+  com especialista" na mesma linha de 360 px em diante. Com menos movimento, o estado final direto.
+- **Seções** (`secoes/`): hero, cartão "Cuidado", exemplos, praças, Decida, nota, planos, especialista, prova social,
+  FAQ (com a pergunta do cancelamento aberta), chamada final e a barra do celular; 360, 390, 768, 1024 e 1440, dois
+  temas: sem rolagem lateral, sem erro, nenhum "advogado", nenhum "[7]", nenhum "Suporte dedicado".
+- **Ida e volta** (`ida-e-volta/`; `scratchpad/r5L/ida-e-volta.mjs`): os 11 links da landing para a demonstração (10 no
+  celular, sem o do menu do computador) em 360, 390, 768, 1024 e 1440: a seção certa no topo (abaixo das barras fixas),
+  a opção do favorito aberta no `#alerta-praca`, o botão de voltar visível, e a volta no **mesmo ponto: diferença de 0 px**
+  em todos (limite pedido: 20 px). Também: voltar depois de navegar na demonstração (lista → outro imóvel), pelo teclado
+  (Enter no link, Enter no botão), e quem entra direto não vê o botão.
+- **Favorito** (`favorito/`): na lista e na página do imóvel, 390 e 1440, dois temas: o coração abre a opção, a chave
+  liga e desliga (fica em `luneta-alerta-praca`), Esc devolve o foco ao coração, "Tirar dos favoritos" tira os dois, e no
+  Lente o coração continua com o cadeado e a janela da Luneta.
+- **axe** (WCAG 2.2 AA), 390 e 1440, dois temas: sem violações no hero, praças, planos, especialista, chamada final,
+  cartão "Cuidado" e nota da landing, nem no botão de voltar e na opção do favorito da demonstração.
 
 ### Ler cada leilão com IA: é viável?
 
@@ -1308,11 +1477,13 @@ pelo valor real no arquivo de conteúdo.
 
 **Decisões suas** (detalhes e recomendação na análise: https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7)
 - [ ] Lançar em duas fases (reservas e e-mails sem cobrar; venda só com base real, login e pagamento)?
-- [ ] Advogado: manter "advogado especialista com prioridade" ou trocar por checklist/ficha até sair parecer da OAB.
-- [ ] Abertura do hero: manter na primeira rolada (atual) ou automática, sem trava.
+- [x] ~~Advogado: manter "advogado especialista com prioridade" ou trocar por checklist/ficha até sair parecer da OAB.~~
+  Rodada 5: o site fala em "especialista" (pedido do dono); a linha da OAB vale quando o especialista for advogado.
+- [x] ~~Abertura do hero: manter na primeira rolada (atual) ou automática, sem trava.~~ Rodada 5: automática, sem trava.
 - [ ] Título novo com "imóveis" e "risco" ("Leilões de imóveis de todo o Brasil. E o risco de cada um, na mira.").
 - [ ] Encurtar a página (Exemplos e Filtros dentro do Por dentro; Dados e Prova social só com números reais).
-- [ ] Preços, oferta de fundador, garantia (7 ou 30 dias) e Lente paga ou grátis. Com a Luneta mais completa (rodada 4),
+- [ ] Preços, oferta de fundador e Lente paga ou grátis (a garantia ficou em 7 dias: "Cancele grátis em até 7 dias",
+  rodada 5). Com a Luneta mais completa (rodada 4),
   rever o `R$ [129]`.
 - [ ] Landing (rodada 4): publicar o número de compras do ITBI só depois das licenças de SP, Rio e POA; manter o link
   "Ferramentas" no menu? (detalhes em "Rodada 4 · site original").
@@ -1330,7 +1501,8 @@ pelo valor real no arquivo de conteúdo.
 - [ ] Base de dados de leilões: fontes com API pública primeiro (em andamento), depois raspagem de leiloeiros locais.
 - [ ] Casos reais no site (Exemplos, hero, Praças, Por dentro e `/assinante`) a partir da base.
 - [ ] Formulário que muda conforme o botão clicado e envia de verdade (servidor, anti-robô, LGPD).
-- [ ] Alerta de 2ª praça por e-mail (hoje é promessa na página).
+- [ ] Alerta de mudança de praça por e-mail: a landing promete (decisão do dono, rodada 5); o back-end é obrigatório antes
+  do lançamento (ver "Back-end: favoritos e alerta de mudança de praça").
 - [ ] Login e área do assinante com dados reais; pagamento só na fase de venda.
 - [ ] No lançamento: `npm run check:publicacao` sem bloqueios e `NEXT_PUBLIC_INDEXAR=1` (passos abaixo).
 
@@ -1434,10 +1606,7 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
 | Dados de deságio | deságio médio `[X]%`, maior deságio do mês `[X]%`, total de leilões ativos `[X]` | `site.ts` → `STATS.items[].value` (número; `null` mostra `[X]`) |
 | Planos · preços sugeridos | Lente `R$ [49]`, Luneta `R$ [129]`, Telescópio `R$ [499]` (cartões e tabela) | `site.ts` → `PLANS.plans[].price` e `priceValue` (este alimenta o JSON-LD) |
 | Área do assinante (`/assinante`) | preço da Luneta `[129]` no aviso do plano Lente e na janela de upgrade | vem do mesmo `PLANS` (não precisa trocar em outro lugar) |
-| Planos · nota | `[7] dias para cancelar` | `site.ts` → `PLANS.note` |
-| Prova social · garantia | `[7] dias` | `site.ts` → `SOCIAL.guarantee` |
 | FAQ · "Os leilões de todo o Brasil estão aqui?" | `Hoje são [X] leiloeiros monitorados.` | `site.ts` → `FAQ.items[2].a` |
-| FAQ · "Posso cancelar quando quiser?" | `[7] dias para cancelar` | `site.ts` → `FAQ.items[10].a` |
 | Decida com números · preço do m² | `preço pago em [X] compras registradas na prefeitura` (o total do ITBI, ~203 mil, sai dos arquivos; liga depois das licenças de SP, Rio e POA) | `ferramentas.ts` → `DECIDA.mostrarTotalItbi` |
 | Rodapé | links `Política de privacidade [link]` e `Termos de uso [link]` (hoje apontam para `#`) | `Footer.tsx` |
 | Rodapé | `[Razão social] · CNPJ [X]` | `site.ts` → `FOOTER.company` |
@@ -1470,7 +1639,8 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
 - **Explicações das tags** (pop-up "O que é / Na prática", `src/content/tags.ts`): linguagem simples, mas são orientações
   jurídicas. Revisar todas com o advogado, em especial dívidas de condomínio e IPTU (quem paga depende do edital), ação
   judicial pendente, penhoras de outros processos e imóvel financiado/alienação fiduciária.
-- **Aviso de 2ª praça por e-mail** (Praças e plano Luneta): é uma promessa de funcionalidade. Só publicar quando o alerta existir.
+- **Aviso de mudança de praça por e-mail** (Praças, FAQ e plano Luneta): o dono decidiu promover (rodada 5). É promessa
+  de funcionalidade: o back-end precisa existir antes do lançamento ("Back-end: favoritos e alerta de mudança de praça").
 - **Consultoria**: validar o texto da seção com as regras de publicidade da OAB.
 - **Origem dos dados**: confirmar que a coleta nos sites dos leiloeiros respeita termos de uso e a lei.
 - **Preços e garantia**: validar valores e o prazo de cancelamento. O JSON-LD Product/Offer volta sozinho quando `price`
@@ -1498,14 +1668,13 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
 
 ## Decisões de implementação
 
-- **Hero**: a intro inteira (as 6 etapas do Passo 4) roda de uma vez no primeiro gesto de rolar (dois dedos no trackpad,
-  roda do mouse, toque ou teclado): ~1,9 s até a cena montar (lente, mapa, mira e cartão do Alvo) e ~2,7 s com o brilho
-  final. Enquanto a cena monta, a página fica no topo e a inércia do trackpad é absorvida; com a cena montada, um gesto
-  novo já rola a página. Esc pula. Roda uma vez por visita (o "Voltar ao site" da `/assinante` leva aos planos com o
-  hero já no estado final; recarregar repete).
+- **Hero** (rodada 5): a intro inteira (as 6 etapas do Passo 4) roda sozinha ao abrir ou recarregar a página no topo,
+  sem esperar a rolagem e sem travar a página: ~2,5 s, com a etapa 1 pelo menos 0,45 s na tela. Esc pula; rolar até o
+  hero sair da tela também. Na volta da demonstração (o roteador do Next) o hero já vem no estado final; recarregar
+  repete. (Até a rodada 4, a intro esperava o primeiro gesto de rolar e segurava a rolagem enquanto montava.)
   No celular, a lente fica entre o texto e o cartão e encolhe em telas baixas, sem cobrir os botões.
-  A marcação vem do servidor, a etapa 1 vem do CSS (`html.motion`) e o GSAP é baixado no ócio (`HeroMotion.tsx`). Se o GSAP
-  não carregar, a página pula direto para o estado final (`#topo[data-done]`, só CSS) e nunca trava a rolagem.
+  A marcação vem do servidor, a etapa 1 vem do CSS (`html.motion`) e o GSAP é pedido assim que a página hidrata
+  (`HeroMotion.tsx`). Se o GSAP não chegar em 2,2 s, a página pula direto para o estado final (`#topo[data-done]`, só CSS).
 - **Animações de apoio** (entradas, números contando, anéis desenhados, tags em cascata): IntersectionObserver + transições CSS
   (`MotionLayer.tsx` e o bloco "Animações de apoio" em `globals.css`). Ficam bem mais leves que um ScrollTrigger por bloco.
   As entradas genéricas (`[data-reveal]`) são curtas: fade + 10 px em 0,45 s, cascata de no máximo 3 blocos (80 ms).

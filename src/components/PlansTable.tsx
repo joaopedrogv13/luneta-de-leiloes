@@ -1,6 +1,7 @@
 import { PLANS, type PlanFeature, type PlanId, type PlanValue } from "@/content/site";
 import { PlansCompare } from "@/components/PlansCompare";
 import { RichText } from "@/components/ui/RichText";
+import { SeloCancelamento } from "@/components/ui/SeloCancelamento";
 
 const PREV: Record<PlanId, PlanId | null> = { lente: null, luneta: "lente", telescopio: "luneta" };
 
@@ -144,6 +145,8 @@ export function PlansTable() {
               <a href={p.href} data-intent={p.id} className={p.featured ? "btn-primary w-full shadow-[0_0_30px_rgba(201,162,77,.35)]" : "btn-outline w-full"}>
                 {p.cta}
               </a>
+              {/* rodada 5, ponto 13: o selo sob o botão de cada plano (os três têm mensalidade; os botões ficam alinhados) */}
+              <SeloCancelamento variante="linha" className="mt-3.5 justify-center" />
             </div>
           );
         })}

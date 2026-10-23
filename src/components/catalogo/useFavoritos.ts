@@ -6,7 +6,9 @@ import type { Conjunto } from "@/lib/catalogo/tipos";
 
 /**
  * Favoritos da demonstração, guardados no navegador (localStorage, por conjunto) e sincronizados entre a lista,
- * a página do imóvel e outras abas. Sem login ainda: é só a experiência; o alerta de praça é promessa da Luneta.
+ * a página do imóvel e outras abas. Sem login ainda: é só a experiência. O "Avisar por e-mail quando a praça mudar"
+ * (rodada 5) é uma lista à parte (useAlertasPraca), também só no navegador: nenhum e-mail é coletado nem enviado
+ * enquanto PRODUTO.envioDeEmail for false.
  * Se o armazenamento falhar (aba privada, bloqueio), os favoritos valem só enquanto a página estiver aberta.
  */
 const VAZIO: readonly string[] = [];
@@ -41,7 +43,7 @@ function gravar(chave: string, lista: readonly string[]) {
 function assinar(avisar: () => void) {
   ouvintes.add(avisar);
   const deOutraAba = (e: StorageEvent) => {
-    if (!e.key?.startsWith("luneta-favoritos:")) return;
+    if (!e.key?.startsWith("luneta-favoritos:") && e.key !== CHAVE_ALERTAS) return;
     memoria.delete(e.key);
     avisar();
   };
@@ -50,6 +52,28 @@ function assinar(avisar: () => void) {
     ouvintes.delete(avisar);
     window.removeEventListener("storage", deOutraAba);
   };
+}
+
+/**
+ * Os imóveis com o aviso de praça ligado. Uma lista só para os dois conjuntos (os ids da demonstração, "ex-…", e os
+ * da base não se repetem), para o botão de favorito não precisar saber em qual conjunto está.
+ */
+const CHAVE_ALERTAS = "luneta-alerta-praca";
+
+export function useAlertasPraca() {
+  const lista = useSyncExternalStore(
+    assinar,
+    () => ler(CHAVE_ALERTAS),
+    () => VAZIO,
+  );
+  const temAlerta = useCallback((id: string) => lista.includes(id), [lista]);
+  /** Liga (true) ou desliga (false) o aviso de um imóvel. */
+  const definir = useCallback((id: string, ligado: boolean) => {
+    const atual = ler(CHAVE_ALERTAS);
+    if (atual.includes(id) === ligado) return;
+    gravar(CHAVE_ALERTAS, ligado ? [...atual, id] : atual.filter((x) => x !== id));
+  }, []);
+  return { temAlerta, definir };
 }
 
 export function useFavoritos(conjunto: Conjunto) {

@@ -1,15 +1,18 @@
 import { LAWYER } from "@/content/site";
 import { SectionHeading } from "@/components/ui/Heading";
 
-/** Consultoria com advogado. Atenção: a publicidade de serviços jurídicos segue regras da OAB. */
+/**
+ * Consultoria com especialista (rodada 5: "advogado" virou "especialista" em todo o site, pedido do dono). Quando o
+ * especialista for advogado, a publicidade de serviços jurídicos segue as regras da OAB (a linha fica na seção).
+ */
 export function Lawyer() {
   return (
-    <section id="advogado" aria-labelledby="advogado-titulo" className="section bg-tinta">
+    <section id="especialista" aria-labelledby="especialista-titulo" className="section bg-tinta">
       <div className="container-l grid items-center gap-10 md:grid-cols-2 md:gap-20">
         <div data-reveal>
-          <SectionHeading id="advogado-titulo" eyebrow={LAWYER.eyebrow} parts={LAWYER.title} />
+          <SectionHeading id="especialista-titulo" eyebrow={LAWYER.eyebrow} parts={LAWYER.title} />
           <p className="mt-6 max-w-[520px] text-base leading-relaxed text-nevoa sm:text-lg">{LAWYER.text}</p>
-          <a href="#comecar" data-intent="advogado" className="btn-primary mt-8">
+          <a href="#comecar" data-intent="especialista" className="btn-primary mt-8">
             {LAWYER.cta}
           </a>
           <p className="mt-5 max-w-[520px] text-xs leading-relaxed text-nevoa">{LAWYER.oab}</p>

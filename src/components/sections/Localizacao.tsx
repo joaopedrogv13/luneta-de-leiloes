@@ -50,10 +50,16 @@ export function Localizacao() {
                 </li>
               ))}
             </ol>
-            <Link href={METODO_NOTA.href} prefetch={false} className="btn-outline mt-8 gap-2">
-              {NOTA_LOCAL.more}
-              <span aria-hidden="true">→</span>
-            </Link>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              {/* rodada 5, ponto 10: a mesma nota na página do exemplo, já na seção de localização */}
+              <Link href={NOTA_LOCAL.demoHref} prefetch={false} className="btn-outline gap-2">
+                {NOTA_LOCAL.demo}
+                <span aria-hidden="true">→</span>
+              </Link>
+              <Link href={METODO_NOTA.href} prefetch={false} className="btn-ghost gap-2">
+                {NOTA_LOCAL.more}
+              </Link>
+            </div>
           </div>
 
           <figure data-seal-card data-reveal className="flex min-w-0 flex-col gap-3.5">

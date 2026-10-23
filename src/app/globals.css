@@ -321,7 +321,7 @@
    Hero · "a luneta chega ao alvo"
    Sem JS ou com prefers-reduced-motion: a cena já aparece no estado final (mira travada).
    Com movimento, o script do <head> põe html.motion e as regras abaixo desenham a etapa 1
-   (noite e névoa) antes da pintura; a primeira rolada dispara a intro inteira (HeroMotion, GSAP).
+   (noite e névoa) antes da pintura; a intro roda sozinha logo depois (HeroMotion, GSAP; rodada 5: sem esperar rolagem).
    Quando a intro termina (ou é pulada, ou o GSAP não carrega), HeroMotion marca #topo[data-done]
    e remove os estilos do GSAP: daí em diante o estado final é só CSS e continua responsivo.
    Só opacity e transform animam; desfoque e brilho são camadas prontas que trocam de opacidade.
@@ -338,13 +338,10 @@
   .hero-track [data-h="stage"] {
     height: max(100svh, 640px);
   }
-  /* o texto começa logo abaixo do menu (em vez de centralizar) e a dica de rolagem sai de cena */
+  /* o texto começa logo abaixo do menu (em vez de centralizar) */
   .hero-track [data-h="text"] {
     top: 0;
     translate: none;
-  }
-  .hero-track [data-h="hint"] {
-    display: none;
   }
 }
 @media (max-height: 640px) and (min-width: 640px) {
@@ -356,7 +353,8 @@
    o cartão (12px da borda, ~110px de altura) cobre ~29px dela. Em telas baixas ela encolhe em vez de subir
    no texto. A partir de sm, o HeroScene usa outro posicionamento. */
 .hero-track [data-h="stage"] {
-  --lens: max(130px, min(78cqw, calc(100cqh - 512px)));
+  /* rodada 5: o selo "Cancele grátis em até 7 dias" (~29 px no celular) entrou no texto; a lente cede o mesmo espaço */
+  --lens: max(101px, min(78cqw, calc(100cqh - 541px)));
   --lens-y: calc(100cqh - 93px - var(--lens) / 2);
 }
 .motion:not(.intro-seen) #topo:not([data-done])
@@ -403,17 +401,11 @@
     transform: translate(-50%, -50%) translate(26cqw, -22cqh) rotate(-32deg) scale(0.38);
   }
 }
-/* fim da intro: a névoa se dissipou; a dica some assim que a intro começa.
+/* fim da intro: a névoa se dissipou.
    html.intro-seen: a intro já rodou nesta visita (ex.: voltou da /assinante); o hero já nasce no estado final. */
 :is(#topo[data-done], .intro-seen #topo) [data-h="fog"] {
   opacity: 0;
   visibility: hidden;
-}
-[data-h="hint"] {
-  transition: opacity 0.3s ease;
-}
-:is(#topo[data-playing], #topo[data-done], .intro-seen #topo) [data-h="hint"] {
-  opacity: 0;
 }
 /* mouse sobre a lente: o mapa acompanha 2–4px com inércia */
 [data-h="map"] {

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LEVELS } from "@/content/site";
 import { SEVERITY_LABEL, type Severity } from "@/content/tags";
 import { Title } from "@/components/ui/Heading";
@@ -179,12 +180,21 @@ export function CautionCard() {
 
       <CautionDemo />
 
-      <div className="relative self-start [grid-area:cta]">
+      <div className="relative flex flex-wrap items-center gap-x-6 gap-y-3 self-start [grid-area:cta]">
         <a href="#planos" className="btn-primary">
           <Seal level={2} size={16} className="[&_circle]:stroke-[#070B16] [&_circle:last-child]:fill-[#070B16]" />
           {C.cta}
           <span aria-hidden="true">→</span>
         </a>
+        {/* rodada 5, ponto 10: o caso parecido da demonstração, já na seção de riscos */}
+        <Link
+          href={LEVELS.demoHref}
+          prefetch={false}
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-latao-texto underline decoration-latao/50 underline-offset-4 hover:text-luar"
+        >
+          {LEVELS.demo}
+          <span aria-hidden="true">→</span>
+        </Link>
       </div>
     </div>
   );

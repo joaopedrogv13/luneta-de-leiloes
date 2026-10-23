@@ -180,7 +180,7 @@ export function Relatorio({
                 <li>{AVISO_CLASSIFICACAO}</li>
                 <li>
                   <span className={s.forte}>Confira o edital.</span> Preços, praças, datas, ocupação e dívidas mudam e vale sempre o que está no edital e no
-                  site da fonte. Leia a matrícula atualizada e, de preferência, converse com um advogado antes do lance.
+                  site da fonte. Leia a matrícula atualizada e, de preferência, converse com um especialista antes do lance.
                 </li>
                 <li>Fotos e anúncios pertencem às fontes; a Luneta não copia nem re-hospeda anúncios.</li>
                 {exemplo && <li>Exemplo fictício da demonstração: nenhum número deste relatório se refere a um imóvel real.</li>}
@@ -665,7 +665,7 @@ function Alertas({ pagina, plano }: { pagina: PaginaImovel; plano: Plano }) {
       )}
       <p className={s.pequeno}>
         <span className={s.forte}>{pendente ? "Selo em análise" : i.selo === 0 ? "Sem selo" : `Selo ${SELO_ROTULO[i.selo]}`}.</span>{" "}
-        {i.porQueSelo || (pendente ? "Os critérios dos selos ainda estão em definição com o advogado." : "")}
+        {i.porQueSelo || (pendente ? "Os critérios dos selos ainda estão em definição com o especialista parceiro." : "")}
       </p>
     </Secao>
   );

@@ -4,7 +4,7 @@
  * /relatorio baixava o JavaScript da galeria, dos parecidos e do simulador sem usar.)
  */
 export const AVISO_CLASSIFICACAO =
-  "A classificação não é garantia: é uma análise automática dos dados publicados pela fonte e não substitui a leitura do edital nem a avaliação de um advogado.";
+  "A classificação não é garantia: é uma análise automática dos dados publicados pela fonte e não substitui a leitura do edital nem a avaliação de um especialista.";
 
 /**
  * Aviso do simulador. A landing lê daqui; a tela do simulador (src/components/simulador/Simulador.tsx) e o relatório

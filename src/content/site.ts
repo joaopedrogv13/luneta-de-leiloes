@@ -37,7 +37,7 @@ export const SITE = {
   locale: "pt_BR",
   title: "Leilões de Imóveis do Brasil em um Só Lugar | Luneta de Leilões",
   description:
-    "Leilões de imóveis do Brasil reunidos e classificados por risco. Simule o lance máximo, compare o preço do m² da região e fale com um advogado.",
+    "Leilões de imóveis do Brasil reunidos e classificados por risco. Simule o lance máximo, compare o preço do m² da região e fale com um especialista.",
   slogan: "Mire a oportunidade. Veja o risco antes do lance.",
   keywords: [
     "leilão de imóveis",
@@ -58,8 +58,21 @@ export const NAV_LINKS: readonly { href: string; label: string; largo?: boolean 
   { href: "#niveis", label: "Níveis" },
   { href: "#decida", label: "Ferramentas", largo: true },
   { href: "#planos", label: "Planos" },
-  { href: "#advogado", label: "Falar com advogado" },
+  { href: "#especialista", label: "Falar com especialista" },
 ];
+
+/**
+ * "Cancele grátis em até 7 dias" (rodada 5, ponto 13: o dono confirmou os 7 dias). É também o direito de arrependimento
+ * das compras pela internet (Código de Defesa do Consumidor, art. 49). Não prometer nada além disso (reembolso de outra
+ * forma, prazo maior): o selo aparece perto de cada botão de assinar (hero, planos, chamada final, barra do celular).
+ */
+export const CANCELAMENTO = {
+  selo: "Cancele grátis em até 7 dias",
+  /** barra do celular, onde o espaço é curto */
+  curto: "Cancele grátis em 7 dias",
+  /** o complemento, nos planos */
+  depois: "Depois, cancele quando quiser.",
+} as const;
 
 /** Página pública do método da nota de localização (fora da área do assinante). */
 export const METODO_NOTA = { href: "/metodologia/localizacao", label: "Como a nota é calculada" } as const;
@@ -74,9 +87,11 @@ export const HERO = {
   subtitle:
     "Pare de abrir dezenas de sites de leiloeiros. A Luneta de Leilões reúne cada oportunidade, mostra o risco e faz a conta do lance.",
   primary: "Ver planos",
-  secondary: "Falar com um advogado especialista",
+  /** o selo logo abaixo dos botões (CANCELAMENTO) */
+  garantia: CANCELAMENTO.selo,
+  secondary: "Falar com um especialista",
   /** No celular o secundário vira link de texto ao lado do botão principal (sobra espaço para a lente). */
-  secondaryShort: "Falar com advogado",
+  secondaryShort: "Falar com especialista",
   trust: "+[X] leilões ativos · [X] leiloeiros monitorados · atualizado todos os dias",
 } as const;
 
@@ -137,6 +152,9 @@ export const LEVELS = {
     },
   },
   bridge: ["Por isso, no plano Luneta, a gente separa os", "melhores", "casos para você."],
+  /** um caso assim na demonstração: o maior desconto da lista, com os riscos à vista (a seção de riscos do exemplo) */
+  demo: "Ver um caso assim na demonstração",
+  demoHref: "/assinante/imovel/ex-semselo-rj#riscos",
   sealsNote: "Três selos, do Promissor ao Alvo. Cada nível soma um anel e mais um critério cumprido.",
   seals: [
     {
@@ -179,24 +197,43 @@ export const LEVELS = {
     footer: "No plano Luneta, essa tag aparece em cada leilão em que for encontrada.",
   },
   disclaimer:
-    "A classificação é uma análise baseada nos dados de cada leilão e não substitui a avaliação de um advogado.",
+    "A classificação é uma análise baseada nos dados de cada leilão e não substitui a avaliação de um especialista.",
 } as const;
 
 export const EXAMPLES = {
   eyebrow: "Exemplos de cada nível",
   title: ["Da névoa ao", "alvo", ", lado a lado."],
   note: "Exemplos fictícios, só para ilustrar a classificação.",
+  /** cada cartão abre a página do mesmo exemplo na demonstração */
+  demo: "Abrir na demonstração",
+  demoHref: (id: string) => `/assinante/imovel/ex-${id}`,
 } as const;
 
 export const PRACAS = {
   eyebrow: "Primeira e segunda praça",
   title: ["O mesmo imóvel pode ficar", "até 50%", "mais barato na segunda praça."],
   text: "Muitos leilões têm duas rodadas. Na primeira praça, o lance mínimo costuma partir do valor de avaliação. Se ninguém arremata, vem a segunda praça, e o mesmo imóvel pode sair por até metade desse valor.",
-  /** o alerta por e-mail só aparece quando existir (PRODUTO.alertaPraca); até lá, só os favoritos */
+  /** o alerta por e-mail aparece com PRODUTO.alertaPraca (ligado pelo dono na rodada 5); sem ele, só os favoritos */
   alert: PRODUTO.alertaPraca
-    ? "Por isso, no plano Luneta, você marca seus casos favoritos e a gente avisa por e-mail assim que eles vão para a segunda praça. Você não perde o momento do lance."
+    ? "Por isso, no plano Luneta, você marca seus favoritos e recebe um e-mail quando a praça de cada um muda. Você não perde o momento do lance."
     : "Por isso, no plano Luneta, você marca seus casos favoritos e acompanha a praça e o lance mínimo de cada um num só lugar.",
   mostrarAlerta: PRODUTO.alertaPraca,
+  /** o fluxo do alerta, em três passos (só com o alerta ligado) */
+  passosTitulo: "Como funciona o alerta de praça",
+  passos: [
+    { icone: "coracao", titulo: "Marque o favorito", texto: "Toque no coração do imóvel e ligue “Avisar por e-mail quando a praça mudar”." },
+    { icone: "radar", titulo: "A Luneta confere a cada atualização", texto: "A praça, a data e o lance mínimo de cada favorito são comparados com a leitura anterior da fonte." },
+    { icone: "envelope", titulo: "Você recebe um e-mail", texto: "Com o novo lance mínimo e a data do leilão, a tempo de decidir o lance." },
+  ],
+  /** o e-mail de exemplo (ilustração) */
+  email: {
+    rotulo: "Alerta por e-mail · plano Luneta",
+    titulo: "Seu favorito foi para a 2ª praça.",
+  },
+  demo: "Ver o favorito com aviso na demonstração",
+  /** um exemplo em 2ª praça; #alerta-praca abre a opção do favorito (BotaoFavoritar) já na chegada */
+  demoHref: "/assinante/imovel/ex-namira-pr#alerta-praca",
+  aviso: "Confira sempre o edital: o leiloeiro pode mudar datas e condições.",
 } as const;
 
 export const FILTERS = {
@@ -288,11 +325,20 @@ const FEATURES: readonly PlanFeature[] = [
   { grupo: "Decidir", label: "Relatório em PDF do imóvel e da simulação", cartao: "Relatório em PDF", recurso: "relatorio", lente: false, luneta: true, telescopio: true },
   // Acompanhar
   { grupo: "Acompanhar", label: "Favoritos", cartao: maiuscula(FAVORITOS_ROTULO), recurso: "favoritos", lente: false, luneta: true, telescopio: true },
-  // o alerta por e-mail só entra na tabela quando existir (PRODUTO.alertaPraca)
+  // o alerta por e-mail entra na tabela com PRODUTO.alertaPraca (ligado pelo dono na rodada 5)
   ...(PRODUTO.alertaPraca
-    ? [{ grupo: "Acompanhar", label: "Alerta por e-mail quando muda a praça", cartao: maiuscula(FAVORITOS_ROTULO), lente: false, luneta: true, telescopio: true } as const]
+    ? [
+        {
+          grupo: "Acompanhar",
+          label: "Alerta por e-mail quando a praça de um favorito muda: 2ª praça, nova data ou novo lance mínimo",
+          cartao: maiuscula(FAVORITOS_ROTULO),
+          lente: false,
+          luneta: true,
+          telescopio: true,
+        } as const,
+      ]
     : []),
-  { grupo: "Acompanhar", label: "Prioridade para contato com advogado", lente: false, luneta: true, telescopio: true },
+  { grupo: "Acompanhar", label: "Prioridade para falar com um especialista", lente: false, luneta: true, telescopio: true },
   // Equipe: o Telescópio
   {
     grupo: "Equipe",
@@ -303,7 +349,6 @@ const FEATURES: readonly PlanFeature[] = [
     telescopio: true,
   },
   { grupo: "Equipe", label: "Vários usuários", lente: false, luneta: false, telescopio: true },
-  { grupo: "Equipe", label: "Suporte dedicado", lente: false, luneta: false, telescopio: true },
 ];
 
 export const PLANS = {
@@ -351,15 +396,16 @@ export const PLANS = {
   ],
   /** Linhas da tabela comparativa, em grupos (decisão da rodada 4: Lente = encontrar; Luneta = decidir). */
   features: FEATURES,
-  note: "Cancele quando quiser · [7] dias para cancelar.",
+  /** o selo de cancelamento vai perto de cada botão (CANCELAMENTO); a nota repete a regra inteira */
+  note: `${CANCELAMENTO.selo} depois de assinar. ${CANCELAMENTO.depois}`,
 } as const;
 
 export const LAWYER = {
-  eyebrow: "Consultoria com advogado",
+  eyebrow: "Consultoria com especialista",
   title: ["Achou a oportunidade? Fale com quem", "entende", "."],
-  text: "Antes de dar o lance, converse com um advogado especialista em leilões. Ele analisa o edital, os riscos e o caminho para a posse do imóvel. Peça o contato direto aqui.",
-  cta: "Quero falar com um advogado",
-  oab: "A publicidade de serviços jurídicos segue as regras da OAB.",
+  text: "Antes de dar o lance, converse com um especialista em leilões de imóveis. Ele analisa o edital, os riscos e o caminho para a posse do imóvel. Peça o contato direto aqui.",
+  cta: "Quero falar com um especialista",
+  oab: "Quando o especialista for advogado, a publicidade segue as regras da OAB.",
   steps: [
     { n: "01", title: "Análise do edital", text: "Regras do leilão, prazos, custos e condições de pagamento." },
     { n: "02", title: "Leitura dos riscos", text: "Ocupação, dívidas, matrícula e processos que podem pesar na decisão." },
@@ -373,9 +419,9 @@ export const SOCIAL = {
   launch: "Lançamento",
   launchText:
     "Os depoimentos desta seção serão de assinantes reais, com nome, foto e resultado. Nada inventado.",
-  guarantee: "[7] dias",
-  guaranteeTitle: "para cancelar.",
-  guaranteeText: "Assine, explore a base inteira e, se não fizer sentido, cancele dentro do prazo.",
+  guarantee: "7 dias",
+  guaranteeTitle: "para cancelar grátis.",
+  guaranteeText: "Assine, explore a base inteira e, se não fizer sentido, cancele grátis em até 7 dias depois de assinar.",
 } as const;
 
 export const FAQ = {
@@ -389,6 +435,19 @@ export const FAQ = {
     {
       q: "O que é primeira e segunda praça?",
       a: "Muitos leilões têm duas rodadas. Na primeira praça, o lance mínimo costuma partir do valor de avaliação. Se ninguém arremata, vem a segunda praça, em que o mesmo imóvel pode sair por até metade desse valor.",
+    },
+    // com o alerta por e-mail no marketing (PRODUTO.alertaPraca, ligado pelo dono na rodada 5)
+    ...(PRODUTO.alertaPraca
+      ? [
+          {
+            q: "Como recebo o aviso quando a praça muda?",
+            a: "No plano Luneta, toque no coração do imóvel para marcá-lo como favorito e ligue “Avisar por e-mail quando a praça mudar”. Quando a base for atualizada e o leilão tiver ido para a segunda praça (ou mudado de data ou de lance mínimo), você recebe um e-mail com o novo lance mínimo e a data. Confira sempre o edital: o leiloeiro pode mudar datas e condições.",
+          } as const,
+        ]
+      : []),
+    {
+      q: "Posso cancelar quando quiser?",
+      a: "Sim. Nos primeiros 7 dias depois de assinar, o cancelamento é grátis: é o direito de arrependimento das compras pela internet (Código de Defesa do Consumidor, art. 49). Depois desse prazo, você também pode cancelar quando quiser.",
     },
     {
       q: "Os leilões de todo o Brasil estão aqui?",
@@ -418,24 +477,11 @@ export const FAQ = {
     },
     {
       q: "A classificação, a nota e o simulador são garantia?",
-      a: "Não. As tags e os selos são uma análise automática dos dados de cada leilão; a nota de localização resume dados abertos do entorno; o simulador faz contas com premissas genéricas. Nada disso é garantia de resultado nem recomendação de investimento, e nada substitui a leitura do edital, a visita ao imóvel e a avaliação de um advogado. “Nenhum risco identificado” quer dizer que a análise não encontrou riscos nos dados disponíveis, não que eles não existam.",
-    },
-    // só quando o alerta por e-mail existir (PRODUTO.alertaPraca)
-    ...(PRODUTO.alertaPraca
-      ? [
-          {
-            q: "Como recebo os alertas de mudança de praça?",
-            a: "No plano Luneta, marque o leilão como favorito. Assim que ele for para a segunda praça, você recebe um e-mail com o novo lance mínimo e a data.",
-          } as const,
-        ]
-      : []),
-    {
-      q: "Posso cancelar quando quiser?",
-      a: "Sim. A assinatura pode ser cancelada quando você quiser, e você tem [7] dias para cancelar após a contratação.",
+      a: "Não. As tags e os selos são uma análise automática dos dados de cada leilão; a nota de localização resume dados abertos do entorno; o simulador faz contas com premissas genéricas. Nada disso é garantia de resultado nem recomendação de investimento, e nada substitui a leitura do edital, a visita ao imóvel e a avaliação de um especialista. “Nenhum risco identificado” quer dizer que a análise não encontrou riscos nos dados disponíveis, não que eles não existam.",
     },
     {
-      q: "Como falo com um advogado?",
-      a: "Peça o contato pelo botão “Quero falar com um advogado”. Assinantes Luneta e Telescópio têm prioridade no atendimento.",
+      q: "Como falo com um especialista?",
+      a: "Peça o contato pelo botão “Quero falar com um especialista”. Assinantes Luneta e Telescópio têm prioridade no atendimento.",
     },
   ],
 } as const;
@@ -453,6 +499,6 @@ export const FINAL_CTA = {
 
 export const FOOTER = {
   legal:
-    "As tags de risco e os selos Promissor, Na Mira e Alvo são uma análise baseada nos dados públicos de cada leilão. A classificação não é garantia de resultado e não substitui a avaliação de um advogado. “Nenhum risco identificado” significa que nossa análise não encontrou riscos nos dados disponíveis, não que eles não existam. O simulador faz contas com premissas genéricas e não é recomendação de investimento. A nota de localização resume dados abertos do entorno e não é avaliação do imóvel nem garantia. Preços, prazos e condições dos leilões podem mudar; confira sempre o edital oficial do leiloeiro. Dados pessoais tratados conforme a LGPD.",
+    "As tags de risco e os selos Promissor, Na Mira e Alvo são uma análise baseada nos dados públicos de cada leilão. A classificação não é garantia de resultado e não substitui a avaliação de um especialista. “Nenhum risco identificado” significa que nossa análise não encontrou riscos nos dados disponíveis, não que eles não existam. O simulador faz contas com premissas genéricas e não é recomendação de investimento. A nota de localização resume dados abertos do entorno e não é avaliação do imóvel nem garantia. Preços, prazos e condições dos leilões podem mudar; confira sempre o edital oficial do leiloeiro. Dados pessoais tratados conforme a LGPD.",
   company: "[Razão social] · CNPJ [X]",
 } as const;

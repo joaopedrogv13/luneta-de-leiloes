@@ -34,7 +34,7 @@ export const DECIDA = {
       icon: "doc",
       plano: "luneta",
       title: "Relatório em PDF",
-      text: "A simulação inteira num relatório em PDF, em folhas A4: resultado, cenários, custos linha a linha, preço da região e alertas. Para guardar, imprimir ou levar ao advogado.",
+      text: "A simulação inteira num relatório em PDF, em folhas A4: resultado, cenários, custos linha a linha, preço da região e alertas. Para guardar, imprimir ou levar a um especialista.",
     },
     {
       icon: "casa",
@@ -101,6 +101,9 @@ export const NOTA_LOCAL = {
     },
   ],
   more: "Como a nota é calculada",
+  demo: "Ver esta nota na demonstração",
+  /** a página do mesmo exemplo, já na seção da nota (a mesma nota 91 da miniatura) */
+  demoHref: "/assinante/imovel/ex-alvo-sp#localizacao",
   card: {
     /** "Melhor localizado que 91% dos moradores de São Paulo/SP" */
     frase: (nota: number, cidade: string) => `Melhor localizado que ${nota}% dos moradores de ${cidade}`,

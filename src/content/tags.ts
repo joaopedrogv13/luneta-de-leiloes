@@ -4,7 +4,7 @@
  * Os critérios exatos de cada tag devem ser validados com o advogado parceiro.
  *
  * `what` e `practice` alimentam o pop-up de explicação da seção "Tags de risco e selos":
- * linguagem simples, sem promessa, e sempre com a sugestão de conferir no edital ou com advogado
+ * linguagem simples, sem promessa, e sempre com a sugestão de conferir no edital ou com um especialista
  * quando fizer sentido. Revisar junto com os critérios.
  */
 export type Severity = "grave" | "atencao" | "positivo" | "info";
@@ -122,13 +122,13 @@ export const TAG_CATEGORIES: TagCategory[] = [
         label: "Ação judicial em curso",
         severity: "grave",
         what: "Existe um processo na Justiça que discute o imóvel ou o próprio leilão, como um pedido para anular a venda.",
-        practice: "Uma decisão pode atrasar a posse ou até desfazer a compra. Vale ler o processo com um advogado antes do lance.",
+        practice: "Uma decisão pode atrasar a posse ou até desfazer a compra. Vale ler o processo com um especialista antes do lance.",
       },
       {
         label: "Penhora de outros credores",
         severity: "grave",
         what: "Além da dívida que levou o imóvel a leilão, outros credores também bloquearam o imóvel na Justiça. Esse bloqueio se chama penhora.",
-        practice: "Muitas vezes essas penhoras são canceladas depois do leilão, mas isso pode levar tempo e gerar disputa. Confira com um advogado.",
+        practice: "Muitas vezes essas penhoras são canceladas depois do leilão, mas isso pode levar tempo e gerar disputa. Confira com um especialista.",
       },
       {
         label: "Leilão com recurso",
@@ -188,7 +188,7 @@ export const TAG_CATEGORIES: TagCategory[] = [
         label: "Só direitos sobre o imóvel",
         severity: "grave",
         what: "O leilão não vende o imóvel em si, mas os direitos de quem ainda o estava pagando, como num financiamento ou num contrato de compra.",
-        practice: "Você pode assumir parcelas e obrigações do contrato, e a escritura no seu nome pode demorar. Leia o edital com um advogado.",
+        practice: "Você pode assumir parcelas e obrigações do contrato, e a escritura no seu nome pode demorar. Leia o edital com um especialista.",
       },
     ],
   },

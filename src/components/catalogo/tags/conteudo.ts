@@ -91,7 +91,7 @@ const TEXTOS_EXEMPLO: Record<string, { what: string; practice: string; categoria
 const GENERICO: Record<Severidade, { oQueE: string; naPratica: string }> = {
   grave: {
     oQueE: "Ponto de risco sério encontrado no anúncio ou no edital deste imóvel.",
-    naPratica: "Entenda o que ele significa para este imóvel, de preferência com um advogado, antes de dar qualquer lance.",
+    naPratica: "Entenda o que ele significa para este imóvel, de preferência com um especialista, antes de dar qualquer lance.",
   },
   atencao: {
     oQueE: "Ponto que pede cuidado: pode trazer custo, prazo ou trabalho extra para quem arremata.",
