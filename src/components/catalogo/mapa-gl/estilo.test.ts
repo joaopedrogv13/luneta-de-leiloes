@@ -1,7 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateStyleMin } from "@maplibre/maplibre-gl-style-spec";
-import { ATRIBUICAO, CAMADAS, CORES_DESAGIO, estiloMapa, FONTES, ROTULOS_DESAGIO, type TemaMapa } from "./estilo";
+import { createPropertyExpression, featureFilter, latest, validateStyleMin } from "@maplibre/maplibre-gl-style-spec";
+import type { LayerSpecification } from "maplibre-gl";
+import {
+  ATRIBUICAO,
+  CAMADAS,
+  CORES_DESAGIO,
+  estiloMapa,
+  FONTES,
+  IMAGEM_BLOQUEIO,
+  RAIO_MAX_INCERTEZA,
+  raioPixelZ0,
+  ROTULOS_DESAGIO,
+  TAMANHO_BLOQUEIO,
+  type TemaMapa,
+} from "./estilo";
 
 const TEMAS: TemaMapa[] = ["claro", "escuro"];
 
@@ -59,6 +72,65 @@ test("estilo: camadas dos imóveis por cima da base, na fonte agrupada; aproxima
   assert.match(filtro(CAMADAS.preco), /\[0,1\]/);
   assert.match(filtro(CAMADAS.incerteza), /\[2\]/);
   assert.match(filtro(CAMADAS.cidade), /\[3\]/);
+});
+
+/** Avalia uma propriedade de pintura ou de layout de uma camada no zoom e no ponto dados (como o MapLibre faz). */
+function avaliar(camada: LayerSpecification, grupo: "paint" | "layout", nome: string, zoom: number, props: Record<string, unknown>) {
+  const especificacao = (latest as unknown as Record<string, Record<string, unknown>>)[`${grupo}_${camada.type}`]![nome];
+  const valor = (camada as unknown as Record<string, Record<string, unknown>>)[grupo]![nome];
+  const r = createPropertyExpression(valor as never, `layers.${camada.id}.${grupo}.${nome}`, especificacao as never);
+  assert.equal(r.result, "success", JSON.stringify(r.value));
+  return (r.value as { evaluate: (g: unknown, f: unknown) => number }).evaluate({ zoom }, { type: 1, properties: props });
+}
+
+test("incerteza: o círculo do bairro some de perto, antes de passar do raio máximo na tela; na página do imóvel, fica", () => {
+  const camada = estiloMapa("escuro").layers.find((l) => l.id === CAMADAS.incerteza)!;
+  const filtro = featureFilter((camada as { filter?: unknown }).filter as never, `layers.${camada.id}.filter`);
+  const r0 = raioPixelZ0(800, -22.9); // bairro com 800 m de raio, no Rio
+  const lugar = { nv: 2, n: 3, r0, sd: 0, nd: 0 };
+  const zoomDoRaio = (px: number) => Math.log2(px / r0);
+  const entra = (z: number, p: Record<string, unknown>) => filtro.filter({ zoom: z } as never, { type: 1, properties: p } as never);
+  const opacidade = (z: number, p: Record<string, unknown>) => avaliar(camada, "paint", "circle-opacity", z, p);
+  // de longe: aparece inteiro
+  const zPerto = zoomDoRaio(100);
+  assert.ok(entra(Math.floor(zPerto), lugar));
+  assert.ok(opacidade(Math.floor(zPerto), lugar) > 0.05);
+  // o filtro e a pintura valem por zoom inteiro (o do ladrilho; entre dois inteiros a placa de vídeo interpola): em
+  // cada inteiro, passou do máximo → fora do desenho e, onde um ladrilho de baixo ainda o traz, opacidade zero (some
+  // aos poucos, sem "pulo"); até o início do sumiço, inteiro
+  for (let z = 8; z <= 20; z++) {
+    const raio = r0 * 2 ** z;
+    assert.equal(entra(z, lugar), raio <= RAIO_MAX_INCERTEZA, `filtro no zoom ${z} (raio ${raio.toFixed(0)} px)`);
+    if (raio >= RAIO_MAX_INCERTEZA) assert.equal(opacidade(z, lugar), 0, `zoom ${z}`);
+    if (raio <= 140 && z <= 16) assert.ok(opacidade(z, lugar) >= 0.06, `zoom ${z}`);
+  }
+  assert.ok(!entra(Math.ceil(zoomDoRaio(RAIO_MAX_INCERTEZA + 1)), lugar));
+  // a página do imóvel (fx): o círculo fica em qualquer zoom
+  assert.ok(entra(18, { ...lugar, fx: 1 }));
+  assert.ok(opacidade(18, { ...lugar, fx: 1 }) > 0.03);
+  // e o rótulo "N imóveis no bairro" responde ao clique (é por ele que se abre o cartão de perto)
+  assert.equal(CAMADAS.bairro, "lu-bairro-n");
+});
+
+test("bolhas: a área que tira os nomes do fundo de baixo tem o tamanho da bolha (raio + borda), em todas as contagens", () => {
+  const e = estiloMapa("claro");
+  for (const [bolha, numero] of [
+    [CAMADAS.agrupamento, "lu-agrupamento-n"],
+    [CAMADAS.cidade, "lu-cidade-n"],
+  ] as const) {
+    const circulo = e.layers.find((l) => l.id === bolha)!;
+    const texto = e.layers.find((l) => l.id === numero)!;
+    for (const n of [1, 9, 10, 49, 120, 999, 4200, 12000]) {
+      const raio = avaliar(circulo, "paint", "circle-radius", 5, { n, sd: 0, nd: 0 });
+      const lado = avaliar(texto, "layout", "icon-size", 5, { n }) * TAMANHO_BLOQUEIO;
+      assert.ok(Math.abs(lado - 2 * (raio + 2.5)) < 1e-9, `${bolha} n=${n}`);
+    }
+    assert.equal((texto as { layout: Record<string, unknown> }).layout["icon-image"], IMAGEM_BLOQUEIO);
+    assert.equal((texto as { layout: Record<string, unknown> }).layout["icon-ignore-placement"], false);
+  }
+  // os nomes de cidade do fundo desviam (em vez de sumir embaixo da bolha)
+  const capital = e.layers.find((l) => l.id === "nome-capital") as { layout: Record<string, unknown> };
+  assert.deepEqual(capital.layout["text-variable-anchor"], ["center", "top", "bottom", "right", "left"]);
 });
 
 test("legenda: uma cor por faixa de deságio, nos dois temas", () => {

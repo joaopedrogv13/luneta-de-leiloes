@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { canonico } from "@/components/catalogo/app/consultas";
+import { filtrosEfetivos } from "@/lib/catalogo/filtros-rotulos";
 import { lerPontos, type PontosCompactos, type PontosLidos } from "@/lib/catalogo/pontos";
 import type { Conjunto, Filtros, ImovelResumo, Plano } from "@/lib/catalogo/tipos";
 import { escreverBusca } from "@/lib/catalogo/url";
@@ -17,11 +18,15 @@ import { escreverBusca } from "@/lib/catalogo/url";
 
 const API_PONTOS = "/api/catalogo/pontos";
 
-/** Consulta dos pontos (a chave do cache): conjunto, filtros sem a área do mapa e o plano. */
+/**
+ * Consulta dos pontos (a chave do cache): conjunto e os filtros que valem no plano, sem a área do mapa. O plano não vai
+ * (os pontos não têm nada da Luneta; os filtros dela já saíram aqui no Lente): trocar de Lente para Luneta sem filtro
+ * avançado não pede os pontos de novo, e a CDN guarda uma resposta só.
+ */
 export function consultaPontos(conjunto: Conjunto, filtros: Filtros, plano: Plano): string {
-  const f = canonico(filtros);
+  const f = canonico(filtrosEfetivos(filtros, plano, false));
   delete f.bbox;
-  return escreverBusca({ conjunto, filtros: f, plano }).toString();
+  return escreverBusca({ conjunto, filtros: f }).toString();
 }
 
 const cache = new Map<string, PontosLidos>();

@@ -39,6 +39,8 @@ export function featureDoImovel(i: {
       nd: temDesagio ? 1 : 0,
       r0: raio > 0 ? raioPixelZ0(raio, i.lat) : 0,
       rot: rotuloLugar({ n: 1, lanceMin: i.lance }),
+      // um só: o círculo do bairro fica em qualquer zoom (no catálogo, de perto, ele some)
+      fx: 1,
     },
   };
 }

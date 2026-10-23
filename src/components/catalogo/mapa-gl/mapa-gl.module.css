@@ -3,8 +3,9 @@
   Brasil em SVG; os controles do próprio MapLibre (créditos e escala) ganham as cores e a fonte do site.
 */
 .mapa {
-  --g-vidro: rgba(15, 24, 48, 0.88);
-  --g-vidro-borda: rgba(142, 155, 181, 0.26);
+  /* um tom acima da terra do mapa (#0e1630): a superfície se destaca do fundo, como um cartão por cima */
+  --g-vidro: rgba(26, 37, 70, 0.9);
+  --g-vidro-borda: rgba(142, 155, 181, 0.32);
   --g-sombra: 0 12px 34px rgba(0, 0, 0, 0.42);
   --g-fundo: #0e1630;
   background: var(--g-fundo);
@@ -65,8 +66,12 @@
   outline-offset: -3px;
 }
 
-/* créditos (sempre abertos) e escala nas cores do site */
-.mapa :global(.maplibregl-ctrl-attrib) {
+/*
+  Créditos (sempre abertos) e escala nas cores do site. Os seletores repetem as duas classes do MapLibre: a folha dele
+  chega depois (com o código do mapa) e, com a mesma força, ganharia (fundo branco translúcido, texto quase preto: no
+  tema escuro os créditos sumiam).
+*/
+.mapa :global(.maplibregl-ctrl.maplibregl-ctrl-attrib) {
   background: var(--g-vidro);
   color: var(--nevoa);
   font: 500 11px/1.35 var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -74,13 +79,18 @@
   border-radius: 10px 0 0 0;
   max-width: calc(100vw - 140px);
 }
-.mapa :global(.maplibregl-ctrl-attrib a) {
+.mapa :global(.maplibregl-ctrl.maplibregl-ctrl-attrib a) {
   color: var(--nevoa);
   text-decoration: none;
 }
-.mapa :global(.maplibregl-ctrl-attrib a:hover) {
+.mapa :global(.maplibregl-ctrl.maplibregl-ctrl-attrib a:hover) {
   color: var(--luar);
   text-decoration: underline;
+}
+/* no celular, a folha da lista cobre o pé do mapa: créditos e escala sobem para cima dela */
+.mapa :global(.maplibregl-ctrl-bottom-right),
+.mapa :global(.maplibregl-ctrl-bottom-left) {
+  bottom: var(--folga-baixo, 0px);
 }
 .mapa :global(.maplibregl-ctrl-bottom-right .maplibregl-ctrl) {
   margin: 0;

@@ -113,7 +113,7 @@ export function FolhaMapa({
             type="button"
             onClick={() => irPara(posicao === "espiada" ? "cheia" : "espiada")}
             aria-expanded={posicao !== "espiada"}
-            className="sticky top-0 z-10 flex w-full cursor-pointer flex-col items-center gap-2 rounded-t-[28px] bg-noite/95 px-4 pt-2.5 pb-3 backdrop-blur-md"
+            className="sticky top-0 z-10 flex w-full cursor-pointer flex-col items-center gap-2 rounded-t-[28px] bg-noite px-4 pt-2.5 pb-3"
           >
             <span aria-hidden="true" className="h-1.5 w-10 rounded-full bg-nevoa/40" />
             <span className="flex w-full items-center justify-between gap-3 text-left">

@@ -187,6 +187,39 @@ export const PREFIXO_PILULA = "lu-pilula-";
 const PILULA: ExpressionSpecification = ["concat", PREFIXO_PILULA, ["to-string", FAIXA]];
 
 /**
+ * Imagem transparente (quadrado de TAMANHO_BLOQUEIO px, gerada pelo mapa) sob a contagem das bolhas: ocupa o lugar da
+ * bolha na disputa por espaço dos rótulos, e o nome da cidade do mapa de fundo desvia para o lado (ou some) em vez de
+ * ficar escondido embaixo dela ("Rio d(1)eiro").
+ */
+export const IMAGEM_BLOQUEIO = "lu-bloqueio";
+export const TAMANHO_BLOQUEIO = 32;
+
+/** Raio (px) da bolha pela quantidade de imóveis: [raio inicial, n1, raio1, n2, raio2...] (como no `step`). */
+const RAIO_BOLHA_AGRUPAMENTO = [14, 10, 16, 50, 19, 200, 22, 1000, 25, 5000, 28] as const;
+const RAIO_BOLHA_CIDADE = [12, 10, 14, 50, 17, 200, 20] as const;
+const BORDA_BOLHA = 2.5;
+
+/** O `step` do raio pela quantidade (`n`), com uma conta em cada degrau (o raio, o tamanho do bloqueio...). */
+function porQuantidade(degraus: readonly number[], conta: (raio: number) => number): ExpressionSpecification {
+  const [primeiro, ...resto] = degraus;
+  const saida: (number | ExpressionSpecification)[] = [conta(primeiro!)];
+  for (let k = 0; k < resto.length; k += 2) saida.push(resto[k]!, conta(resto[k + 1]!));
+  return ["step", ["get", "n"], ...saida] as unknown as ExpressionSpecification;
+}
+const tamanhoBloqueio = (degraus: readonly number[]) => porQuantidade(degraus, (r) => (2 * (r + BORDA_BOLHA)) / TAMANHO_BLOQUEIO);
+
+/**
+ * Círculo de incerteza (bairro) só até este raio na tela (px): de perto ele passaria da tela, sem dizer mais nada (o
+ * imóvel está em algum lugar da tela inteira), e dezenas deles, um sobre o outro, pesam na placa de vídeo do celular
+ * (no Rio, no zoom 16, eram 169 círculos com raio mediano de 760 px; 2 quadros por segundo na medição do Actions).
+ * Filtro e opacidade valem por zoom inteiro (o do ladrilho; no meio, a placa de vídeo interpola): de INICIO_SUMIR até
+ * este raio ele vai sumindo e, no zoom inteiro em que passa dele, já está transparente e sai do desenho. O rótulo
+ * "N imóveis no bairro" continua no centro (e abre o cartão). Na página do imóvel (um só, `fx`), o círculo fica sempre.
+ */
+export const RAIO_MAX_INCERTEZA = 220;
+const INICIO_SUMIR = 140;
+
+/**
  * Raio de um círculo em METROS na tela (px), com um mínimo: `r0` (px no zoom 0, calculado por ponto com a latitude:
  * raioPixelZ0) × 2^zoom. Paradas a cada 2 zooms (exatas na curva; o mínimo só vale perto do zoom em que ele aparece).
  */
@@ -194,6 +227,25 @@ function raioEmMetros(minimoPx: number): DataDrivenPropertyValueSpecification<nu
   const paradas: (number | ExpressionSpecification)[] = [];
   for (let z = 0; z <= 24; z += 2) paradas.push(z, ["max", minimoPx, ["*", ["get", "r0"], 2 ** z]]);
   return ["interpolate", ["exponential", 2], ["zoom"], ...paradas] as unknown as DataDrivenPropertyValueSpecification<number>;
+}
+
+/**
+ * Opacidade do círculo de incerteza: a do zoom (de `em10` no zoom 10 a `em16` no 16) × o quanto falta para o círculo
+ * chegar a RAIO_MAX_INCERTEZA na tela (some entre INICIO_SUMIR e ele). Uma parada por zoom inteiro (a mesma conta do
+ * filtro, que só entra no desenho o que ainda não passou do máximo); `fx` (página do imóvel) não some.
+ */
+function opacidadeIncerteza(em10: number, em16: number): DataDrivenPropertyValueSpecification<number> {
+  const paradas: (number | ExpressionSpecification)[] = [];
+  for (let z = 0; z <= 22; z++) {
+    const base = z <= 10 ? em10 : z >= 16 ? em16 : em10 + ((em16 - em10) * (z - 10)) / 6;
+    const falta: ExpressionSpecification = [
+      "min",
+      1,
+      ["max", ["coalesce", ["get", "fx"], 0], ["/", ["-", RAIO_MAX_INCERTEZA, ["*", ["get", "r0"], 2 ** z]], RAIO_MAX_INCERTEZA - INICIO_SUMIR]],
+    ];
+    paradas.push(z, ["*", Math.round(base * 1000) / 1000, falta]);
+  }
+  return ["interpolate", ["linear"], ["zoom"], ...paradas] as unknown as DataDrivenPropertyValueSpecification<number>;
 }
 
 /** Contagem curta no agrupamento: "8", "950", "1,2 mil", "21 mil" (como contagemCurta, em src/lib/catalogo/pontos.ts). */
@@ -212,6 +264,12 @@ const solto = (niveis: number[]): ExpressionSpecification => ["all", ["!", ["has
 // ---------------------------------------------------------------------------
 // Base
 // ---------------------------------------------------------------------------
+
+/**
+ * Nomes de lugares do fundo que desviam das bolhas dos imóveis: no centro quando cabem; se uma bolha (ou um balão) estiver
+ * em cima, vão para cima, para baixo ou para o lado; sem espaço, somem (nunca ficam cortados embaixo de uma bolha).
+ */
+const DESVIA = { "text-variable-anchor": ["center", "top", "bottom", "right", "left"], "text-radial-offset": 1.3 } satisfies SymbolLayerSpecification["layout"];
 
 function camadasBase(p: PaletaBase): LayerSpecification[] {
   const s = "openmaptiles";
@@ -245,12 +303,12 @@ function camadasBase(p: PaletaBase): LayerSpecification[] {
     // pontos de interesse discretos: estações (trem, metrô) a partir do 13; os demais, só de perto e só o nome
     { id: "estacao", type: "symbol", source: s, "source-layer": "poi", minzoom: 13, filter: ["==", ["get", "class"], "rail"], layout: { "text-field": NOME_LOCAL, "text-font": FONTE_ITALICO, "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10.5, 17, 12.5], "text-max-width": 8, "text-anchor": "top", "text-optional": true }, paint: texto(p.textoEstacao) },
     { id: "poi", type: "symbol", source: s, "source-layer": "poi", minzoom: 16, filter: ["all", ["!=", ["get", "class"], "rail"], ["<=", ["get", "rank"], 20]], layout: { "text-field": NOME_LOCAL, "text-font": FONTE_ITALICO, "text-size": 11, "text-max-width": 8 }, paint: texto(p.textoPoi) },
-    { id: "nome-bairro", type: "symbol", source: s, "source-layer": "place", minzoom: 11, filter: ["match", ["get", "class"], ["suburb", "quarter", "neighbourhood"], true, false], layout: { "text-field": NOME_PT, "text-font": FONTE, "text-size": ["interpolate", ["linear"], ["zoom"], 11, 10, 15, 12.5], "text-transform": "uppercase", "text-letter-spacing": 0.12, "text-max-width": 7 }, paint: texto(p.textoBairro, 1.4) },
-    { id: "nome-vila", type: "symbol", source: s, "source-layer": "place", minzoom: 10, filter: ["match", ["get", "class"], ["village", "hamlet"], true, false], layout: { "text-field": NOME_PT, "text-font": FONTE, "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10.5, 14, 13], "text-max-width": 8 }, paint: texto(p.textoCidade) },
-    { id: "nome-cidade", type: "symbol", source: s, "source-layer": "place", minzoom: 5, filter: ["all", ["==", ["get", "class"], "town"]], layout: { "text-field": NOME_PT, "text-font": FONTE, "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10.5, 12, 15], "text-max-width": 8 }, paint: texto(p.textoCidade, 1.5) },
-    { id: "nome-cidade-grande", type: "symbol", source: s, "source-layer": "place", minzoom: 3, filter: ["all", ["==", ["get", "class"], "city"], ["!=", ["get", "capital"], 2]], layout: { "text-field": NOME_PT, "text-font": FONTE, "text-size": ["interpolate", ["linear"], ["zoom"], 3, 11, 8, 14, 12, 18], "text-max-width": 8 }, paint: texto(p.textoCidade, 1.6) },
+    { id: "nome-bairro", type: "symbol", source: s, "source-layer": "place", minzoom: 11, filter: ["match", ["get", "class"], ["suburb", "quarter", "neighbourhood"], true, false], layout: { ...DESVIA, "text-field": NOME_PT, "text-font": FONTE, "text-size": ["interpolate", ["linear"], ["zoom"], 11, 10, 15, 12.5], "text-transform": "uppercase", "text-letter-spacing": 0.12, "text-max-width": 7 }, paint: texto(p.textoBairro, 1.4) },
+    { id: "nome-vila", type: "symbol", source: s, "source-layer": "place", minzoom: 10, filter: ["match", ["get", "class"], ["village", "hamlet"], true, false], layout: { ...DESVIA, "text-field": NOME_PT, "text-font": FONTE, "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10.5, 14, 13], "text-max-width": 8 }, paint: texto(p.textoCidade) },
+    { id: "nome-cidade", type: "symbol", source: s, "source-layer": "place", minzoom: 5, filter: ["all", ["==", ["get", "class"], "town"]], layout: { ...DESVIA, "text-field": NOME_PT, "text-font": FONTE, "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10.5, 12, 15], "text-max-width": 8 }, paint: texto(p.textoCidade, 1.5) },
+    { id: "nome-cidade-grande", type: "symbol", source: s, "source-layer": "place", minzoom: 3, filter: ["all", ["==", ["get", "class"], "city"], ["!=", ["get", "capital"], 2]], layout: { ...DESVIA, "text-field": NOME_PT, "text-font": FONTE, "text-size": ["interpolate", ["linear"], ["zoom"], 3, 11, 8, 14, 12, 18], "text-max-width": 8 }, paint: texto(p.textoCidade, 1.6) },
     { id: "nome-estado", type: "symbol", source: s, "source-layer": "place", minzoom: 4, maxzoom: 8, filter: ["==", ["get", "class"], "state"], layout: { "text-field": NOME_PT, "text-font": FONTE, "text-size": ["interpolate", ["linear"], ["zoom"], 4, 9.5, 7, 12], "text-transform": "uppercase", "text-letter-spacing": 0.18, "text-max-width": 8 }, paint: texto(p.textoEstado) },
-    { id: "nome-capital", type: "symbol", source: s, "source-layer": "place", minzoom: 3, filter: ["all", ["==", ["get", "class"], "city"], ["==", ["get", "capital"], 2]], layout: { "text-field": NOME_PT, "text-font": FONTE_NEGRITO, "text-size": ["interpolate", ["linear"], ["zoom"], 3, 12, 8, 15, 12, 20], "text-max-width": 8 }, paint: texto(p.textoCidade, 1.6) },
+    { id: "nome-capital", type: "symbol", source: s, "source-layer": "place", minzoom: 3, filter: ["all", ["==", ["get", "class"], "city"], ["==", ["get", "capital"], 2]], layout: { ...DESVIA, "text-field": NOME_PT, "text-font": FONTE_NEGRITO, "text-size": ["interpolate", ["linear"], ["zoom"], 3, 12, 8, 15, 12, 20], "text-max-width": 8 }, paint: texto(p.textoCidade, 1.6) },
     { id: "nome-pais", type: "symbol", source: s, "source-layer": "place", maxzoom: 7, filter: ["==", ["get", "class"], "country"], layout: { "text-field": NOME_PT, "text-font": FONTE_NEGRITO, "text-size": ["interpolate", ["linear"], ["zoom"], 1, 10, 5, 15], "text-max-width": 7, "text-transform": "uppercase", "text-letter-spacing": 0.15 }, paint: texto(p.textoPais) },
   ];
 }
@@ -266,6 +324,8 @@ export const CAMADAS = {
   preco: "lu-preco",
   cidade: "lu-cidade",
   incerteza: "lu-incerteza",
+  /** "N imóveis no bairro" (de perto, quando o círculo já sumiu, é por ele que se abre o cartão) */
+  bairro: "lu-bairro-n",
 } as const;
 
 /** Fontes de dados dos imóveis (GeoJSON) e do destaque (o imóvel sob o mouse na lista ou no mapa). */
@@ -273,8 +333,8 @@ export const FONTES = { imoveis: "imoveis", destaque: "destaque" } as const;
 
 /** Até este zoom os lugares se agrupam; do 14 em diante, cada lugar aparece sozinho (as ruas já estão à vista). */
 export const ZOOM_MAX_AGRUPAMENTO = 13;
-/** Raio do agrupamento (px). */
-export const RAIO_AGRUPAMENTO = 42;
+/** Raio do agrupamento (px): com as bolhas de até 28 px de raio, quase não se encostam. */
+export const RAIO_AGRUPAMENTO = 50;
 /** Os preços aparecem nos pontos a partir deste zoom. */
 export const ZOOM_PRECOS = 14;
 
@@ -287,15 +347,20 @@ function camadasImoveis(tema: TemaMapa): LayerSpecification[] {
     id: CAMADAS.incerteza,
     type: "circle",
     source: FONTES.imoveis,
-    filter: solto([2]),
+    // o zoom no filtro vale por ladrilho (zoom inteiro): de perto, os círculos grandes nem entram no desenho
+    filter: [
+      "all",
+      solto([2]),
+      ["any", ["==", ["coalesce", ["get", "fx"], 0], 1], ["<=", ["*", ["get", "r0"], ["^", 2, ["zoom"]]], RAIO_MAX_INCERTEZA]],
+    ],
     paint: {
       "circle-radius": raioEmMetros(7),
       "circle-color": fundo,
-      // de perto o círculo cobre a tela: fica mais transparente para as ruas aparecerem por baixo
-      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 10, tema === "escuro" ? 0.2 : 0.24, 16, 0.05],
+      // de perto o círculo cobre muito: fica mais transparente para as ruas aparecerem por baixo, e some antes de passar da tela
+      "circle-opacity": opacidadeIncerteza(tema === "escuro" ? 0.2 : 0.24, 0.06),
       "circle-stroke-color": fundo,
       "circle-stroke-width": 1.5,
-      "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0.85, 16, 0.35],
+      "circle-stroke-opacity": opacidadeIncerteza(0.85, 0.4),
       "circle-pitch-alignment": "map",
     },
   };
@@ -306,23 +371,33 @@ function camadasImoveis(tema: TemaMapa): LayerSpecification[] {
     filter: agrupado,
     paint: {
       "circle-color": fundo,
-      "circle-radius": ["step", ["get", "n"], 14, 10, 17, 50, 20, 200, 24, 1000, 29, 5000, 34],
+      "circle-radius": porQuantidade(RAIO_BOLHA_AGRUPAMENTO, (r) => r),
       "circle-stroke-color": c.borda,
-      "circle-stroke-width": 2.5,
+      "circle-stroke-width": BORDA_BOLHA,
       "circle-stroke-opacity": tema === "escuro" ? 0.9 : 1,
     },
   };
+  // a contagem sempre aparece; a imagem transparente do tamanho da bolha tira os nomes do fundo de baixo dela
+  const bloqueio = (degraus: readonly number[]) =>
+    ({
+      "icon-image": IMAGEM_BLOQUEIO,
+      "icon-size": tamanhoBloqueio(degraus),
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": false,
+      "icon-padding": 1,
+      "text-allow-overlap": true,
+      "text-ignore-placement": false,
+    }) as const;
   const agrupamentoN: SymbolLayerSpecification = {
     id: "lu-agrupamento-n",
     type: "symbol",
     source: FONTES.imoveis,
     filter: agrupado,
     layout: {
+      ...bloqueio(RAIO_BOLHA_AGRUPAMENTO),
       "text-field": CONTAGEM,
       "text-font": FONTE_NEGRITO,
-      "text-size": ["step", ["get", "n"], 12, 1000, 12.5, 5000, 13.5],
-      "text-allow-overlap": true,
-      "text-ignore-placement": true,
+      "text-size": ["step", ["get", "n"], 12, 1000, 12, 5000, 13],
     },
     paint: { "text-color": porFaixa(c.texto) },
   };
@@ -334,9 +409,9 @@ function camadasImoveis(tema: TemaMapa): LayerSpecification[] {
     paint: {
       "circle-color": c.cidadeFundo,
       "circle-opacity": 0.94,
-      "circle-radius": ["step", ["get", "n"], 12, 10, 14, 50, 17, 200, 20],
+      "circle-radius": porQuantidade(RAIO_BOLHA_CIDADE, (r) => r),
       "circle-stroke-color": fundo,
-      "circle-stroke-width": 2.5,
+      "circle-stroke-width": BORDA_BOLHA,
     },
   };
   const cidadeN: SymbolLayerSpecification = {
@@ -344,7 +419,7 @@ function camadasImoveis(tema: TemaMapa): LayerSpecification[] {
     type: "symbol",
     source: FONTES.imoveis,
     filter: solto([3]),
-    layout: { "text-field": CONTAGEM, "text-font": FONTE_NEGRITO, "text-size": 11.5, "text-allow-overlap": true, "text-ignore-placement": true },
+    layout: { ...bloqueio(RAIO_BOLHA_CIDADE), "text-field": CONTAGEM, "text-font": FONTE_NEGRITO, "text-size": 11.5 },
     paint: { "text-color": textoCidade },
   };
   const cidadeRotulo: SymbolLayerSpecification = {
@@ -365,7 +440,7 @@ function camadasImoveis(tema: TemaMapa): LayerSpecification[] {
   };
   // no centro do círculo do bairro: quantos imóveis ele tem (de perto, com "no bairro", para o número não parecer um ponto)
   const bairroN: SymbolLayerSpecification = {
-    id: "lu-bairro-n",
+    id: CAMADAS.bairro,
     type: "symbol",
     source: FONTES.imoveis,
     filter: solto([2]),
@@ -494,6 +569,8 @@ export interface PropsLugar {
   r0: number;
   /** texto do balão de preço */
   rot: string;
+  /** 1 = imóvel sozinho (página do imóvel): o círculo de incerteza não some de perto */
+  fx?: number;
 }
 
 export { raioPixelZ0 };

@@ -202,7 +202,7 @@ export default function MapaGL(props: PropsMapaGL) {
       }
     });
 
-    const interativas = [CAMADAS.preco, CAMADAS.ponto, CAMADAS.cidade, CAMADAS.agrupamento, CAMADAS.incerteza];
+    const interativas = [CAMADAS.preco, CAMADAS.ponto, CAMADAS.cidade, CAMADAS.agrupamento, CAMADAS.bairro, CAMADAS.incerteza];
     const acharFeature = (e: MapMouseEvent): MapGeoJSONFeature | null => {
       const camadas = interativas.filter((id) => mapa.getLayer(id));
       const achadas = mapa.queryRenderedFeatures(e.point, { layers: camadas });
@@ -368,6 +368,8 @@ export default function MapaGL(props: PropsMapaGL) {
   return (
     <div
       className={`${s.mapa} relative h-full w-full overflow-hidden ${props.className ?? ""}`}
+      // créditos e escala do MapLibre acima da folha da lista (celular), sempre à vista
+      style={{ "--folga-baixo": `${folga.baixo}px` } as React.CSSProperties}
       onKeyDown={(e) => {
         if (e.key === "Escape" && ativo) {
           e.stopPropagation();

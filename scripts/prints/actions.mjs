@@ -34,7 +34,11 @@ async function playwright() {
 }
 
 const { chromium } = await playwright();
-const navegador = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+// a rasterização da página na CPU: com ela no SwiftShader, o Chromium sem GPU deixava faixas brancas (ladrilhos não
+// pintados) na folha da lista do celular; o WebGL do mapa continua no SwiftShader
+const navegador = await chromium.launch({
+  args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--disable-gpu-rasterization"],
+});
 const relatorio = [];
 const log = (...x) => {
   const linha = x.map((v) => (typeof v === "string" ? v : JSON.stringify(v))).join(" ");
@@ -90,7 +94,10 @@ const TEMAS = ["escuro", "claro"];
 const VISTAS = [
   { nome: "brasil", url: "/previa?vista=mapa" },
   { nome: "capital-sp", url: "/previa?vista=mapa&centro=-23.55,-46.63&zoom=11.3" },
-  { nome: "rua-rj-z16", url: "/previa?vista=mapa&centro=-22.794,-43.572&zoom=16" },
+  // Nova Iguaçu: muitos imóveis com o número (os balões de preço e os nomes das ruas)
+  { nome: "rua-rj-z16", url: "/previa?vista=mapa&centro=-22.7955,-43.5775&zoom=16" },
+  // centro do Rio no zoom 15: os círculos dos bairros já sumindo e os rótulos "N imóveis no bairro"
+  { nome: "bairros-rj-z15", url: "/previa?vista=mapa&centro=-22.9068,-43.1729&zoom=15" },
 ];
 
 if (roteiro === "mapa" || roteiro === "tudo") {
@@ -153,31 +160,42 @@ if (roteiro === "mapa" || roteiro === "tudo") {
     await ctx.close();
   });
 
-  // ---- página do imóvel: a seção Localização com o mapa ----
-  for (const [largura, altura] of [
-    [1440, 900],
-    [390, 844],
-  ]) {
-    for (const tema of TEMAS) {
-      await passo(`imóvel ${largura} ${tema}`, async () => {
-        const { ctx, pagina, erros } = await abrir({ largura, altura, tema, url: "/previa/imovel/caixa-1444419640129" });
-        await pagina.waitForSelector("#localizacao", { timeout: 30000 });
-        // chega perto do mapa (ele só carrega a 500 px da tela)
-        await pagina.evaluate(async () => {
-          const alvo = document.querySelector("#localizacao");
-          alvo.scrollIntoView({ block: "start" });
-          await new Promise((ok) => setTimeout(ok, 400));
-          const mapa = alvo.querySelector("[class*='rounded-3xl'][class*='h-[300px]']");
-          mapa?.scrollIntoView({ block: "center" });
+  // ---- página do imóvel: a seção Localização com o mapa (endereço no número e só no bairro) ----
+  const IMOVEIS = [
+    { nome: "numero", id: "caixa-1444419640129" },
+    { nome: "bairro", id: "caixa-0000010207569" },
+  ];
+  for (const im of IMOVEIS) {
+    for (const [largura, altura] of [
+      [1440, 900],
+      [390, 844],
+    ]) {
+      for (const tema of TEMAS) {
+        // o do bairro: só um tamanho e um tema por tamanho (o círculo é o que importa)
+        if (im.nome === "bairro" && tema !== (largura < 800 ? "claro" : "escuro")) continue;
+        await passo(`imóvel ${im.nome} ${largura} ${tema}`, async () => {
+          const { ctx, pagina, erros } = await abrir({ largura, altura, tema, url: `/previa/imovel/${im.id}` });
+          await pagina.waitForSelector("#localizacao", { timeout: 30000 });
+          // chega perto do mapa (ele só carrega a 500 px da tela)
+          await pagina.evaluate(async () => {
+            const alvo = document.querySelector("#localizacao");
+            alvo.scrollIntoView({ block: "start" });
+            await new Promise((ok) => setTimeout(ok, 400));
+            const mapa = alvo.querySelector("[class*='rounded-3xl'][class*='h-[300px]']");
+            mapa?.scrollIntoView({ block: "center" });
+          });
+          await esperarMapa(pagina, "#localizacao .maplibregl-canvas");
+          const sufixo = im.nome === "numero" ? "" : `-${im.nome}`;
+          await pagina.screenshot({ path: join(SAIDA, `imovel-mapa${sufixo}-${largura}-${tema}.png`) });
+          if (im.nome === "numero") {
+            await pagina.evaluate(() => window.scrollTo(0, 0));
+            await pagina.waitForTimeout(800);
+            await pagina.screenshot({ path: join(SAIDA, `imovel-topo-${largura}-${tema}.png`) });
+          }
+          log("     ", erros.length ? `erros: ${erros.slice(0, 4).join(" | ")}` : "sem erros");
+          await ctx.close();
         });
-        await esperarMapa(pagina, "#localizacao .maplibregl-canvas");
-        await pagina.screenshot({ path: join(SAIDA, `imovel-mapa-${largura}-${tema}.png`) });
-        await pagina.evaluate(() => window.scrollTo(0, 0));
-        await pagina.waitForTimeout(800);
-        await pagina.screenshot({ path: join(SAIDA, `imovel-topo-${largura}-${tema}.png`) });
-        log("     ", erros.length ? `erros: ${erros.slice(0, 4).join(" | ")}` : "sem erros");
-        await ctx.close();
-      });
+      }
     }
   }
 

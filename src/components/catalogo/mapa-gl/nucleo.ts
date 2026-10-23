@@ -6,7 +6,7 @@
  * Só entra nos pedaços de código do mapa (carregados sob demanda): importa maplibre-gl.
  */
 import { AttributionControl, getVersion, Map as MapaML, ScaleControl, setWorkerUrl, type MapOptions, type StyleSpecification } from "maplibre-gl";
-import { CORES_DESAGIO, estiloMapa, FONTES, PREFIXO_PILULA, type TemaMapa } from "./estilo";
+import { CORES_DESAGIO, estiloMapa, FONTES, IMAGEM_BLOQUEIO, PREFIXO_PILULA, TAMANHO_BLOQUEIO, type TemaMapa } from "./estilo";
 
 let workerPronto = false;
 
@@ -80,6 +80,11 @@ export function abrirMapa(container: HTMLElement, opcoes: Partial<MapOptions> & 
   mapa.addControl(new ScaleControl({ unit: "metric", maxWidth: 96 }), "bottom-left");
   // os balões de preço são desenhados aqui (sem sprite): o mapa pede quando um aparece pela primeira vez
   mapa.setMissingStyleImageResolver((id) => {
+    if (id === IMAGEM_BLOQUEIO) {
+      // transparente: só ocupa o lugar da bolha na disputa por espaço dos rótulos
+      if (!mapa.hasImage(id)) mapa.addImage(id, { width: TAMANHO_BLOQUEIO, height: TAMANHO_BLOQUEIO, data: new Uint8Array(TAMANHO_BLOQUEIO * TAMANHO_BLOQUEIO * 4) });
+      return;
+    }
     const faixa = id.startsWith(PREFIXO_PILULA) ? Number(id.slice(PREFIXO_PILULA.length)) : NaN;
     if (Number.isInteger(faixa) && !mapa.hasImage(id)) {
       const img = imagemPilula(temaAtual.get(mapa) ?? tema, faixa);
