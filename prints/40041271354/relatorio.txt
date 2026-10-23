@@ -1,0 +1,76 @@
+      {"url":"/previa?vista=mapa&centro=-17.88606%2C-43.34396&zoom=3.58","zoom":"3.58","lista":"Resultados, página 1 de 885"} 
+ok   mapa brasil 1440 escuro (7.3 s)
+      {"url":"/previa?vista=mapa&centro=-17.88606%2C-43.34396&zoom=3.58","zoom":"3.58","lista":"Resultados, página 1 de 885"} 
+ok   mapa brasil 1440 claro (5.1 s)
+      {"url":"/previa?vista=mapa&centro=-21.75056%2C-42.68274&zoom=3.06","zoom":"3.06","lista":"Resultados, página 1 de 885"} 
+ok   mapa brasil 390 escuro (5.0 s)
+      {"url":"/previa?vista=mapa&centro=-21.75056%2C-42.68274&zoom=3.06","zoom":"3.06","lista":"Resultados, página 1 de 885"} 
+ok   mapa brasil 390 claro (4.8 s)
+      {"url":"/previa?vista=mapa&centro=-23.55%2C-46.63&zoom=11.3","zoom":"11.30","lista":"Resultados, página 1 de 885"} 
+ok   mapa capital-sp 1440 escuro (5.0 s)
+      {"url":"/previa?vista=mapa&centro=-23.55%2C-46.63&zoom=11.3","zoom":"11.30","lista":"Resultados, página 1 de 885"} 
+ok   mapa capital-sp 1440 claro (5.0 s)
+      {"url":"/previa?vista=mapa&centro=-23.55%2C-46.63&zoom=11.3","zoom":"11.30","lista":"Resultados, página 1 de 885"} 
+ok   mapa capital-sp 390 escuro (4.4 s)
+      {"url":"/previa?vista=mapa&centro=-23.55%2C-46.63&zoom=11.3","zoom":"11.30","lista":"Resultados, página 1 de 885"} 
+ok   mapa capital-sp 390 claro (4.3 s)
+      {"url":"/previa?vista=mapa&centro=-22.7955%2C-43.5775&zoom=16","zoom":"16.00","lista":"Resultados, página 1 de 885"} 
+ok   mapa rua-rj-z16 1440 escuro (5.1 s)
+      {"url":"/previa?vista=mapa&centro=-22.7955%2C-43.5775&zoom=16","zoom":"16.00","lista":"Resultados, página 1 de 885"} 
+ok   mapa rua-rj-z16 1440 claro (5.0 s)
+      {"url":"/previa?vista=mapa&centro=-22.7955%2C-43.5775&zoom=16","zoom":"16.00","lista":"Resultados, página 1 de 885"} 
+ok   mapa rua-rj-z16 390 escuro (4.0 s)
+      {"url":"/previa?vista=mapa&centro=-22.7955%2C-43.5775&zoom=16","zoom":"16.00","lista":"Resultados, página 1 de 885"} 
+ok   mapa rua-rj-z16 390 claro (4.1 s)
+      {"url":"/previa?vista=mapa&centro=-22.9068%2C-43.1729&zoom=15","zoom":"15.00","lista":"Resultados, página 1 de 885"} 
+ok   mapa bairros-rj-z15 1440 escuro (5.0 s)
+      {"url":"/previa?vista=mapa&centro=-22.9068%2C-43.1729&zoom=15","zoom":"15.00","lista":"Resultados, página 1 de 885"} 
+ok   mapa bairros-rj-z15 1440 claro (5.0 s)
+      {"url":"/previa?vista=mapa&centro=-22.9068%2C-43.1729&zoom=15","zoom":"15.00","lista":"Resultados, página 1 de 885"} 
+ok   mapa bairros-rj-z15 390 escuro (4.4 s)
+      {"url":"/previa?vista=mapa&centro=-22.9068%2C-43.1729&zoom=15","zoom":"15.00","lista":"Resultados, página 1 de 885"} 
+ok   mapa bairros-rj-z15 390 claro (4.3 s)
+ok   cartão no mapa escuro (9.1 s)
+ok   cartão no mapa claro (9.1 s)
+ok   folha do celular (6.0 s)
+      sem erros
+ok   imóvel numero 1440 escuro (7.6 s)
+      sem erros
+ok   imóvel numero 1440 claro (7.3 s)
+      sem erros
+ok   imóvel numero 390 escuro (6.8 s)
+      sem erros
+ok   imóvel numero 390 claro (6.7 s)
+      sem erros
+ok   imóvel bairro 1440 escuro (5.0 s)
+      sem erros
+ok   imóvel bairro 390 claro (4.4 s)
+ok   assinante 1440 (6.2 s)
+ok   assinante 390 (6.3 s)
+      {"centro":"-23.550,-46.630","zoom":"11.30","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"} {"visivel":true,"texto":"OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap"}
+ok   tela 844x390 escuro (4.1 s)
+      {"centro":"-22.796,-43.578","zoom":"16.00","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"} {"visivel":true,"texto":"OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap"}
+ok   tela 844x390 claro (3.9 s)
+      {"centro":"-23.550,-46.630","zoom":"11.30","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"} {"visivel":false,"texto":"OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap"}
+ok   tela 1366x768 escuro (4.9 s)
+      {"centro":"-18.222,-42.770","zoom":"3.12","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"} {"visivel":false,"texto":"OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap"}
+ok   tela 1366x768 claro (4.7 s)
+ok   casas z17.6 escuro (4.8 s)
+ok   casas z17.6 claro (4.9 s)
+      {"centro":"-17.886,-43.344","zoom":"3.58","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"}
+ok   abrir o Brasil 1440 (5.0 s)
+      {"centro":"-21.751,-42.683","zoom":"3.06","bbox":null,"q":null,"lista":"Resultados, página 1 de 885","contagem":"21.229 imóveis"}
+ok   abrir o Brasil 390 (4.6 s)
+      antes -22.796,-43.578 16.00 139 depois -22.796,-43.578 16.00 139
+ok   tema com o mapa aberto (7.4 s)
+      arrastou {"centro":"-23.550,-46.548","zoom":"11.00","bbox":"-46.6965,-23.65618,-46.40022,-23.44374","q":null,"lista":"Resultados, página 1 de 13","contagem":"21.229 imóveis"}
+      recife   {"centro":"-8.055,-34.906","zoom":"10.92","bbox":null,"q":"Recife","lista":"Resultados, página 1 de 2","contagem":"21.229 imóveis"}
+      voltou   {"centro":"-23.550,-46.548","zoom":"11.00","bbox":"-46.6965,-23.65618,-46.40022,-23.44374","q":null,"lista":"Resultados, página 1 de 13","contagem":"21.229 imóveis"}
+ok   voltar no histórico (16.8 s)
+      {"pedidoDosPontos":"http://localhost:3000/api/catalogo/pontos?conjunto=previa&q=casa+2+quartos&plano=lente","noMapa":7893,"contagem":"21.229 imóveis"}
+ok   Lente: 2 quartos na busca (5.0 s)
+ok   imóvel na rua (5.0 s)
+      tarefas longas (ms) depois de cada parada: [[216,100],[50,50,50],[96,74]]
+ok   parada com a lista (CPU 4x) (14.7 s)
+     desempenho {"ateOsPontosMs":3738,"comImoveis":{"zoomBrasilAteSP":{"fps":16,"p95ms":183,"longas":2},"arrastoSPateRio":{"fps":6,"p95ms":300,"longas":0},"zoomAteRua":{"fps":2,"p95ms":1683,"longas":1}},"semImoveis":{"zoomBrasilAteSP":{"fps":16,"p95ms":133,"longas":0},"arrastoSPateRio":{"fps":8,"p95ms":233,"longas":0},"zoomAteRua":{"fps":4,"p95ms":483,"longas":0}},"porCamada":{"todasDeNovo":{"fps":10,"p95ms":183,"longas":0,"duracoesLongas":[]},"semPrecos":{"fps":11,"p95ms":217,"longas":0,"duracoesLongas":[]},"semSimbolos":{"fps":11,"p95ms":150,"longas":0,"duracoesLongas":[]},"semCirculos":{"fps":11,"p95ms":150,"longas":0,"duracoesLongas":[]},"nenhuma":{"fps":12,"p95ms":150,"longas":0,"duracoesLongas":[]},"todasDeNovo2":{"fps":11,"p95ms":250,"longas":0,"duracoesLongas":[]}},"setDataAteDesenharMs":476,"lugares":9741,"webgl":"WebKit WebGL","pedidoDosPontos":{"ms":10,"bytesDescomprimidos":538624,"codificacao":"br"}}
+ok   desempenho (45.9 s)
