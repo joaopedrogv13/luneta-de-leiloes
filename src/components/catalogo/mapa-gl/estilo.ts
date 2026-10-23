@@ -333,8 +333,8 @@ export const FONTES = { imoveis: "imoveis", destaque: "destaque" } as const;
 
 /** Até este zoom os lugares se agrupam; do 14 em diante, cada lugar aparece sozinho (as ruas já estão à vista). */
 export const ZOOM_MAX_AGRUPAMENTO = 13;
-/** Raio do agrupamento (px): com as bolhas de até 28 px de raio, quase não se encostam. */
-export const RAIO_AGRUPAMENTO = 50;
+/** Raio do agrupamento (px): com as bolhas de até 28 px de raio, quase não se encostam (com 50, no celular, sim). */
+export const RAIO_AGRUPAMENTO = 60;
 /** Os preços aparecem nos pontos a partir deste zoom. */
 export const ZOOM_PRECOS = 14;
 

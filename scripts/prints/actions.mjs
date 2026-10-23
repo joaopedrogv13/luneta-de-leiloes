@@ -4,7 +4,8 @@
  * escolhido, com o `next start` na porta 3000). Grava PNGs e o log em prints-saida/.
  *
  *   node scripts/prints/actions.mjs mapa      # vista de mapa, página do imóvel, /assinante, desempenho
- *   node scripts/prints/actions.mjs tudo      # o mesmo (o único roteiro, por enquanto)
+ *   node scripts/prints/actions.mjs tudo      # o mesmo
+ *   node scripts/prints/actions.mjs desempenho  # só a medição (quadros por segundo, tarefas longas, camada por camada)
  *
  * O Chromium do runner não tem GPU: o WebGL roda no SwiftShader (na CPU). Os números de quadros por segundo daqui são
  * piores que os de qualquer celular com GPU; o que vale é a comparação com e sem as camadas dos imóveis (o custo que o
@@ -214,7 +215,9 @@ if (roteiro === "mapa" || roteiro === "tudo") {
       await ctx.close();
     });
   }
+}
 
+if (roteiro === "mapa" || roteiro === "tudo" || roteiro === "desempenho") {
   // ---- desempenho: quadros no zoom e no arrasto (com e sem as camadas dos imóveis), setData, os pontos ----
   await passo("desempenho", async () => {
     const t0 = Date.now();
@@ -263,13 +266,36 @@ if (roteiro === "mapa" || roteiro === "tudo") {
       camadas.forEach((id) => m.setLayoutProperty(id, "visibility", "none"));
       const semImoveis = await percurso();
       camadas.forEach((id) => m.setLayoutProperty(id, "visibility", "visible"));
+      // o zoom até a rua no Rio, de novo (ladrilhos já baixados), e escondendo um grupo de camadas por vez: quem pesa
+      const simbolos = camadas.filter((id) => m.getLayer(id).type === "symbol");
+      const circulos = camadas.filter((id) => m.getLayer(id).type === "circle");
+      const ateRua = async (esconder) => {
+        esconder.forEach((id) => m.setLayoutProperty(id, "visibility", "none"));
+        m.jumpTo({ center: [-43.2, -22.9], zoom: 12 });
+        await ocioso();
+        const n0 = longas.length;
+        m.easeTo({ zoom: 16, duration: 1500 });
+        const r = await quadros(1600);
+        r.duracoesLongas = longas.slice(n0).map(Math.round);
+        await ocioso();
+        esconder.forEach((id) => m.setLayoutProperty(id, "visibility", "visible"));
+        return r;
+      };
+      const porCamada = {
+        todasDeNovo: await ateRua([]),
+        semPrecos: await ateRua(["lu-preco"]),
+        semSimbolos: await ateRua(simbolos),
+        semCirculos: await ateRua(circulos),
+        nenhuma: await ateRua(camadas),
+        todasDeNovo2: await ateRua([]),
+      };
       const fonte = m.getSource("imoveis");
       const dados = fonte.serialize().data;
       const t1 = performance.now();
       fonte.setData(dados);
       await new Promise((ok) => m.once("idle", ok));
       const setDataAteDesenharMs = Math.round(performance.now() - t1);
-      return { comImoveis, semImoveis, setDataAteDesenharMs, lugares: dados.features.length, webgl: m.painter?.context?.gl?.getParameter?.(0x1f01) ?? "?" };
+      return { comImoveis, semImoveis, porCamada, setDataAteDesenharMs, lugares: dados.features.length, webgl: m.painter?.context?.gl?.getParameter?.(0x1f01) ?? "?" };
     });
     const r = await pagina.evaluate(async () => {
       const t = performance.now();

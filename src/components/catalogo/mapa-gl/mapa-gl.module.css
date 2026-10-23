@@ -88,9 +88,12 @@
   text-decoration: underline;
 }
 /* no celular, a folha da lista cobre o pé do mapa: créditos e escala sobem para cima dela */
-.mapa :global(.maplibregl-ctrl-bottom-right),
-.mapa :global(.maplibregl-ctrl-bottom-left) {
+.mapa :global(.maplibregl-ctrl-bottom-right) {
   bottom: var(--folga-baixo, 0px);
+}
+/* no mapa pequeno (página do imóvel) os créditos ocupam a largura toda: a escala fica acima deles */
+.mapa :global(.maplibregl-ctrl-bottom-left) {
+  bottom: calc(var(--folga-baixo, 0px) + var(--folga-escala, 0px));
 }
 .mapa :global(.maplibregl-ctrl-bottom-right .maplibregl-ctrl) {
   margin: 0;

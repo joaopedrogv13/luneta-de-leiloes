@@ -7,7 +7,9 @@ plano Luneta ("Decida com números", "Nota de localização", tabela de planos e
 prévia no celular, tablet e celular deitado; coleta no PC do dono pronta; **a trava dos planos pronta**: no Lente, cada
 recurso da Luneta vira uma chamada no mesmo lugar, e os filtros avançados ficam com cadeado; ver "Rodada 4 · a trava dos
 planos"; **revisão final da rodada 4**: 44 achados de três revisores corrigidos ou anotados, a landing sem promessa que o
-produto ainda não cumpre e a nota recalculada; ver "Rodada 4 · revisão final").
+produto ainda não cumpre e a nota recalculada; ver "Rodada 4 · revisão final"). Rodada 5 (23/10/2026): **mapa de
+verdade** no catálogo e na página do imóvel (ruas, agrupamentos, preços de perto, "Buscar ao mover o mapa"); ver "Rodada 5
+· mapa de verdade".
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
@@ -1237,6 +1239,91 @@ o commit da trava dos planos (D1). Conferido com `next start` (porta 3330), Play
 - [ ] Testar a trava no `<body>` no Safari do iPhone (a propagação do overflow é a mesma do `<html>`, mas não houve iPhone).
 - [ ] Recálculo da nota encadeado na atualização da base (hoje manual; o texto diz isso).
 - [ ] O relatório ainda cresce ~45 px quando a simulação adiada chega (CLS 0,006).
+
+### Rodada 5 · mapa de verdade (23/10/2026)
+
+Pedido (ponto 14): "um carinho maior com o mapa": filtrar os casos conforme o zoom, mostrar o nome da rua de perto,
+estado da arte, responsivo e rápido. Feito com **MapLibre GL JS 6.15.0** (código aberto, BSD) e os ladrilhos vetoriais
+do **OpenFreeMap** (grátis, sem chave). `package.json` e `package-lock.json` ganharam `maplibre-gl`.
+
+**O que mudou para quem usa:**
+- **Vista "Mapa" no catálogo** (/previa e /assinante, Lente e Luneta), ao lado de Lista e Cards (`?vista=mapa`). Fundo
+  claro e escuro nas cores do site, nomes em português; trocar o tema não mexe na câmera nem recarrega os imóveis.
+- **De longe, agrupamentos** com a contagem ("1,4 mil") e a cor do deságio médio (legenda embaixo); **de perto (zoom 14+),
+  cada endereço com o lance num balão** ("R$ 43 mil", ou "3 imóveis" no mesmo prédio). Nomes das avenidas a partir do
+  zoom 13, das ruas a partir do 14,5, número das casas a partir do 17,5; estações de trem e metrô a partir do 13; os demais
+  pontos de interesse, discretos, a partir do 16. Os nomes de cidade do fundo desviam das bolhas (não ficam cortados).
+- **"Buscar ao mover o mapa"** (ligado por padrão): a lista ao lado mostra só os imóveis da área visível (filtro `bbox`
+  na URL, aplicado no servidor, nos dois planos). Desligado: "Buscar nesta área" e "Ver a busca inteira (N)". O centro e
+  o zoom vão na URL (`centro=lat,lon&zoom=`): o link e o "voltar" reabrem o mesmo lugar.
+- **Cartão do lugar:** ao passar o mouse (foto, lance, deságio, bairro, link) e preso ao clicar ou tocar. O mouse num
+  cartão da lista acende o ponto no mapa, e o lugar no mapa acende os cartões da lista.
+- **Precisão do endereço, nunca um alfinete falso:** no número ou na rua, o ponto; **só o bairro**, um círculo ("em algum
+  ponto do círculo"), que some de perto e deixa o rótulo "N imóveis no bairro"; **só a cidade**, o marcador "sem
+  endereço exato" no centro, com "N imóveis sem endereço exato em <cidade>" e "Ver os N na lista" no cartão.
+- **Botões:** aproximar, afastar, ver o Brasil e "minha região" (localização do navegador, só ao clicar; a posição não é
+  enviada ao site). Teclado: setas, + e −, Esc fecha o cartão. Leitor de tela: o mapa tem descrição, e a lista é a
+  alternativa completa.
+- **Celular:** o mapa ocupa a tela abaixo da barra e a lista fica numa folha que se puxa (espiada, meio, cheia); pinça e
+  arrasto no mapa. Créditos e escala sempre acima da folha.
+- **Sem WebGL** (ou se a placa de vídeo derrubar o mapa): o mapa do Brasil em SVG de antes.
+- **Página do imóvel:** a seção Localização ganhou o mapa de verdade (só baixa quando a seção chega perto), com o ponto
+  e o lance, ou o círculo do bairro (desenhado em qualquer zoom), ou o marcador da cidade. A roda do mouse rola a página
+  (Ctrl/⌘ + roda aproxima); no toque, dois dedos movem o mapa. "Ver o ponto no OpenStreetMap" continua.
+
+**Como funciona (técnico):**
+- `GET /api/catalogo/pontos` (os mesmos filtros da lista, sem a área) devolve os **lugares** (imóveis no mesmo ponto e
+  precisão juntos), em ordem de Morton, latitude e longitude em diferenças × 100.000, lance em centenas. Brasil inteiro:
+  **9.741 lugares, 537 KB de JSON, 182 KB em gzip, 161 KB em brotli**; ~50 ms no servidor na primeira vez e ~5 ms depois
+  (cache por instância). Compressão feita na rota (o `next start` não comprime rotas). `/api/catalogo/pontos/itens`
+  devolve os imóveis de um lugar (até 40), com a versão da lista (409 se ela mudou).
+- **Peso:** o MapLibre (1.057 KB, **287 KB em gzip**) e o worker dele (519 KB, 147 KB em gzip, servido pelo próprio site
+  em `/mapa/maplibre-gl-worker.mjs`) só baixam na vista de mapa ou perto do mapa da página do imóvel. Conferido no build
+  de produção: a landing, a lista, os cards e o topo da página do imóvel não baixam nada do mapa.
+- **Desempenho:** os pontos entram no mapa (`setData`) só quando os filtros mudam; arrastar e aproximar não passam pelo
+  React (o MapLibre desenha na placa de vídeo e agrupa num worker); o cartão preso acompanha o mapa mexendo só na posição;
+  a área visível sai uma vez por movimento. O círculo do bairro some entre 140 e 220 px de raio e sai do desenho por
+  zoom: no Rio, no zoom 16, eram 169 círculos com raio mediano de 760 px, um sobre o outro.
+- **Medição no Actions** (Chromium sem placa de vídeo: o WebGL roda no SwiftShader, na CPU, e os quadros por segundo são
+  piores que os de qualquer celular; vale a comparação com e sem as camadas dos imóveis):
+
+  | Percurso (1440×900) | 1ª rodada (40033977496): com imóveis / sem | Depois da correção (40036326671): com / sem |
+  | --- | --- | --- |
+  | Brasil → São Paulo (voo de 3 s) | 16 / 12 quadros/s | [X] |
+  | arrasto São Paulo → Rio (2 s) | 6 / 8 | [X] |
+  | Rio, zoom 12 → 16 (1,5 s) | **2** / 12 (1 tarefa de 1,9 s) | [X] |
+
+  Na 1ª rodada: pontos na tela 2,7 s depois de abrir a página; `setData` dos 9.741 lugares até desenhar, 793 ms; pedido
+  dos pontos, 14 ms (538 KB, brotli).
+- **Prints:** `git push -f origin HEAD:acoes-mapa` e `gh workflow run site-prints.yml --ref acoes-mapa -f roteiro=mapa`
+  (roteiro em `scripts/prints/actions.mjs`); os PNGs e o `relatorio.txt` vão para o branch `coletas-dados`, pasta
+  `prints/<id da rodada>/`. Daqui (este ambiente) a rede não chega aos ladrilhos; no Actions, sim.
+
+**OpenFreeMap: termos e endereços (conferidos em 23/10/2026, openfreemap.org):**
+- Grátis, sem chave, sem cadastro, sem limite de uso e sem cookies; uso comercial permitido (FAQ: "Yes").
+- Pede a atribuição "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" (a parte do OpenFreeMap é opcional). O site
+  mostra, sempre aberta no canto do mapa: "OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap", com os links.
+- Termos: serviço "como está", sem garantia, e **pode acabar a qualquer momento**; servido pela Cloudflare; lei da Hungria.
+  Privacidade: dizem não guardar o IP nos registros de acesso.
+- Endereços usados: `https://tiles.openfreemap.org/planet` (TileJSON; ladrilhos em `/planet/<versão>/{z}/{x}/{y}.pbf`) e
+  `https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf` (Noto Sans). Sem sprite (os balões são desenhados na hora).
+  O estilo é nosso, feito a partir do Positron do OpenFreeMap (BSD-3 / CC BY 4.0).
+
+**Decisões suas:**
+- [ ] **Política de privacidade:** citar o OpenFreeMap. O navegador do visitante pede os ladrilhos direto a eles (via
+  Cloudflare), o que entrega o IP e a região vista no mapa; "minha região" usa a localização do navegador só ao clicar.
+- [ ] **Doação ao OpenFreeMap** (o projeto vive de doações e pede apoio de quem usa em produção) ou plano pago de reserva.
+- [ ] Vista padrão: hoje a lista (ou cards, a que ficou salva); o mapa é um modo de explorar que entra no histórico (o
+  "voltar" volta à lista) e não vira a preferência salva. Abrir no mapa por padrão em algum caso?
+
+**Falta (técnico):**
+- [ ] **Plano B dos ladrilhos:** se o OpenFreeMap sair do ar, o mapa avisa "As ruas do mapa não carregaram agora" e os
+  imóveis continuam no lugar. Alternativas: os mesmos ladrilhos do Brasil num arquivo PMTiles (Protomaps) num
+  armazenamento nosso, ou um serviço pago (MapTiler, Stadia).
+- [ ] **Testar num celular de verdade** (o Actions não tem placa de vídeo; aqui a rede não chega aos ladrilhos).
+- [ ] O worker do MapLibre sai sem compressão no `next start` (na Vercel a CDN comprime).
+- [ ] O print da folha do celular no Chromium sem placa de vídeo saía com faixas brancas (partes da página não pintadas
+  pelo SwiftShader); com a rasterização na CPU (como no roteiro agora) some. Conferir num celular.
 
 ### Ler cada leilão com IA: é viável?
 

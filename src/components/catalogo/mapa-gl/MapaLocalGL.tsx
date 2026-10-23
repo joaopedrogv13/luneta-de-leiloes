@@ -103,7 +103,10 @@ export default function MapaLocalGL({
   };
 
   return (
-    <div className={`${s.mapa} relative h-[300px] overflow-hidden rounded-3xl border border-nevoa/20 sm:h-[320px]`}>
+    <div
+      className={`${s.mapa} relative h-[300px] overflow-hidden rounded-3xl border border-nevoa/20 sm:h-[320px]`}
+      style={{ "--folga-escala": "20px" } as React.CSSProperties}
+    >
       <div className="absolute inset-0">
         <div ref={caixa} className="h-full w-full" />
       </div>
