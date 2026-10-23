@@ -1,10 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useMidia } from "../app/hooks";
 import { IconeLista, IconeMapa } from "../cartoes/icones";
 
 /** Quanto da folha aparece embaixo com o mapa aberto (o título e o começo do primeiro cartão). */
 export const ESPIADA = 132;
+/**
+ * Com pouco espaço para o mapa (celular deitado: ~210 px entre a barra e o pé da tela), a folha espia só o título: com
+ * 132 px ela cobria mais da metade do mapa, e os botões e os créditos ficavam embaixo dela.
+ */
+export const ESPIADA_BAIXA = 78;
+/**
+ * Tela baixa (celular deitado; a barra de filtros ocupa ~180 px): a espiada baixa. Por consulta de mídia, e não pela
+ * altura medida, para a folha já nascer na altura certa (medida depois, ela pulava: CLS de 0,02 a 0,03). A altura da
+ * folga (CSS) e a do mapa (JS) seguem a mesma consulta.
+ */
+const CONSULTA_TELA_BAIXA = "(max-height: 600px)";
 
 type Posicao = "espiada" | "meio" | "cheia";
 
@@ -20,7 +32,8 @@ export function FolhaMapa({
   barra,
   children,
 }: {
-  mapa: ReactNode;
+  /** o mapa, com a altura da espiada (a folga de baixo dele: créditos, escala e enquadramento acima da folha) */
+  mapa: (espiada: number) => ReactNode;
   titulo: ReactNode;
   /** a barra de filtros: o mapa começa logo abaixo dela (onde ela estiver na tela) */
   barra: RefObject<HTMLElement | null>;
@@ -30,9 +43,12 @@ export function FolhaMapa({
   const meio = useRef<HTMLDivElement>(null);
   const [posicao, setPosicao] = useState<Posicao>("espiada");
   const [topo, setTopo] = useState<number | null>(null);
+  const espiada = useMidia(CONSULTA_TELA_BAIXA, false) ? ESPIADA_BAIXA : ESPIADA;
 
-  // o mapa começa onde a barra termina (com o cabeçalho à vista no topo da página, ou a barra colada no alto)
-  useEffect(() => {
+  // o mapa começa onde a barra termina (com o cabeçalho à vista no topo da página, ou a barra colada no alto). A primeira
+  // medida sai antes da pintura (efeito de layout): medida num quadro depois, a folha nascia no topo padrão e descia
+  // ~120 px (CLS de até 0,1 no tablet)
+  useLayoutEffect(() => {
     const el = barra.current;
     if (!el) return;
     let quadro = 0;
@@ -43,7 +59,7 @@ export function FolhaMapa({
     const pedir = () => {
       if (!quadro) quadro = requestAnimationFrame(medir);
     };
-    pedir();
+    medir();
     const ro = new ResizeObserver(pedir);
     ro.observe(el);
     window.addEventListener("resize", pedir);
@@ -97,14 +113,15 @@ export function FolhaMapa({
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[25] top-[var(--topo-h)]" style={topo !== null ? { top: topo } : undefined}>
-      <div className="absolute inset-0">{mapa}</div>
+      <div className="absolute inset-0">{mapa(espiada)}</div>
       <div
         ref={rolo}
         className="pointer-events-none absolute inset-0 snap-y snap-mandatory overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {/* duas alturas de encaixe acima da folha: espiada (topo) e meio */}
         <div aria-hidden="true" className="h-[45%] snap-start" />
-        <div ref={meio} aria-hidden="true" className="h-[calc(55%-132px)] snap-start" />
+        {/* a espiada (ESPIADA, ESPIADA_BAIXA) em CSS, pela mesma consulta de CONSULTA_TELA_BAIXA */}
+        <div ref={meio} aria-hidden="true" className="h-[calc(55%-132px)] snap-start [@media(max-height:600px)]:h-[calc(55%-78px)]" />
         <section
           aria-label="Imóveis da área do mapa"
           className="pointer-events-auto relative min-h-full snap-start rounded-t-[28px] border-t border-nevoa/15 bg-noite shadow-[0_-16px_44px_rgba(0,0,0,.42)] [[data-theme=light]_&]:shadow-[0_-12px_36px_rgba(15,24,48,.16)]"

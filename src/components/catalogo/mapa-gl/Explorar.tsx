@@ -10,6 +10,7 @@ import { usePontos } from "./dados";
 import { mesmaArea } from "./geojson";
 import type { Folga } from "./MapaGL";
 import s from "./mapa-gl.module.css";
+import { temWebGL } from "./webgl";
 
 /** O MapLibre (~280 KB comprimidos) só é baixado quando a vista de mapa abre: nunca na lista nem na landing. */
 const carregarMapaGL = () => import("./MapaGL");
@@ -64,6 +65,9 @@ function useAoMover(): boolean {
 /** Espera depois que a câmera para, antes de buscar a área: aproximar com a roda dá vários "parou" seguidos. */
 const ESPERA_AREA = 280;
 
+/** O WebGL do navegador não muda durante a visita: nada a assinar (useSyncExternalStore só lê, no navegador). */
+const semAvisos = () => () => {};
+
 /**
  * A vista de mapa do catálogo, sem o MapLibre (este módulo entra no app; o mapa vem sob demanda): pede os pontos de
  * todos os imóveis filtrados (em paralelo com o código do mapa), liga a lista ao mapa ("Buscar ao mover o mapa", com
@@ -74,6 +78,7 @@ export function Explorar({
   plano,
   filtros,
   camera,
+  cameraRestaurada,
   folga,
   compacto,
   loja,
@@ -90,6 +95,8 @@ export function Explorar({
   filtros: Filtros;
   /** câmera da URL (só na abertura) */
   camera: CameraMapa | null;
+  /** voltar/avançar no navegador: a câmera daquela entrada (o mapa aberto pula para ela) */
+  cameraRestaurada?: CameraMapa | null;
   folga: Folga;
   compacto: boolean;
   loja: LojaDestaque;
@@ -111,10 +118,20 @@ export function Explorar({
     () => null,
   );
 
-  // baixa o código do mapa já (junto com os pontos, não depois deles)
+  /**
+   * O navegador desenha WebGL? (null: ainda não perguntado; só no navegador). O mapa só é desenhado (e o código dele,
+   * ~290 KB comprimidos, só é baixado) depois do sim; sem WebGL, quem chama mostra o mapa do Brasil em SVG.
+   */
+  const comGL = useSyncExternalStore(semAvisos, temWebGL, () => null);
+  const falhou = useRef(onFalhou);
   useEffect(() => {
-    void carregarMapaGL();
-  }, []);
+    falhou.current = onFalhou;
+  });
+  useEffect(() => {
+    if (comGL === false) falhou.current();
+    // baixa o código do mapa já (junto com os pontos, não depois deles)
+    else if (comGL) void carregarMapaGL();
+  }, [comGL]);
 
   const ultimaArea = useRef<CaixaGeo | null>(null);
   const espera = useRef(0);
@@ -125,9 +142,12 @@ export function Explorar({
   });
   useEffect(() => () => window.clearTimeout(espera.current), []);
 
-  const onMover = useCallback((c: CameraMapa, area: CaixaGeo) => {
+  const onMover = useCallback((c: CameraMapa, area: CaixaGeo, daPessoa: boolean) => {
     atual.current.onCamera(c);
     ultimaArea.current = area;
+    // o enquadramento automático (abrir, lugar novo, voltar no histórico, tela que muda) não muda a lista: ele corta as
+    // pontas dos resultados (e, no celular, parte do Brasil). Só o movimento da pessoa vira a área (movimentoDaPessoa).
+    if (!daPessoa) return;
     window.clearTimeout(espera.current);
     if (atual.current.aoMover) {
       espera.current = window.setTimeout(() => {
@@ -154,25 +174,31 @@ export function Explorar({
   const onDestaqueIds = useCallback((ids: string[] | null) => loja.definirIdsDoMapa(ids), [loja]);
 
   return (
-    <div className="relative h-full w-full">
-      <MapaGL
-        conjunto={conjunto}
-        plano={plano}
-        pontos={pontos}
-        carregando={carregando}
-        erroPontos={erro}
-        onTentarPontos={tentarDeNovo}
-        camera={camera}
-        chaveEnquadrar={chaveEnquadrar}
-        folga={folga}
-        onMover={onMover}
-        destaque={destaque}
-        onDestaqueIds={onDestaqueIds}
-        hrefImovel={hrefImovel}
-        onFiltrarCidade={onFiltrarCidade}
-        onFalhou={onFalhou}
-        compacto={compacto}
-      />
+    <div id="mapa-explorar" className="relative h-full w-full">
+      {!comGL ? (
+        <Espera />
+      ) : (
+        <MapaGL
+          conjunto={conjunto}
+          plano={plano}
+          pontos={pontos}
+          carregando={carregando}
+          erroPontos={erro}
+          onTentarPontos={tentarDeNovo}
+          camera={camera}
+          areaInicial={filtros.bbox ?? null}
+          cameraRestaurada={cameraRestaurada ?? null}
+          chaveEnquadrar={chaveEnquadrar}
+          folga={folga}
+          onMover={onMover}
+          destaque={destaque}
+          onDestaqueIds={onDestaqueIds}
+          hrefImovel={hrefImovel}
+          onFiltrarCidade={onFiltrarCidade}
+          onFalhou={onFalhou}
+          compacto={compacto}
+        />
+      )}
 
       {/* "Buscar ao mover o mapa" (ligado por padrão) e, desligado, "Buscar nesta área" depois de mexer */}
       <div className="pointer-events-none absolute left-3 z-10 flex max-w-[calc(100%-80px)] flex-wrap items-center gap-2" style={{ top: folga.cima + 12 }}>

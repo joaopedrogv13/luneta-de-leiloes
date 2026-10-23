@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { filtrosIguais } from "../../../lib/catalogo/filtros-rotulos";
 import { lerBusca } from "../../../lib/catalogo/url";
-import { canonico, chaveMapa, consultaContagem, consultaLista, consultaMapa, enderecoPagina } from "./consultas";
+import { canonico, chaveMapa, consultaContagem, consultaLista, consultaMapa, consultaPontos, enderecoPagina } from "./consultas";
 
 const pedido = { filtros: { uf: ["SP", "MG"], tipo: ["casa" as const, "apartamento" as const], lanceMax: 300000 }, ordem: "lance-asc" as const, pagina: 2, plano: "luneta" as const };
 
@@ -35,6 +35,21 @@ test("mapa: não muda com página, ordem nem com o plano quando não há filtro 
   const q = new URLSearchParams(consultaMapa("previa", { uf: ["MG"] }, "luneta"));
   assert.equal(q.get("porPagina"), "1");
   assert.equal(q.get("mapa"), null, "o mapa vem junto");
+});
+
+test("mapa e pontos do Lente: '2 quartos' na busca não vira filtro da Luneta (o plano vai junto)", () => {
+  // sem filtro que dependa do plano, Lente e Luneta pedem a mesma coisa (a CDN guarda uma só)
+  assert.equal(consultaPontos("previa", { q: "casa", uf: ["MG"] }, "lente"), consultaPontos("previa", { q: "casa", uf: ["MG"] }, "luneta"));
+  // "N quartos" no texto é o filtro de quartos da Luneta: no Lente o servidor precisa saber o plano para ignorá-lo
+  const lente = new URLSearchParams(consultaPontos("previa", { q: "casa 2 quartos" }, "lente"));
+  assert.equal(lente.get("plano"), "lente");
+  assert.equal(lerBusca(lente).plano, "lente", "o servidor lê o Lente");
+  assert.equal(new URLSearchParams(consultaPontos("previa", { q: "casa 2 quartos" }, "luneta")).get("plano"), null);
+  assert.notEqual(chaveMapa("previa", { q: "casa 2 quartos" }, "lente", true), chaveMapa("previa", { q: "casa 2 quartos" }, "luneta", true));
+  // a área do mapa nunca vai nos pontos (o mapa mostra tudo; a lista segue a área)
+  assert.equal(new URLSearchParams(consultaPontos("previa", { bbox: [-47, -24, -46, -23] }, "luneta")).get("bbox"), null);
+  // filtro da Luneta no Lente sai dos pontos (o servidor também o ignora)
+  assert.equal(new URLSearchParams(consultaPontos("previa", { comTags: ["ocupado"] }, "lente")).get("comTags"), null);
 });
 
 test("contagem: uma página de 1, sem mapa", () => {

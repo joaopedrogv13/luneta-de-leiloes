@@ -4,13 +4,23 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { GeoJSONSource, Map as MapaML, MapGeoJSONFeature, MapMouseEvent } from "maplibre-gl";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { numero, plural } from "@/lib/catalogo/rotulos";
-import { raioPixelZ0, type LugarMapa, type PontosLidos } from "@/lib/catalogo/pontos";
+import type { LugarMapa, PontosLidos } from "@/lib/catalogo/pontos";
 import type { CaixaGeo, Conjunto, Plano } from "@/lib/catalogo/tipos";
 import type { CameraMapa } from "@/lib/catalogo/url";
 import { CartaoLugar } from "./CartaoLugar";
 import { esquecerPontos } from "./dados";
 import { CAMADAS, CORES_DESAGIO, FONTES, ROTULOS_DESAGIO, ZOOM_MAX_AGRUPAMENTO, type TemaMapa } from "./estilo";
-import { CAIXA_BRASIL, caixaDaTela, caixaDosLugares, geojsonDosLugares, textoPrecisao } from "./geojson";
+import {
+  CAIXA_BRASIL,
+  caixaDaTela,
+  caixaDosLugares,
+  DA_PESSOA,
+  featuresDoDestaque,
+  geojsonDosLugares,
+  movimentoDaPessoa,
+  textoPrecisao,
+  type DestaqueDaLista,
+} from "./geojson";
 import s from "./mapa-gl.module.css";
 import { abrirMapa, seguirTema, temaDoSite, temWebGL } from "./nucleo";
 
@@ -31,15 +41,25 @@ export interface PropsMapaGL {
   carregando: boolean;
   erroPontos: boolean;
   onTentarPontos: () => void;
-  /** câmera da URL (só na abertura); null = enquadra os resultados */
+  /** câmera da URL (só na abertura); null = enquadra os resultados (ou `areaInicial`) */
   camera: CameraMapa | null;
+  /** a área da lista vinda da URL sem a câmera (link antigo): o mapa abre nela, e não nos resultados */
+  areaInicial?: CaixaGeo | null;
+  /**
+   * Voltar ou avançar no navegador: a câmera daquela entrada do histórico (um objeto novo a cada vez). O mapa já aberto
+   * pula para ela, sem reenquadrar os resultados.
+   */
+  cameraRestaurada?: CameraMapa | null;
   /** muda quando os filtros de lugar ou o texto mudam: a câmera enquadra os pontos novos */
   chaveEnquadrar: string;
   folga: Folga;
-  /** a câmera parou: centro e zoom (URL) e a área visível (o filtro "Buscar nesta área") */
-  onMover: (camera: CameraMapa, area: CaixaGeo) => void;
-  /** o imóvel sob o mouse na lista (o mapa marca o ponto dele) */
-  destaque: { lat: number; lon: number } | null;
+  /**
+   * A câmera parou: centro e zoom (URL), a área visível (o filtro "Buscar nesta área") e se o movimento foi da pessoa
+   * (gesto ou botão). Só o movimento da pessoa muda a área da lista: o enquadramento automático não (movimentoDaPessoa).
+   */
+  onMover: (camera: CameraMapa, area: CaixaGeo, daPessoa: boolean) => void;
+  /** o imóvel sob o mouse na lista (o mapa marca o lugar dele, conforme a precisão) */
+  destaque: DestaqueDaLista | null;
   /** ids do lugar sob o mouse no mapa (a lista acende os cartões deles); null ao sair */
   onDestaqueIds?: (ids: string[] | null) => void;
   hrefImovel: (id: string) => string;
@@ -84,6 +104,8 @@ export default function MapaGL(props: PropsMapaGL) {
   const [ativo, setAtivo] = useState<Ativo | null>(null);
   /** null = o padrão (aberta no computador, recolhida no celular) */
   const [legendaAberta, setLegendaAberta] = useState<boolean | null>(null);
+  /** altura do mapa (px): com pouco mapa à vista (celular deitado), os botões vão para uma linha */
+  const [altura, setAltura] = useState(0);
   const cartaoRef = useRef<HTMLDivElement>(null);
   const idDica = useId();
 
@@ -138,6 +160,12 @@ export default function MapaGL(props: PropsMapaGL) {
     return () => ro.disconnect();
   }, [ativo, posicionarCartao]);
 
+  // a altura antes da primeira pintura (os botões já nascem em linha ou em coluna; depois, o ResizeObserver segue)
+  useLayoutEffect(() => {
+    const el = caixa.current;
+    if (el) setAltura(Math.round(el.clientHeight));
+  }, []);
+
   // ---- abrir o mapa (uma vez) ----
   useEffect(() => {
     const el = caixa.current;
@@ -148,7 +176,8 @@ export default function MapaGL(props: PropsMapaGL) {
     }
     const p = atual.current;
     const inicial = pontosRef.current;
-    const enquadrar = p.camera ? null : inicial ? caixaDosLugares(inicial.lugares) : CAIXA_BRASIL;
+    // a câmera da URL; sem ela, a área da lista da URL (link antigo); sem as duas, os resultados (ou o Brasil)
+    const enquadrar = p.camera ? null : (p.areaInicial ?? (inicial ? caixaDosLugares(inicial.lugares) : CAIXA_BRASIL));
     let mapa: MapaML;
     try {
       mapa = abrirMapa(el, {
@@ -177,14 +206,15 @@ export default function MapaGL(props: PropsMapaGL) {
     const perdeuContexto = () => atual.current.onFalhou();
     canvas.addEventListener("webglcontextlost", perdeuContexto, { once: true });
 
-    // a câmera parou: a URL e a área visível (uma vez por movimento)
-    mapa.on("moveend", () => {
+    // a câmera parou: a URL e a área visível (uma vez por movimento); a área só vale para a lista se a pessoa moveu
+    mapa.on("moveend", (e) => {
       const c = mapa.getCenter();
       const f = atual.current.folga;
       const { width, height } = mapa.getCanvas().getBoundingClientRect();
       const no = mapa.unproject([f.esq, f.cima]);
       const se = mapa.unproject([Math.max(f.esq + 1, width - f.dir), Math.max(f.cima + 1, height - f.baixo)]);
-      atual.current.onMover({ lat: c.lat, lon: c.lng, zoom: mapa.getZoom() }, caixaDaTela(no.lng, se.lat, se.lng, no.lat));
+      const ev = e as { originalEvent?: unknown; daPessoa?: unknown };
+      atual.current.onMover({ lat: c.lat, lon: c.lng, zoom: mapa.getZoom() }, caixaDaTela(no.lng, se.lat, se.lng, no.lat), movimentoDaPessoa(ev));
     });
 
     // o cartão preso acompanha o mapa (só a posição dele; sem desenhar o React a cada quadro)
@@ -264,7 +294,8 @@ export default function MapaGL(props: PropsMapaGL) {
       if (props.cluster) {
         const fonte = mapa.getSource(FONTES.imoveis) as GeoJSONSource | undefined;
         fonte?.getClusterExpansionZoom(Number(props.cluster_id)).then(
-          (z) => mapa.easeTo({ center: geo.coordinates as [number, number], zoom: Math.min(z + 0.25, ZOOM_MAX_AGRUPAMENTO + 1.5), duration: semMovimento() ? 0 : 450 }),
+          (z) =>
+            mapa.easeTo({ center: geo.coordinates as [number, number], zoom: Math.min(z + 0.25, ZOOM_MAX_AGRUPAMENTO + 1.5), duration: semMovimento() ? 0 : 450 }, DA_PESSOA),
           () => undefined,
         );
         setAtivo(null);
@@ -277,7 +308,10 @@ export default function MapaGL(props: PropsMapaGL) {
     });
 
     const pararTema = seguirTema(mapa, setTema);
-    const ro = new ResizeObserver(() => mapa.resize());
+    const ro = new ResizeObserver(() => {
+      mapa.resize();
+      setAltura(Math.round(el.clientHeight));
+    });
     ro.observe(el);
     return () => {
       canvas.removeEventListener("webglcontextlost", perdeuContexto);
@@ -290,9 +324,21 @@ export default function MapaGL(props: PropsMapaGL) {
     };
   }, [idDica, posicionarCartao]);
 
+  // ---- voltar e avançar no navegador: a câmera daquela entrada, sem reenquadrar os resultados ----
+  // (antes do efeito dos pontos: ele vê a chave já enquadrada e não chama o fitBounds)
+  const enquadrado = useRef<string | null>(props.camera || props.areaInicial ? props.chaveEnquadrar : null);
+  const { chaveEnquadrar, cameraRestaurada } = props;
+  const restauradaVista = useRef(cameraRestaurada);
+  useEffect(() => {
+    const mapa = mapaRef.current;
+    // só uma restauração nova (a do momento em que o mapa abriu já é a câmera de abertura)
+    if (!mapa || !cameraRestaurada || cameraRestaurada === restauradaVista.current) return;
+    restauradaVista.current = cameraRestaurada;
+    enquadrado.current = chaveEnquadrar;
+    mapa.jumpTo({ center: [cameraRestaurada.lon, cameraRestaurada.lat], zoom: cameraRestaurada.zoom });
+  }, [cameraRestaurada, chaveEnquadrar]);
+
   // ---- os pontos: setData só quando mudam; enquadra quando os filtros de lugar mudam ----
-  const enquadrado = useRef<string | null>(props.camera ? props.chaveEnquadrar : null);
-  const { chaveEnquadrar } = props;
   useEffect(() => {
     pontosRef.current = pontos;
     const mapa = mapaRef.current;
@@ -316,23 +362,14 @@ export default function MapaGL(props: PropsMapaGL) {
     const mapa = mapaRef.current;
     if (!mapa || pronto === 0) return;
     const fonte = mapa.getSource(FONTES.destaque) as GeoJSONSource | undefined;
-    const features: GeoJSON.Feature[] = [];
-    if (destaque) features.push({ type: "Feature", properties: { nv: 0, r0: 0 }, geometry: { type: "Point", coordinates: [destaque.lon, destaque.lat] } });
-    if (lugarDestaque && lugarDestaque.nivel < 3) {
-      const l = lugarDestaque;
-      features.push({
-        type: "Feature",
-        properties: { nv: l.nivel, r0: l.nivel >= 1 && l.raio > 0 ? raioPixelZ0(l.raio, l.lat) : 0 },
-        geometry: { type: "Point", coordinates: [l.lon, l.lat] },
-      });
-    }
-    fonte?.setData({ type: "FeatureCollection", features });
+    // a precisão manda: o bairro sob o mouse na lista vira a área dele, nunca um anel no centro (featuresDoDestaque)
+    fonte?.setData({ type: "FeatureCollection", features: featuresDoDestaque(destaque, lugarDestaque, pontosRef.current?.lugares) });
   }, [destaque, lugarDestaque, pronto]);
 
-  // ---- botões ----
-  const zoom = (d: number) => mapaRef.current?.easeTo({ zoom: mapaRef.current.getZoom() + d, duration: semMovimento() ? 0 : 250 });
+  // ---- botões (movimentos da pessoa: a lista segue a área, se "Buscar ao mover o mapa" estiver ligada) ----
+  const zoom = (d: number) => mapaRef.current?.easeTo({ zoom: mapaRef.current.getZoom() + d, duration: semMovimento() ? 0 : 250 }, DA_PESSOA);
   const verBrasil = () =>
-    mapaRef.current?.fitBounds(CAIXA_BRASIL, { padding: paddingDe(folga, 24), duration: semMovimento() ? 0 : 700 });
+    mapaRef.current?.fitBounds(CAIXA_BRASIL, { padding: paddingDe(folga, 24), duration: semMovimento() ? 0 : 700 }, DA_PESSOA);
   const [localizando, setLocalizando] = useState(false);
   const minhaRegiao = () => {
     if (!navigator.geolocation) return;
@@ -340,7 +377,7 @@ export default function MapaGL(props: PropsMapaGL) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocalizando(false);
-        mapaRef.current?.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 12.5, duration: semMovimento() ? 0 : 900 });
+        mapaRef.current?.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 12.5, duration: semMovimento() ? 0 : 900 }, DA_PESSOA);
       },
       () => setLocalizando(false),
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 600_000 },
@@ -355,14 +392,18 @@ export default function MapaGL(props: PropsMapaGL) {
   const verNaLista = useCallback((l: LugarMapa, cidade: string | null) => {
     const mapa = mapaRef.current;
     if (cidade) atual.current.onFiltrarCidade(cidade);
-    else mapa?.easeTo({ center: [l.lon, l.lat], zoom: Math.max(mapa.getZoom(), ZOOM_PONTO + 1), duration: semMovimento() ? 0 : 500 });
+    else mapa?.easeTo({ center: [l.lon, l.lat], zoom: Math.max(mapa.getZoom(), ZOOM_PONTO + 1), duration: semMovimento() ? 0 : 500 }, DA_PESSOA);
     setAtivo(null);
   }, []);
 
   // o cartão vale para os pontos em que foi aberto (filtros novos trocam os índices: ele some)
   const lugarAtivo = ativo?.tipo === "lugar" && ativo.p === pontos ? (pontos.lugares[ativo.i] ?? null) : null;
 
-
+  /**
+   * Pouco mapa à vista (celular deitado: ~140 px entre a barra e a folha): os botões vão para uma linha no alto (em
+   * coluna eles passavam para baixo da folha) e os avisos sobem para a linha da legenda.
+   */
+  const apertado = altura > 0 && altura - folga.cima - folga.baixo < 260;
   const cores = CORES_DESAGIO[tema];
 
   return (
@@ -387,12 +428,12 @@ export default function MapaGL(props: PropsMapaGL) {
       </p>
 
       {/* controles: aproximar, afastar, o Brasil inteiro, minha região */}
-      <div className={`${s.controles} absolute right-3 z-10 flex flex-col gap-2`} style={{ top: folga.cima + 12 }}>
-        <div className={`${s.vidro} flex flex-col overflow-hidden rounded-2xl`}>
+      <div className={`${s.controles} absolute right-3 z-10 flex gap-2 ${apertado ? "flex-row" : "flex-col"}`} style={{ top: folga.cima + 12 }}>
+        <div className={`${s.vidro} flex overflow-hidden rounded-2xl ${apertado ? "flex-row" : "flex-col"}`}>
           <button type="button" onClick={() => zoom(1)} aria-label="Aproximar" title="Aproximar" className={s.botao}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           </button>
-          <span aria-hidden="true" className="h-px bg-nevoa/20" />
+          <span aria-hidden="true" className={apertado ? "w-px bg-nevoa/20" : "h-px bg-nevoa/20"} />
           <button type="button" onClick={() => zoom(-1)} aria-label="Afastar" title="Afastar" className={s.botao}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
           </button>
@@ -462,7 +503,10 @@ export default function MapaGL(props: PropsMapaGL) {
       </div>
 
       {/* avisos: as ruas não carregaram, os pontos carregando ou com erro */}
-      <div className="pointer-events-none absolute inset-x-0 z-10 flex flex-col items-center gap-2 px-4" style={{ bottom: folga.baixo + (compacto ? 84 : 104) }}>
+      <div
+        className="pointer-events-none absolute inset-x-0 z-10 flex flex-col items-center gap-2 px-4"
+        style={{ bottom: folga.baixo + (apertado ? 36 : compacto ? 84 : 104) }}
+      >
         {fundoFalhou && (
           <p className={`${s.vidro} max-w-[440px] rounded-2xl px-3.5 py-1.5 text-center text-[12.5px] text-nevoa`}>
             As ruas do mapa não carregaram agora. Os imóveis continuam no lugar certo.

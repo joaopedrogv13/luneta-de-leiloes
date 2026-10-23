@@ -10,7 +10,9 @@ import {
   nivelDaPrecisao,
   posicoesDoLugar,
   precoCurto,
+  RAIO_MINIMO,
   RAIO_PADRAO,
+  raioDoNivel,
   raioNaTela,
   raioPixelZ0,
   TIPOS_PONTO,
@@ -157,6 +159,20 @@ test("nível da precisão e raio padrão", () => {
   buscar(IX, busca(), { agora: AGORA, mapa: false, facetas: false, aoFiltrar: (x) => (m = x) });
   const d = lerPontos(montarPontos(IX, m!, { conjunto: "v" }));
   assert.equal(d.lugares.find((l) => l.nivel === 2)!.raio, RAIO_PADRAO[2]);
+});
+
+test("só o bairro nunca vira ponto: o círculo tem pelo menos 300 m, mesmo com desvio de 10 m na base", () => {
+  assert.equal(raioDoNivel(2, 10), RAIO_MINIMO[2]);
+  assert.equal(raioDoNivel(2, 1300), 1300);
+  assert.equal(raioDoNivel(2, null), RAIO_PADRAO[2]);
+  assert.equal(raioDoNivel(1, 10), 10, "na rua, o desvio da base");
+  assert.equal(raioDoNivel(3, 900), 0, "na cidade, sem raio (o marcador da sede)");
+  let m: Int32Array | null = null;
+  buscar(IX, busca(), { agora: AGORA, mapa: false, facetas: false, aoFiltrar: (x) => (m = x) });
+  const d = lerPontos(montarPontos(IX, m!, { conjunto: "v", raio: () => 10 }));
+  for (const l of d.lugares.filter((x) => x.nivel === 2)) assert.ok(l.raio >= RAIO_MINIMO[2], `bairro com ${l.raio} m`);
+  // no zoom 16 (rua), 300 m em São Paulo passam de 130 px de raio: um círculo, nunca um alfinete
+  assert.ok(raioNaTela(RAIO_MINIMO[2], -23.55, 16) > 130);
 });
 
 test("metros → pixels: um raio de 1 km em São Paulo no zoom 14 tem ~228 px; o raio dobra a cada zoom", () => {

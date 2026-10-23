@@ -3,7 +3,7 @@
  * enquadramento dos resultados (sem que um imóvel perdido no mapa jogue a câmera para longe) e a área visível, que
  * vira o filtro "Buscar nesta área". Imports relativos (sem "@/"): o teste roda em Node puro.
  */
-import { precoCurto, RAIO_PADRAO, raioPixelZ0, type LugarMapa, type PontosLidos } from "../../../lib/catalogo/pontos";
+import { precoCurto, raioDoNivel, raioPixelZ0, type LugarMapa, type PontosLidos } from "../../../lib/catalogo/pontos";
 import type { CaixaGeo } from "../../../lib/catalogo/tipos";
 import type { PropsLugar } from "./estilo";
 
@@ -25,7 +25,7 @@ export function featureDoImovel(i: {
   lance: number;
   desagio: number | null;
 }): GeoJSON.Feature<GeoJSON.Point, PropsLugar> {
-  const raio = i.nivel === 3 ? 0 : i.raio && i.raio > 0 ? i.raio : RAIO_PADRAO[i.nivel];
+  const raio = raioDoNivel(i.nivel, i.raio);
   const temDesagio = i.desagio !== null && Number.isFinite(i.desagio);
   return {
     type: "Feature",
@@ -53,9 +53,45 @@ export function zoomDoImovel(nivel: LugarMapa["nivel"], raio: number | null, lat
   if (nivel === 0) return 16.5;
   if (nivel === 1) return 15.5;
   if (nivel === 3) return 12;
-  const r = raio && raio > 0 ? raio : RAIO_PADRAO[2];
-  const z = Math.log2((alturaPx * 0.3) / raioPixelZ0(r, lat));
+  const r = raioDoNivel(2, raio);
+  const z =Math.log2((alturaPx * 0.3) / raioPixelZ0(r, lat));
   return Math.max(11, Math.min(16, z));
+}
+
+/** O imóvel sob o mouse na lista (o mapa marca o lugar dele), com a precisão do ponto. */
+export interface DestaqueDaLista {
+  lat: number;
+  lon: number;
+  nivel: LugarMapa["nivel"];
+}
+
+/**
+ * As marcas do destaque (fonte "destaque" do estilo: anel em `nv` ≠ 2, área onde `r0` > 0), sem nunca fingir um
+ * endereço exato:
+ * - o imóvel sob o mouse na lista: anel no número e na rua; no bairro, a área do bairro (o mesmo círculo do lugar,
+ *   achado pelos pontos; sem ele, o raio padrão), nunca um anel no centro; na cidade, o anel largo em volta do
+ *   marcador "sem endereço exato";
+ * - o lugar aberto no mapa (cartão): o anel e a área de incerteza dele (rua ou bairro); na cidade, só o cartão.
+ */
+export function featuresDoDestaque(lista: DestaqueDaLista | null, aberto: LugarMapa | null, lugares: readonly LugarMapa[] = []): GeoJSON.Feature<GeoJSON.Point>[] {
+  const saida: GeoJSON.Feature<GeoJSON.Point>[] = [];
+  const ponto = (lat: number, lon: number, nv: number, r0: number): GeoJSON.Feature<GeoJSON.Point> => ({
+    type: "Feature",
+    properties: { nv, r0 },
+    geometry: { type: "Point", coordinates: [lon, lat] },
+  });
+  if (lista) {
+    if (lista.nivel === 2) {
+      const l = lugares.find((x) => x.nivel === 2 && Math.abs(x.lat - lista.lat) < 1e-5 && Math.abs(x.lon - lista.lon) < 1e-5);
+      saida.push(ponto(lista.lat, lista.lon, 2, raioPixelZ0(raioDoNivel(2, l?.raio), lista.lat)));
+    } else {
+      saida.push(ponto(lista.lat, lista.lon, lista.nivel, 0));
+    }
+  }
+  if (aberto && aberto.nivel < 3) {
+    saida.push(ponto(aberto.lat, aberto.lon, aberto.nivel, aberto.nivel >= 1 && aberto.raio > 0 ? raioPixelZ0(aberto.raio, aberto.lat) : 0));
+  }
+  return saida;
 }
 
 /** Os lugares como FeatureCollection (id = índice do lugar; propriedades curtas: são ~10 mil). */
@@ -125,6 +161,20 @@ export function caixaDaTela(oeste: number, sul: number, leste: number, norte: nu
   const n = Math.min(85, r(norte));
   return [o, s, Math.max(l, o + 1e-5), Math.max(n, s + 1e-5)];
 }
+
+/**
+ * O movimento do mapa foi da pessoa? Gesto (arrastar, pinça, roda, teclado: o MapLibre põe o `originalEvent` em todo
+ * evento de movimento que vem de um gesto, inclusive no fim da inércia) ou um botão nosso (aproximar, Brasil, minha
+ * região, clique no agrupamento), que marca `daPessoa` no evento. Só esses viram a área da lista ("Buscar ao mover o
+ * mapa"); o enquadramento automático (abrir o mapa, filtro de lugar novo, voltar no histórico, tela que muda de
+ * tamanho) não: ele corta 2% dos imóveis de cada ponta (caixaDosLugares) e, no celular, o Brasil inteiro não cabe.
+ */
+export function movimentoDaPessoa(e: { originalEvent?: unknown; daPessoa?: unknown } | null | undefined): boolean {
+  return !!e && (!!e.originalEvent || e.daPessoa === true);
+}
+
+/** Dado do evento dos movimentos que os botões do mapa pedem (movimentoDaPessoa). */
+export const DA_PESSOA = { daPessoa: true } as const;
 
 /** As duas áreas são praticamente a mesma (diferença menor que 2% do lado)? Evita buscar de novo por um tremor. */
 export function mesmaArea(a: CaixaGeo | undefined | null, b: CaixaGeo | undefined | null): boolean {

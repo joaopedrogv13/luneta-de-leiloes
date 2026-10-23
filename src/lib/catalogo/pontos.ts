@@ -49,6 +49,20 @@ export function nivelDaPrecisao(p: PrecisaoGeo | null): NivelPonto {
  */
 export const RAIO_PADRAO: Record<NivelPonto, number> = { 0: 30, 1: 200, 2: 800, 3: 0 };
 
+/**
+ * Raio mínimo da incerteza (m). No bairro, 300 m: a base tem desvios de bairro de 10 m (30 lugares abaixo de 50 m na
+ * prévia), e um círculo desses vira um ponto de 7 px no mapa, igual a um endereço exato. "Só o bairro" nunca pode
+ * parecer o endereço.
+ */
+export const RAIO_MINIMO: Record<NivelPonto, number> = { 0: 0, 1: 0, 2: 300, 3: 0 };
+
+/** O raio da incerteza que o mapa desenha: o desvio da base (ou o padrão do nível), nunca abaixo do mínimo do nível. */
+export function raioDoNivel(nivel: NivelPonto, desvio: number | null | undefined): number {
+  if (nivel === 3) return 0;
+  const r = typeof desvio === "number" && Number.isFinite(desvio) && desvio > 0 ? desvio : RAIO_PADRAO[nivel];
+  return Math.max(RAIO_MINIMO[nivel], r);
+}
+
 /** Escala das coordenadas inteiras (1e5 ≈ 1,1 m no equador). */
 const ESCALA = 1e5;
 
@@ -140,8 +154,7 @@ export function montarPontos(ix: IndiceCatalogo, mascaras: Int32Array, opcoes: O
     }
     l.ks.push(k);
     if (nivel < 3) {
-      const r = opcoes.raio?.(k);
-      const raio = typeof r === "number" && Number.isFinite(r) && r > 0 ? r : RAIO_PADRAO[nivel];
+      const raio = raioDoNivel(nivel, opcoes.raio?.(k));
       // o lugar fica com o maior desvio dos imóveis dele (a área cobre todos)
       if (raio > l.raio) l.raio = raio;
     }

@@ -5,10 +5,13 @@ import {
   CAIXA_BRASIL,
   caixaDaTela,
   caixaDosLugares,
+  DA_PESSOA,
   featureDoImovel,
+  featuresDoDestaque,
   geojsonDosLugares,
   mesmaArea,
   metros,
+  movimentoDaPessoa,
   rotuloLugar,
   textoPrecisao,
   zoomDoImovel,
@@ -86,6 +89,30 @@ test("área da tela: 5 casas, dentro do globo; mesma área ignora tremores de me
   assert.ok(mesmaArea(a, [-46.801, -23.7, -46.4, -23.401]));
   assert.ok(!mesmaArea(a, [-46.7, -23.7, -46.3, -23.4]));
   assert.ok(mesmaArea(undefined, null) === false && mesmaArea(null, null));
+});
+
+test("o movimento só vira a área da lista quando é da pessoa (gesto ou botão), nunca o enquadramento automático", () => {
+  assert.equal(movimentoDaPessoa({ originalEvent: new Object() }), true, "arrastar, pinça, roda, teclado (e a inércia)");
+  assert.equal(movimentoDaPessoa(DA_PESSOA), true, "botões do mapa e clique no agrupamento");
+  assert.equal(movimentoDaPessoa({}), false, "abrir o mapa, filtro de lugar novo, voltar no histórico, resize");
+  assert.equal(movimentoDaPessoa({ daPessoa: "sim" }), false);
+  assert.equal(movimentoDaPessoa(null), false);
+});
+
+test("destaque: o bairro sob o mouse na lista vira a área do bairro (nunca um anel no centro); número e rua, anel", () => {
+  const bairro = lugar({ i: 5, nivel: 2, raio: 1300, lat: -22.9, lon: -43.2 });
+  const [a] = featuresDoDestaque({ lat: -22.9, lon: -43.2, nivel: 2 }, null, [lugar({}), bairro]);
+  assert.equal(a!.properties!.nv, 2, "a camada do anel ignora o nível 2");
+  assert.ok(Math.abs(a!.properties!.r0 - raioPixelZ0(1300, -22.9)) < 1e-12, "o mesmo círculo do lugar");
+  // sem o lugar nos pontos (outra busca): o raio padrão, nunca menos que o mínimo do bairro
+  const [b] = featuresDoDestaque({ lat: -1, lon: -1, nivel: 2 }, null, []);
+  assert.ok(Math.abs(b!.properties!.r0 - raioPixelZ0(RAIO_PADRAO[2], -1)) < 1e-12);
+  const [c] = featuresDoDestaque({ lat: -23.5, lon: -46.6, nivel: 0 }, null);
+  assert.deepEqual(c!.properties, { nv: 0, r0: 0 });
+  // o lugar aberto: anel e área (na rua); na cidade, nada (o cartão diz "sem endereço exato")
+  const rua = featuresDoDestaque(null, lugar({ nivel: 1, raio: 240 }));
+  assert.ok(rua[0]!.properties!.r0 > 0);
+  assert.equal(featuresDoDestaque(null, lugar({ nivel: 3, raio: 0 })).length, 0);
 });
 
 test("rótulos curtos", () => {

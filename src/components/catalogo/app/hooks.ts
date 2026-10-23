@@ -96,18 +96,29 @@ export function useMidia(consulta: string, doServidor: boolean): boolean {
 // Destaque ligado entre a lista e o mapa (fora do estado do app: passar o mouse não redesenha a página)
 // ---------------------------------------------------------------------------
 
+/** O imóvel sob o mouse na lista, para o mapa de verdade. */
+export interface ImovelDestacado {
+  id: string;
+  lat: number;
+  lon: number;
+  nivel: 0 | 1 | 2 | 3;
+}
+
 export interface LojaDestaque {
   /** cidade ("MG|Uberlândia") do imóvel sob o mouse (ou com foco) na lista: acende no mapa */
   daLista: string | null;
   /** cidade sob o mouse no mapa: acende os imóveis dela na lista */
   doMapa: string | null;
-  /** mapa de verdade (vista de mapa): o imóvel sob o mouse na lista, para marcar o ponto dele */
-  imovel: { id: string; lat: number; lon: number } | null;
+  /**
+   * mapa de verdade (vista de mapa): o imóvel sob o mouse na lista, para marcar o lugar dele; `nivel` é a precisão do
+   * ponto (0 no número, 1 na rua, 2 no bairro, 3 só a cidade: src/lib/catalogo/pontos.ts), e o bairro vira uma área
+   */
+  imovel: ImovelDestacado | null;
   /** mapa de verdade: os imóveis do lugar sob o mouse (ou aberto) no mapa, que a lista acende */
   idsDoMapa: ReadonlySet<string> | null;
   definirDaLista(chave: string | null): void;
   definirDoMapa(chave: string | null): void;
-  definirImovel(i: { id: string; lat: number; lon: number } | null): void;
+  definirImovel(i: ImovelDestacado | null): void;
   definirIdsDoMapa(ids: readonly string[] | null): void;
   assinar(avisar: () => void): () => void;
 }

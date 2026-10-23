@@ -507,14 +507,15 @@ function camadasImoveis(tema: TemaMapa): LayerSpecification[] {
       "circle-pitch-alignment": "map",
     },
   };
-  // o anel do imóvel sob o mouse na lista (ou do lugar aberto no mapa)
+  // o anel do imóvel sob o mouse na lista (ou do lugar aberto no mapa); no bairro, só a área (featuresDoDestaque); na
+  // cidade, um anel largo em volta do marcador "sem endereço exato" (que tem até 22 px de raio com a borda)
   const destaque: CircleLayerSpecification = {
     id: "lu-destaque",
     type: "circle",
     source: FONTES.destaque,
     filter: ["!=", ["get", "nv"], 2],
     paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 13, 16, 17],
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, ["case", ["==", ["get", "nv"], 3], 26, 13], 16, ["case", ["==", ["get", "nv"], 3], 27, 17]],
       "circle-color": "rgba(0,0,0,0)",
       "circle-stroke-color": c.destaque,
       "circle-stroke-width": 3,

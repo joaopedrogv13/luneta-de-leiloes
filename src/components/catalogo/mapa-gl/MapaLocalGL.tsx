@@ -3,7 +3,7 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { GeoJSONSource, Map as MapaML } from "maplibre-gl";
 import { useEffect, useId, useRef, useState } from "react";
-import type { NivelPonto } from "@/lib/catalogo/pontos";
+import { raioDoNivel, raioPixelZ0, type NivelPonto } from "@/lib/catalogo/pontos";
 import { FONTES } from "./estilo";
 import { featureDoImovel, zoomDoImovel } from "./geojson";
 import s from "./mapa-gl.module.css";
@@ -12,7 +12,8 @@ import { abrirMapa, seguirTema, temWebGL } from "./nucleo";
 /**
  * O mapa da página do imóvel (MapLibre, sob demanda: só quando a seção chega perto da tela). Centrado no ponto, com o
  * zoom de rua, e a precisão desenhada como no catálogo: no número, o ponto com o preço; na rua, o ponto com a área de
- * incerteza; no bairro, só o círculo (nunca um alfinete); só na cidade, o marcador "sem endereço exato" no centro.
+ * incerteza em volta (a do lugar aberto no catálogo); no bairro, só o círculo (nunca um alfinete, com pelo menos 300 m);
+ * só na cidade, o marcador "sem endereço exato" no centro.
  * No fluxo da página: a roda do mouse rola a página (Ctrl/⌘ + roda aproxima) e, no toque, um dedo rola a página e dois
  * movem o mapa. Sem WebGL, quem chama mostra o mapa do Brasil em SVG.
  */
@@ -74,6 +75,14 @@ export default function MapaLocalGL({
         type: "FeatureCollection",
         features: [featureDoImovel({ lat: a.lat, lon: a.lon, nivel: a.nivel, raio: a.raio, lance: a.lance, desagio: a.desagio })],
       });
+      // na rua, a área da incerteza em volta do ponto (até ~500 m): o ponto sozinho pareceria o endereço exato
+      (mapa.getSource(FONTES.destaque) as GeoJSONSource | undefined)?.setData({
+        type: "FeatureCollection",
+        features:
+          a.nivel === 1
+            ? [{ type: "Feature", properties: { nv: 1, r0: raioPixelZ0(raioDoNivel(1, a.raio), a.lat) }, geometry: { type: "Point", coordinates: [a.lon, a.lat] } }]
+            : [],
+      });
     };
     mapa.on("style.load", ponto);
     mapa.on("error", (e) => {
@@ -95,11 +104,12 @@ export default function MapaLocalGL({
     };
   }, [idDica, legenda]);
 
-  const zoom = (d: number) => mapaRef.current?.easeTo({ zoom: mapaRef.current.getZoom() + d, duration: 250 });
+  const semMovimento = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const zoom = (d: number) => mapaRef.current?.easeTo({ zoom: mapaRef.current.getZoom() + d, duration: semMovimento() ? 0 : 250 });
   const voltar = () => {
     const m = mapaRef.current;
     const a = atual.current;
-    m?.easeTo({ center: [a.lon, a.lat], zoom: zoomDoImovel(a.nivel, a.raio, a.lat, m.getContainer().clientHeight), duration: 400 });
+    m?.easeTo({ center: [a.lon, a.lat], zoom: zoomDoImovel(a.nivel, a.raio, a.lat, m.getContainer().clientHeight), duration: semMovimento() ? 0 : 400 });
   };
 
   return (

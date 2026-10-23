@@ -1,12 +1,13 @@
 "use client";
 
-import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useRef, useState, type ReactNode } from "react";
 import { UpgradeModal } from "@/components/assinante/UpgradeModal";
 import { filtrosEfetivos, filtrosIguais, gruposForaDoPlano, limparVazios, pilulas, recursoDoGrupo, removerGrupos } from "@/lib/catalogo/filtros-rotulos";
 import { ordemPermitida, pode, RECURSO_DA_ORDEM } from "@/lib/catalogo/planos";
 import { TOAST_FAVORITADO } from "@/lib/catalogo/produto";
 import { chaveUltimaBusca, rotaImovel, ROTA_LISTA } from "@/lib/catalogo/rotas";
 import { ORDEM_PADRAO, type CaixaGeo, type Conjunto, type Facetas, type Filtros, type ImovelResumo, type Ordem, type Plano, type PontoMapa, type Recurso, type ResultadoBusca } from "@/lib/catalogo/tipos";
+import { nivelDaPrecisao } from "@/lib/catalogo/pontos";
 import { plural } from "@/lib/catalogo/rotulos";
 import { quartosDaBusca, rotuloQuartosDaBusca, semQuartos } from "@/lib/catalogo/texto";
 import { lerBusca, type CameraMapa, type Vista } from "@/lib/catalogo/url";
@@ -27,7 +28,7 @@ import { ProvedorPedirLuneta } from "./planos/convite";
 import { consumirVoltaPropria, depoisDoHistorico } from "./ui/historico";
 import { semMovimento } from "./ui/useAdiado";
 import { Explorar } from "./mapa-gl/Explorar";
-import { ESPIADA, FolhaMapa } from "./mapa-gl/FolhaMapa";
+import { FolhaMapa } from "./mapa-gl/FolhaMapa";
 import type { Folga } from "./mapa-gl/MapaGL";
 import { temWebGL } from "./mapa-gl/webgl";
 import { useBusca } from "./useBusca";
@@ -58,7 +59,8 @@ const ESPACO_BOTAO_MAPA = 84;
 
 /** Vista de mapa: nada cobre o mapa no computador; no celular, a folha da lista espia embaixo. */
 const FOLGA_COLUNA: Folga = { cima: 0, baixo: 0, esq: 0, dir: 0 };
-const FOLGA_FOLHA: Folga = { cima: 0, baixo: ESPIADA, esq: 0, dir: 0 };
+/** Celular: a folha da lista espia embaixo (a altura da espiada vem da folha: menor no celular deitado). */
+const folgaDaFolha = (espiada: number): Folga => ({ cima: 0, baixo: espiada, esq: 0, dir: 0 });
 
 /** Os filtros de lugar e o texto: mudando um deles na vista de mapa, a área antiga sai (o mapa enquadra o lugar novo). */
 const mudouLugar = (a: Filtros, b: Filtros) =>
@@ -136,6 +138,8 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   const vistaLista: Exclude<Vista, "mapa"> = emMapa ? "lista" : vista;
   /** câmera da vista de mapa (vai para a URL a cada parada) */
   const [cameraMapa, setCameraMapa] = useState<CameraMapa | null>(inicio.camera);
+  /** voltar/avançar no navegador: a câmera daquela entrada (um objeto novo a cada vez; o mapa aberto pula para ela) */
+  const [cameraRestaurada, setCameraRestaurada] = useState<CameraMapa | null>(null);
   /** null = padrão do aparelho (o CSS decide na primeira pintura: visível a partir de lg) */
   const mapaPedido = mapaEscolhido ?? pref.mapa;
   const mapaVisivel = emMapa ? glFalhou : (mapaPedido ?? computador);
@@ -154,7 +158,16 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
   const { pedido } = busca;
   const plano = pedido.plano;
   const lente = plano === "lente";
-  const exibido = busca.exibido;
+  /**
+   * Na vista de mapa, o resultado novo (a cada parada do mapa, com "Buscar ao mover o mapa") é desenhado em segundo
+   * plano (useDeferredValue): medido com a CPU 4× mais lenta (celular), o desenho da lista, da barra e das facetas novas
+   * logo depois de soltar o dedo caiu de 215–260 ms numa tarefa só para 105–140 ms. Nas outras vistas, vem na hora.
+   */
+  const exibidoAgora = busca.exibido;
+  const exibidoAdiado = useDeferredValue(exibidoAgora);
+  const exibido = emMapa ? exibidoAdiado : exibidoAgora;
+  /** o resultado na tela ainda é o anterior (o novo está sendo desenhado): conta como carregando */
+  const desenhando = exibido !== exibidoAgora;
   const resultado = exibido?.resultado ?? null;
   const facetas = resultado?.facetas ?? FACETAS_VAZIAS;
   const total = resultado?.total ?? 0;
@@ -197,7 +210,10 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
       restaurar({ filtros: e.filtros, ordem: e.ordem, pagina: e.pagina, plano: e.plano });
       setVistaEscolhida(e.vista);
       setMapaEscolhido(e.mapa);
-      if (e.camera) setCameraMapa(e.camera);
+      if (e.camera) {
+        setCameraMapa(e.camera);
+        setCameraRestaurada(e.camera);
+      }
     };
     window.addEventListener("popstate", aoNavegar);
     return () => window.removeEventListener("popstate", aoNavegar);
@@ -244,7 +260,9 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
       setColada(estaColada);
       // Faixa de aviso ainda à vista acima do cabeçalho fixo (topo da página): a coluna do mapa encolhe o
       // mesmo tanto, para caber inteira na tela (com a legenda) desde a primeira pintura.
-      const faixa = cabFixo.current ? Math.max(0, Math.round(c.getBoundingClientRect().top)) : 0;
+      // Com o cabeçalho que rola junto (tela baixa, como 1366×768), o que ainda está à vista dele também conta: sem isso a
+      // coluna do mapa passava ~110 px do pé da tela (legenda, escala e créditos fora da tela até rolar).
+      const faixa = Math.max(0, Math.round(cabFixo.current ? c.getBoundingClientRect().top : c.getBoundingClientRect().bottom));
       if (faixa !== faixaAntes) {
         faixaAntes = faixa;
         r.style.setProperty("--faixa-v", `${faixa}px`);
@@ -527,6 +545,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
       plano={plano}
       filtros={filtros}
       camera={cameraMapa}
+      cameraRestaurada={cameraRestaurada}
       folga={folga}
       compacto={compactoMapa}
       loja={loja}
@@ -551,7 +570,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     ...(quartosFora.length ? (["filtrosAvancados"] as const) : []),
     ...(ordemFora && RECURSO_DA_ORDEM[ordemFora] ? [RECURSO_DA_ORDEM[ordemFora]!] : []),
   ]);
-  const semResultado = resultado !== null && !busca.carregando && total === 0;
+  const semResultado = resultado !== null && !busca.carregando && !desenhando && total === 0;
 
   /** A página de resultados (avisos, lista, paginação): na coluna da lista, sozinha, ou na folha do mapa (celular). */
   const secao = (classeSecao: string) => (
@@ -619,7 +638,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
             )
           ) : (
             // lista anterior esmaecida enquanto a nova chega, ou se a nova falhou (o aviso diz que não atualizou)
-            <div aria-busy={busca.carregando} data-desatualizada={busca.erro ? "" : undefined} className={`${s.lista} @container`}>
+            <div aria-busy={busca.carregando || desenhando} data-desatualizada={busca.erro ? "" : undefined} className={`${s.lista} @container`}>
               <ListaImoveis
                 itens={itens}
                 vista={vistaLista}
@@ -629,6 +648,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
                 onFavoritar={onFavoritar}
                 onUpsell={onUpsell}
                 loja={loja}
+                pularForaDaTela={emMapa}
               />
             </div>
           )}
@@ -664,6 +684,21 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
         >
           Pular para os resultados
         </a>
+        {emMapa && !glFalhou && (
+          // no computador o mapa vem depois dos 24 cartões (~50 paradas do Tab): este atalho vai direto a ele
+          <a
+            href="#mapa-explorar"
+            onClick={(e) => {
+              const canvas = document.querySelector<HTMLElement>("#mapa-explorar .maplibregl-canvas");
+              if (!canvas) return;
+              e.preventDefault();
+              canvas.focus();
+            }}
+            className="fixed top-2 left-2 z-[70] -translate-y-24 rounded-full bg-latao px-4 py-2.5 text-sm font-semibold text-noite-fixa transition-transform focus:translate-y-0 focus-visible:outline-noite-fixa"
+          >
+            Pular para o mapa
+          </a>
+        )}
 
         <Cabecalho
           plano={plano}
@@ -734,7 +769,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
             // celular e tablet: o mapa abaixo da barra e a lista numa folha que se puxa por cima dele
             <FolhaMapa
               barra={barraVisivel}
-              mapa={explorar(FOLGA_FOLHA, true)}
+              mapa={(espiada) => explorar(folgaDaFolha(espiada), true)}
               titulo={
                 <span className="block">
                   <span className="block font-display text-[16px] leading-tight font-bold text-luar tabular-nums">
@@ -827,6 +862,7 @@ const ListaImoveis = memo(function ListaImoveis({
   onFavoritar,
   onUpsell,
   loja,
+  pularForaDaTela = false,
 }: {
   itens: ImovelResumo[];
   vista: Vista;
@@ -836,13 +872,18 @@ const ListaImoveis = memo(function ListaImoveis({
   onFavoritar: (id: string) => void;
   onUpsell: (quem: HTMLElement, recurso?: Recurso | null) => void;
   loja: LojaDestaque;
+  /**
+   * Vista de mapa: o navegador não calcula o layout dos cartões fora da tela (content-visibility). No celular a lista
+   * fica quase toda escondida sob a folha, e o layout dos 24 cartões novos a cada parada do mapa levava ~140 ms (CPU 4×).
+   */
+  pularForaDaTela?: boolean;
 }) {
   // Página nova sob o mouse parado: o cartão que acendia a cidade saiu sem "pointerleave". O mapa apaga.
   useEffect(() => () => loja.definirDaLista(null), [itens, loja]);
   return (
     <ul aria-label="Imóveis" className={vista === "cards" ? GRADE_CARDS : LISTA_LINHAS}>
       {itens.map((imovel, i) => (
-        <li key={imovel.id} className="min-w-0">
+        <li key={imovel.id} className={pularForaDaTela ? "min-w-0 [contain-intrinsic-size:auto_200px] [content-visibility:auto]" : "min-w-0"}>
           <ItemImovel
             imovel={imovel}
             vista={vista}
@@ -885,13 +926,14 @@ const ItemImovel = memo(function ItemImovel({
   const cidade = `${imovel.uf}|${imovel.cidade}`;
   const ativo = useAcesoPeloMapa(loja, cidade, imovel.id);
   const { lat, lon } = imovel;
+  const nivel = nivelDaPrecisao(imovel.precisaoGeo);
   const onHover = useCallback(
     (id: string | null) => {
       loja.definirDaLista(id ? cidade : null);
-      // mapa de verdade: o ponto deste imóvel ganha o anel de destaque
-      loja.definirImovel(id && lat !== null && lon !== null ? { id, lat, lon } : null);
+      // mapa de verdade: o lugar deste imóvel ganha o destaque (anel; no bairro, a área: nunca um ponto exato)
+      loja.definirImovel(id && lat !== null && lon !== null ? { id, lat, lon, nivel } : null);
     },
-    [loja, cidade, lat, lon],
+    [loja, cidade, lat, lon, nivel],
   );
   const props = { imovel, plano, hrefImovel: href, favorito, onFavoritar, onUpsell, onHover, ativo, eager };
   return vista === "cards" ? <CartaoImovel {...props} /> : <LinhaImovel {...props} />;

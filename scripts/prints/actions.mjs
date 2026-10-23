@@ -6,6 +6,8 @@
  *   node scripts/prints/actions.mjs mapa      # vista de mapa, página do imóvel, /assinante, desempenho
  *   node scripts/prints/actions.mjs tudo      # o mesmo
  *   node scripts/prints/actions.mjs desempenho  # só a medição (quadros por segundo, tarefas longas, camada por camada)
+ *   node scripts/prints/actions.mjs revisao   # só as conferências da revisão (celular deitado, 1366×768, casas, tema,
+ *                                             # histórico, Lente com "2 quartos", imóvel na rua, CPU 4× na parada)
  *
  * O Chromium do runner não tem GPU: o WebGL roda no SwiftShader (na CPU). Os números de quadros por segundo daqui são
  * piores que os de qualquer celular com GPU; o que vale é a comparação com e sem as camadas dos imóveis (o custo que o
@@ -215,6 +217,160 @@ if (roteiro === "mapa" || roteiro === "tudo") {
       await ctx.close();
     });
   }
+}
+
+if (roteiro === "mapa" || roteiro === "tudo" || roteiro === "revisao") {
+  // ---- revisão: as correções da revisão adversarial, com os ladrilhos de verdade ----
+  const estado = (pagina) =>
+    pagina.evaluate(() => {
+      const m = window.__mapaLuneta;
+      const q = new URLSearchParams(location.search);
+      return {
+        centro: m ? `${m.getCenter().lat.toFixed(3)},${m.getCenter().lng.toFixed(3)}` : null,
+        zoom: m?.getZoom().toFixed(2),
+        bbox: q.get("bbox"),
+        q: q.get("q"),
+        lista: document.querySelector("#titulo-resultados")?.textContent,
+        contagem: document.body.innerText.match(/[\d.]+ imóve(?:l|is)/)?.[0],
+      };
+    });
+
+  // celular deitado e notebook de 768 px de altura (o cabeçalho rola junto): botões, legenda e créditos à vista
+  for (const [largura, altura, tema, url] of [
+    [844, 390, "escuro", VISTAS[1].url],
+    [844, 390, "claro", VISTAS[2].url],
+    [1366, 768, "escuro", VISTAS[1].url],
+    [1366, 768, "claro", VISTAS[0].url],
+  ]) {
+    await passo(`tela ${largura}x${altura} ${tema}`, async () => {
+      const { ctx, pagina } = await abrir({ largura, altura, tema, url, medir: true });
+      await esperarMapa(pagina);
+      await pagina.screenshot({ path: join(SAIDA, `revisao-${largura}x${altura}-${tema}.png`) });
+      const creditos = await pagina.evaluate(() => {
+        const a = document.querySelector(".maplibregl-ctrl-attrib");
+        if (!a) return "sem créditos";
+        const r = a.getBoundingClientRect();
+        return { visivel: r.bottom <= innerHeight && r.top >= 0 && r.height > 0, texto: a.textContent?.trim().slice(0, 90) };
+      });
+      log("     ", await estado(pagina), creditos);
+      await ctx.close();
+    });
+  }
+
+  // número das casas de perto (zoom 17,6), nos dois temas
+  for (const tema of TEMAS) {
+    await passo(`casas z17.6 ${tema}`, async () => {
+      const { ctx, pagina } = await abrir({ largura: 1440, altura: 900, tema, url: "/previa?vista=mapa&centro=-22.7955,-43.5775&zoom=17.6", medir: true });
+      await esperarMapa(pagina);
+      await pagina.screenshot({ path: join(SAIDA, `revisao-casas-z17-${tema}.png`) });
+      await ctx.close();
+    });
+  }
+
+  // abrir o Brasil inteiro (sem câmera): a lista é a busca inteira (o enquadramento automático não vira área)
+  for (const [largura, altura] of [
+    [1440, 900],
+    [390, 844],
+  ]) {
+    await passo(`abrir o Brasil ${largura}`, async () => {
+      const { ctx, pagina } = await abrir({ largura, altura, tema: "escuro", url: "/previa?vista=mapa", medir: true });
+      await esperarMapa(pagina);
+      log("     ", await estado(pagina));
+      await ctx.close();
+    });
+  }
+
+  // trocar o tema com o mapa aberto (ladrilhos de verdade): a câmera e os imóveis ficam
+  await passo("tema com o mapa aberto", async () => {
+    const { ctx, pagina } = await abrir({ largura: 1440, altura: 900, tema: "escuro", url: VISTAS[2].url, medir: true });
+    await esperarMapa(pagina);
+    const antes = await estado(pagina);
+    const nAntes = await pagina.evaluate(() => window.__mapaLuneta.querySourceFeatures("imoveis").length);
+    await pagina.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
+    await pagina.waitForTimeout(2500);
+    const depois = await estado(pagina);
+    const nDepois = await pagina.evaluate(() => window.__mapaLuneta.querySourceFeatures("imoveis").length);
+    await pagina.screenshot({ path: join(SAIDA, "revisao-tema-trocado-1440.png") });
+    log("      antes", antes.centro, antes.zoom, nAntes, "depois", depois.centro, depois.zoom, nDepois);
+    await ctx.close();
+  });
+
+  // voltar no histórico: a câmera e a área daquela entrada (não o Brasil inteiro)
+  await passo("voltar no histórico", async () => {
+    const { ctx, pagina } = await abrir({ largura: 1440, altura: 900, tema: "claro", url: "/previa?vista=mapa&centro=-23.55,-46.63&zoom=11", medir: true });
+    await esperarMapa(pagina);
+    const c = await pagina.locator(".maplibregl-canvas").boundingBox();
+    await pagina.mouse.move(c.x + c.width / 2, c.y + c.height / 2);
+    await pagina.mouse.down();
+    for (let k = 1; k <= 10; k++) await pagina.mouse.move(c.x + c.width / 2 - 20 * k, c.y + c.height / 2);
+    await pagina.mouse.up();
+    await pagina.waitForTimeout(2500);
+    const arrastou = await estado(pagina);
+    const busca = pagina.getByPlaceholder(/Cidade, bairro/).first();
+    await busca.fill("Recife");
+    await busca.press("Enter");
+    await pagina.waitForTimeout(4000);
+    const recife = await estado(pagina);
+    await pagina.goBack();
+    await pagina.waitForTimeout(4000);
+    const voltou = await estado(pagina);
+    await pagina.screenshot({ path: join(SAIDA, "revisao-voltou-1440.png") });
+    log("      arrastou", arrastou);
+    log("      recife  ", recife);
+    log("      voltou  ", voltou);
+    await ctx.close();
+  });
+
+  // Lente com "2 quartos" na busca: o mapa pede com o plano (o filtro de quartos é da Luneta)
+  await passo("Lente: 2 quartos na busca", async () => {
+    const { ctx, pagina } = await abrir({ largura: 1440, altura: 900, tema: "escuro", url: "/previa?vista=mapa&plano=lente&q=casa+2+quartos", medir: true });
+    await esperarMapa(pagina);
+    const r = await pagina.evaluate(() => ({
+      pedidoDosPontos: performance.getEntriesByType("resource").map((e) => e.name).find((u) => u.includes("/api/catalogo/pontos?")),
+      noMapa: window.__mapaLuneta.getSource("imoveis").serialize().data.features.reduce((s, f) => s + f.properties.n, 0),
+      contagem: document.body.innerText.match(/[\d.]+ imóve(?:l|is)/)?.[0],
+    }));
+    log("     ", r);
+    await ctx.close();
+  });
+
+  // página do imóvel com o endereço pela rua: o ponto com a área de incerteza em volta
+  await passo("imóvel na rua", async () => {
+    const { ctx, pagina } = await abrir({ largura: 1440, altura: 900, tema: "claro", url: "/previa/imovel/caixa-8555511199930" });
+    await pagina.waitForSelector("#localizacao", { timeout: 30000 });
+    await pagina.evaluate(async () => {
+      const alvo = document.querySelector("#localizacao");
+      alvo.scrollIntoView({ block: "start" });
+      await new Promise((ok) => setTimeout(ok, 400));
+      alvo.querySelector("[class*='rounded-3xl'][class*='h-[300px]']")?.scrollIntoView({ block: "center" });
+    });
+    await esperarMapa(pagina, "#localizacao .maplibregl-canvas");
+    await pagina.screenshot({ path: join(SAIDA, "revisao-imovel-rua-1440-claro.png") });
+    await ctx.close();
+  });
+
+  // celular com a CPU 4× mais lenta: tarefas longas depois de soltar o dedo (a lista segue a área)
+  await passo("parada com a lista (CPU 4x)", async () => {
+    const { ctx, pagina } = await abrir({ largura: 390, altura: 844, tema: "escuro", url: VISTAS[1].url, medir: true });
+    await esperarMapa(pagina);
+    const cdp = await ctx.newCDPSession(pagina);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    const r = await pagina.evaluate(async () => {
+      const longas = [];
+      new PerformanceObserver((l) => l.getEntries().forEach((e) => longas.push(Math.round(e.duration)))).observe({ type: "longtask" });
+      const m = window.__mapaLuneta;
+      const saida = [];
+      for (const dx of [220, -220, 220]) {
+        const n0 = longas.length;
+        m.panBy([dx, 0], { duration: 600 }, { daPessoa: true });
+        await new Promise((ok) => setTimeout(ok, 3500));
+        saida.push(longas.slice(n0));
+      }
+      return saida;
+    });
+    log("      tarefas longas (ms) depois de cada parada:", r);
+    await ctx.close();
+  });
 }
 
 if (roteiro === "mapa" || roteiro === "tudo" || roteiro === "desempenho") {

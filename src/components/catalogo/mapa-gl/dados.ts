@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { canonico } from "@/components/catalogo/app/consultas";
-import { filtrosEfetivos } from "@/lib/catalogo/filtros-rotulos";
+import { consultaPontos } from "@/components/catalogo/app/consultas";
 import { lerPontos, type PontosCompactos, type PontosLidos } from "@/lib/catalogo/pontos";
 import type { Conjunto, Filtros, ImovelResumo, Plano } from "@/lib/catalogo/tipos";
-import { escreverBusca } from "@/lib/catalogo/url";
 
 /**
  * Os dados do mapa de verdade no navegador:
@@ -18,18 +16,15 @@ import { escreverBusca } from "@/lib/catalogo/url";
 
 const API_PONTOS = "/api/catalogo/pontos";
 
-/**
- * Consulta dos pontos (a chave do cache): conjunto e os filtros que valem no plano, sem a área do mapa. O plano não vai
- * (os pontos não têm nada da Luneta; os filtros dela já saíram aqui no Lente): trocar de Lente para Luneta sem filtro
- * avançado não pede os pontos de novo, e a CDN guarda uma resposta só.
- */
-export function consultaPontos(conjunto: Conjunto, filtros: Filtros, plano: Plano): string {
-  const f = canonico(filtrosEfetivos(filtros, plano, false));
-  delete f.bbox;
-  return escreverBusca({ conjunto, filtros: f }).toString();
-}
+/** Consulta dos pontos (a chave do cache): src/components/catalogo/app/consultas.ts (com o plano). */
+export { consultaPontos };
 
 const cache = new Map<string, PontosLidos>();
+/**
+ * O catálogo mudou no servidor (o cartão recebeu 409): o próximo pedido dos pontos pula o cache HTTP do navegador
+ * (5 minutos), senão ele devolveria os pontos velhos de novo.
+ */
+let recarregar = false;
 const LIMITE = 6;
 function guardar(chave: string, p: PontosLidos) {
   cache.delete(chave);
@@ -65,7 +60,9 @@ export function usePontos(conjunto: Conjunto, filtros: Filtros, plano: Plano, at
     if (!ativo || cache.has(consulta)) return;
     const controle = new AbortController();
     const t = performance.now();
-    fetch(`${API_PONTOS}?${consulta}`, { signal: controle.signal, headers: { accept: "application/json" } })
+    const modo: RequestCache = recarregar ? "reload" : "default";
+    recarregar = false;
+    fetch(`${API_PONTOS}?${consulta}`, { signal: controle.signal, cache: modo, headers: { accept: "application/json" } })
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status));
         return r.json() as Promise<PontosCompactos>;
@@ -93,6 +90,7 @@ export function usePontos(conjunto: Conjunto, filtros: Filtros, plano: Plano, at
 /** Esquece os pontos guardados (a versão do catálogo mudou no servidor). */
 export function esquecerPontos() {
   cache.clear();
+  recarregar = true;
 }
 
 // ---------------------------------------------------------------------------
