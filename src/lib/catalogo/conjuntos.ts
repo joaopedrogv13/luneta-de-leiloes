@@ -72,7 +72,8 @@ export async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
   for (const i of lista.itens) {
     i.notaLocal = notaLocalDe(loc, i.id);
     const estacoes = tagsDeEstacoes(estacoesDe(loc, i.id));
-    if (estacoes.length) i.tags = [...i.tags, ...estacoes];
+    // na frente das outras positivas: o cartão mostra poucas tags (as graves e de atenção vêm antes de qualquer jeito)
+    if (estacoes.length) i.tags = [...estacoes, ...i.tags];
   }
   const enderecos = lista.enderecos;
   const indice = criarIndice(lista.itens, { textoExtra: (_, k) => enderecos[k] });

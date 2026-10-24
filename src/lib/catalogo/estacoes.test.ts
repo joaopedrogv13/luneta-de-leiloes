@@ -213,6 +213,6 @@ test("dados reais: as colunas estão no arquivo do OSM, só para número ou rua,
     const { precisao } = contextoEstacoes(d, i.id);
     assert.ok(precisao === "numero" || precisao === "rua", `${i.id}: ${precisao}`);
   }
-  // a medição de 24/10/2026 deu 911 imóveis com pelo menos uma das três tags
+  // a medição de 24/10/2026 deu 907 imóveis com pelo menos uma das três tags
   assert.ok(comTag > 500 && comTag < 2000, String(comTag));
 });

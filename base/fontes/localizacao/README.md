@@ -199,8 +199,8 @@ metrô Botafogo a 450 m" da seção de localização. É do plano Luneta, como a
 - **a nota não muda**: o transporte da nota segue com a distância até qualquer estação, barca ou terminal (`estacao_m`),
   como na rodada 4. As colunas novas entram no `localizacao-osm.json.gz` sem tocar no resto do arquivo.
 
-Em 24/10/2026, com o OSM de 23/10: 369 imóveis com metrô a menos de 1 km, 604 com trem e 46 com VLT (911 com pelo menos
-uma, 6,7% dos 13.692 com número ou rua), quase todos no Rio, em São Paulo e nas regiões metropolitanas de Recife,
+Em 24/10/2026, com o OSM de 23/10: 369 imóveis com metrô a menos de 1 km, 604 com trem e 46 com VLT (907 com pelo menos
+uma, 6,6% dos 13.692 com número ou rua), quase todos no Rio, em São Paulo e nas regiões metropolitanas de Recife,
 Salvador, Fortaleza e Porto Alegre. Por cidade em [`medicao-nota.md`](../../saida/localizacao/medicao-nota.md).
 
 Para recalcular sem refazer a nota: a etapa `osm` do Actions e `estacoes.py --osm osm-pois.csv.gz` (2 s).

@@ -26,7 +26,11 @@ test("26 tags com slug único e estável", () => {
 
 test("rótulo, categoria e severidade iguais aos do site (src/content/tags.ts)", () => {
   const caminho = fileURLToPath(new URL("../../src/content/tags.ts", import.meta.url));
-  const fonte = readFileSync(caminho, "utf8");
+  // só TAG_CATEGORIES: as tags de localização (TAGS_LOCALIZACAO, metrô, trem e VLT perto, rodada 5) são calculadas pelo
+  // site com o OpenStreetMap, não pelo motor de regras da base
+  const inteira = readFileSync(caminho, "utf8");
+  const fimAnalise = inteira.indexOf("export const TAGS_LOCALIZACAO");
+  const fonte = fimAnalise >= 0 ? inteira.slice(0, fimAnalise) : inteira;
   // Lê a estrutura do site como texto: cada categoria (name) seguida das suas tags (label, severity).
   const site: Array<{ categoria: string; rotulo: string; severidade: string }> = [];
   let categoria = "";

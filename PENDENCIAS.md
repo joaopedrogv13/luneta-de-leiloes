@@ -1623,6 +1623,121 @@ simples de tamanho fixo, e o endereço do real fora).
   `if (["fotos", "fotos-site"].includes(roteiro)) { await import("./" + roteiro + ".mjs"); process.exit(0); }` (os dois
   roteiros desta frente moram em `fotos.mjs` e `fotos-site.mjs`).
 
+### Rodada 5 · simulador e metrô (frente S): lucro com o lance primeiro, conta limpa e a tag "Metrô a 450 m" (24/10/2026)
+
+Pedidos do dono: (6) "No cenário e prazos, quero que a versão 'Lucro com o meu lance' seja a principal. Se quiser, muda
+para a outra."; (7) "No 'A conta linha a linha', quero que a parte de alterar a conta linha a linha seja escondida; se eu
+clico, ela abre."; (11) "Para cidade grande, quero que metrô perto seja uma flag (< 1 km). Dá para fazer?"
+
+**(6) "Cenários e prazos" abre em "Lucro com o meu lance".**
+- A opção vem primeiro no seletor e é o padrão (`VISAO_PADRAO` em `src/lib/simulador/completa.ts`). "Lance máximo para
+  a meta" fica a um toque.
+- **Quem já escolheu mantém a escolha**: o estado salvo (`luneta:simulador:v2:<id>`) guarda `visao: null` enquanto a
+  pessoa não toca no seletor, então dá para distinguir. Quem nunca escolheu (ou tem só ajustes) passa a ver o lucro;
+  quem escolheu o lance máximo continua nele.
+- O PDF segue a mesma vista: a tabela da tela vem primeiro e a outra depois.
+- Venda direta sem mudança: "Vale a pena comprar por R$ X?", a tabela abre no "Lucro pelo preço" e a outra vista é a
+  margem para imprevistos.
+- O "Como usar" explica as duas visões na ordem nova, a legenda das cores é a da visão aberta (com uma linha sobre a
+  outra) e o exemplo começa pelo lucro com o lance.
+
+**(7) "A conta, linha a linha" abre limpa.**
+- Os lápis, o "+ Adicionar custo", a lista "Fora da conta" (com o "Religar") e o "Restaurar tudo" ficam atrás de um
+  botão discreto ao lado do título, **"Editar a conta"**.
+- Aberta, tudo funciona como antes (os pop-ups por tipo de despesa) e o botão vira "Concluir".
+- **Com ajustes salvos**, o botão diz **"Conta ajustada · ver ajustes"**, com um ponto de latão. As linhas ajustadas
+  mantêm o selo "ajustado" mesmo fechada. Custo tirado da conta aparece numa linha discreta ("1 custo fora da conta:
+  registro").
+- Teclado e leitor de tela: é o mesmo botão nos três estados (`aria-expanded`, `aria-controls`), então o foco fica nele
+  ao abrir e ao fechar. O lápis abre o pop-up, e o Esc devolve o foco ao lápis.
+- Celular: as abas Tabela / Conta / Gráfico e as folhas dos pop-ups continuam iguais. A conta fica aberta enquanto a
+  pessoa estiver na página.
+- O "Restaurar tudo" saiu do cabeçalho do Detalhe e foi para dentro da edição da conta.
+
+**(11) Metrô perto: a tag "Metrô a 450 m" (e "Trem a…", "VLT a…").**
+- **Dados**: `base/fontes/localizacao/osm.py` separa a antiga categoria `trilho` em `metro`, `trem`, `vlt` e
+  `monotrilho`, pelas tags subway, train, light_rail, tram, monorail e station=*.
+  - O arquivo do OSM ganhou o nome e a rede de cada estação.
+  - Estação de dois modos sai nas duas categorias.
+  - Etapa `osm` rodada de novo no Actions (execuções 40099760538 e 40100163122, branch `coleta-localizacao`, OSM de
+    23/10/2026): 970 pontos de metrô, 788 de trem, 376 de VLT e 45 de monotrilho, em `coletas-dados/localizacao/40100163122/`.
+- **Cálculo**: `base/fontes/localizacao/estacoes.py`.
+  - Calcula, para cada imóvel com endereço no número ou na rua, a distância em linha reta até a estação mais perto de
+    metrô, de trem e de VLT, com o nome da estação.
+  - Grava as colunas `metro_m`, `trem_m`, `vlt_m`, `<modo>_nome` e `metro_mono` no `localizacao-osm.json.gz` (ODbL).
+  - **A nota não mudou**: só as colunas novas entraram, o resto do arquivo ficou igual.
+  - A etapa `nota` do Actions já chama o `estacoes.py` depois do `nota.py`.
+- **Só estação de passageiros de transporte urbano**: o OSM marca como estação muita parada antiga do interior, linha
+  de carga, trem turístico, bonde e funicular. Para a tag:
+  - saem os nomes com "antiga", "desativada", "turística", "bonde", "funicular", "plano inclinado" etc.;
+  - sai a linha Teresina–Parnaíba, marcada ao mesmo tempo como metrô, trem e VLT em cada estação;
+  - sai o acesso de metrô "órfão", longe de qualquer estação (havia um no Méier, a 2,6 km do metrô mais perto);
+  - trem e VLT só contam de rede urbana conhecida (CPTM, ViaMobilidade, TIC Trens, SuperVia, Trensurb, CBTU,
+    Metrofor, VLT, EMTU...) e das estações vizinhas dela;
+  - o monotrilho só conta o do Metrô de São Paulo (vira "Metrô a…", com a frase "estação de monotrilho"); o de
+    santuário e o de parque ficam fora.
+
+  Conferi à mão, cidade por cidade, as estações que dão tag: nomes de estações da SuperVia, da CPTM, dos metrôs e dos
+  VLTs.
+- **Quantos ganham a tag** (detalhe por cidade em `base/saida/localizacao/medicao-nota.md`, seção "Estação de metrô,
+  trem e VLT perto"):
+
+  | Tag (abaixo de 1 km) | Imóveis | % dos 13.692 com número ou rua |
+  | --- | --- | --- |
+  | Metrô | 369 | 2,7% |
+  | Trem | 604 | 4,4% |
+  | VLT | 46 | 0,3% |
+  | Pelo menos uma | 907 | 6,6% |
+
+  Rio de Janeiro: 543 (144 metrô, 473 trem). São Paulo: 132. Jaboatão: 41. Salvador: 23. Camaragibe: 21. Nilópolis: 17.
+  Fortaleza: 13. Canoas, São Vicente, São Leopoldo e Brasília: 10 a 11.
+- **No site** (`src/lib/catalogo/estacoes.ts`):
+  - a tag é calculada no servidor ao montar o resumo e o detalhe (`conjuntos.ts`). É positiva e confirmada, vem antes
+    das outras positivas no cartão e é do plano Luneta: no Lente sai com as outras tags;
+  - na página, a tag tem a evidência ("Estação de metrô Carioca / Centro a 150 m, em linha reta do ponto do endereço
+    (no número). Fonte: OpenStreetMap...") e a confiança: alta no número, média na rua;
+  - a explicação está em `src/content/tags.ts` (`TAGS_LOCALIZACAO`), fora das 8 categorias da landing;
+  - a faceta de tags usa o rótulo fixo "Metrô a até 1 km";
+  - **filtro avançado "Metrô a até 1 km"** (Luneta), com a contagem. Fica na seção **"Entorno"** do painel de filtros,
+    que antes se chamava "Nota de localização" e agora tem a nota e o metrô. URL `metro=1`, pílula, consulta no
+    servidor. No Lente aparece com o cadeado e é ignorado;
+  - na seção de localização da página do imóvel, o cartão do endereço diz "Estação de metrô Carioca / Centro a 150 m"
+    (sem nome, se o OSM não trouxer), em linha reta e com a atribuição do OSM. O PDF tem a mesma frase, em
+    "Transporte sobre trilhos perto";
+  - nas fontes da nota, o OSM cita as duas datas: a da nota (17/10) e a das estações (23/10).
+
+**Navegador** (`next start`, Playwright, prints em `scratchpad/prints/r5-S/`). Larguras 360, 390, 768, 1024 e 1440, nos
+dois temas: 218 conferências, sem erro (o script está em `scratchpad/r5s-prints.mjs`).
+- **Simulador**: abre no lucro; quem tinha escolhido o lance máximo continua nele; a conta fechada não tem lápis nem
+  "Adicionar custo". Enter no "Editar a conta" abre e o foco fica no botão. O lápis abre o pop-up, e o Esc volta ao
+  lápis. "Conta ajustada · ver ajustes" aparece com ajustes salvos. No celular, a aba Conta.
+- **Metrô**: a tag e a explicação no imóvel, a frase na localização, o filtro na URL, a pílula e o chip marcado no
+  painel. O Lente fica sem a estação e sem a tag, e o filtro aparece com o cadeado.
+- **PDF**: a tabela da vista escolhida vem primeiro, e a localização diz a estação.
+- Sem rolagem lateral.
+
+**Testes**: `src/lib/catalogo/estacoes.test.ts` (textos, leitura das colunas, conferência do arquivo, filtro com
+contagem, Lente, URL e pílula, dados reais), um caso real em `pagina.test.ts` (a tag com a evidência na Luneta, nada no
+Lente), a visão padrão em `simulador-v2.test.ts` e as regras do `estacoes.py` e do `osm.py` no `testar.py`.
+
+**Pendências desta frente**:
+- **Decisões do dono** (o que escolhi):
+  - monotrilho do Metrô de SP conta como metrô;
+  - o bonde de Santa Teresa e os trens de longa distância (Vitória a Minas, Carajás) não contam;
+  - a tag vale com endereço na rua (o ponto é o meio da rua: confiança média), não só no número;
+  - Trensurb (Porto Alegre) aparece como metrô, porque o OSM a marca assim.
+- **Atualização**: a cada etapa `osm` + `nota` do Actions a tag se refaz sozinha. Fora dela, depois de uma etapa `osm`
+  nova: `estacoes.py --osm osm-pois.csv.gz` (2 s) e commitar o `localizacao-osm.json.gz` e o `medicao-nota.md`.
+  Estação nova (uma linha que abre) entra quando o OSM a marcar; se a rede dela não estiver em `REDES_PASSAGEIROS`
+  nem perto de uma que esteja, acrescentar lá.
+- **Nota de localização**: o transporte da nota ainda usa a categoria inteira de 17/10, com as estações antigas do
+  interior, como na rodada 4. No próximo recálculo da nota, vale usar as mesmas regras da tag. Isso muda a nota de
+  algumas cidades pequenas, por isso não fiz agora.
+- A página pública "Como a nota é calculada" (`/metodologia/localizacao`) ainda não fala da tag de metrô. Dá para pôr
+  um parágrafo quando o dono aprovar as regras acima.
+- O Next avisou no `next build` que a versão 16.4.0 tem uma vulnerabilidade conhecida e recomendou atualizar. Não
+  mexi: fica para uma frente própria.
+
 ### Ler cada leilão com IA: é viável?
 
 Sim: em vez de preencher à mão, um robô baixa a página e os documentos de cada leilão (página da Caixa, edital,
