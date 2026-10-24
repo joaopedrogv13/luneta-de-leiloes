@@ -1,0 +1,86 @@
+[
+ {
+  "url": "/assinante",
+  "largura": 1440,
+  "tema": "dark",
+  "fotos": 16,
+  "ok": 16,
+  "falharam": []
+ },
+ {
+  "url": "/assinante",
+  "largura": 390,
+  "tema": "light",
+  "fotos": 16,
+  "ok": 16,
+  "falharam": []
+ },
+ {
+  "url": "/assinante?vista=cards",
+  "largura": 1440,
+  "tema": "dark",
+  "fotos": 16,
+  "ok": 16,
+  "falharam": []
+ },
+ {
+  "url": "/assinante?vista=cards",
+  "largura": 390,
+  "tema": "light",
+  "fotos": 16,
+  "ok": 16,
+  "falharam": []
+ },
+ {
+  "url": "/assinante/imovel/ex-alvo-sp",
+  "largura": 1440,
+  "tema": "dark",
+  "fotos": 2,
+  "ok": 2,
+  "falharam": []
+ },
+ {
+  "url": "/assinante/imovel/ex-alvo-sp",
+  "largura": 390,
+  "tema": "light",
+  "fotos": 2,
+  "ok": 2,
+  "falharam": []
+ },
+ {
+  "url": "/assinante/imovel/ex-semselo-go",
+  "largura": 1440,
+  "tema": "dark",
+  "fotos": 2,
+  "ok": 2,
+  "falharam": []
+ },
+ {
+  "url": "/assinante/imovel/ex-semselo-go",
+  "largura": 390,
+  "tema": "light",
+  "fotos": 2,
+  "ok": 2,
+  "falharam": []
+ },
+ {
+  "url": "/",
+  "largura": 1440,
+  "tema": "dark",
+  "fotos": 14,
+  "ok": 14,
+  "falharam": []
+ },
+ {
+  "url": "/",
+  "largura": 390,
+  "tema": "light",
+  "fotos": 14,
+  "ok": 11,
+  "falharam": [
+   "https://venda-imoveis.caixa.gov.br/fotos/F144440451477721.jpg",
+   "https://venda-imoveis.caixa.gov.br/fotos/F144440451477721.jpg",
+   "https://venda-imoveis.caixa.gov.br/fotos/F144440451477721.jpg"
+  ]
+ }
+]

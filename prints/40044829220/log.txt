@@ -1,0 +1,12 @@
+
+added 2 packages in 1s
+/assinante 1440 dark 16/16 fotos
+/assinante 390 light 16/16 fotos
+/assinante?vista=cards 1440 dark 16/16 fotos
+/assinante?vista=cards 390 light 16/16 fotos
+/assinante/imovel/ex-alvo-sp 1440 dark 2/2 fotos
+/assinante/imovel/ex-alvo-sp 390 light 2/2 fotos
+/assinante/imovel/ex-semselo-go 1440 dark 2/2 fotos
+/assinante/imovel/ex-semselo-go 390 light 2/2 fotos
+/ 1440 dark 14/14 fotos
+/ 390 light 11/14 fotos
