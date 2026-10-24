@@ -11,7 +11,8 @@ produto ainda não cumpre e a nota recalculada; ver "Rodada 4 · revisão final"
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
-  (exemplos fictícios) e prévia com dados reais em `/previa` (sem link, noindex).
+  (desde a rodada 5: vitrine com os 10 melhores imóveis reais da base e os 6 exemplos fictícios à parte; ver "Rodada 5 ·
+  demonstração (frente V)") e prévia com dados reais em `/previa` (sem link, noindex).
 - **Base de dados:** pasta `base/` (SQLite do Node, sem dependências). Detalhes em `base/README.md`, fontes em
   `base/FONTES.md`, caminho até o site em `base/FASE1-SITE.md`.
 - **Análise de negócio, conversão e jurídico:** https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7
@@ -1490,6 +1491,123 @@ violações (quadro inicial, com metrô, pop-up e folha).
   known security vulnerability" (Next 16.4.0) e passa ao repetir. Vale avaliar a atualização do Next (`next upgrade`)
   antes do lançamento; não foi feita aqui.
 
+### Rodada 5 · demonstração (frente V): vitrine com 10 imóveis reais e fotos nos exemplos (24/10/2026)
+
+Pedidos do dono: (3) "Todos os pontos sem foto: adicione as melhores fotos que temos. Uma por caso." e (4) "No 'Abrir
+demonstração completa' pode sempre mostrar parte dos uns 10 imóveis (os melhores) da base real e deixe claro que para
+mostrar mais só assinando."
+
+**A vitrine (`/assinante`)**. O servidor escolhe os **10 melhores imóveis reais** da base a cada carga do instantâneo (e
+de novo a cada dia), por um critério objetivo em `src/lib/catalogo/vitrine.ts` (testado em `vitrine.test.ts`):
+1. **Regras** (todas valem):
+   - deságio de 35% a 75% (alto, sem o desconto extremo que costuma ser erro da fonte);
+   - avaliação coerente: R$/m² da avaliação até 1,8 vez a mediana do mesmo tipo na cidade (ou no estado);
+   - lance de R$ 40 mil a R$ 3 milhões e, em casa e apartamento, de R$ 500 a R$ 25 mil por m²;
+   - nota de localização de 70 para cima, com o endereço achado no número ou na rua;
+   - cidade com 300 mil moradores ou mais (IBGE);
+   - com foto, fora das fotos olhadas e recusadas (`src/lib/catalogo/vitrine-fotos.ts`);
+   - sem tag grave, nem em revisão;
+   - preço claro (venda direta, venda online, licitação ou leilão com a praça informada);
+   - praça ainda não passada, quando a fonte dá a data; área informada.
+2. **Pontuação** = deságio + nota ÷ 2 + 3 se o endereço foi achado no número (desempate: mais dados, depois o id).
+3. **Variedade**: no máximo 2 por estado, 1 por cidade, 4 apartamentos, 4 casas e 1 de cada outro tipo.
+4. Se faltar imóvel, as vagas que sobram usam regras afrouxadas em duas etapas (cada escolhido guarda a etapa e o
+   motivo). Hoje os 10 passam nas regras estritas (643 dos 21.229 passam; o teste com o instantâneo confere).
+
+**Os 10 de hoje** (instantâneo da lista da Caixa de 08/10; todos venda direta ou venda online, praça única, "Ocupação
+não informada", sem tag grave):
+
+| # | Imóvel | Deságio | Nota | Endereço | Pontos | A foto (a do próprio imóvel, vista no Actions) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Casa 1 quarto · Mutondo, São Gonçalo/RJ (R$ 58.764) | 70% | 98 | número | 122 | fachada com portão, nítida |
+| 2 | Apartamento 2 quartos · Areia Branca, Belford Roxo/RJ (R$ 64.001) | 63% | 89 | número | 110,5 | condomínio de torres |
+| 3 | Casa 3 quartos · Nazaré, Salvador/BA (R$ 81.070) | 56% | 100 | número | 109 | a viela com plantas |
+| 4 | Apartamento 2 quartos · Rua Nova, Feira de Santana/BA (R$ 52.217) | 62% | 94 | rua | 109 | entrada do condomínio |
+| 5 | Apartamento 1 quarto · Jardim Atlântico, Olinda/PE (R$ 45.065) | 60% | 91 | número | 108,5 | prédio de 4 andares |
+| 6 | Apartamento 4 quartos, 506 m² · Vila Bom Jesus, São José do Rio Preto/SP (R$ 1,02 mi) | 59% | 98 | rua | 108 | a torre, de baixo |
+| 7 | Loja 545 m² · Floresta, Porto Alegre/RS (R$ 755.609) | 50% | 98 | número | 102 | fachada com portas de garagem |
+| 8 | Casa 109,73 m² · Centro, Pelotas/RS (R$ 200.999) | 46% | 91 | número | 94,5 | fileira de casas antigas |
+| 9 | Casa 258 m² · Mooca, São Paulo/SP (R$ 934.217) | 45% | 92 | número | 94 | o sobrado (foto pequena, 252 px) |
+| 10 | Terreno 454,88 m² · Amambai, Campo Grande/MS (R$ 681.926) | 36% | 95 | número | 86,5 | muro e portão, de madrugada |
+
+Variedade: RJ, BA, SP e RS com 2; PE e MS com 1; 4 apartamentos, 4 casas, 1 loja, 1 terreno. A casa de São João de
+Meriti (69%, era a 2ª) saiu porque uma van cobre a fachada na foto; entraram o apartamento de Belford Roxo e a casa da
+Mooca. O terreno de Campo Grande ficou: os outros terrenos que passam nas regras estritas têm foto pior (preto e branco,
+entulho); sem ele, a 10ª vaga iria para as regras afrouxadas.
+
+**Na tela**:
+- topo da lista: "**Você está vendo 10 de 21.229 imóveis reais da base.** Para ver todos, com filtros, mapa e alertas,
+  assine.", o botão "Ver os planos", o "Cancele grátis em até 7 dias" e, no clique, "Como escolhemos estes 10";
+- com filtro ou busca (valem só dentro dos 10): "Com estes filtros: 2 dos 10 aqui e 2.841 imóveis na base completa.";
+- fim da lista: o mesmo convite, maior; página de cada imóvel real: faixa "imóvel real da vitrine", o aviso no topo e
+  no rodapé, e os parecidos só os da vitrine, com "Na base completa há pelo menos 6 imóveis parecidos com este, fora
+  da vitrine";
+- a troca Lente/Luneta continua: no Lente, sem tags, nota e simulador; no Luneta, tags em revisão, nota e o simulador
+  com os dados da base inteira (região, ITBI). Selos: desligados nos reais (critérios pendentes), como na prévia;
+- o "Como a nota é calculada" de um imóvel da vitrine volta para a demonstração (`?c=assinante`);
+- sem a base (instantâneo faltando), a `/assinante` volta a mostrar só os 6 exemplos, como antes.
+
+**Os 6 exemplos fictícios** ficam num bloco à parte, abaixo do convite: "**Exemplos fictícios (para ver os selos)**",
+fora dos filtros, da contagem e do mapa, com as mesmas páginas `/assinante/imovel/ex-*` (os links da landing e o "Voltar
+à apresentação" continuam iguais). Escolhi o bloco, e não só um link, porque os selos só aparecem neles e quem chega
+pela landing reconhece os cartões; no celular é uma fila que rola de lado (empilhados, os 6 alongavam a página em
+~3.500 px).
+
+**Fotos (decisão 3)**. Todo cartão que aparecia sem foto ganhou uma:
+- os 6 fictícios (os 4 cartões da landing, os 3 do "Por dentro", o cartão do Alvo no hero, a demonstração, a página e o
+  PDF de cada um) usam a foto de um **imóvel real compatível** da base, sempre com o rótulo **"Foto ilustrativa"**
+  ("Exemplo fictício · foto ilustrativa" no cartão da landing; "Foto ilustrativa · de um imóvel real parecido, de outro
+  endereço" na galeria). O endereço do imóvel real nunca aparece (teste);
+
+  | Exemplo | Foto de (imóvel real, mesmo tipo e UF, sem tag grave) | O que mostra |
+  | --- | --- | --- |
+  | Alvo · Apto 3 quartos, Vila Mariana, São Paulo/SP | `caixa-1444423428333`, apto 3 quartos, São Paulo/SP | prédio com sacadas e árvores |
+  | Na Mira · Casa 2 quartos, Água Verde, Curitiba/PR | `caixa-8444429616989`, casa 2 quartos, Fazenda Rio Grande/PR | fachada com garagem (a única de 35 casas do PR olhadas sem data, coordenadas ou rua gravadas na foto) |
+  | Promissor · Apto 2 quartos, Pituba, Salvador/BA | `caixa-1444404514777`, apto 3 quartos, Salvador/BA | prédios de 4 andares numa rua |
+  | Sem selo · Sala comercial, Centro, Rio/RJ | `caixa-0000010139772`, sala comercial, Centro, Rio/RJ | prédios altos do Centro (o prédio inteiro, nunca a unidade) |
+  | Na Mira · Apto 1 quarto, Savassi, BH/MG | `caixa-1787702387750`, apto 2 quartos, Belo Horizonte/MG | duas torres residenciais |
+  | Sem selo · Terreno, Setor Bueno, Goiânia/GO | `caixa-1444417582466`, terreno, Águas Lindas de Goiás/GO | terreno plano em rua asfaltada, com recorte (zoom de 1,3 a partir do canto esquerdo de baixo) que tira a marca de data e coordenadas |
+
+- compatibilidade: a Caixa não informa a ocupação de nenhum imóvel ("não informada"), então nenhum real contradiz o
+  exemplo; no exemplo "ocupado" (sala no Rio), a foto é a fachada do prédio inteiro;
+- os casos reais usam a foto deles (a vitrine e a prévia);
+- o `AuctionCard` da landing trocou o `next/image` por `<img>` de 84 px (64 no compacto) com largura e altura fixas (sem
+  CLS), `loading="lazy"`, `referrerPolicy="no-referrer"` e o desenho listrado por baixo, que fica se a foto falhar;
+- o cartão do Alvo no hero leva a mesma foto, preguiçosa e de baixa prioridade (o LCP continua o título);
+- o mapa não usa a foto ilustrativa na miniatura (não caberia o rótulo);
+- ficaram sem foto, de propósito: as 150 linhas do "Ajuste o foco" (linha com o ícone do tipo, sem moldura de foto;
+  seriam 150 pedidos à Caixa) e as miniaturas do "Decida com números" e da "Nota de localização" (não têm moldura de
+  foto).
+
+**Escolha das fotos no Actions** (`scripts/prints/actions.mjs`, roteiro `fotos` → `scripts/prints/fotos.mjs`): baixa as
+candidatas de `scripts/prints/fotos-candidatas.json` (um pedido por vez, 1,2 s de pausa, User-Agent que diz quem somos;
+para depois de 5 bloqueios seguidos, sem contornar anti-robô), reduz a 320 px com o sharp e monta folhas de contato em
+`coletas-dados/prints/<execução>/`. **A Caixa não bloqueou**: execuções 40042341202 (114 candidatas: a vitrine, a fila
+e as fotos para cada exemplo), 40042911905 (88) e 40098277361 (40, a fila da vitrine); 242 pedidos, 234 fotos, 8 com
+404. As fotos ruins para a vitrine ficaram em `vitrine-fotos.ts` (40: página de documento, mapa de satélite, colagem do
+laudo, 404, van na frente, entulho ou lixo em primeiro plano, preto e branco, tremida). O roteiro `fotos-site` (`scripts/prints/fotos-site.mjs`) tira os prints
+com as fotos de verdade: execução EXEC_SITE, `/assinante`, um imóvel real, `ex-alvo-sp` e a landing em 360, 390, 768,
+1024 e 1440, nos dois temas.
+
+**Testes**: `vitrine.test.ts` (cada regra, pontuação, variedade, etapas, contagem dos ativos, textos sem "vendendo",
+fotos ilustrativas, e o instantâneo real: 10 no critério estrito, filtros só dentro deles, página de um real e de um
+fictício, Lente sem nada da Luneta), `exemplos.test.ts` e `src/components/fotos-ilustrativas.test.ts` (renderiza no
+Node o cartão da landing, o hero, o cartão e a galeria da demonstração: a foto ilustrativa sempre com o rótulo, `<img>`
+simples de tamanho fixo, e o endereço do real fora).
+
+**Pendências desta frente**:
+- **Fotos da vitrine a cada atualização da base**: a escolha se refaz sozinha, mas a olhada nas fotos não. Imóvel novo
+  entra com a foto que tiver. Depois de cada atualização: `node --import jiti/register scripts/prints/gerar-candidatas.ts`
+  (a vitrine e a fila dela), push num `acoes-*`, `gh workflow run site-prints.yml --ref <branch> -f roteiro=fotos`,
+  olhar as folhas e anotar as ruins em `vitrine-fotos.ts`.
+- **Imóvel vendido continua na vitrine** enquanto a base não se atualiza sozinha (a lista da Caixa é de 08/10): o
+  mesmo problema da prévia (ver "Atualização: como funciona").
+- **Fotos ilustrativas**: confirmar com o especialista que usar a foto pública de um imóvel da Caixa, rotulada e sem o
+  endereço, para ilustrar um exemplo fictício está ok (a foto fica na Caixa; o site não a copia). Se a Caixa tirar a
+  foto do ar, o cartão volta ao desenho listrado; trocar a foto em `src/content/examples.ts` (`photoIlustrativa`).
+- **"Ajuste o foco"** continua sem foto nas linhas (decisão acima); se o dono quiser, dá para pôr a foto ilustrativa
+  por tipo e cidade, ao custo de ~30 fotos da Caixa carregadas na landing.
+
 ### Ler cada leilão com IA: é viável?
 
 Sim: em vez de preencher à mão, um robô baixa a página e os documentos de cada leilão (página da Caixa, edital,
@@ -1582,7 +1700,8 @@ pelo valor real no arquivo de conteúdo.
 
 **Técnico (eu, quando as decisões e a rede permitirem)**
 - [ ] Base de dados de leilões: fontes com API pública primeiro (em andamento), depois raspagem de leiloeiros locais.
-- [ ] Casos reais no site (Exemplos, hero, Praças, Por dentro e `/assinante`) a partir da base.
+- [ ] Casos reais no site (Exemplos, hero, Praças e Por dentro) a partir da base. A `/assinante` já mostra a vitrine
+  com 10 imóveis reais, e os cartões fictícios da landing têm foto ilustrativa de um imóvel real (rodada 5, frente V).
 - [ ] Formulário que muda conforme o botão clicado e envia de verdade (servidor, anti-robô, LGPD).
 - [ ] Alerta de mudança de praça por e-mail: a landing promete (decisão do dono, rodada 5); o back-end é obrigatório antes
   do lançamento (ver "Back-end: favoritos e alerta de mudança de praça").
@@ -1702,13 +1821,15 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
   de `src/lib/brazil.ts` para pôr o pino no lugar exato). Com `source`, o rótulo muda sozinho para "Caso real · leiloeiro".
   Tags e selo de um caso real devem ser marcados como análise ilustrativa até passarem pelo critério validado.
 - **Exemplos de leilão** (`src/content/examples.ts`): 6 imóveis fictícios, sempre rotulados como "Exemplo fictício".
-  O blueprint pede casos reais da base com a etiqueta "exemplo de oportunidade" e fotos; o cartão já aceita
-  `photo` (WebP, servido via `next/image` dentro da moldura de lente). Hoje as fotos são placeholders listrados.
+  O blueprint pede casos reais da base com a etiqueta "exemplo de oportunidade" e fotos; o cartão aceita `photo` (a foto
+  do caso real, num `<img>` simples direto da fonte, sem `next/image`). Desde a rodada 5, cada exemplo tem uma **foto
+  ilustrativa** de um imóvel real parecido (`photoIlustrativa`), sempre rotulada e sem o endereço do real (frente V).
   O Na Mira diz que, segundo o edital, o condomínio em atraso é quitado com o valor da arrematação: revisar com o
   advogado junto com as explicações das tags.
 - **Cartão do Alvo no hero** (deságio contando até 48%) e **praças** (apartamento em Campinas/SP, R$ 400.000 → R$ 200.000,
   e o aviso "Seu favorito foi para a 2ª praça"): fictícios, rotulados.
-- **"Por dentro, depois de assinar"** e **área do assinante** (`/assinante`): usam os mesmos exemplos fictícios.
+- **"Por dentro, depois de assinar"** usa os mesmos exemplos fictícios. A **área do assinante** (`/assinante`) mostra a
+  vitrine com 10 imóveis reais e, à parte, os 6 exemplos fictícios (rodada 5, frente V).
 - **Demo de filtros e mapa** ("Ajuste o foco"): 150 imóveis fictícios gerados (`src/lib/demo-foco`), rotulados
   "Demonstração · 150 imóveis fictícios"; cidades e bairros reais, preço, praça, ocupação, nota e metrô inventados
   (rodada 5, frente F).

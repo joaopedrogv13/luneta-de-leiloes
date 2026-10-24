@@ -213,7 +213,7 @@ export function HeroScene() {
             </p>
             <p className="mt-1 text-[13px] leading-tight font-semibold text-luar">Apartamento 3 quartos · São Paulo/SP</p>
             <p className="mt-0.5 text-[11px] leading-tight text-nevoa">Desocupado · sem dívidas identificadas</p>
-            {FOTO_ALVO && <p className="mt-0.5 text-[10px] leading-tight text-nevoa/90">Foto ilustrativa</p>}
+            {FOTO_ALVO && <p className="mt-0.5 text-[10px] leading-tight text-nevoa">Foto ilustrativa</p>}
           </div>
           <div className="shrink-0 text-right">
             {/* o número anima de 0 a 48; leitores de tela recebem sempre o valor final */}

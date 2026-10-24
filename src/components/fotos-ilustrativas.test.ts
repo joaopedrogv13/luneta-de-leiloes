@@ -37,7 +37,7 @@ test("cartões da landing: cada exemplo fictício leva a foto ilustrativa num <i
       assert.match(img, /referrerPolicy="no-referrer"/i);
       assert.doesNotMatch(h, /_next\/image/, `${l.id}: sem o otimizador do next/image`);
       // o rótulo à vista (inteiro numa linha) e no nome acessível do cartão
-      assert.match(h, /Exemplo fictício<\/span> <span class="whitespace-nowrap">· foto ilustrativa<\/span>/, `${l.id}: rótulo visível`);
+      assert.match(h, /Exemplo fictício ·<\/span> <span class="whitespace-nowrap">foto ilustrativa<\/span>/, `${l.id}: rótulo visível`);
       assert.match(h, /aria-label="Exemplo fictício · foto ilustrativa:/, `${l.id}: rótulo no nome acessível`);
       // o desenho de fallback continua por baixo (a foto da Caixa pode não abrir)
       assert.match(h, /photo-placeholder/);

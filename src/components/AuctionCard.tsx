@@ -121,12 +121,13 @@ export function AuctionCard({
 
       {/* cada parte quebra inteira (nunca "foto" numa linha e "ilustrativa" na outra); a mira do Alvo fica à direita */}
       <p className={`text-[10px] font-medium tracking-[0.14em] text-nevoa uppercase ${alvo && !locked ? "pr-12" : ""}`}>
-        <span className="whitespace-nowrap">{listingLabel(l)}</span>
-        {fotoIlustrativa(l) && (
+        {fotoIlustrativa(l) ? (
           <>
-            {" "}
-            <span className="whitespace-nowrap">· foto ilustrativa</span>
+            {/* quebrando, o ponto fica no fim da 1ª linha: "Exemplo fictício ·" / "foto ilustrativa" */}
+            <span className="whitespace-nowrap">{listingLabel(l)} ·</span> <span className="whitespace-nowrap">foto ilustrativa</span>
           </>
+        ) : (
+          listingLabel(l)
         )}
       </p>
 
