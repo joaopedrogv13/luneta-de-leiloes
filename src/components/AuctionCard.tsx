@@ -61,8 +61,11 @@ function LensPhoto({ listing, size }: { listing: Listing; size: number }) {
   );
 }
 
+/** A foto do cartão é de outro imóvel (exemplo fictício com foto ilustrativa). */
+const fotoIlustrativa = (l: Listing) => !!l.photoIlustrativa && !l.photo;
+
 /** Rótulo do alto do cartão: "Exemplo fictício · foto ilustrativa" quando a foto é de outro imóvel. */
-const rotuloCartao = (l: Listing) => (l.photoIlustrativa && !l.photo ? `${listingLabel(l)} · foto ilustrativa` : listingLabel(l));
+const rotuloCartao = (l: Listing) => (fotoIlustrativa(l) ? `${listingLabel(l)} · foto ilustrativa` : listingLabel(l));
 
 /**
  * Cartão de leilão: foto em moldura de lente, endereço parcial, avaliação, lance mínimo, deságio,
@@ -116,7 +119,16 @@ export function AuctionCard({
         </>
       )}
 
-      <p className="text-[10px] font-medium tracking-[0.14em] text-nevoa uppercase">{rotuloCartao(l)}</p>
+      {/* cada parte quebra inteira (nunca "foto" numa linha e "ilustrativa" na outra); a mira do Alvo fica à direita */}
+      <p className={`text-[10px] font-medium tracking-[0.14em] text-nevoa uppercase ${alvo && !locked ? "pr-12" : ""}`}>
+        <span className="whitespace-nowrap">{listingLabel(l)}</span>
+        {fotoIlustrativa(l) && (
+          <>
+            {" "}
+            <span className="whitespace-nowrap">· foto ilustrativa</span>
+          </>
+        )}
+      </p>
 
       <div className="mt-4 flex items-center gap-3.5">
         <LensPhoto listing={l} size={compact ? 64 : 84} />

@@ -6,10 +6,10 @@ import { SeloCancelamento } from "@/components/ui/SeloCancelamento";
 import { LISTINGS } from "@/content/examples";
 import { estiloRecorte } from "@/lib/catalogo/recorte";
 import { ALVO_DESAGIO, BRASS, LENS_GLOW, LENS_SHADOW } from "./constants";
+import { HeroMotion } from "./HeroMotion";
 
 /** Foto ilustrativa do cartão do Alvo: a do exemplo "alvo-sp" (src/content/examples.ts). */
 const FOTO_ALVO = LISTINGS.find((l) => l.id === "alvo-sp")?.photoIlustrativa ?? null;
-import { HeroMotion } from "./HeroMotion";
 
 /** Cartões desfocados ao fundo = os sites dos leiloeiros, cada um no seu canto. */
 const SITES = [
