@@ -14,8 +14,8 @@
  *    - endereço achado no número ou na rua (precisão "exata" ou "rua"), nunca só no bairro ou na cidade;
  *    - cidade com 300 mil moradores ou mais, pelo IBGE (cidade grande: a nota compara muitos bairros e a revenda tem
  *      mais procura);
- *    - com foto na fonte, e que não esteja entre as fotos olhadas e recusadas (documento, mapa, colagem do laudo ou
- *      foto que a Caixa não publica: src/lib/catalogo/vitrine-fotos.ts);
+ *    - com foto na fonte, e que não esteja entre as fotos olhadas e recusadas (documento, mapa, colagem do laudo, foto
+ *      que a Caixa não publica ou que não mostra o imóvel: src/lib/catalogo/vitrine-fotos.ts);
  *    - sem nenhuma tag grave, nem em revisão (ex.: "Lance acima da avaliação", "Só direitos", "Ocupado");
  *    - modalidade com preço claro: venda direta, venda online, licitação, ou leilão com a praça informada (no Leilão
  *      SFI da Caixa sem ficha não se sabe se o preço é o da 1ª ou da 2ª praça);

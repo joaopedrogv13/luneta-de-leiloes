@@ -34,6 +34,8 @@ export function TopoImovel({
       : vitrine
         ? `Demonstração · imóvel real da vitrine (${numero(vitrine.mostrados)} de ${numero(vitrine.totalBase)}) · classificação automática ainda sem revisão humana · sem login`
         : "Demonstração com exemplo fictício · sem login";
+  // celular: a faixa da vitrine em até duas linhas (as contagens estão no aviso logo abaixo)
+  const faixaCurta = vitrine && conjunto !== "previa" ? "Demonstração · imóvel real · classificação ainda sem revisão humana" : null;
   return (
     <>
       <a
@@ -47,7 +49,14 @@ export function TopoImovel({
         className="bg-latao px-4 py-1.5 text-center text-[12px] leading-snug font-semibold text-noite-fixa sm:text-[13px]"
       >
         {/* tela baixa: numa linha só */}
-        <p className="baixa:truncate">{faixa}</p>
+        {faixaCurta ? (
+          <p className="baixa:truncate">
+            <span className="sm:hidden">{faixaCurta}</span>
+            <span className="max-sm:hidden">{faixa}</span>
+          </p>
+        ) : (
+          <p className="baixa:truncate">{faixa}</p>
+        )}
       </aside>
       {/* celular deitado (pouca altura): o cabeçalho rola junto e a navegação das seções cola no topo. Celular e
           tablet: sai de cena ao rolar para baixo e volta ao rolar para cima (TopoRecolhivel marca o <html>) */}
