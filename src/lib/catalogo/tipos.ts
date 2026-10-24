@@ -3,7 +3,9 @@
  * a página do imóvel e o simulador. Vale para os dois conjuntos de dados:
  * - "previa": o instantâneo do banco em base/saida/site (todos os imóveis ativos; gerado por
  *   `npm run base:exportar -- --site`);
- * - "exemplos": os exemplos fictícios de src/content/examples.ts (a /assinante, demonstração pública).
+ * - "exemplos": a /assinante, demonstração pública: a VITRINE com os ~10 melhores imóveis reais da prévia (escolhidos
+ *   no servidor por src/lib/catalogo/vitrine.ts; filtros e busca valem só dentro deles) e, à parte, os 6 exemplos
+ *   fictícios de src/content/examples.ts (para ver os selos; acessíveis por /assinante/imovel/ex-*).
  *
  * Regras que atravessam tudo:
  * - Dinheiro em reais (number), áreas em m², datas em ISO (UTC). Formatação só na hora de mostrar.
@@ -104,6 +106,17 @@ export interface ImovelResumo {
   foto: string | null;
   /** quantas fotos a fonte publica (para o selo "+N fotos"); 0 sem foto */
   totalFotos: number;
+  /**
+   * A foto é ILUSTRATIVA: de outro imóvel (real, do mesmo tipo e da mesma cidade ou UF), só nos exemplos fictícios
+   * (rodada 5, decisão 3). A tela sempre a rotula "Foto ilustrativa"; o endereço do imóvel da foto nunca aparece.
+   * Ausente = a foto é do próprio imóvel.
+   */
+  fotoIlustrativa?: boolean;
+  /**
+   * Recorte da foto ilustrativa (só nos exemplos): um zoom a partir de um canto, para tirar da imagem a marca de data e
+   * coordenadas que a vistoria grava num canto (o lugar do imóvel real não pode aparecer). Ausente = a foto inteira.
+   */
+  fotoRecorte?: RecorteFoto;
   /** selo (só no plano Luneta; no Lente vem 0) */
   selo: Selo;
   /** selo ainda não avaliado (critérios pendentes): mostrar "Selo em análise" */
@@ -117,6 +130,14 @@ export interface ImovelResumo {
    * nota (endereço só na cidade, rural, cidade pequena) e sempre no plano Lente.
    */
   notaLocal: number | null;
+}
+
+/** Zoom de uma foto a partir de um ponto fixo (CSS transform-origin), para cortar o que fica no canto oposto. */
+export interface RecorteFoto {
+  /** 1 = a foto inteira; 1.3 = mostra ~77% de cada lado */
+  escala: number;
+  /** o ponto que fica parado: "left bottom", "center bottom"... */
+  origem: string;
 }
 
 export type TipoLink = "anuncio" | "edital" | "matricula" | "laudo" | "avaliacao" | "leiloeiro" | "processo" | "mapa" | "outro";
@@ -358,6 +379,23 @@ export interface ResultadoBusca {
   selosDesligados: boolean;
   /** quando o conjunto foi gerado e de que fontes, para o rodapé */
   sobre: SobreConjunto;
+  /** só na vitrine da demonstração (/assinante): o que a lista é e o que fica para quem assina */
+  vitrine?: ResumoVitrine;
+}
+
+/**
+ * A vitrine da demonstração (/assinante): poucos imóveis reais, escolhidos no servidor (src/lib/catalogo/vitrine.ts). Os
+ * filtros e a busca valem só dentro deles; `naBase` diz quantos a base inteira daria com os mesmos filtros.
+ */
+export interface ResumoVitrine {
+  /** imóveis reais na vitrine (sem filtro) */
+  mostrados: number;
+  /** imóveis ativos na base inteira (a prévia), sem filtro */
+  totalBase: number;
+  /** com os mesmos filtros e o mesmo plano, quantos a base inteira tem */
+  naBase: number;
+  /** os exemplos fictícios (para ver os selos e as tags), com o plano aplicado; fora dos filtros e da contagem */
+  exemplos: ImovelResumo[];
 }
 
 export interface SobreConjunto {
@@ -424,6 +462,11 @@ export interface Vizinhanca {
   buscasExternas: (LinkImovel & { nivel?: "rua" | "bairro" | "cidade" })[];
   /** de quais cidades a Luneta tem preço de transação real (ITBI) e índices, e de quais ainda não */
   cobertura?: CoberturaPrecos;
+  /**
+   * Só na vitrine da demonstração: quantos parecidos a base inteira tem fora da vitrine (eles não aparecem: a tela diz
+   * quantos são e que a assinatura mostra todos). Ausente = 0.
+   */
+  parecidosForaDaVitrine?: number;
 }
 
 export interface CoberturaPrecos {
@@ -547,6 +590,8 @@ export interface PaginaImovel {
   localizacao: LocalizacaoImovel | null;
   /** o que o plano atual NÃO vê (src/lib/catalogo/planos.ts): a tela mostra a chamada da Luneta no lugar */
   travas: Recurso[];
+  /** imóvel real da vitrine da demonstração: quantos a vitrine mostra e quantos a base tem (a tela convida a assinar) */
+  vitrine?: { mostrados: number; totalBase: number };
 }
 
 /** Recursos dos planos (src/lib/catalogo/planos.ts). */

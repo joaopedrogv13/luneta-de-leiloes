@@ -122,7 +122,12 @@ export function Relatorio({
             </header>
 
             <section aria-labelledby="imovel-titulo">
-              <GradeCapa foto={foto} legenda={`Foto: ${i.fonte.nome} (publicada no anúncio)`}>
+              <GradeCapa
+                foto={foto}
+                ilustrativa={!!i.fotoIlustrativa}
+                recorte={i.fotoRecorte ?? null}
+                legenda={i.fotoIlustrativa ? "Foto ilustrativa: de um imóvel real parecido, de outro endereço (exemplo fictício)" : `Foto: ${i.fonte.nome} (publicada no anúncio)`}
+              >
                 <div className={s.identidade}>
                   <p className={s.sobretitulo}>{[tipo, i.fonte.nome, MODALIDADE_ROTULO[i.modalidade]].join(" · ")}</p>
                   <h1 id="imovel-titulo" className={s.titulo}>

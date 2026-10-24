@@ -40,7 +40,7 @@ export async function metadadosImovel(conjunto: Conjunto, entrada: Parametros): 
   const desagio = fraseDesagio(i.desagio);
   const description =
     `${i.tipo === "outro" ? "Imóvel" : TIPO_ROTULO[i.tipo]} em ${local(i)}: lance mínimo ${moeda(i.lance)}` +
-    `${desagio && i.desagio! > 0 ? ` (${desagio})` : ""}. ${conjunto === "exemplos" ? "Exemplo fictício da demonstração." : `Fonte: ${i.fonte.nome}.`}`;
+    `${desagio && i.desagio! > 0 ? ` (${desagio})` : ""}. ${i.fonte.id === "exemplo" ? "Exemplo fictício da demonstração." : `Fonte: ${i.fonte.nome}.`}`;
   const url = rotaImovel(conjunto, i.id);
   return {
     title,

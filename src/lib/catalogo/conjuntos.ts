@@ -4,7 +4,10 @@
  * (src/lib/catalogo/pagina.ts), pelo mesmo caminho do servidor.
  * - "previa": o instantâneo do banco em base/saida/site (src/lib/catalogo/instantaneo.ts). A lista inteira vem de uma
  *   vez; cada pedaço de detalhes só quando uma página de imóvel precisa dele.
- * - "exemplos": os 6 exemplos fictícios (src/lib/catalogo/exemplos.ts).
+ * - "exemplos" (a /assinante): a VITRINE (`montarVitrine`) com os ~10 melhores imóveis reais da prévia, escolhidos por
+ *   src/lib/catalogo/vitrine.ts, e os 6 exemplos fictícios (src/lib/catalogo/exemplos.ts) à parte. A lista, os filtros,
+ *   o mapa e as facetas usam só os reais; a página de cada um (real ou fictício) é montada com os dados do conjunto de
+ *   origem (`origemDe`): o imóvel real tem a região, o ITBI e a nota da base inteira.
  *
  * A nota de localização (src/lib/catalogo/localizacao.ts) entra no resumo de cada imóvel (`notaLocal`) antes do índice
  * e, por imóvel, em `localizacao(id)`: na prévia, dos arquivos base/saida/site/localizacao*.json.gz; nos exemplos,
@@ -19,6 +22,7 @@ import { converterExemplos, localizacaoDosExemplos, resumoDe } from "./exemplos"
 import { lerLista, lerParte, montarDetalhe, parteDoId, type DetalheParcial } from "./instantaneo";
 import { dadosLocalizacao, montarLocalizacao, notaLocalDe } from "./localizacao";
 import type { Conjunto, ImovelDetalhe, ImovelResumo, LocalizacaoImovel, SobreConjunto } from "./tipos";
+import { escolherVitrine, type EscolhidoVitrine, type OpcoesVitrine } from "./vitrine";
 import { indiceDeRuas, type ContextoVizinhanca, type RuaDoImovel } from "./vizinhanca";
 
 export interface DadosConjunto {
@@ -41,6 +45,21 @@ export interface DadosConjunto {
    * imóvel ainda não foi calculado.
    */
   localizacao(id: string): Promise<LocalizacaoImovel | null>;
+  /**
+   * De que conjunto o imóvel vem, quando não é deste (a vitrine mostra imóveis da prévia e os exemplos fictícios): a
+   * página dele é montada com os dados daquele conjunto. Ausente (ou null) = deste mesmo.
+   */
+  origemDe?(id: string): DadosConjunto | null;
+  /** Só na vitrine: quem foi escolhido (e por quê), os exemplos fictícios à parte e a base inteira (para as contagens). */
+  vitrine?: DadosVitrine;
+}
+
+export interface DadosVitrine {
+  escolhidos: readonly EscolhidoVitrine[];
+  /** os exemplos fictícios (sem plano aplicado), fora da lista e dos filtros */
+  exemplos: readonly ImovelResumo[];
+  /** a base inteira (a prévia): o total e "com estes filtros, a base tem N" */
+  base: DadosConjunto;
 }
 
 /** A prévia: o instantâneo da pasta (base/saida/site) com a nota de localização. */
@@ -110,5 +129,44 @@ export function carregarExemplos(listings: readonly Listing[], agora: Date = new
     async localizacao(id) {
       return locs.get(id) ?? null;
     },
+  };
+}
+
+/**
+ * A vitrine da demonstração (/assinante): os melhores imóveis reais da prévia (src/lib/catalogo/vitrine.ts), na ordem da
+ * pontuação, e os exemplos fictícios à parte. Só os reais entram no índice (lista, filtros, facetas, mapa); a posição, o
+ * detalhe e a nota valem para os dois, cada um pelo conjunto de origem.
+ */
+export function montarVitrine(previa: DadosConjunto, ficticios: DadosConjunto, opcoes: OpcoesVitrine = {}): DadosConjunto {
+  const escolhidos = escolherVitrine(previa.itens, opcoes);
+  const reais = escolhidos.map((e) => e.item);
+  const itens = [...reais, ...ficticios.itens];
+  const deReais = new Set(reais.map((i) => i.id));
+  const origemDe = (id: string): DadosConjunto | null => (deReais.has(id) ? previa : ficticios.posicao.has(id) ? ficticios : null);
+  return {
+    conjunto: "exemplos",
+    itens,
+    indice: criarIndice(reais),
+    sobre: previa.sobre,
+    // os selos da base real estão em análise (critérios pendentes); os exemplos fictícios mostram os deles na página
+    selosDesligados: previa.selosDesligados,
+    posicao: new Map(itens.map((i, k) => [i.id, k])),
+    ruas: itens.map((i) => {
+      const k = previa.posicao.get(i.id);
+      return k === undefined ? null : (previa.ruas[k] ?? null);
+    }),
+    contexto: (k) => {
+      const i = itens[k];
+      const kp = i ? previa.posicao.get(i.id) : undefined;
+      return kp === undefined ? {} : previa.contexto(kp);
+    },
+    async detalhe(id) {
+      return (await origemDe(id)?.detalhe(id)) ?? null;
+    },
+    async localizacao(id) {
+      return (await origemDe(id)?.localizacao(id)) ?? null;
+    },
+    origemDe,
+    vitrine: { escolhidos, exemplos: ficticios.itens, base: previa },
   };
 }

@@ -8,7 +8,7 @@ import { TOAST_FAVORITADO } from "@/lib/catalogo/produto";
 import { chaveUltimaBusca, rotaImovel, ROTA_LISTA } from "@/lib/catalogo/rotas";
 import { ORDEM_PADRAO, type Conjunto, type Facetas, type Filtros, type ImovelResumo, type Ordem, type Plano, type PontoMapa, type Recurso, type ResultadoBusca } from "@/lib/catalogo/tipos";
 import { quartosDaBusca, rotuloQuartosDaBusca, semQuartos } from "@/lib/catalogo/texto";
-import { lerBusca, type Vista } from "@/lib/catalogo/url";
+import { contarFiltros, lerBusca, type Vista } from "@/lib/catalogo/url";
 import { AreaMapa } from "./app/AreaMapa";
 import { AvisoForaDoPlano, AvisoLente, Toast, type Mensagem } from "./app/Avisos";
 import s from "./app/catalogo.module.css";
@@ -17,6 +17,7 @@ import { EstadoVazio } from "./app/EstadoVazio";
 import { MapaTelaCheia } from "./app/MapaTelaCheia";
 import { criarLojaDestaque, salvarPreferencias, useAcesoPeloMapa, useMidia, usePreferencias, type LojaDestaque } from "./app/hooks";
 import { Paginacao } from "./app/Paginacao";
+import { AvisoVitrine, ExemplosFicticios, RodapeVitrine } from "./app/Vitrine";
 import { CHAVE_TELA, CONSULTA_BARRA_COMPACTA, CONSULTA_BARRA_RECOLHE, CONSULTA_COMPUTADOR, CONSULTA_CELULAR, type Preferencias } from "./app/preferencias";
 import { Cabecalho, type FaixaAviso } from "./Cabecalho";
 import { CartaoImovel, LinhaImovel, ListaEsqueletos, SeletorVista } from "./cartoes";
@@ -450,6 +451,9 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     ...(ordemFora && RECURSO_DA_ORDEM[ordemFora] ? [RECURSO_DA_ORDEM[ordemFora]!] : []),
   ]);
   const semResultado = resultado !== null && !busca.carregando && total === 0;
+  // vitrine da demonstração (/assinante): os reais da lista e, à parte, os exemplos fictícios
+  const vitrine = resultado?.vitrine ?? null;
+  const filtrando = contarFiltros(pilulasValendo) > 0;
 
   return (
     // os RecursoLuneta de dentro (painel de filtros) abrem a mesma janela da Luneta
@@ -536,6 +540,7 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
               </h2>
 
               <div className={`mx-auto flex flex-col gap-5 ${largura}`}>
+                {vitrine && <AvisoVitrine vitrine={vitrine} total={total} filtrando={filtrando} />}
                 {lente && <AvisoLente onAssinar={() => assinar("aviso")} />}
 
                 {(gruposFora.length > 0 || ordemFora || quartosFora.length > 0) && (
@@ -619,6 +624,20 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
                     onIr={irParaPagina}
                     onTopo={() => irAoTopo(true)}
                   />
+                )}
+
+                {vitrine && (
+                  <>
+                    <RodapeVitrine vitrine={vitrine} />
+                    <ExemplosFicticios
+                      exemplos={vitrine.exemplos}
+                      plano={planoDosDados}
+                      conjunto={conjunto}
+                      ehFavorito={ehFavorito}
+                      onFavoritar={onFavoritar}
+                      onUpsell={onUpsell}
+                    />
+                  </>
                 )}
               </div>
             </section>

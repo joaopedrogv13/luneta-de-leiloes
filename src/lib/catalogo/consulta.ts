@@ -1090,7 +1090,8 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
       ...p,
       destaques: destaquesK.map((k) => {
         const i = ix.itens[k]!;
-        return { id: i.id, titulo: i.titulo, tipo: i.tipo, foto: i.foto, lance: i.lance, desagio: i.desagio, bairro: i.bairro };
+        // foto ilustrativa (exemplo fictício) não vai para a miniatura do mapa, onde não caberia o rótulo
+        return { id: i.id, titulo: i.titulo, tipo: i.tipo, foto: i.fotoIlustrativa ? null : i.foto, lance: i.lance, desagio: i.desagio, bairro: i.bairro };
       }),
     }))
     .sort((a, b) => b.total - a.total || (a.chave < b.chave ? -1 : 1));

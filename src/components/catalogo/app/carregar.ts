@@ -18,10 +18,16 @@ type Entrada = Record<string, string | string[] | undefined>;
 export async function carregarCatalogo(
   conjunto: Conjunto,
   parametros: Entrada,
-): Promise<{ props: Pick<PropsCatalogoApp, "conjunto" | "servidor" | "preferencias" | "palpiteCelular" | "selosDesligados">; sobre: SobreConjunto; total: number }> {
+): Promise<{
+  props: Pick<PropsCatalogoApp, "conjunto" | "servidor" | "preferencias" | "palpiteCelular" | "selosDesligados">;
+  sobre: SobreConjunto;
+  total: number;
+  /** só na vitrine da demonstração: quantos ela mostra e quantos a base tem */
+  vitrine: { mostrados: number; totalBase: number } | null;
+}> {
   const estado = lerBusca(parametros);
   let resultado: ResultadoBusca | null = null;
-  let sobre: (SobreConjunto & { total: number; selosDesligados: boolean }) | null = null;
+  let sobre: Awaited<ReturnType<typeof sobreConjunto>> | null = null;
   try {
     [resultado, sobre] = await Promise.all([
       buscar({ conjunto, plano: estado.plano, filtros: estado.filtros, ordem: estado.ordem, pagina: estado.pagina }, { mapa: false }),
@@ -48,5 +54,6 @@ export async function carregarCatalogo(
     },
     sobre: sobre ?? resultado?.sobre ?? { geradoEm: new Date().toISOString(), fontes: [] },
     total: sobre?.total ?? resultado?.totalConjunto ?? 0,
+    vitrine: sobre?.vitrine ?? (resultado?.vitrine ? { mostrados: resultado.vitrine.mostrados, totalBase: resultado.vitrine.totalBase } : null),
   };
 }

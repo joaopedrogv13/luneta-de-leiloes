@@ -516,6 +516,16 @@ export function notaLocalDe(d: DadosLocalizacao, id: string): number | null {
   return n === null ? null : Math.round(n);
 }
 
+/** Moradores da cidade do imóvel (IBGE, pelo arquivo das cidades), ou null sem o dado. Para a vitrine (vitrine.ts). */
+export function moradoresDe(d: DadosLocalizacao, id: string): number | null {
+  const p = d.principal;
+  const k = d.posicao.get(id);
+  if (!p || k === undefined) return null;
+  const code = valor(p.colunas, "cidade", k);
+  const m = code !== null ? d.cidades?.cidades[String(code)]?.moradores : undefined;
+  return typeof m === "number" && Number.isFinite(m) ? m : null;
+}
+
 // ---------------------------------------------------------------------------
 // Exemplos fictícios (conjunto "exemplos", src/content/examples.ts)
 // ---------------------------------------------------------------------------

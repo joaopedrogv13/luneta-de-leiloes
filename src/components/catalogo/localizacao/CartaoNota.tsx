@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useImovel } from "@/components/catalogo/imovel/ContextoImovel";
 import { Popover } from "@/components/catalogo/ui/Popover";
 import {
   cidadePequena,
@@ -312,9 +313,10 @@ function Topo({ exemplo }: { exemplo: boolean }) {
 }
 
 function ComoCalcula({ id }: { id: string }) {
+  const { conjunto } = useImovel();
   return (
     <Link
-      href={rotaMetodoLocal(id)}
+      href={rotaMetodoLocal(id, undefined, conjunto)}
       prefetch={false}
       className="group/como inline-flex min-h-11 items-center gap-1.5 rounded-full text-[14px] font-semibold text-latao-texto underline-offset-4 hover:text-luar hover:underline pointer-fine:min-h-9"
     >

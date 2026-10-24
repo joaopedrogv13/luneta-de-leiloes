@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { estiloRecorte } from "@/lib/catalogo/recorte";
 import { numero, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
 import type { ImovelResumo } from "@/lib/catalogo/tipos";
 import { IconeCamera } from "./icones";
@@ -19,13 +20,17 @@ const semMovimento = () => typeof window !== "undefined" && window.matchMedia("(
  */
 const VIDRO = "bg-[#070b16]/78 text-white ring-1 ring-white/12";
 
-export type DadosFoto = Pick<ImovelResumo, "foto" | "tipo" | "totalFotos" | "desagio"> & { id?: string };
+export type DadosFoto = Pick<ImovelResumo, "foto" | "tipo" | "totalFotos" | "desagio" | "fotoIlustrativa" | "fotoRecorte"> & { id?: string };
+
+/** Rótulo da foto ilustrativa (exemplos fictícios): sempre à vista sobre a foto. */
+export const ROTULO_FOTO_ILUSTRATIVA = "Foto ilustrativa";
 
 /**
  * O que dizer quando não há foto, pela causa (nunca afirmar o que não foi conferido): a fonte não publicou,
  * é um exemplo fictício, ou a foto existe na fonte e só não carregou (rede, bloqueio do site da fonte).
  */
 function textoSemFoto(imovel: DadosFoto, falhou: boolean): { titulo: string; detalhe?: string } {
+  if (falhou && imovel.fotoIlustrativa) return { titulo: "Exemplo fictício: a foto ilustrativa não carregou" };
   if (falhou) return { titulo: "A foto não carregou do site da fonte", detalhe: "Veja no anúncio, na página do imóvel." };
   if (imovel.id?.startsWith("ex-")) return { titulo: "Exemplo fictício: sem foto" };
   return { titulo: "Sem foto na fonte" };
@@ -136,6 +141,7 @@ export function FotoImovel({
             if (semMovimento()) setCoberta(src);
           }}
           onError={() => falha(src)}
+          style={estiloRecorte(imovel.fotoRecorte)}
           onTransitionEnd={(e) => {
             if (e.propertyName === "opacity" && pronta) setCoberta(src);
           }}
@@ -143,6 +149,17 @@ export function FotoImovel({
             pronta ? "opacity-100" : "opacity-0"
           }`}
         />
+      )}
+
+      {/* foto de outro imóvel (exemplo fictício): o rótulo fica sempre à vista, também na linha compacta */}
+      {src && imovel.fotoIlustrativa && (
+        <span
+          className={`absolute bottom-3 left-3 z-[1] rounded-full px-2.5 py-1.5 text-[11px] leading-none font-semibold ${VIDRO} ${
+            enxutaNoCompacto ? "@max-xl:bottom-1.5 @max-xl:left-1.5 @max-xl:px-1.5 @max-xl:py-1 @max-xl:text-[9.5px]" : ""
+          }`}
+        >
+          {ROTULO_FOTO_ILUSTRATIVA}
+        </span>
       )}
 
       {selos && (

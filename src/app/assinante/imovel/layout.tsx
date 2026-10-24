@@ -9,7 +9,7 @@ import { SITE } from "@/content/site";
  */
 export const metadata: Metadata = {
   title: `Imóvel não encontrado | ${SITE.name}`,
-  description: "Este exemplo não existe na demonstração da área do assinante.",
+  description: "Este imóvel não está na demonstração da área do assinante.",
   robots: { index: false, follow: false },
   alternates: { canonical: null },
   openGraph: null,

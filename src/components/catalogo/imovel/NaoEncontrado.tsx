@@ -57,7 +57,7 @@ export function NaoEncontrado({ conjunto }: { conjunto: Conjunto }) {
           <p className="mx-auto mt-4 max-w-[440px] text-[16px] leading-relaxed text-nevoa">
             {conjunto === "previa"
               ? "Ele pode ter sido vendido, retirado pela fonte ou ter saído na última atualização da base. Confira o endereço ou volte à lista."
-              : "Este exemplo não existe na demonstração. Volte à lista para ver os exemplos."}
+              : "Ele não está na vitrine da demonstração: a vitrine muda a cada atualização da base. Volte à lista para ver os imóveis de agora."}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link href={ROTA_LISTA[conjunto]} className="btn-primary">

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { idDeImovelValido } from "@/lib/catalogo/nota-texto";
+import { conjuntoDoMetodo, idDeImovelValido } from "@/lib/catalogo/nota-texto";
 import { lerPlano } from "@/lib/catalogo/planos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
 
@@ -15,7 +15,7 @@ export function VoltarImovel({ className = "", rotulo = "Voltar ao imóvel" }: {
   const sp = useSearchParams();
   const id = sp.get("de");
   if (!idDeImovelValido(id)) return null;
-  const conjunto = id.startsWith("ex-") ? "exemplos" : "previa";
+  const conjunto = conjuntoDoMetodo(id, sp.get("c"));
   const href = `${rotaImovel(conjunto, id, lerPlano(sp.get("plano")))}#localizacao`;
   return (
     <Link href={href} prefetch={false} className={className}>

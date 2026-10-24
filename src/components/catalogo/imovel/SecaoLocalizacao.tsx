@@ -4,7 +4,7 @@ import { RecursoLuneta } from "@/components/catalogo/planos/RecursoLuneta";
 import { rotaMetodoLocal } from "@/lib/catalogo/nota-texto";
 import { local } from "@/lib/catalogo/rotulos";
 import { linkGoogleMaps } from "@/lib/catalogo/texto";
-import type { ImovelDetalhe, LocalizacaoImovel, PontoMapa } from "@/lib/catalogo/tipos";
+import type { Conjunto, ImovelDetalhe, LocalizacaoImovel, PontoMapa } from "@/lib/catalogo/tipos";
 import { ehExemplo, legendaPosicao, linkPontoOsm, localRepetido, pontoDaSecao, textoPosicao } from "./formato";
 import { IconeExterno, IconePino } from "./icones";
 import { MapaLocal } from "./MapaLocal";
@@ -20,8 +20,11 @@ export function SecaoLocalizacao({
   imovel: i,
   localizacao,
   travada,
+  conjunto,
 }: {
   imovel: ImovelDetalhe;
+  /** de onde a página foi aberta (o "Voltar ao imóvel" da página do método volta para lá) */
+  conjunto: Conjunto;
   /** a nota (null no Lente e quando não há o dado) */
   localizacao: LocalizacaoImovel | null;
   /** o plano não vê a nota (Lente): a chamada da Luneta no lugar */
@@ -57,7 +60,7 @@ export function SecaoLocalizacao({
         <p>
           A nota depende de o endereço ser localizado no número, na rua ou no bairro.{" "}
           <Link
-            href={rotaMetodoLocal(i.id, "lente")}
+            href={rotaMetodoLocal(i.id, "lente", conjunto)}
             prefetch={false}
             className="font-semibold text-latao-texto underline underline-offset-4 hover:text-luar"
           >

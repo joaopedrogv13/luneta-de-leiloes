@@ -13,7 +13,9 @@ import { buscar as buscarNoIndice, POR_PAGINA_MAXIMO } from "./consulta";
 import { dadosDoConjunto } from "./dados";
 import { lerItbi, type DadosItbi } from "./itbi";
 import { montarPaginaImovel } from "./pagina";
-import type { Busca, Conjunto, PaginaImovel, Plano, ResultadoBusca, SobreConjunto } from "./tipos";
+import { paraPlano } from "./planos";
+import type { Busca, Conjunto, ImovelResumo, PaginaImovel, Plano, ResultadoBusca, ResumoVitrine, SobreConjunto } from "./tipos";
+import { contarAtivos } from "./vitrine";
 import { lerBusca } from "./url";
 
 export { lerBusca };
@@ -52,7 +54,27 @@ export function buscaDaUrl(conjunto: Conjunto, entrada: Entrada): Busca {
 export async function buscar(busca: Busca, opcoes: { mapa?: boolean; facetas?: boolean } = {}): Promise<ResultadoBusca> {
   const d = await dadosDoConjunto(busca.conjunto);
   const r = buscarNoIndice(d.indice, busca, { selosDesligados: d.selosDesligados, mapa: opcoes.mapa, facetas: opcoes.facetas });
-  return { ...r, sobre: d.sobre };
+  return { ...r, sobre: d.sobre, ...(d.vitrine ? { vitrine: resumoVitrine(d, busca) } : {}) };
+}
+
+/**
+ * A vitrine na resposta: quantos a vitrine mostra, quantos a base inteira tem e quantos ela daria com os mesmos filtros
+ * e o mesmo plano (uma busca de 1 item na prévia, sem facetas nem mapa: poucos milissegundos), e os exemplos
+ * fictícios com o plano aplicado (no Lente, sem tags, selo e nota).
+ */
+function resumoVitrine(d: Awaited<ReturnType<typeof dadosDoConjunto>>, busca: Busca): ResumoVitrine {
+  const v = d.vitrine!;
+  const base = buscarNoIndice(v.base.indice, { ...busca, conjunto: "previa", pagina: 1, porPagina: 1 }, {
+    selosDesligados: v.base.selosDesligados,
+    mapa: false,
+    facetas: false,
+  });
+  return {
+    mostrados: d.indice.n,
+    totalBase: base.totalConjunto,
+    naBase: base.total,
+    exemplos: v.exemplos.map((x) => paraPlano(x, busca.plano)),
+  };
 }
 
 /** ITBI (base/saida/site/itbi), lido uma vez por instância; um erro não fica guardado. */
@@ -86,10 +108,18 @@ export async function existeImovel(conjunto: Conjunto, id: string): Promise<bool
 }
 
 /** Quando e de que fontes o conjunto foi gerado (rodapé, faixa da prévia). */
-export async function sobreConjunto(conjunto: Conjunto): Promise<SobreConjunto & { total: number; selosDesligados: boolean }> {
+export async function sobreConjunto(
+  conjunto: Conjunto,
+): Promise<SobreConjunto & { total: number; selosDesligados: boolean; vitrine?: { mostrados: number; totalBase: number } }> {
   const d = await dadosDoConjunto(conjunto);
   // mesmo total que a busca sem filtro (totalConjunto): sem as praças vencidas há mais de 1 dia
-  const vencidoAntesDe = Date.now() - 24 * 3600 * 1000;
-  const total = d.itens.reduce((n, i) => (i.dataPraca !== null && Date.parse(i.dataPraca) < vencidoAntesDe ? n : n + 1), 0);
-  return { ...d.sobre, total, selosDesligados: d.selosDesligados };
+  const ativos = (itens: readonly ImovelResumo[]) => contarAtivos(itens);
+  // na vitrine, o total é o dos imóveis reais da lista (os exemplos fictícios ficam à parte)
+  const total = ativos(d.vitrine ? d.indice.itens : d.itens);
+  return {
+    ...d.sobre,
+    total,
+    selosDesligados: d.selosDesligados,
+    ...(d.vitrine ? { vitrine: { mostrados: total, totalBase: ativos(d.vitrine.base.itens) } } : {}),
+  };
 }

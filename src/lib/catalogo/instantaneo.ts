@@ -116,8 +116,8 @@ const conferirTagResumo = (v: unknown): v is TagResumo => {
 };
 
 /** Conferência de cada campo do ImovelResumo (e do endereço, que vem junto na lista). */
-/** Campos da lista. `notaLocal` não vem do imoveis.json.gz: sai dos arquivos de localização (dados.ts). */
-const CAMPOS_RESUMO: Record<Exclude<keyof ImovelResumo, "notaLocal"> | "endereco", Conferir> = {
+/** Campos da lista. `notaLocal` não vem do imoveis.json.gz: sai dos arquivos de localização (dados.ts); `fotoIlustrativa` é só dos exemplos. */
+const CAMPOS_RESUMO: Record<Exclude<keyof ImovelResumo, "notaLocal" | "fotoIlustrativa" | "fotoRecorte"> | "endereco", Conferir> = {
   id: (v) => typeof v === "string" && /^[a-z0-9-]+$/i.test(v) && v.length <= 80,
   titulo: texto,
   tipo: umDe("apartamento", "casa", "terreno", "comercial", "rural", "outro"),

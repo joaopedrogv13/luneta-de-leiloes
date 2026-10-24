@@ -3,7 +3,12 @@ import { BrazilMap } from "@/components/ui/BrazilMap";
 import { RichText } from "@/components/ui/RichText";
 import { Seal } from "@/components/ui/Seal";
 import { SeloCancelamento } from "@/components/ui/SeloCancelamento";
+import { LISTINGS } from "@/content/examples";
+import { estiloRecorte } from "@/lib/catalogo/recorte";
 import { ALVO_DESAGIO, BRASS, LENS_GLOW, LENS_SHADOW } from "./constants";
+
+/** Foto ilustrativa do cartão do Alvo: a do exemplo "alvo-sp" (src/content/examples.ts). */
+const FOTO_ALVO = LISTINGS.find((l) => l.id === "alvo-sp")?.photoIlustrativa ?? null;
 import { HeroMotion } from "./HeroMotion";
 
 /** Cartões desfocados ao fundo = os sites dos leiloeiros, cada um no seu canto. */
@@ -181,11 +186,26 @@ export function HeroScene() {
           data-h="card"
           className="flex items-center gap-3 rounded-2xl border border-latao/45 bg-tinta p-3 pr-4 shadow-[0_20px_60px_rgba(0,0,0,.5)]"
         >
-          <div
-            aria-hidden="true"
-            className="photo-placeholder flex size-14 shrink-0 items-center justify-center rounded-full border-[3px] border-latao font-mono text-[9px] text-nevoa"
-          >
+          {/* foto ilustrativa do exemplo (a mesma do cartão do Alvo na landing): <img> simples da fonte, preguiçoso e de
+              baixa prioridade (não disputa com o título, que é o LCP); se falhar, fica o desenho listrado de baixo */}
+          <div aria-hidden="true" className="photo-placeholder relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-latao font-mono text-[9px] text-nevoa">
             foto
+            {FOTO_ALVO && (
+              // eslint-disable-next-line @next/next/no-img-element -- a foto fica na fonte: o next/image a baixaria e re-hospedaria
+              <img
+                src={FOTO_ALVO.url}
+                alt=""
+                width={56}
+                height={56}
+                loading="lazy"
+                decoding="async"
+                fetchPriority="low"
+                referrerPolicy="no-referrer"
+                draggable={false}
+                style={estiloRecorte(FOTO_ALVO.recorte)}
+                className="absolute inset-0 size-full object-cover"
+              />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.14em] text-pos uppercase">
@@ -193,6 +213,7 @@ export function HeroScene() {
             </p>
             <p className="mt-1 text-[13px] leading-tight font-semibold text-luar">Apartamento 3 quartos · São Paulo/SP</p>
             <p className="mt-0.5 text-[11px] leading-tight text-nevoa">Desocupado · sem dívidas identificadas</p>
+            {FOTO_ALVO && <p className="mt-0.5 text-[10px] leading-tight text-nevoa/90">Foto ilustrativa</p>}
           </div>
           <div className="shrink-0 text-right">
             {/* o número anima de 0 a 48; leitores de tela recebem sempre o valor final */}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BACK_TO_SITE } from "@/components/assinante/shared";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoMark } from "@/components/ui/Logo";
+import { numero } from "@/lib/catalogo/rotulos";
 import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
 import { TopoRecolhivel } from "./TopoRecolhivel";
 import { TrocaPlano } from "./TrocaPlano";
@@ -15,11 +16,24 @@ export const ALTURA_TOPO = "h-14 sm:h-16";
  * (ícone); logo (volta ao site), "Ver como: Lente | Luneta" (a mesma página no outro plano), tema e o convite ao
  * plano Luneta. No celular e no tablet ele sai de cena ao rolar para baixo (TopoRecolhivel).
  */
-export function TopoImovel({ conjunto, plano, id }: { conjunto: Conjunto; plano: Plano; id: string }) {
+export function TopoImovel({
+  conjunto,
+  plano,
+  id,
+  vitrine = null,
+}: {
+  conjunto: Conjunto;
+  plano: Plano;
+  id: string;
+  /** imóvel real da vitrine da demonstração */
+  vitrine?: { mostrados: number; totalBase: number } | null;
+}) {
   const faixa =
     conjunto === "previa"
       ? "Prévia interna com dados reais · classificação automática ainda sem revisão humana · selos desligados"
-      : "Demonstração com exemplos fictícios · sem login";
+      : vitrine
+        ? `Demonstração · imóvel real da vitrine (${numero(vitrine.mostrados)} de ${numero(vitrine.totalBase)}) · classificação automática ainda sem revisão humana · sem login`
+        : "Demonstração com exemplo fictício · sem login";
   return (
     <>
       <a
