@@ -6,7 +6,7 @@
  *
  * Imports relativos (sem "@/"): o teste roda em Node puro.
  */
-import { TAG_CATEGORIES } from "../../../content/tags";
+import { TAG_CATEGORIES, TAGS_LOCALIZACAO } from "../../../content/tags";
 import type { Confianca, Severidade, TagResumo } from "../../../lib/catalogo/tipos";
 
 /** As 26 tags da base (base/riscos/tags.ts), na mesma ordem. */
@@ -87,6 +87,14 @@ const TEXTOS_EXEMPLO: Record<string, { what: string; practice: string; categoria
   },
 };
 
+/**
+ * Tags calculadas pela Luneta, fora da análise do edital (rodada 5): estação de metrô, trem ou VLT a menos de 1 km. O
+ * rótulo de cada imóvel diz a distância ("Metrô a 450 m"), então o texto casa pelo slug.
+ */
+const TEXTOS_LOCALIZACAO: Record<string, { what: string; practice: string; categoria: string }> = Object.fromEntries(
+  Object.entries(TAGS_LOCALIZACAO.tags).map(([slug, t]) => [slug, { what: t.what, practice: t.practice, categoria: TAGS_LOCALIZACAO.name }]),
+);
+
 /** Texto genérico por gravidade, para tag sem explicação própria no site. */
 const GENERICO: Record<Severidade, { oQueE: string; naPratica: string }> = {
   grave: {
@@ -110,7 +118,7 @@ const GENERICO: Record<Severidade, { oQueE: string; naPratica: string }> = {
 /** Explicação de uma tag: casa pelo slug (rótulo oficial da base) e, se preciso, pelo rótulo recebido. */
 export function conteudoTag(tag: Pick<TagResumo, "slug" | "rotulo" | "severidade">): ConteudoTag {
   const base = BASE_POR_SLUG.get(tag.slug);
-  const site = (base && TEXTOS_SITE.get(chave(base.rotulo))) ?? TEXTOS_SITE.get(chave(tag.rotulo)) ?? TEXTOS_EXEMPLO[tag.slug];
+  const site = (base && TEXTOS_SITE.get(chave(base.rotulo))) ?? TEXTOS_LOCALIZACAO[tag.slug] ?? TEXTOS_SITE.get(chave(tag.rotulo)) ?? TEXTOS_EXEMPLO[tag.slug];
   const rotulo = tag.rotulo || base?.rotulo || tag.slug;
   if (site) {
     return { slug: tag.slug, rotulo, severidade: tag.severidade, categoria: base?.categoria ?? site.categoria, oQueE: site.what, naPratica: site.practice, generico: false };
@@ -165,6 +173,8 @@ export function origemTag(origem: string): { rotulo: string; detalhe: string | n
       return { rotulo: "leitura humana", detalhe: null };
     case "exemplo":
       return { rotulo: "exemplo fictício", detalhe: null };
+    case "osm":
+      return { rotulo: "cálculo da Luneta com o OpenStreetMap", detalhe: "distância em linha reta do ponto do endereço" };
     default:
       return { rotulo: "dados da fonte", detalhe: null };
   }

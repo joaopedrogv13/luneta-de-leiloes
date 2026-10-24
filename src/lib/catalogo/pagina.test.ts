@@ -126,3 +126,19 @@ test("instantâneo real: caixa-1444419640129 e um imóvel de São Paulo com ITBI
     conferir(lente, luneta);
   }
 });
+
+test("instantâneo real: a tag de metrô (rodada 5) chega à Luneta com a evidência e à seção de localização; o Lente não leva nada", { skip: !TEM_PREVIA }, async () => {
+  const [d, dadosItbi] = await Promise.all([carregarPrevia(PASTA), itbi()]);
+  const comMetro = d.itens.find((i) => i.tags.some((t) => t.slug === "metro-perto"));
+  if (!comMetro) return; // instantâneo sem as estações (antes da rodada 5)
+  const { lente, luneta } = await paginas(d, dadosItbi, comMetro.id);
+  const tag = luneta.imovel.tags.find((t) => t.slug === "metro-perto")!;
+  assert.match(tag.rotulo, /^Metrô a \d+ m$/);
+  assert.equal(tag.origem, "osm");
+  assert.ok(tag.confianca === "alta" || tag.confianca === "media");
+  assert.match(tag.evidencia ?? "", /^Estação de (metrô|monotrilho).* a \d+ m, em linha reta do ponto do endereço/);
+  assert.match(tag.evidencia ?? "", /OpenStreetMap/);
+  assert.ok(luneta.localizacao?.estacoes?.some((e) => e.modo === "metro" && e.distanciaM < 1000), "a seção diz a estação");
+  conferir(lente, luneta);
+  assert.ok(!JSON.stringify(lente).includes('"estacoes"'), "o Lente não leva as estações");
+});

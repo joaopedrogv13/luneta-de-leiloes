@@ -155,6 +155,8 @@ export function lerBusca(p: Entrada): EstadoBusca {
   const notaLocalBruta = numero(p, "notaLocalMin");
   const notaLocalMin = notaLocalBruta === undefined ? undefined : Math.round(notaLocalBruta);
   if (notaLocalMin !== undefined && notaLocalMin >= 1 && notaLocalMin <= 100) f.notaLocalMin = notaLocalMin;
+  // metrô a até 1 km (Luneta): só "metro=1" filtra; "metro=0" e outro valor não querem dizer nada (não há "sem metrô")
+  if (um(p, "metro") === "1") f.metroPerto = true;
 
   const ordemBruta = um(p, "ordem");
   const ordem = ORDENS.includes(ordemBruta as Ordem) ? (ordemBruta as Ordem) : ORDEM_PADRAO;
@@ -183,6 +185,7 @@ export function escreverBusca(e: Partial<EstadoBusca> & { conjunto?: Conjunto })
   if (f.dataAte) p.set("dataAte", f.dataAte);
   for (const c of CAMPOS_SIM_NAO) if (f[c] !== undefined) p.set(c, f[c] ? "1" : "0");
   if (f.notaLocalMin !== undefined) p.set("notaLocalMin", String(f.notaLocalMin));
+  if (f.metroPerto) p.set("metro", "1");
   if (e.ordem && e.ordem !== ORDEM_PADRAO) p.set("ordem", e.ordem);
   if (e.pagina && e.pagina > 1) p.set("pagina", String(e.pagina));
   if (e.vista) p.set("vista", e.vista);
@@ -203,6 +206,7 @@ export function contarFiltros(f: Filtros): number {
   if (f.quartosMin !== undefined) n++;
   if (f.vagasMin !== undefined) n++;
   if (f.notaLocalMin !== undefined) n++;
+  if (f.metroPerto) n++;
   if (f.dataDe || f.dataAte) n++;
   for (const c of CAMPOS_SIM_NAO) if (f[c] !== undefined) n++;
   if (f.q) n++;

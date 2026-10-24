@@ -35,6 +35,16 @@ export const IconeCasa = (p: P) => (
   </Svg>
 );
 
+/** Estação de metrô, trem ou VLT: o vagão de frente, sobre os trilhos. */
+export const IconeTrilho = (p: P) => (
+  <Svg {...p}>
+    <rect x="5" y="2.8" width="10" height="11" rx="2.6" />
+    <path d="M5 9.2h10" />
+    <path d="M7.6 11.6h.01M12.4 11.6h.01" />
+    <path d="m7.2 13.8-2.2 3.4M12.8 13.8l2.2 3.4M6.1 15.8h7.8" />
+  </Svg>
+);
+
 /** Área privativa: planta com cotas. */
 export const IconeArea = (p: P) => (
   <Svg {...p}>

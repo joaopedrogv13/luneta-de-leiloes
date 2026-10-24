@@ -11,7 +11,8 @@
  *
  * A nota de localização (src/lib/catalogo/localizacao.ts) entra no resumo de cada imóvel (`notaLocal`) antes do índice
  * e, por imóvel, em `localizacao(id)`: na prévia, dos arquivos base/saida/site/localizacao*.json.gz; nos exemplos,
- * a nota fictícia de src/content/examples.ts.
+ * a nota fictícia de src/content/examples.ts. A tag de estação ("Metrô a 450 m", src/lib/catalogo/estacoes.ts) entra
+ * nas tags do resumo da prévia, também antes do índice, e no detalhe com a evidência.
  *
  * Os dados ficam inteiros (com tags e selo, sem plano aplicado): o navegador recebe só o que src/lib/catalogo/servidor.ts
  * devolve, com o plano já aplicado. Sem imports com "@/".
@@ -20,7 +21,8 @@ import type { Listing } from "../../content/examples";
 import { criarIndice, type IndiceCatalogo } from "./consulta";
 import { converterExemplos, localizacaoDosExemplos, resumoDe } from "./exemplos";
 import { lerLista, lerParte, montarDetalhe, parteDoId, type DetalheParcial } from "./instantaneo";
-import { dadosLocalizacao, montarLocalizacao, notaLocalDe } from "./localizacao";
+import { eTagEstacao, tagDetalheEstacao, tagsDeEstacoes } from "./estacoes";
+import { contextoEstacoes, dadosLocalizacao, estacoesDe, montarLocalizacao, notaLocalDe } from "./localizacao";
 import type { Conjunto, ImovelDetalhe, ImovelResumo, LocalizacaoImovel, SobreConjunto } from "./tipos";
 import { escolherVitrine, type EscolhidoVitrine, type OpcoesVitrine } from "./vitrine";
 import { indiceDeRuas, type ContextoVizinhanca, type RuaDoImovel } from "./vizinhanca";
@@ -65,8 +67,13 @@ export interface DadosVitrine {
 /** A prévia: o instantâneo da pasta (base/saida/site) com a nota de localização. */
 export async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
   const [lista, loc] = await Promise.all([lerLista(pasta), dadosLocalizacao()]);
-  // a nota entra no resumo antes do índice (a ordem e o filtro por nota usam o índice)
-  for (const i of lista.itens) i.notaLocal = notaLocalDe(loc, i.id);
+  // a nota e a tag de estação ("Metrô a 450 m", rodada 5) entram no resumo antes do índice (a ordem, o filtro por nota e o
+  // filtro "Metrô a até 1 km" usam o índice)
+  for (const i of lista.itens) {
+    i.notaLocal = notaLocalDe(loc, i.id);
+    const estacoes = tagsDeEstacoes(estacoesDe(loc, i.id));
+    if (estacoes.length) i.tags = [...i.tags, ...estacoes];
+  }
   const enderecos = lista.enderecos;
   const indice = criarIndice(lista.itens, { textoExtra: (_, k) => enderecos[k] });
   const posicao = new Map(lista.itens.map((i, k) => [i.id, k]));
@@ -96,7 +103,17 @@ export async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
       if (k === undefined) return null;
       const parcial = (await parte(parteDoId(id, lista.partes))).get(id);
       if (!parcial) return null;
-      return montarDetalhe(lista.itens[k]!, enderecos[k] ?? null, parcial);
+      const detalhe = montarDetalhe(lista.itens[k]!, enderecos[k] ?? null, parcial);
+      // a tag de estação ganha a evidência (a estação, a distância, a regra e a fonte) e a confiança pela precisão
+      if (!detalhe.tags.some((t) => eTagEstacao(t.slug))) return detalhe;
+      const { precisao, dadosOsmDe } = contextoEstacoes(loc, id);
+      const porModo = new Map(
+        estacoesDe(loc, id).map((e) => {
+          const t = tagDetalheEstacao(e, precisao, dadosOsmDe);
+          return [t.slug, t] as const;
+        }),
+      );
+      return { ...detalhe, tags: detalhe.tags.map((t) => porModo.get(t.slug) ?? t) };
     },
     async localizacao(id) {
       const k = posicao.get(id);

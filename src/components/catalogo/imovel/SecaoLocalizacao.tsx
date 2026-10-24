@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { CartaoNota } from "@/components/catalogo/localizacao/CartaoNota";
 import { RecursoLuneta } from "@/components/catalogo/planos/RecursoLuneta";
+import { fraseEstacao } from "@/lib/catalogo/estacoes";
 import { rotaMetodoLocal } from "@/lib/catalogo/nota-texto";
 import { local } from "@/lib/catalogo/rotulos";
 import { linkGoogleMaps } from "@/lib/catalogo/texto";
 import type { Conjunto, ImovelDetalhe, LocalizacaoImovel, PontoMapa } from "@/lib/catalogo/tipos";
 import { ehExemplo, legendaPosicao, linkPontoOsm, localRepetido, pontoDaSecao, textoPosicao } from "./formato";
-import { IconeExterno, IconePino } from "./icones";
+import { IconeExterno, IconePino, IconeTrilho } from "./icones";
 import { MapaLocal } from "./MapaLocal";
 import { NovaAba, Secao } from "./partes";
 
@@ -14,7 +15,8 @@ import { NovaAba, Secao } from "./partes";
  * Seção 5, "Localização". Primeiro a nota de localização (plano Luneta; no Lente, o mapa e o endereço vêm antes e a
  * chamada curta da Luneta, RecursoLuneta "faixa", fica embaixo), depois o mapa mini com o ponto e o endereço. O ponto é o mais preciso que houver (o do geocode do CNEFE, que a
  * nota usa, ou o do resumo); com ele, "Ver o ponto no OpenStreetMap" abre a coordenada, e "Abrir no Google Maps" busca o
- * endereço publicado (sem endereço, bairro e cidade).
+ * endereço publicado (sem endereço, bairro e cidade). Com estação de metrô, trem ou VLT a menos de 1 km (rodada 5), o
+ * cartão do endereço diz qual e a que distância ("Estação de metrô Botafogo a 450 m").
  */
 export function SecaoLocalizacao({
   imovel: i,
@@ -50,6 +52,7 @@ export function SecaoLocalizacao({
     : null;
   // o ponto vale abrir no mapa quando é melhor que a sede da cidade (e não é o de um exemplo fictício)
   const pontoUtil = p && !exemplo && (p.precisao === "exata" || p.precisao === "rua" || p.precisao === "bairro");
+  const estacoes = localizacao?.estacoes ?? [];
 
   const nota = travada ? (
     <RecursoLuneta
@@ -95,6 +98,22 @@ export function SecaoLocalizacao({
             <p className="mt-4 text-sm leading-relaxed text-nevoa sm:text-[13.5px]">
               {textoPosicao({ ...i, precisaoGeo: p!.precisao }, p!.cnefe)}. O ponto no mapa não marca o imóvel exato.
             </p>
+          )}
+          {/* estação de metrô, trem ou VLT a menos de 1 km (plano Luneta: no Lente a localização não chega) */}
+          {!travada && !exemplo && estacoes.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-pos/25 bg-pos/[0.06] px-3.5 py-3">
+              <ul className="flex flex-col gap-1.5">
+                {estacoes.map((e) => (
+                  <li key={e.modo} className="flex items-start gap-2 text-[14.5px] leading-snug font-medium text-luar">
+                    <IconeTrilho tamanho={18} className="mt-px text-pos" />
+                    <span className="min-w-0">{fraseEstacao(e)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1.5 pl-[26px] text-[13px] leading-snug text-nevoa sm:text-[12.5px]">
+                Em linha reta do ponto do endereço, não pelo caminho a pé. Estações do OpenStreetMap (© contribuidores do OpenStreetMap).
+              </p>
+            </div>
           )}
           <a href={url} target="_blank" rel="noopener noreferrer" className="btn-outline mt-5 w-full gap-2">
             Abrir no Google Maps

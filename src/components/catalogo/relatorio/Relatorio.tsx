@@ -2,6 +2,7 @@ import { conteudoTag, origemTag, partesEvidencia, SEVERIDADE_ORDEM } from "@/com
 import { AVISO_CLASSIFICACAO } from "@/content/avisos";
 import { SITE } from "@/content/site";
 import { MODALIDADE_ROTULO, numero, SELO_ROTULO, SEVERIDADE_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
+import { fraseEstacao } from "@/lib/catalogo/estacoes";
 import { pode } from "@/lib/catalogo/planos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
 import {
@@ -547,6 +548,16 @@ function LocalizacaoRel({ pagina, plano }: { pagina: PaginaImovel; plano: Plano 
             </tbody>
           </table>
           </div>
+        </div>
+      )}
+
+      {/* estação de metrô, trem ou VLT a menos de 1 km (rodada 5): como na página do imóvel */}
+      {!exemplo && (loc.estacoes?.length ?? 0) > 0 && (
+        <div className={s.inteira}>
+          <p className={s.p}>
+            <span className={s.forte}>Transporte sobre trilhos perto.</span> {loc.estacoes!.map((e) => fraseEstacao(e)).join("; ")}. Em linha reta do ponto do
+            endereço, não pelo caminho a pé (estações do OpenStreetMap).
+          </p>
         </div>
       )}
 

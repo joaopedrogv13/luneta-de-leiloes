@@ -16,6 +16,8 @@
  * - Sem imports com "@/" aqui e nos demais módulos de src/lib/catalogo: os testes rodam em Node puro.
  */
 
+import type { EstacaoPerto } from "./estacoes";
+
 export type Conjunto = "previa" | "exemplos";
 export type Plano = "lente" | "luneta";
 
@@ -264,6 +266,11 @@ export interface Filtros {
   selo?: Exclude<Selo, 0>[];
   /** Luneta: nota de localização mínima (0 a 100); imóvel sem nota não passa */
   notaLocalMin?: number;
+  /**
+   * Luneta (filtro avançado): só imóvel com estação de metrô (ou monotrilho) a menos de 1 km em linha reta do ponto do
+   * endereço (a tag "Metrô a X m"; src/lib/catalogo/estacoes.ts). Imóvel sem endereço no número ou na rua não passa.
+   */
+  metroPerto?: boolean;
 }
 
 export type Ordem =
@@ -329,6 +336,8 @@ export interface Facetas {
   comFoto: number;
   /** resultados com data da praça (a ordem "Praça mais próxima" só ajuda se houver) */
   comData?: number;
+  /** Luneta: quantos têm estação de metrô a menos de 1 km (o filtro "Metrô a até 1 km"), com os OUTROS filtros; ausente no Lente */
+  metroPerto?: number;
   /** todos os resultados coletados no mesmo dia (a ordem "Mais recentes" não muda nada) */
   coletaUnica?: boolean;
   /**
@@ -575,6 +584,11 @@ export interface LocalizacaoImovel {
    * `coberturaRisco` e raio null, que a cidade tem áreas mapeadas mas o imóvel não pôde ser conferido. Nunca "sem risco".
    */
   riscoRaioM: number | null;
+  /**
+   * Estação de metrô, trem ou VLT a menos de 1 km do ponto do endereço (só número ou rua; src/lib/catalogo/estacoes.ts):
+   * a seção diz "Estação de metrô Botafogo a 450 m". Ausente = nenhuma (ou o imóvel não tem o ponto no número ou na rua).
+   */
+  estacoes?: EstacaoPerto[];
   fontes: { nome: string; detalhe: string; licenca: string; url: string | null }[];
   versao: number;
   /** AAAA-MM-DD */

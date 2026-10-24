@@ -20,6 +20,7 @@ import {
   removerFiltro,
   type FormatoFaixa,
 } from "@/lib/catalogo/filtros-rotulos";
+import { ROTULO_FILTRO_METRO } from "@/lib/catalogo/estacoes";
 import { MODALIDADE_ROTULO, PRACA_ROTULO, SELO_ROTULO, TIPO_ROTULO, numero } from "@/lib/catalogo/rotulos";
 import { NAO_INFORMADO, type Facetas, type Filtros, type OpcaoFaceta, type Severidade } from "@/lib/catalogo/tipos";
 import { CampoFaixa, type AtalhoFaixa } from "../ui/CampoFaixa";
@@ -566,6 +567,24 @@ export function ControleNotaLocal({ f, facetas, aplicar }: PropsControle) {
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * "Metrô a até 1 km" (filtro avançado da Luneta; src/lib/catalogo/estacoes.ts): um chip com quantos imóveis desta busca
+ * têm estação de metrô (ou de monotrilho do Metrô) a menos de 1 km, em linha reta do ponto do endereço. Imóvel sem
+ * endereço no número ou na rua não tem a distância e fica de fora com o filtro.
+ */
+export function ControleMetro({ f, facetas, aplicar }: PropsControle) {
+  const ativo = f.metroPerto === true;
+  return (
+    <Chips
+      rotulo="Transporte sobre trilhos perto"
+      opcoes={[{ valor: "1", rotulo: ROTULO_FILTRO_METRO, total: facetas.metroPerto }]}
+      valor={ativo ? ["1"] : []}
+      vazio="Nenhum imóvel desta busca tem estação de metrô a menos de 1 km (só há a distância para endereço localizado no número ou na rua)."
+      onChange={(v) => aplicar("metro", (x) => ({ ...removerFiltro(x, "metro"), ...(v.length ? { metroPerto: true } : {}) }))}
+    />
   );
 }
 

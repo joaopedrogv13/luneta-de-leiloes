@@ -91,6 +91,7 @@ export const FILTROS_PROMETIDOS = {
     { rotulo: "tags de risco", chaves: ["comTags", "semTags"] },
     { rotulo: "selo", chaves: ["selo"] },
     { rotulo: "nota de localização", chaves: ["notaLocalMin"] },
+    { rotulo: "metrô perto", chaves: ["metroPerto"] },
   ],
 } as const satisfies Record<"lente" | "luneta", readonly { rotulo: string; chaves: readonly (keyof Filtros)[]; destaque?: boolean }[]>;
 

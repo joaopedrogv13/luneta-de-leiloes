@@ -40,7 +40,10 @@ export interface ResultadoCompleto {
    * pedido, com a margem de segurança (`margem`); a matriz abre no lucro.
    */
   semDisputa: boolean;
-  /** o que a matriz mostra (a escolha da pessoa, ou o padrão do imóvel: lance máximo; na venda direta, o lucro) */
+  /**
+   * o que a matriz mostra: a escolha da pessoa ou, para quem nunca escolheu, `VISAO_PADRAO` (o lucro com o lance da
+   * pessoa; na venda direta, o lucro pelo preço). Desde a rodada 5 (decisão 6); antes, o leilão abria no lance máximo.
+   */
   visao: Visao;
   modelo: Modelo;
   meta: Meta;
@@ -71,6 +74,13 @@ export interface ResultadoCompleto {
   /** o que o "+ Adicionar custo" oferece */
   adicionaveis: Adicionavel[];
 }
+
+/**
+ * A visão da tabela "Cenários e prazos" para quem nunca escolheu (`estado.visao` null): "Lucro com o meu lance" (na
+ * venda direta, "Lucro pelo preço"). Quem escolheu antes guarda "teto" ou "lucro" e mantém a escolha. A tela e o PDF
+ * leem daqui.
+ */
+export const VISAO_PADRAO: Visao = "lucro";
 
 /** Confere o estado contra o imóvel: cenário personalizado sem definição vira base; prazo fora da faixa, 12. */
 export function normalizarEstado(estado: EstadoSimulador, modelo: Modelo): EstadoSimulador {
@@ -118,7 +128,7 @@ export function completarModelo(modelo: Modelo, estadoBruto: EstadoSimulador): R
     entrada,
     estado,
     semDisputa: fixo,
-    visao: estado.visao ?? (fixo ? "lucro" : "teto"),
+    visao: estado.visao ?? VISAO_PADRAO,
     modelo,
     meta,
     celula,

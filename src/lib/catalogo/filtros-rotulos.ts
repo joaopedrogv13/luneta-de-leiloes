@@ -7,6 +7,7 @@
  * Exemplos de pílula: "MG", "Uberlândia/MG", "Apartamento, Casa", "Lance até R$ 300 mil",
  * "Deságio ≥ 30%", "2+ quartos", "Praça: 2ª", "Sem: Ocupado".
  */
+import { ROTULO_FILTRO_METRO } from "./estacoes";
 import { NAO_INFORMADO, ORDEM_PADRAO, type Facetas, type Filtros, type Modalidade, type Ocupacao, type Ordem, type Plano, type Praca, type Recurso, type Selo, type TipoImovel } from "./tipos";
 import { filtroPermitido, ordemDoPlano, recursoDoFiltro } from "./planos";
 import { MODALIDADE_ROTULO, OCUPACAO_ROTULO, SELO_ROTULO, TIPO_ROTULO, UF_NOME, area, moedaCurta, numero } from "./rotulos";
@@ -117,7 +118,7 @@ export type GrupoFiltro =
   | "lance" | "avaliacao" | "desagio" | "lanceM2" | "area" | "quartos" | "vagas"
   | "modalidade" | "praca" | "data"
   | "financiamento" | "fgts" | "parcelamento" | "ocupacao" | "natureza" | "fonte" | "comFoto"
-  | "semTags" | "comTags" | "selo" | "notaLocal";
+  | "semTags" | "comTags" | "selo" | "notaLocal" | "metro";
 
 /** Chaves de Filtros que cada grupo ocupa. */
 export const CHAVES_DO_GRUPO: Record<GrupoFiltro, readonly (keyof Filtros)[]> = {
@@ -147,6 +148,7 @@ export const CHAVES_DO_GRUPO: Record<GrupoFiltro, readonly (keyof Filtros)[]> = 
   comTags: ["comTags"],
   selo: ["selo"],
   notaLocal: ["notaLocalMin"],
+  metro: ["metroPerto"],
 };
 
 /**
@@ -473,6 +475,7 @@ export function pilulas(f: Filtros, nomes?: NomesDasFacetas): Pilula[] {
   if (f.quartosMin !== undefined) add("quartos", textoMinimo(f.quartosMin, "quarto", "quartos"));
   if (f.vagasMin !== undefined) add("vagas", textoMinimo(f.vagasMin, "vaga", "vagas"));
   if (f.notaLocalMin !== undefined) add("notaLocal", `Localização: nota ${numero(f.notaLocalMin)}+`);
+  if (f.metroPerto) add("metro", ROTULO_FILTRO_METRO);
 
   if (f.modalidade?.length) add("modalidade", juntar(f.modalidade.map((m: Modalidade) => MODALIDADE_ROTULO[m] ?? m)));
   if (f.praca?.length) add("praca", `Praça: ${f.praca.map((x) => PRACA_CURTA[x] ?? x).join(", ")}`);

@@ -241,3 +241,40 @@ export const TAG_CATEGORIES: TagCategory[] = [
     ],
   },
 ];
+
+/**
+ * Tags de localização (rodada 5, decisão 11): estação de metrô, trem ou VLT a menos de 1 km. Não vêm do edital nem do
+ * anúncio: a Luneta calcula a distância no servidor (src/lib/catalogo/estacoes.ts), com as estações do OpenStreetMap,
+ * e a tag de cada imóvel diz a distância ("Metrô a 450 m"). São do plano Luneta, como as outras tags.
+ *
+ * Ficam fora de TAG_CATEGORIES de propósito: aquela lista é a das 8 categorias da análise do leilão, que a landing mostra
+ * em 2 linhas de 4 cartões (Levels, TagExplorer). O pop-up de explicação do catálogo lê daqui pelo slug.
+ */
+export const TAGS_LOCALIZACAO: { name: string; question: string; tags: Record<"metro-perto" | "trem-perto" | "vlt-perto", TagDef> } = {
+  name: "Localização",
+  question: "Tem metrô, trem ou VLT perto?",
+  tags: {
+    "metro-perto": {
+      label: "Metrô a até 1 km",
+      severity: "positivo",
+      what:
+        "Há uma estação de metrô (ou de monotrilho do Metrô de São Paulo) a menos de 1 km do ponto do endereço, em linha reta. As estações vêm do OpenStreetMap, o mapa aberto feito por colaboradores (© contribuidores do OpenStreetMap). Só vale para endereço localizado no número ou na rua.",
+      practice:
+        "Linha reta não é o caminho a pé: confira no mapa o trajeto até a entrada da estação. Metrô perto costuma ajudar a vender e a alugar, mas não é garantia de preço.",
+    },
+    "trem-perto": {
+      label: "Trem a até 1 km",
+      severity: "positivo",
+      what:
+        "Há uma estação de trem urbano de passageiros (CPTM, SuperVia, Trensurb, CBTU e outras) a menos de 1 km do ponto do endereço, em linha reta. As estações vêm do OpenStreetMap (© contribuidores do OpenStreetMap); estação antiga, turística ou de carga fica de fora. Só vale para endereço localizado no número ou na rua.",
+      practice: "Veja no mapa o caminho até a estação e a frequência da linha nos horários que importam para você.",
+    },
+    "vlt-perto": {
+      label: "VLT a até 1 km",
+      severity: "positivo",
+      what:
+        "Há uma parada de VLT (veículo leve sobre trilhos) a menos de 1 km do ponto do endereço, em linha reta. As paradas vêm do OpenStreetMap (© contribuidores do OpenStreetMap). Só vale para endereço localizado no número ou na rua.",
+      practice: "Confira no mapa o caminho até a parada e se a linha leva aonde você precisa.",
+    },
+  },
+};

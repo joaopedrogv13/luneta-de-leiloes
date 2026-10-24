@@ -22,6 +22,7 @@
  *   confirmada ou em revisão (o que "esconder" tira). Tag já escondida: os dois contam quantos voltariam
  *   ao deixar de escondê-la. Ordem: grave, atenção, positivo, informativo.
  */
+import { modoDoSlug, ROTULO_TAG_ESTACAO, temMetroPerto } from "./estacoes";
 import { filtrosDoPlano, ordemDoPlano, paraPlano, pode } from "./planos";
 import { MODALIDADE_ROTULO, OCUPACAO_ROTULO, PRACA_ROTULO, SELO_ROTULO, TIPO_ROTULO, UF_NOME } from "./rotulos";
 import { interpretarBusca, palavras, type ClausulaBusca } from "./texto";
@@ -83,6 +84,8 @@ const B_SELO = 1 << 22;
 const B_VENCIDO = 1 << 23;
 /** Luneta: nota de localização abaixo do mínimo (ou sem nota). */
 const B_NOTA_LOCAL = 1 << 24;
+/** Luneta (filtro avançado): sem estação de metrô a menos de 1 km (a tag "Metrô a X m"; estacoes.ts). */
+const B_METRO = 1 << 25;
 
 const UM_DIA = 24 * 3600 * 1000;
 
@@ -94,6 +97,7 @@ const FACETAS_VAZIAS: Facetas = {
 /** As facetas dos filtros avançados (planos.ts › recursoDoFiltro), vazias para o plano que não os usa. */
 const FACETAS_AVANCADAS_VAZIAS: Partial<Facetas> = {
   modalidade: [], praca: [], ocupacao: [], natureza: [], fonte: [], lanceM2: null, area: null, financiamento: 0, fgts: 0, parcelamento: 0, comFoto: 0,
+  metroPerto: undefined,
 };
 const TRES_HORAS = 3 * 3600 * 1000;
 
@@ -153,6 +157,8 @@ export interface IndiceCatalogo {
   readonly fgts: Int8Array;
   readonly parcelamento: Int8Array;
   readonly temFoto: Uint8Array;
+  /** 1 = estação de metrô a menos de 1 km (a tag "metro-perto"; o filtro "Metrô a até 1 km") */
+  readonly metroPerto: Uint8Array;
   readonly selo: Uint8Array;
   /** Tags: dicionário de slugs e, por imóvel, bits das confirmadas e de todas (confirmadas + em revisão). */
   readonly slugs: { slug: string; rotulo: string; severidade: Severidade }[];
@@ -226,12 +232,18 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
   const fgts = new Int8Array(n);
   const parcelamento = new Int8Array(n);
   const temFoto = new Uint8Array(n);
+  const metroPerto = new Uint8Array(n);
   const selo = new Uint8Array(n);
 
   // Tags: dicionário na ordem de gravidade, depois na ordem em que aparecem (a exportação já ordena pelo catálogo).
   const vistas = new Map<string, { slug: string; rotulo: string; severidade: Severidade; ordem: number }>();
   for (const i of itens) {
-    for (const t of i.tags) if (!vistas.has(t.slug)) vistas.set(t.slug, { slug: t.slug, rotulo: t.rotulo, severidade: t.severidade, ordem: vistas.size });
+    for (const t of i.tags) {
+      if (vistas.has(t.slug)) continue;
+      // a tag de estação diz a distância ("Metrô a 450 m"): na faceta e nos filtros de tags vale o rótulo fixo
+      const modo = modoDoSlug(t.slug);
+      vistas.set(t.slug, { slug: t.slug, rotulo: modo ? ROTULO_TAG_ESTACAO[modo] : t.rotulo, severidade: t.severidade, ordem: vistas.size });
+    }
   }
   const slugs = [...vistas.values()].sort((a, b) => SEVERIDADES.indexOf(a.severidade) - SEVERIDADES.indexOf(b.severidade) || a.ordem - b.ordem);
   const slugId = new Map(slugs.map((s, k) => [s.slug, k]));
@@ -285,6 +297,7 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
     fgts[k] = bool(i.fgts);
     parcelamento[k] = bool(i.parcelamento);
     temFoto[k] = i.foto ? 1 : 0;
+    metroPerto[k] = temMetroPerto(i.tags) ? 1 : 0;
     selo[k] = i.selo;
     let nAlertas = 0;
     for (const t of i.tags) {
@@ -323,7 +336,7 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
 
   return {
     itens, n, ufs, ufDe, cidades, cidadeDe, bairros, bairroDe, tipoDe, modalidadeDe, pracaDe, ocupacaoDe, naturezaDe,
-    fontes, fonteDe, dia, instante, numeros, financiamento, fgts, parcelamento, temFoto, selo, slugs, palavrasTag,
+    fontes, fonteDe, dia, instante, numeros, financiamento, fgts, parcelamento, temFoto, metroPerto, selo, slugs, palavrasTag,
     tagsConfirmadas, tagsTodas, alertas, suspeito, vocabulario, tokInicio, tokIds, rankId, ordens: new Map(), ordenadosPor: new Map(),
   };
 }
@@ -812,6 +825,8 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
   const fFgts = simNao(f.fgts);
   const fParc = simNao(f.parcelamento);
   const fFoto = simNao(f.comFoto);
+  // "Metrô a até 1 km": só o sim filtra (não há "sem metrô")
+  const fMetro = f.metroPerto === true;
   const com = bitsDeTags(ix, f.comTags);
   const sem = bitsDeTags(ix, f.semTags);
   const okSelo = temLista(f.selo) ? Uint8Array.from([0, 1, 2, 3], (s) => (f.selo!.includes(s as 1 | 2 | 3) ? 1 : 0)) : null;
@@ -835,6 +850,8 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
   let cFgts = 0;
   let cParc = 0;
   let cFoto = 0;
+  /** com estação de metrô a menos de 1 km, com os outros filtros (o filtro "Metrô a até 1 km") */
+  let cMetro = 0;
   /** imóveis com cada nota de localização (0 a 100), com os outros filtros (só na Luneta) */
   const cNota = new Int32Array(101);
   /** com data da praça; todos coletados no mesmo dia? (as ordens "Praça mais próxima" e "Mais recentes" avisam quando não ajudam) */
@@ -894,6 +911,7 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
     if (okNatureza && !okNatureza[ix.naturezaDe[k]!]) m |= B_NATUREZA;
     if (okFonte && !okFonte[ix.fonteDe[k]!]) m |= B_FONTE;
     if (fFoto !== null && ix.temFoto[k] !== fFoto) m |= B_FOTO;
+    if (fMetro && !ix.metroPerto[k]) m |= B_METRO;
     if (com) {
       let passa = !com.desconhecida;
       for (let w = 0; passa && w < W; w++) passa = (ix.tagsConfirmadas[k * W + w]! & com.bits[w]!) === com.bits[w];
@@ -935,6 +953,8 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
       if (ix.fgts[k] === 1) cFgts++;
       if (ix.parcelamento[k] === 1) cParc++;
       if (ix.temFoto[k]) cFoto++;
+      // com o filtro ligado, os resultados são exatamente os com metrô; desligado, quantos o filtro deixaria
+      if (ix.metroPerto[k]) cMetro++;
       if (ix.dia[k] !== null) cData++;
       const coleta = ix.itens[k]!.coletadoEm;
       if (primeiraColeta === null) primeiraColeta = coleta;
@@ -1148,6 +1168,7 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
     comData: cData,
     coletaUnica: total > 0 && !variasColetas,
     notaLocal: veNota ? acumuladoDeCima(cNota) : [],
+    metroPerto: cMetro,
   };
   // filtros avançados (Luneta): no Lente as contagens e histogramas deles não saem (os controles aparecem travados)
   if (!veAvancados) Object.assign(facetas, FACETAS_AVANCADAS_VAZIAS);

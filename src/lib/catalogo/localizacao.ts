@@ -20,6 +20,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { gunzip } from "node:zlib";
+import { LIMITE_TAG_M, MODOS_ESTACAO, type EstacaoPerto } from "./estacoes";
 import { moeda, numero } from "./rotulos";
 import type { AlertaLocal, ChaveComponenteLocal, ComponenteLocal, IndicadorLocal, LocalizacaoImovel, PrecisaoLocal } from "./tipos";
 
@@ -67,6 +68,11 @@ export interface ArquivoLocalizacaoOsm {
   fonte: FonteArquivo;
   colunas: Record<string, Coluna>;
   cidades: Record<string, { comum: Record<string, number | null> }>;
+  /**
+   * Estação de metrô, trem e VLT mais perto (base/fontes/localizacao/estacoes.py, rodada 5): as colunas `metro_m`,
+   * `trem_m`, `vlt_m` (m), `<modo>_nome` (índice em `nomes`) e `metro_mono` (1 = monotrilho). Ausente em arquivo antigo.
+   */
+  estacoes?: { dados_osm_de: string | null; nomes: string[]; limite_m?: number; tag_m?: number };
 }
 
 export interface CidadeLocalizacao {
@@ -137,6 +143,8 @@ export function conferirArquivoLocalizacao(a: unknown, formato: "luneta-localiza
     const o = a as ArquivoLocalizacaoOsm;
     if (typeof o.aviso !== "string" || !o.aviso.includes("OpenStreetMap")) return "sem o aviso da ODbL";
     if (typeof o.cidades !== "object" || o.cidades === null) return "sem as cidades";
+    if (o.estacoes !== undefined && (typeof o.estacoes !== "object" || o.estacoes === null || !Array.isArray(o.estacoes.nomes) || !o.estacoes.nomes.every((n) => typeof n === "string")))
+      return "estações sem a lista de nomes";
     return conferirColunas(o.colunas, []);
   }
   return typeof x.cidades === "object" && x.cidades !== null ? null : "sem as cidades";
@@ -385,13 +393,51 @@ function textoMotivo(
   }
 }
 
-function fontesDe(d: DadosLocalizacao, usouOsm: boolean): LocalizacaoImovel["fontes"] {
+const dataBr = (iso: string | null | undefined) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : null);
+
+function fontesDe(d: DadosLocalizacao, usouOsm: boolean, usouEstacoes = false): LocalizacaoImovel["fontes"] {
   const fontes = (d.principal?.fontes ?? []).map((f) => ({ nome: f.nome, detalhe: f.detalhe, licenca: f.licenca, url: f.url ?? null }));
-  if (usouOsm && d.osm) {
-    const data = d.osm.dados_osm_de ? ` (dados de ${d.osm.dados_osm_de.slice(8, 10)}/${d.osm.dados_osm_de.slice(5, 7)}/${d.osm.dados_osm_de.slice(0, 4)})` : "";
-    fontes.push({ nome: d.osm.fonte.nome, detalhe: `${d.osm.fonte.detalhe}${data}`, licenca: d.osm.fonte.licenca, url: d.osm.fonte.url ?? null });
+  if ((usouOsm || usouEstacoes) && d.osm) {
+    // a nota usa o OSM do último cálculo dela; as estações de metrô, trem e VLT podem ser de uma extração mais nova
+    const daNota = dataBr(d.osm.dados_osm_de);
+    const dasEstacoes = usouEstacoes ? dataBr(d.osm.estacoes?.dados_osm_de) : null;
+    let detalhe: string;
+    if (!usouOsm) detalhe = `estações de metrô, trem e VLT${dasEstacoes ? ` (dados de ${dasEstacoes})` : ""}`;
+    else if (dasEstacoes && dasEstacoes !== daNota)
+      detalhe = `${d.osm.fonte.detalhe} (dados de ${daNota ?? "data não informada"}; estações de metrô, trem e VLT, de ${dasEstacoes})`;
+    else detalhe = `${d.osm.fonte.detalhe}${daNota ? ` (dados de ${daNota})` : ""}`;
+    fontes.push({ nome: d.osm.fonte.nome, detalhe, licenca: d.osm.fonte.licenca, url: d.osm.fonte.url ?? null });
   }
   return fontes;
+}
+
+/**
+ * Estações de metrô, trem e VLT perto do imóvel (src/lib/catalogo/estacoes.ts), das colunas do arquivo do OSM: só com
+ * endereço no número ou na rua (as outras precisões não têm a coluna); vazio sem o dado. `todas`: até o limite gravado
+ * (2 km); sem ele, só as que viram tag (abaixo de 1 km).
+ */
+export function estacoesDe(d: DadosLocalizacao, id: string, opcoes: { todas?: boolean } = {}): EstacaoPerto[] {
+  const o = d.osm;
+  const ko = d.posicaoOsm.get(id);
+  if (!o?.estacoes || ko === undefined) return [];
+  const nomes = o.estacoes.nomes;
+  const saida: EstacaoPerto[] = [];
+  for (const modo of MODOS_ESTACAO) {
+    const m = valor(o.colunas, `${modo}_m`, ko);
+    if (m === null || m < 0 || (!opcoes.todas && m >= LIMITE_TAG_M)) continue;
+    const n = valor(o.colunas, `${modo}_nome`, ko);
+    const nome = n !== null && Number.isInteger(n) ? (nomes[n] ?? null) : null;
+    saida.push({ modo, distanciaM: m, nome: nome || null, ...(modo === "metro" && valor(o.colunas, "metro_mono", ko) === 1 ? { monotrilho: true } : {}) });
+  }
+  return saida;
+}
+
+/** A data dos dados das estações (ISO) e a precisão do ponto do imóvel, para a evidência da tag. */
+export function contextoEstacoes(d: DadosLocalizacao, id: string): { precisao: PrecisaoLocal | null; dadosOsmDe: string | null } {
+  const p = d.principal;
+  const k = d.posicao.get(id);
+  const cod = p && k !== undefined ? valor(p.colunas, "precisao", k) : null;
+  return { precisao: p && cod !== null ? ((p.precisoes[cod] ?? null) as PrecisaoLocal | null) : null, dadosOsmDe: d.osm?.estacoes?.dados_osm_de ?? null };
 }
 
 /**
@@ -484,6 +530,8 @@ export function montarLocalizacao(d: DadosLocalizacao, id: string, lugar: { cida
   const nota = mostraNota ? valor(c, "nota", k) : null;
   const fmin = valor(c, "faixa_min", k);
   const fmax = valor(c, "faixa_max", k);
+  // estação de metrô, trem ou VLT a menos de 1 km (só número ou rua): a seção diz "Estação de metrô X a 450 m"
+  const estacoes = temPonto ? estacoesDe(d, id) : [];
   return {
     situacao,
     nota: nota === null ? null : Math.round(nota),
@@ -499,7 +547,8 @@ export function montarLocalizacao(d: DadosLocalizacao, id: string, lugar: { cida
     ...(espalhada ? { pontoRuaEspalhada: true } : {}),
     coberturaRisco: !!cidade?.bater,
     riscoRaioM: raioRisco(p.regras, precisao, desvioM, temPonto, !!cidade?.bater),
-    fontes: fontesDe(d, usouOsm),
+    ...(estacoes.length ? { estacoes } : {}),
+    fontes: fontesDe(d, usouOsm, estacoes.length > 0),
     versao: p.versao,
     geradoEm: p.gerado_em,
   };

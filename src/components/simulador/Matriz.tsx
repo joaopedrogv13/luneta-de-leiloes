@@ -82,8 +82,8 @@ export function leituraCelula(r: ResultadoCompleto, cel: CelulaMatriz, visao: Vi
 }
 
 /**
- * Matriz cenários × prazos. Duas visões: o lance máximo que atinge a meta em cada célula, ou o lucro e o
- * retorno ao ano com o lance da pessoa. A célula escolhida (botão com aria-pressed; setas movem a escolha) é a
+ * Matriz cenários × prazos. Duas visões: o lucro e o retorno ao ano com o lance da pessoa (a principal, que abre
+ * para quem nunca escolheu: VISAO_PADRAO em completa.ts) ou o lance máximo que atinge a meta em cada célula. A célula escolhida (botão com aria-pressed; setas movem a escolha) é a
  * mesma do cartão e do Detalhe. Embaixo, a leitura da célula (o que ela quer dizer, em frase), a legenda das
  * cores, a base dos % de venda e os prazos das colunas. O % de cada cenário se edita no próprio cabeçalho da
  * linha. "Como usar" abre a explicação completa.
@@ -216,19 +216,21 @@ export function Matriz({
                 },
               ]
             : [
-                {
-                  valor: "teto",
-                  rotulo: (
-                    <>
-                      Lance máximo<span className="hidden sm:inline"> para a meta</span>
-                    </>
-                  ),
-                },
+                // rodada 5 (decisão 6): o lucro com o lance da pessoa é a visão principal (vem primeiro e abre por
+                // padrão); o lance máximo para a meta fica a um toque
                 {
                   valor: "lucro",
                   rotulo: (
                     <>
                       Lucro com <span className="hidden sm:inline">o </span>meu lance
+                    </>
+                  ),
+                },
+                {
+                  valor: "teto",
+                  rotulo: (
+                    <>
+                      Lance máximo<span className="hidden sm:inline"> para a meta</span>
                     </>
                   ),
                 },

@@ -10,7 +10,7 @@ import type { ReferenciaM2 } from "../catalogo/tipos";
 import { lerLista, lerParte, montarDetalhe, parteDoId, pastaPadrao } from "../catalogo/instantaneo";
 import { atingeMeta, cascata, lanceMaximo, simular } from "./calculo";
 import { adicionaveis, contarAjustes, linhasDaConta } from "./conta";
-import { completarModelo, simulacaoCompleta } from "./completa";
+import { completarModelo, simulacaoCompleta, VISAO_PADRAO } from "./completa";
 import { chaveEstado, ESTADO_INICIAL, interpretarEstado, serializarEstado, type EstadoSimulador } from "./estado";
 import { colunasDaMatriz, limparAjustes, limparMeta, montarModelo, multiplicador, ocupadoComCerteza, PADRAO } from "./premissas";
 import { converterMeta, metaPorExtenso, notaIr, vendaDoCenario, vendaDoCenarioCurta } from "./textos";
@@ -497,7 +497,23 @@ test("simulacaoCompleta: os quatro imóveis do dono", () => {
   // o mesmo resultado a partir do modelo pronto
   assert.equal(completarModelo(vo.modelo, vo.estado).teto, vo.teto);
   assert.equal(vo.margem, null);
-  assert.equal(vo.visao, "teto");
+  // rodada 5 (decisão 6): quem nunca escolheu vê o lucro com o lance; quem escolheu o lance máximo mantém
+  assert.equal(vo.visao, "lucro");
+  assert.equal(simulacaoCompleta(terrenoCocal, estado({ visao: "teto" })).visao, "teto");
+  assert.equal(simulacaoCompleta(terrenoCocal, estado({ visao: "lucro" })).visao, "lucro");
+});
+
+test("visão da tabela: o padrão novo vale para quem nunca escolheu; a escolha salva continua valendo", () => {
+  // estado salvo antes da rodada 5, sem escolha (visao null): abre no lucro
+  const semEscolha = interpretarEstado(JSON.stringify({ v: 2, meta: { tipo: "roi_aa", valor: 0.2 }, celula: { cenario: "base", meses: 12 }, visao: null }));
+  assert.equal(semEscolha.visao, null);
+  assert.equal(simulacaoCompleta(terrenoCocal, semEscolha).visao, "lucro");
+  // estado salvo com o lance máximo escolhido: mantém
+  const comEscolha = interpretarEstado(JSON.stringify({ v: 2, visao: "teto" }));
+  assert.equal(simulacaoCompleta(terrenoCocal, comEscolha).visao, "teto");
+  // valor estranho: como quem nunca escolheu
+  assert.equal(simulacaoCompleta(terrenoCocal, interpretarEstado(JSON.stringify({ v: 2, visao: "outra" }))).visao, "lucro");
+  assert.equal(VISAO_PADRAO, "lucro");
 });
 
 test("venda direta (preço fixo): a conta usa o preço pedido, a margem de segurança e a tabela abre no lucro", () => {

@@ -9,8 +9,9 @@ import { IconeNao, IconeOk } from "./controles";
 import { Janela } from "./Janela";
 
 /**
- * "Como usar" a tabela de cenários e prazos: o que é cenário, prazo, lance máximo e retorno ao ano, como ler as
- * cores, e exemplos com os números deste imóvel. Escrito para quem nunca simulou um leilão.
+ * "Como usar" a tabela de cenários e prazos: o que é cenário, prazo, lucro com o lance, lance máximo e retorno ao
+ * ano, como ler as cores (da visão aberta), e exemplos com os números deste imóvel. Escrito para quem nunca simulou
+ * um leilão.
  */
 export function ComoUsar({ r, onFechar }: { r: ResultadoCompleto; onFechar: () => void }) {
   const p = r.modelo.premissas;
@@ -21,6 +22,8 @@ export function ComoUsar({ r, onFechar }: { r: ResultadoCompleto; onFechar: () =
   const roi24 = Math.pow(1.5, 12 / 24) - 1;
   // venda direta: preço fixo (não há disputa); a tabela mostra o lucro pelo preço e a margem para imprevistos
   const fixo = r.semDisputa;
+  // leilão na visão do lance máximo (a legenda das cores fala da visão aberta)
+  const teto = !fixo && r.visao === "teto";
 
   return (
     <Janela titulo="Como usar a tabela de cenários e prazos" sobretitulo="Simulador · guia rápido" onFechar={onFechar} largura="md:w-[min(720px,94vw)]">
@@ -34,9 +37,9 @@ export function ComoUsar({ r, onFechar }: { r: ResultadoCompleto; onFechar: () =
             </p>
           ) : (
             <p>
-              A tabela responde a uma pergunta: <strong className="font-semibold">até quanto vale dar de lance neste imóvel</strong>, para você ganhar o
-              que quer, conforme o preço de venda e o tempo até vender. Ninguém sabe esses dois números com certeza; por isso a tabela mostra várias
-              combinações lado a lado.
+              A tabela responde a duas perguntas: <strong className="font-semibold">quanto você ganha com o seu lance</strong> e, na outra visão,{" "}
+              <strong className="font-semibold">até quanto vale dar de lance</strong> para ganhar o que quer. As duas dependem do preço de venda e do
+              tempo até vender. Ninguém sabe esses dois números com certeza; por isso a tabela mostra várias combinações lado a lado.
             </p>
           )}
         </Bloco>
@@ -85,16 +88,17 @@ export function ComoUsar({ r, onFechar }: { r: ResultadoCompleto; onFechar: () =
             </>
           ) : (
             <>
-            <p>
-              Na visão <strong className="font-semibold">“Lance máximo”</strong>, cada quadro diz o maior lance que ainda dá a sua meta (
-              {metaPorExtenso(r.meta)}) depois de pagar todos os custos: comissão, ITBI, registro, reforma, os meses até vender, corretagem e imposto de
-              renda. Abaixo do número, a folga: quanto <strong className="font-semibold">sobra</strong> entre o lance mínimo de hoje ({moeda(lance)}) e
-              esse teto, ou quanto <strong className="font-semibold">falta</strong> quando o teto fica abaixo do mínimo.
-            </p>
-            <p className="mt-2">
-              Na visão <strong className="font-semibold">“Lucro com meu lance”</strong>, cada quadro mostra quanto sobra no bolso (lucro, já sem o imposto)
-              e o retorno ao ano, com o lance que você escolher.
-            </p>
+              <p>
+                Na visão <strong className="font-semibold">“Lucro com o meu lance”</strong>, a que abre primeiro, cada quadro mostra quanto sobra no bolso
+                (lucro, já sem o imposto) e o retorno ao ano, com o lance que você escolher (de início, o lance mínimo de hoje, {moeda(lance)}).
+              </p>
+              <p className="mt-2">
+                Na visão <strong className="font-semibold">“Lance máximo para a meta”</strong>, cada quadro diz o maior lance que ainda dá a sua meta (
+                {metaPorExtenso(r.meta)}) depois de pagar todos os custos: comissão, ITBI, registro, reforma, os meses até vender, corretagem e imposto
+                de renda. Abaixo do número, a folga: quanto <strong className="font-semibold">sobra</strong> entre o lance mínimo de hoje e esse teto, ou
+                quanto <strong className="font-semibold">falta</strong> quando o teto fica abaixo do mínimo.
+              </p>
+              <p className="mt-2 text-nevoa">A tabela abre na visão que você usou por último neste imóvel.</p>
             </>
           )}
         </Bloco>
@@ -118,7 +122,9 @@ export function ComoUsar({ r, onFechar }: { r: ResultadoCompleto; onFechar: () =
             >
               {fixo
                 ? "Verde com ✓: comprando pelo preço pedido, você atinge a meta (e, na margem, ainda cabe esse valor de imprevistos)."
-                : "Verde com ✓: o teto passa do lance mínimo. Dá para entrar na disputa e ainda atingir a meta; a diferença é a sua folga."}
+                : teto
+                  ? "Verde com ✓: o teto passa do lance mínimo. Dá para entrar na disputa e ainda atingir a meta; a diferença é a sua folga."
+                  : `Verde com ✓: com o seu lance, você atinge a meta (${metaPorExtenso(r.meta)}).`}
             </Legenda>
             <Legenda
               icone={
@@ -129,9 +135,11 @@ export function ComoUsar({ r, onFechar }: { r: ResultadoCompleto; onFechar: () =
             >
               {fixo
                 ? "✕: comprando pelo preço pedido, você ganha menos que a meta (ou perde), mesmo sem imprevistos."
-                : "✕: o lance mínimo de hoje já é maior que o teto. Comprando por ele, você ganha menos que a meta (ou perde)."}
+                : teto
+                  ? "✕: o lance mínimo de hoje já é maior que o teto. Comprando por ele, você ganha menos que a meta (ou perde)."
+                  : "✕: com o seu lance, você ganha menos que a meta (ou perde)."}
             </Legenda>
-            {!fixo && (
+            {teto && (
               <Legenda icone={<span className="inline-flex size-5 items-center justify-center rounded border border-nevoa/25 bg-noite text-[11px]">—</span>}>
                 Traço: nenhum lance atinge a meta, nem de graça. A venda não cobre os custos com esse retorno.
               </Legenda>
@@ -140,6 +148,13 @@ export function ComoUsar({ r, onFechar }: { r: ResultadoCompleto; onFechar: () =
               Contorno dourado: o quadro escolhido. É o mesmo do cartão de cima e do Detalhe, logo abaixo.
             </Legenda>
           </ul>
+          {!fixo && (
+            <p className="mt-2 text-nevoa">
+              {teto
+                ? "Na visão “Lucro com o meu lance”, o ✓ quer dizer que, com o seu lance, você atinge a meta."
+                : "Na visão “Lance máximo para a meta”, o ✓ quer dizer que o teto passa do lance mínimo, e o traço, que nenhum lance atinge a meta."}
+            </p>
+          )}
         </Bloco>
 
         {ex && (
@@ -157,6 +172,13 @@ export function ComoUsar({ r, onFechar }: { r: ResultadoCompleto; onFechar: () =
                   </span>
                 </li>
               )}
+              <li className="flex gap-2">
+                <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-latao" />
+                <span>
+                  {fixo ? `Comprando por ${moeda(ex.lance)}` : `Com ${moeda(ex.lance)} de lance`}, {ex.lucro >= 0 ? "o lucro" : "o prejuízo"} é de {moeda(Math.abs(Math.round(ex.lucro)))} ({pct(ex.roiAA)} ao
+                  ano), colocando {moeda(Math.round(ex.capital))} do seu dinheiro.
+                </span>
+              </li>
               {!fixo && exTeto !== null && (
                 <li className="flex gap-2">
                   <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-latao" />
@@ -166,13 +188,6 @@ export function ComoUsar({ r, onFechar }: { r: ResultadoCompleto; onFechar: () =
                   </span>
                 </li>
               )}
-              <li className="flex gap-2">
-                <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-latao" />
-                <span>
-                  {fixo ? `Comprando por ${moeda(ex.lance)}` : `Com ${moeda(ex.lance)} de lance`}, {ex.lucro >= 0 ? "o lucro" : "o prejuízo"} é de {moeda(Math.abs(Math.round(ex.lucro)))} ({pct(ex.roiAA)} ao
-                  ano), colocando {moeda(Math.round(ex.capital))} do seu dinheiro.
-                </span>
-              </li>
             </ul>
           </Bloco>
         )}
@@ -180,7 +195,7 @@ export function ComoUsar({ r, onFechar }: { r: ResultadoCompleto; onFechar: () =
         <Bloco titulo="Dicas">
           <ul className="flex flex-col gap-1.5">
             <li>• Decida pelo cenário conservador: se ele já dá a meta, o negócio tem margem.</li>
-            <li>• Toque num quadro para ver a conta completa no Detalhe. Lá cada custo tem um lápis para ajustar.</li>
+            <li>• Toque num quadro para ver a conta completa no Detalhe. Lá, “Editar a conta” mostra um lápis em cada custo para ajustar.</li>
             <li>• Use as setas do teclado para andar pela tabela.</li>
             <li className="text-nevoa">• É uma simulação com premissas genéricas, não recomendação de investimento: confira o edital e os custos locais.</li>
           </ul>
