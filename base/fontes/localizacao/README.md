@@ -184,6 +184,27 @@ cidade (mais de 1,5 km entre eles) fica de fora.
 
 ---
 
+## Estação de metrô, trem e VLT perto (rodada 5)
+
+A tag positiva **"Metrô a 450 m"** (e "Trem a…", "VLT a…") do site, o filtro "Metrô a até 1 km" e a frase "Estação de
+metrô Botafogo a 450 m" da seção de localização. É do plano Luneta, como as outras tags. Regras completas no topo de
+`estacoes.py`; em resumo:
+
+- só imóvel com endereço no **número ou na rua**; distância **em linha reta** do ponto do endereço até a estação (ou o
+  acesso de metrô) mais perto, no OpenStreetMap; a tag vale **abaixo de 1 km**;
+- metrô inclui o monotrilho do Metrô de São Paulo (linhas 15 e 17); o de parque ou santuário fica fora;
+- trem e VLT só de rede urbana de passageiros (CPTM, ViaMobilidade, SuperVia, Trensurb, CBTU, Metrofor, VLT...) e das
+  estações vizinhas dela; estação antiga, desativada, turística, de carga, bonde, funicular e plano inclinado ficam fora.
+  A "Estação Ferroviária de X" do interior é quase sempre um prédio antigo;
+- **a nota não muda**: o transporte da nota segue com a distância até qualquer estação, barca ou terminal (`estacao_m`),
+  como na rodada 4. As colunas novas entram no `localizacao-osm.json.gz` sem tocar no resto do arquivo.
+
+Em 24/10/2026, com o OSM de 23/10: 369 imóveis com metrô a menos de 1 km, 604 com trem e 46 com VLT (911 com pelo menos
+uma, 6,7% dos 13.692 com número ou rua), quase todos no Rio, em São Paulo e nas regiões metropolitanas de Recife,
+Salvador, Fortaleza e Porto Alegre. Por cidade em [`medicao-nota.md`](../../saida/localizacao/medicao-nota.md).
+
+Para recalcular sem refazer a nota: a etapa `osm` do Actions e `estacoes.py --osm osm-pois.csv.gz` (2 s).
+
 ## Geocodificação: resultado (18/10/2026, instantâneo de 21.230 imóveis)
 
 | Precisão | Imóveis | % | No site (`precisaoGeo`) | Verificação (C2) |
@@ -214,6 +235,7 @@ npm run base:exportar -- --site                                         # leva l
 .venv/bin/python base/fontes/localizacao/cidades.py                 # (só quando as cidades da base mudarem) caixas e vizinhas
 .venv/bin/python base/fontes/localizacao/pois.py --osm osm-pois.csv.gz  # → $LUNETA_LOCAL_CACHE/nota/pois.parquet (≈ 4 min)
 .venv/bin/python base/fontes/localizacao/nota.py                    # → base/saida/site/localizacao*.json.gz + medicao-nota.md (≈ 6 min)
+.venv/bin/python base/fontes/localizacao/estacoes.py --osm osm-pois.csv.gz   # metrô, trem e VLT mais perto (tag do site; 2 s)
 ```
 
 O `osm-pois.csv.gz` sai da etapa `osm` do Actions (a Geofabrik não abre do contêiner): `git fetch origin coletas-dados` e
@@ -240,7 +262,7 @@ ref escolhido e publica `base/fontes/localizacao/saida/` e o log no branch `cole
 | `geocode` | geocode completo; usa o CEP das fichas publicadas em `coletas-dados/fichas/` | geocode.json, medicao-geocode.md, manifesto-entradas.json | cerca de 10 min |
 | `osm` | instala o osmium-tool, baixa o brazil-latest.osm.pbf (2 GB), filtra transporte e lazer, exporta e reduz às cidades da base (`osm.py`) | osm-pois.csv.gz (ODbL, aviso no cabeçalho), osm-LEIA-ME.txt, osm-cobertura.csv | cerca de 14 min (12 de download) |
 | `ibge` | ZIP de renda por setor do FTP do IBGE: cabeçalho do CSV e a linha do dicionário que descreve a V06006 (`ibge.py`) | ibge-renda.txt, ibge-renda.json | 1 min |
-| `nota` | entradas da nota, `pois.py` e `nota.py` (com o OSM desta execução ou o último publicado) | localizacao*.json.gz, medicao-nota.md | cerca de 15 min (10 antes da malha de setores; não medido de novo no Actions) |
+| `nota` | entradas da nota, `pois.py`, `nota.py` e `estacoes.py` (com o OSM desta execução ou o último publicado) | localizacao*.json.gz, medicao-nota.md | cerca de 15 min (10 antes da malha de setores; não medido de novo no Actions) |
 | `tudo` | as quatro, nesta ordem (a atualização semanal) | tudo acima | cerca de 40 min |
 
 Para aplicar o resultado do Actions no repositório: copiar de `coletas-dados` o geocode.json (e rodar
@@ -260,7 +282,8 @@ Para aplicar o resultado do Actions no repositório: copiar de `coletas-dados` o
 | `aplicar.ts` | `npm run base:geocode`: grava no banco (padrão de `base/fontes/caixa/aplicar-fichas.ts`) |
 | `raios.py` | o raio de cada município medido no CNEFE, onde a malha fica curta |
 | `cidades.py` | as cidades da base (código IBGE de cada imóvel), a caixa de cada uma (endereços do CNEFE, percentis 0,1 e 99,9, mais 3 km) e as vizinhas (caixa que cruza) → `base/saida/localizacao/cidades-base.csv`, que o Actions usa para recortar o OSM |
-| `osm.py` | (Actions) reduz o extrato do OSM a `categoria,lat,lon,raio_m` nas caixas das cidades; as regras das categorias estão no topo do arquivo |
+| `osm.py` | (Actions) reduz o extrato do OSM a `categoria,lat,lon,raio_m,nome,rede` nas caixas das cidades; as regras das categorias estão no topo do arquivo. Desde a rodada 5 os trilhos vêm separados em `metro`, `trem`, `vlt` e `monotrilho` (antes, `trilho`), com o nome e a rede da estação |
+| `estacoes.py` | a estação de metrô, trem e VLT mais perto de cada imóvel com endereço no número ou na rua (colunas `metro_m`, `trem_m`, `vlt_m`, com o nome, no `localizacao-osm.json.gz`) e a seção "Estação de metrô, trem e VLT perto" do `medicao-nota.md`; ver "Estação de metrô, trem e VLT perto" abaixo |
 | `ibge.py` | (Actions) confere a V06006 no ZIP e no dicionário do IBGE (C6) |
 | `pois.py` | pontos de serviço por categoria (CNEFE pelo nome, Inep, CNES, OSM) → `pois.parquet` no cache; nenhum nome sai (C7, C8) |
 | `metricas.py` | os indicadores de cada ponto (contagens com árvore k-d, distâncias e as somas dos domicílios por setor agregadas antes em quadradinhos de 0,001°, C12; o setor que falta nos resultados sai do polígono da malha 2022) |
@@ -352,7 +375,7 @@ o maior dos dois, também na exportação (sem isso, o exportar devolveria esses
 | Escolas (Inep, via geobr) | escolas em atividade a 1 km | `schools_2025.parquet` | CC BY 4.0: "Fonte: Inep, Censo Escolar e Catálogo de Escolas" |
 | CNES (Ministério da Saúde, via geobr) | unidades de saúde a 1 km | `healthfacilities_202604.parquet` (só tipo, motivo de desativação, município e coordenada) | "Fonte: Ministério da Saúde, CNES"; o arquivo tem CPF e razão social de pessoa física: nunca lidos |
 | BATER (IBGE e Cemaden, via geobr) | alerta de área de risco | `disasterriskareas_2010.parquet` | "Fonte: IBGE e Cemaden, População em Áreas de Risco no Brasil (2018)" |
-| OpenStreetMap (Geofabrik) | estações, pontos de ônibus, parques, praças, parquinhos | `brazil-latest.osm.pbf`, só no Actions | ODbL 1.0, "© contribuidores do OpenStreetMap"; o extrato e as colunas derivadas (`localizacao-osm.json.gz`) saem sob a ODbL, com o aviso no arquivo (C9) |
+| OpenStreetMap (Geofabrik) | estações (e, desde a rodada 5, o nome e a rede das de metrô, trem e VLT), pontos de ônibus, parques, praças, parquinhos | `brazil-latest.osm.pbf`, só no Actions | ODbL 1.0, "© contribuidores do OpenStreetMap"; o extrato e as colunas derivadas (`localizacao-osm.json.gz`) saem sob a ODbL, com o aviso no arquivo (C9) |
 | ITBI das prefeituras (base/fontes/itbi) | só a validação dos pesos | `base/saida/site/itbi/*.json.gz` | as de `base/FONTES.md`; fora da nota |
 
 Os arquivos dos releases mudam sem mudar a tag (o `cnefe_2022.parquet` da v2.0.0, de maio, tem `Last-Modified` de

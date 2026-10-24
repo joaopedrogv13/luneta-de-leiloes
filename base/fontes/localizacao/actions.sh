@@ -18,9 +18,10 @@
 #            osm-LEIA-ME.txt e osm-cobertura.csv (pontos por cidade). O PBF é apagado logo depois do filtro.
 #   ibge     baixa o ZIP de renda do responsável do Censo 2022 no FTP do IBGE e grava o cabeçalho do CSV e a linha
 #            do dicionário que descreve a V06006 (ibge.py → saida/ibge-renda.txt e ibge-renda.json; C6).
-#   nota     pontos de serviço (pois.py), métricas e nota (nota.py) com as entradas do manifesto; usa o osm-pois e o
-#            ibge-renda desta execução ou, sem eles, os últimos publicados em coletas-dados/localizacao/. Copia para
-#            saida/ os arquivos do site (localizacao*.json.gz) e a medição (medicao-nota.md).
+#   nota     pontos de serviço (pois.py), métricas e nota (nota.py) com as entradas do manifesto e a estação de metrô,
+#            trem e VLT mais perto (estacoes.py); usa o osm-pois e o ibge-renda desta execução ou, sem eles, os últimos
+#            publicados em coletas-dados/localizacao/. Copia para saida/ os arquivos do site (localizacao*.json.gz) e a
+#            medição (medicao-nota.md).
 #
 # Uma etapa que falha não derruba as outras; o script sai com 1 se alguma falhou.
 set -uo pipefail
@@ -135,6 +136,12 @@ etapa_nota() {
   "$PY" "$AQUI/pois.py" ${osm:+--osm "$osm"} || return 1
   log "nota: nota.py"
   "$PY" "$AQUI/nota.py" ${renda:+--ibge-renda "$renda"} || return 1
+  # estação de metrô, trem e VLT mais perto (tag "Metrô a 450 m" do site): colunas novas no localizacao-osm.json.gz e a
+  # seção dela no medicao-nota.md; só com um osm-pois.csv.gz da rodada 5 em diante (categorias metro, trem, vlt)
+  if [ -n "$osm" ]; then
+    log "nota: estacoes.py"
+    "$PY" "$AQUI/estacoes.py" --osm "$osm" || log "nota: estacoes.py falhou (o site fica sem a tag de metrô; a nota não muda)"
+  fi
   cp "$RAIZ/base/saida/site/localizacao.json.gz" "$RAIZ/base/saida/site/localizacao-osm.json.gz" \
      "$RAIZ/base/saida/site/localizacao-cidades.json.gz" "$RAIZ/base/saida/localizacao/medicao-nota.md" "$SAIDA/" || return 1
   log "nota: ok"

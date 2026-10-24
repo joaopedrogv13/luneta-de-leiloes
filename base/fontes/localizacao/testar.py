@@ -328,6 +328,65 @@ def osm_categorias():
 
 
 @teste
+def estacoes_regras():
+    import numpy as np
+
+    import estacoes as es
+
+    igual(es.nome_curto("Estação Botafogo"), "Botafogo")
+    igual(es.nome_curto("Estação de Metrô Sé"), "Sé")
+    igual(es.nome_curto("Estação Jaraguá;Jaraguá"), "Jaraguá")
+    igual(es.nome_curto("Jurubatuba- Senac"), "Jurubatuba - Senac")
+    igual(es.nome_curto("Carioca / Centro"), "Carioca / Centro")
+    igual(es.nome_curto(""), "")
+    # fora da tag: antiga, desativada, turística, bonde, funicular, plano inclinado numerado
+    assert es.fora("Antiga estação de trem")
+    assert es.fora("Estação Ferroviária desativada Mailasky")
+    assert es.fora("Largo das Neves", "Bonde de Santa Teresa")
+    assert es.fora("Funicular RioArte")
+    assert es.fora("Estação 3")
+    assert not es.fora("Central do Brasil", "SuperVia")
+    assert not es.fora("Vila Prudente", "Metropolitano de São Paulo")
+    # rede urbana conhecida (trem e VLT) e o monotrilho do Metrô
+    assert es.de_rede_passageiros("Carapicuíba", "Companhia Paulista de Trens Metropolitanos")
+    assert es.de_rede_passageiros("Santa Rita", "VLT João Pessoa · CBTU")
+    assert not es.de_rede_passageiros("Estação Ferroviária de Jacarezinho", "")
+    assert es.de_rede_passageiros("Oratório", "Metropolitano de São Paulo", monotrilho=True)
+    assert not es.de_rede_passageiros("Estação Cidade do Romeiro", "", monotrilho=True)
+    assert es.de_carga("MRS") and es.de_carga("Rumo S/A") and not es.de_carga("SuperVia")
+    # vizinhança: a estação sem rede a 800 m de uma da SuperVia entra; a de carga e a isolada no interior, não
+    lista = [
+        {"lat": -22.9000, "lon": -43.2000, "nome": "Madureira", "rede": "SuperVia", "cat": "trem"},
+        {"lat": -22.9070, "lon": -43.2000, "nome": "", "rede": "", "cat": "trem"},          # ~780 m
+        {"lat": -22.9140, "lon": -43.2000, "nome": "Oswaldo Cruz", "rede": "", "cat": "trem"},  # ~780 m da anterior
+        {"lat": -22.9075, "lon": -43.2050, "nome": "Pátio", "rede": "MRS", "cat": "trem"},
+        {"lat": -21.0000, "lon": -48.0000, "nome": "Pitangueiras", "rede": "", "cat": "trem"},
+    ]
+    igual([e["nome"] for e in es.pela_rede(lista)], ["Madureira", "", "Oswaldo Cruz"])
+    igual([e["nome"] for e in es.pela_rede(lista, vizinha_m=600)], ["Madureira"])
+    # metrô: o acesso sem nome longe de qualquer estação com nome sai
+    metro = [
+        {"lat": -22.9500, "lon": -43.1840, "nome": "Botafogo", "rede": "", "cat": "metro"},
+        {"lat": -22.9520, "lon": -43.1840, "nome": "", "rede": "", "cat": "metro"},  # ~220 m: acesso
+        {"lat": -22.9030, "lon": -43.2700, "nome": "", "rede": "", "cat": "metro"},  # órfão
+    ]
+    igual(len(es.sem_orfaos(metro)), 2)
+    d = es.distancias_m(-22.95, -43.184, np.array([-22.952]), np.array([-43.184]))[0]
+    assert 215 < d < 230, d
+    igual(es.arred10(447), 450)
+    # a seção da medição troca só o que está entre os marcadores
+    import tempfile
+    from pathlib import Path as P
+    with tempfile.TemporaryDirectory() as t:
+        arq = P(t) / "m.md"
+        arq.write_text("# Medição\n\ntexto da nota\n", encoding="utf-8")
+        es.gravar_medicao(arq, f"{es.INICIO}\nA\n{es.FIM}\n")
+        es.gravar_medicao(arq, f"{es.INICIO}\nB\n{es.FIM}\n")
+        txt = arq.read_text(encoding="utf-8")
+        assert "texto da nota" in txt and "\nB\n" in txt and "\nA\n" not in txt and txt.count(es.INICIO) == 1, txt
+
+
+@teste
 def osm_geometria():
     import osm
 
