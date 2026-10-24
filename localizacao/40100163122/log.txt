@@ -1,0 +1,21 @@
+[13:54:43] osm: osmium-tool e shapely
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+osmium version 1.16.0
+[13:55:07] osm: baixando https://download.geofabrik.de/south-america/brazil-latest.osm.pbf
+[13:57:12] osm: 2.0G, dados de 2026-10-23T20:20:51Z
+[13:57:12] osm: tags-filter
+[13:58:12] osm: filtrado 15M; export geojsonseq
+[13:58:13] osm: 135M de geojsonseq; reduzindo às cidades da base
+1153 cidades da base (/home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/saida/localizacao/cidades-base.csv)
+Gravado: /home/runner/work/luneta-de-leiloes/luneta-de-leiloes/base/fontes/localizacao/saida/osm-pois.csv.gz (246473 pontos: {'barca': 985, 'brt': 851, 'metro': 970, 'monotrilho': 45, 'onibus': 114656, 'parque': 85455, 'playground': 6717, 'praca': 30441, 'terminal': 5189, 'trem': 788, 'vlt': 376})
+[13:58:31] osm: ok (1.6M)
+[13:58:31] fim: 0 etapa(s) com falha

@@ -1,0 +1,49 @@
+Pontos de transporte e lazer do OpenStreetMap nas cidades da base da Luneta de Leilões
+
+Dados do OpenStreetMap (c) contribuidores do OpenStreetMap, https://www.openstreetmap.org/copyright
+Disponibilizados sob a Open Database License (ODbL) 1.0: https://opendatacommons.org/licenses/odbl/1-0/
+Este arquivo é um banco de dados derivado do OpenStreetMap e também está sob a ODbL 1.0 (compartilhar pela mesma licença).
+Gerado pela Luneta de Leilões (base/fontes/localizacao/osm.py): só categoria, coordenada e, nas estações de trilho, o nome da estação e a rede.
+
+Dados do OSM de: 2026-10-23T20:20:51Z (https://download.geofabrik.de/south-america/brazil-latest.osm.pbf)
+Gerado em: 2026-10-24T13:58:31Z
+Como: osmium tags-filter + osmium export (geojsonseq) + base/fontes/localizacao/osm.py (regras no topo do arquivo).
+Colunas de osm-pois.csv.gz: categoria, lat, lon (5 casas), raio_m (parque pequeno: raio do círculo de mesma área), nome e rede (só trilhos).
+
+Pontos por categoria:
+  metro: 970
+  trem: 788
+  vlt: 376
+  monotrilho: 45
+  brt: 851
+  barca: 985
+  terminal: 5189
+  onibus: 114656
+  praca: 30441
+  parque: 85455
+  playground: 6717
+
+Contagens da leitura:
+  classificado:barca: 1791
+  classificado:brt: 858
+  classificado:metro: 978
+  classificado:monotrilho: 45
+  classificado:onibus: 122054
+  classificado:parque: 120005
+  classificado:playground: 12769
+  classificado:praca: 75615
+  classificado:terminal: 6878
+  classificado:trem: 1021
+  classificado:vlt: 403
+  gravado:barca: 985
+  gravado:brt: 851
+  gravado:metro: 970
+  gravado:monotrilho: 45
+  gravado:onibus: 114656
+  gravado:parque: 44448
+  gravado:playground: 6717
+  gravado:praca: 29136
+  gravado:terminal: 5189
+  gravado:trem: 788
+  gravado:vlt: 376
+  objetos: 371835
