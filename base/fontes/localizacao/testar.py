@@ -288,10 +288,19 @@ def osm_categorias():
         ({"public_transport": "platform", "bus": "yes"}, "onibus"),
         ({"highway": "bus_stop", "name": "BRT Alvorada"}, "brt"),
         ({"amenity": "bus_station", "name": "Terminal Rodoviário"}, "terminal"),
-        ({"railway": "station", "public_transport": "station", "train": "yes"}, "trilho"),
+        ({"railway": "station", "public_transport": "station", "train": "yes"}, "trem"),
         ({"railway": "station"}, None),  # estação velha só com railway=station: fora
-        ({"railway": "station", "station": "subway"}, "trilho"),
-        ({"railway": "subway_entrance"}, "trilho"),
+        ({"railway": "station", "station": "subway"}, "metro"),
+        ({"railway": "subway_entrance"}, "metro"),
+        ({"railway": "tram_stop", "name": "Parada dos Museus"}, "vlt"),
+        ({"railway": "station", "station": "light_rail"}, "vlt"),
+        ({"railway": "station", "station": "monorail"}, "monotrilho"),
+        ({"public_transport": "station", "monorail": "yes"}, "monotrilho"),
+        ({"railway": "halt", "public_transport": "station"}, "trem"),
+        # sem o modo nas tags: o nome ou a rede; sem nada, trem (o padrão do OSM)
+        ({"railway": "station", "public_transport": "station", "network": "Metrô Rio"}, "metro"),
+        ({"railway": "station", "public_transport": "station", "name": "VLT Parangaba"}, "vlt"),
+        ({"railway": "station", "public_transport": "station", "name": "Japeri"}, "trem"),
         ({"railway": "station", "public_transport": "station", "usage": "freight"}, None),
         ({"railway": "station", "public_transport": "station", "disused:railway": "station"}, None),
         ({"amenity": "ferry_terminal"}, "barca"),
@@ -307,6 +316,12 @@ def osm_categorias():
     ]
     for tags, esperado in casos:
         igual(osm.classificar(tags), esperado, f"{tags}:")
+    # estação de dois modos: uma linha em cada categoria
+    igual(osm.categorias({"railway": "station", "public_transport": "station", "subway": "yes", "train": "yes"}), ["metro", "trem"])
+    # nome só em estação de trilho; o acesso de metrô fica sem nome (é o da saída)
+    igual(osm.nome_estacao({"railway": "station", "name": "Estação  Sé "}, "metro"), "Estação Sé")
+    igual(osm.nome_estacao({"railway": "subway_entrance", "name": "Saída A"}, "metro"), "")
+    igual(osm.nome_estacao({"highway": "bus_stop", "name": "Ponto X"}, "onibus"), "")
 
 
 @teste

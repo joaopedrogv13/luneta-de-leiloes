@@ -7,7 +7,7 @@ Fontes, uma tabela só (`pois.parquet` no cache, fora do git; nunca publicado):
 | CNEFE 2022 (IBGE) | `mercado`, `farmacia`, `padaria` (pelo nome do estabelecimento, C8), `estab` (todo estabelecimento da espécie 6, "outras finalidades": comércio e serviços), `ensino_cnefe` (4), `saude_cnefe` (5), `religioso` (8) | cnefe_2022.parquet (geobr) |
 | INEP | `escola_publica`, `escola_privada` (só em atividade) | schools_2025.parquet (geobr) |
 | CNES (Ministério da Saúde) | `saude` (unidades de atenção, sem consultório isolado; C7) | healthfacilities_202604.parquet (geobr) |
-| OpenStreetMap | `trilho`, `brt`, `barca`, `terminal`, `onibus`, `praca`, `parque`, `playground` (osm.py, só do Actions) | osm-pois.csv.gz |
+| OpenStreetMap | `metro`, `trem`, `vlt`, `monotrilho` (até a rodada 4, `trilho`), `brt`, `barca`, `terminal`, `onibus`, `praca`, `parque`, `playground` (osm.py, só do Actions) | osm-pois.csv.gz |
 
 Colunas: `fonte`, `categoria`, `lat`, `lon`, `raio_m` (parque pequeno do OSM: raio do círculo de mesma área),
 `code_muni` (null no OSM). **Nenhum nome é lido para a saída**: o nome do estabelecimento do CNEFE só passa pela

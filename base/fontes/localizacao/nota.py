@@ -374,7 +374,7 @@ def calcular(cidades: list[dict], imoveis: list[dict], codigos: dict[str, int | 
     celulas = met.carregar_celulas(base)
     pois = met.carregar_pois(caminho_pois)
     faces = met.faces_onibus_por_municipio(base)
-    tem_osm = any(n in ("onibus", "trilho", "parque", "praca") for n in pois["nomes"])
+    tem_osm = any(n in ("onibus", "trilho", "metro", "trem", "vlt", "monotrilho", "parque", "praca") for n in pois["nomes"])
     arv, geos, munis_bater = ler_bater(set(base))
     ruas = ruas_itbi() if com_validacao else {}
     log(f"Entradas prontas ({time.time() - t0:.0f} s); OSM: {'sim' if tem_osm else 'não'}")
