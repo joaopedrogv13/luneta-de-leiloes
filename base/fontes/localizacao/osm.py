@@ -41,8 +41,9 @@ Recorte: só o que cai na caixa de alguma cidade da base (cidades-base.csv, que 
 endereço); estações, barcas e terminais com 5 km a mais (a distância até a estação vai até 5 km).
 
 Saída (pasta --saida):
-- `osm-pois.csv.gz`: `categoria,lat,lon,raio_m,nome` (5 casas), com o aviso da ODbL nas primeiras linhas (começam com
-  #); `nome` só nas estações de trilho (o nome da estação no OSM; vazio no acesso de metrô e nas outras categorias);
+- `osm-pois.csv.gz`: `categoria,lat,lon,raio_m,nome,rede` (5 casas), com o aviso da ODbL nas primeiras linhas (começam
+  com #); `nome` e `rede` só nos trilhos: o nome da estação no OSM (vazio no acesso de metrô) e a rede ou o operador
+  (network, operator), que estacoes.py usa para separar trem de passageiros de estação antiga ou de carga;
 - `osm-LEIA-ME.txt`: licença, atribuição, data dos dados e como foi gerado;
 - `osm-cobertura.csv`: por cidade, quantos pontos de cada categoria caem na caixa (para medir a cobertura do OSM).
 
@@ -78,7 +79,7 @@ AVISO_ODBL = [
     "Dados do OpenStreetMap (c) contribuidores do OpenStreetMap, https://www.openstreetmap.org/copyright",
     "Disponibilizados sob a Open Database License (ODbL) 1.0: https://opendatacommons.org/licenses/odbl/1-0/",
     "Este arquivo é um banco de dados derivado do OpenStreetMap e também está sob a ODbL 1.0 (compartilhar pela mesma licença).",
-    "Gerado pela Luneta de Leilões (base/fontes/localizacao/osm.py): só categoria, coordenada e, nas estações de trilho, o nome da estação.",
+    "Gerado pela Luneta de Leilões (base/fontes/localizacao/osm.py): só categoria, coordenada e, nas estações de trilho, o nome da estação e a rede.",
 ]
 
 RE_BRT = re.compile(r"\bBRT\b", re.IGNORECASE)
@@ -187,6 +188,18 @@ def nome_estacao(t: dict, categoria: str) -> str:
         return ""
     nome = str(t.get("name") or t.get("official_name") or "").strip()
     return re.sub(r"\s+", " ", nome)[:80]
+
+
+def rede_estacao(t: dict, categoria: str) -> str:
+    """A rede e o operador de um trilho ("CPTM", "SuperVia", "Metrô Rio · Concessão Metroviária do Rio"); vazio fora dos trilhos."""
+    if categoria not in TRILHOS:
+        return ""
+    partes = []
+    for k in ("network", "operator"):
+        v = re.sub(r"\s+", " ", str(t.get(k) or "").strip())
+        if v and v not in partes:
+            partes.append(v)
+    return " · ".join(partes)[:120]
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -309,6 +322,7 @@ def reduzir(geojsonseq: Path, cidades: list[dict]) -> tuple[list[tuple], dict]:
             pontos = pontos_da_geometria(feat.get("geometry") or {}, cat)
             indice = ix_est if cat in ESTACOES else ix
             nome = nome_estacao(props, cat)
+            rede = rede_estacao(props, cat)
             contou = False
             for lat, lon, raio in pontos:
                 if not indice.dentro(lat, lon):
@@ -317,7 +331,7 @@ def reduzir(geojsonseq: Path, cidades: list[dict]) -> tuple[list[tuple], dict]:
                 if chave in vistos:
                     continue
                 vistos.add(chave)
-                linhas.append((cat, round(lat, 5), round(lon, 5), raio, nome))
+                linhas.append((cat, round(lat, 5), round(lon, 5), raio, nome, rede))
                 if not contou:
                     # cobertura: um objeto conta uma vez por cidade (pelo primeiro ponto dentro da caixa sem a margem extra)
                     for c in ix.dentro(lat, lon):
@@ -336,9 +350,9 @@ def gravar(saida: Path, linhas: list[tuple], extra: dict, cidades: list[dict], d
         buf.write(f"# {l}\n")
     buf.write(f"# Dados do OSM de {data_osm or 'data não informada'} (Geofabrik, brazil-latest.osm.pbf)\n")
     w = csv.writer(buf, lineterminator="\n")
-    w.writerow(["categoria", "lat", "lon", "raio_m", "nome"])
-    for cat, lat, lon, raio, nome in linhas:
-        w.writerow([cat, f"{lat:.5f}", f"{lon:.5f}", raio, nome])
+    w.writerow(["categoria", "lat", "lon", "raio_m", "nome", "rede"])
+    for cat, lat, lon, raio, nome, rede in linhas:
+        w.writerow([cat, f"{lat:.5f}", f"{lon:.5f}", raio, nome, rede])
     with gzip.open(saida / "osm-pois.csv.gz", "wt", encoding="utf-8", compresslevel=9) as f:
         f.write(buf.getvalue())
     por_cat = collections.Counter(l[0] for l in linhas)
@@ -350,7 +364,7 @@ def gravar(saida: Path, linhas: list[tuple], extra: dict, cidades: list[dict], d
         f"Dados do OSM de: {data_osm or 'não informada'} (https://download.geofabrik.de/south-america/brazil-latest.osm.pbf)",
         f"Gerado em: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}",
         "Como: osmium tags-filter + osmium export (geojsonseq) + base/fontes/localizacao/osm.py (regras no topo do arquivo).",
-        "Colunas de osm-pois.csv.gz: categoria, lat, lon (5 casas), raio_m (parque pequeno: raio do círculo de mesma área), nome (só estação de trilho).",
+        "Colunas de osm-pois.csv.gz: categoria, lat, lon (5 casas), raio_m (parque pequeno: raio do círculo de mesma área), nome e rede (só trilhos).",
         "",
         "Pontos por categoria:",
         *[f"  {c}: {por_cat.get(c, 0)}" for c in CATEGORIAS],

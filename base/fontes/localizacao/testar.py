@@ -322,6 +322,9 @@ def osm_categorias():
     igual(osm.nome_estacao({"railway": "station", "name": "Estação  Sé "}, "metro"), "Estação Sé")
     igual(osm.nome_estacao({"railway": "subway_entrance", "name": "Saída A"}, "metro"), "")
     igual(osm.nome_estacao({"highway": "bus_stop", "name": "Ponto X"}, "onibus"), "")
+    igual(osm.rede_estacao({"railway": "station", "network": "CPTM", "operator": "CPTM"}, "trem"), "CPTM")
+    igual(osm.rede_estacao({"railway": "station", "network": "Metrô Rio", "operator": "MetrôRio"}, "metro"), "Metrô Rio · MetrôRio")
+    igual(osm.rede_estacao({"highway": "bus_stop", "network": "SPTrans"}, "onibus"), "")
 
 
 @teste
