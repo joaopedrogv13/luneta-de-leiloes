@@ -100,6 +100,7 @@ export function AreaMapa({
   onSelecionarCidade,
   hrefImovel,
   recolhivel = false,
+  onExplorar,
   className = "",
 }: {
   variante: Exclude<VarianteMapa, "mini">;
@@ -113,6 +114,8 @@ export function AreaMapa({
   hrefImovel: (id: string) => string;
   /** faixa: "Recolher mapa" (no computador e no tablet; no celular o botão flutuante cuida disso) */
   recolhivel?: boolean;
+  /** "Abrir o mapa com ruas": a vista de mapa (o mapa de verdade, com aproximação e "Buscar nesta área") */
+  onExplorar?: () => void;
   className?: string;
 }) {
   // baixa o código do mapa junto com os pontos (não depois deles)
@@ -136,6 +139,16 @@ export function AreaMapa({
           className={className}
         />
       </Suspense>
+      {onExplorar && (
+        <button
+          type="button"
+          onClick={onExplorar}
+          className="absolute top-3 left-3 z-30 inline-flex min-h-10 items-center gap-2 rounded-full bg-latao px-4 text-[13px] font-semibold text-noite-fixa shadow-[0_10px_28px_rgba(0,0,0,.35)] transition-[filter,scale] duration-150 ease-luneta hover:brightness-105 active:scale-[0.97] motion-reduce:transition-none"
+        >
+          <IconeMapa />
+          Abrir o mapa com ruas
+        </button>
+      )}
       {(carregando || erro) && (
         <div className="pointer-events-none absolute inset-x-0 bottom-14 z-30 flex justify-center px-4">
           {erro ? (

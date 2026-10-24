@@ -23,9 +23,10 @@ export { FILTROS_PROMETIDOS };
 
 /**
  * Filtros de `Filtros` que a landing não cita (deve ser `never`; o teste confere). Um filtro novo no catálogo entra
- * em FILTROS_PROMETIDOS: no Lente (se estiver em FILTROS_LENTE) ou na Luneta.
+ * em FILTROS_PROMETIDOS: no Lente (se estiver em FILTROS_LENTE) ou na Luneta. A busca por texto e a área do mapa
+ * ("Buscar nesta área", da vista de mapa) não são filtros da tabela de planos.
  */
-export type FiltroSemLugar = Exclude<keyof Filtros, "q" | (typeof FILTROS_PROMETIDOS)["lente" | "luneta"][number]["chaves"][number]>;
+export type FiltroSemLugar = Exclude<keyof Filtros, "q" | "bbox" | (typeof FILTROS_PROMETIDOS)["lente" | "luneta"][number]["chaves"][number]>;
 
 export const SITE = {
   name: "Luneta de Leilões",

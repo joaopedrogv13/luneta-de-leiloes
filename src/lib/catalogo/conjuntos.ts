@@ -36,6 +36,12 @@ export interface DadosConjunto {
   selosDesligados: boolean;
   /** Posição de cada id na lista. */
   posicao: ReadonlyMap<string, number>;
+  /**
+   * Desvio do ponto de cada item (mesma posição), em metros: a incerteza do geocode (no número ~10 m, na rua até 500 m,
+   * no bairro até ~2,5 km). NaN sem o dado (só cidade, ou o conjunto não tem a localização). O mapa de verdade desenha
+   * o círculo de incerteza com ele (src/lib/catalogo/pontos.ts).
+   */
+  desvios: Float32Array;
   /** Rua de cada item (mesma posição), tirada do endereço; null sem endereço ou sem nome que identifique a rua. */
   ruas: readonly (RuaDoImovel | null)[];
   /** Rua e imóveis da mesma rua (mesma cidade) do item na posição k, para a vizinhança. */
@@ -79,6 +85,7 @@ export async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
   const indice = criarIndice(lista.itens, { textoExtra: (_, k) => enderecos[k] });
   const posicao = new Map(lista.itens.map((i, k) => [i.id, k]));
   const { ruas, contexto } = indiceDeRuas(lista.itens, enderecos);
+  const desvios = desviosDe(loc, lista.itens);
   const partes = new Map<string, Promise<Map<string, DetalheParcial>>>();
   const parte = (p: string) => {
     let pronta = partes.get(p);
@@ -97,6 +104,7 @@ export async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
     sobre: lista.sobre,
     selosDesligados: true,
     posicao,
+    desvios,
     ruas,
     contexto,
     async detalhe(id) {
@@ -125,6 +133,16 @@ export async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
   };
 }
 
+/** Desvio do ponto de cada item, da coluna `desvio_m` da localização (NaN sem o dado). */
+function desviosDe(loc: Awaited<ReturnType<typeof dadosLocalizacao>>, itens: readonly ImovelResumo[]): Float32Array {
+  const coluna = loc.principal?.colunas.desvio_m;
+  return Float32Array.from(itens, (i) => {
+    const k = loc.posicao.get(i.id);
+    const v = k === undefined ? null : coluna?.[k];
+    return typeof v === "number" && Number.isFinite(v) ? v : NaN;
+  });
+}
+
 /** Os exemplos fictícios (a lista vem de src/content/examples.ts, que usa "@/": quem chama a passa). */
 export function carregarExemplos(listings: readonly Listing[], agora: Date = new Date()): DadosConjunto {
   const detalhes = converterExemplos(listings, agora);
@@ -138,6 +156,7 @@ export function carregarExemplos(listings: readonly Listing[], agora: Date = new
     sobre: { geradoEm: agora.toISOString(), fontes: [{ id: "exemplo", nome: "Exemplo fictício", geradoNaFonteEm: null, total: itens.length }] },
     selosDesligados: false,
     posicao: new Map(itens.map((i, k) => [i.id, k])),
+    desvios: Float32Array.from(itens, (i) => locs.get(i.id)?.desvioM ?? NaN),
     // os exemplos não têm endereço: sem rua
     ruas: itens.map(() => null),
     contexto: () => ({}),
@@ -169,6 +188,12 @@ export function montarVitrine(previa: DadosConjunto, ficticios: DadosConjunto, o
     // os selos da base real estão em análise (critérios pendentes); os exemplos fictícios mostram os deles na página
     selosDesligados: previa.selosDesligados,
     posicao: new Map(itens.map((i, k) => [i.id, k])),
+    // a incerteza do ponto de cada um, do conjunto de origem (o mapa de verdade desenha o círculo com ela)
+    desvios: Float32Array.from(itens, (i) => {
+      const origem = deReais.has(i.id) ? previa : ficticios;
+      const k = origem.posicao.get(i.id);
+      return k === undefined ? NaN : (origem.desvios[k] ?? NaN);
+    }),
     ruas: itens.map((i) => {
       const k = previa.posicao.get(i.id);
       return k === undefined ? null : (previa.ruas[k] ?? null);

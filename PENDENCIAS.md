@@ -7,7 +7,14 @@ plano Luneta ("Decida com números", "Nota de localização", tabela de planos e
 prévia no celular, tablet e celular deitado; coleta no PC do dono pronta; **a trava dos planos pronta**: no Lente, cada
 recurso da Luneta vira uma chamada no mesmo lugar, e os filtros avançados ficam com cadeado; ver "Rodada 4 · a trava dos
 planos"; **revisão final da rodada 4**: 44 achados de três revisores corrigidos ou anotados, a landing sem promessa que o
-produto ainda não cumpre e a nota recalculada; ver "Rodada 4 · revisão final").
+produto ainda não cumpre e a nota recalculada; ver "Rodada 4 · revisão final"). Rodada 5 (23/10/2026): **mapa de
+verdade** no catálogo e na página do imóvel (ruas, agrupamentos, preços de perto, "Buscar ao mover o mapa"), já com a
+**revisão adversarial** (11 achados corrigidos: a lista não perde mais imóveis ao abrir o mapa, o "voltar" reabre o mesmo
+lugar, o Lente não ganha o filtro de quartos pelo mapa, bairro nunca como ponto, celular deitado e notebook de 768 px);
+ver "Rodada 5 · mapa de verdade" e "Rodada 5 · mapa: revisão adversarial". **Rodada 5 integrada (24/10/2026):** num
+branch só, a landing (abertura sozinha, "especialista", alerta de praça, 7 dias, "Voltar à apresentação"), o "Ajuste o
+foco" com 150 imóveis fictícios, a vitrine com os 10 melhores reais e fotos nos exemplos, o simulador (lucro primeiro,
+conta limpa), a tag e o filtro de metrô e o mapa de verdade; ver "Rodada 5 · integração das frentes".
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
@@ -1618,10 +1625,9 @@ simples de tamanho fixo, e o endereço do real fora).
   foto do ar, o cartão volta ao desenho listrado; trocar a foto em `src/content/examples.ts` (`photoIlustrativa`).
 - **"Ajuste o foco"** continua sem foto nas linhas (decisão acima); se o dono quiser, dá para pôr a foto ilustrativa
   por tipo e cidade, ao custo de ~30 fotos da Caixa carregadas na landing.
-- Técnico (integração): a frente do mapa também criou `scripts/prints/actions.mjs` (roteiros `mapa`, `desempenho`,
-  `revisao`). Ao juntar, manter o dela e pôr no começo, antes de abrir o navegador:
-  `if (["fotos", "fotos-site"].includes(roteiro)) { await import("./" + roteiro + ".mjs"); process.exit(0); }` (os dois
-  roteiros desta frente moram em `fotos.mjs` e `fotos-site.mjs`).
+- ~~Técnico (integração): a frente do mapa também criou `scripts/prints/actions.mjs`~~ **Feito na integração
+  (24/10/2026):** o `actions.mjs` é o do mapa (roteiros `mapa`, `tudo`, `desempenho`, `revisao`) e desvia `fotos`,
+  `fotos:<sub>` e `fotos-site` para `fotos.mjs` e `fotos-site.mjs` antes de abrir o navegador.
 
 ### Rodada 5 · simulador e metrô (frente S): lucro com o lance primeiro, conta limpa e a tag "Metrô a 450 m" (24/10/2026)
 
@@ -1737,6 +1743,223 @@ Lente), a visão padrão em `simulador-v2.test.ts` e as regras do `estacoes.py` 
   um parágrafo quando o dono aprovar as regras acima.
 - O Next avisou no `next build` que a versão 16.4.0 tem uma vulnerabilidade conhecida e recomendou atualizar. Não
   mexi: fica para uma frente própria.
+
+### Rodada 5 · mapa de verdade (23/10/2026)
+
+Pedido (ponto 14): "um carinho maior com o mapa": filtrar os casos conforme o zoom, mostrar o nome da rua de perto,
+estado da arte, responsivo e rápido. Feito com **MapLibre GL JS 6.15.0** (código aberto, BSD) e os ladrilhos vetoriais
+do **OpenFreeMap** (grátis, sem chave). `package.json` e `package-lock.json` ganharam `maplibre-gl`.
+
+**O que mudou para quem usa:**
+- **Vista "Mapa" no catálogo** (/previa e /assinante, Lente e Luneta), ao lado de Lista e Cards (`?vista=mapa`). Fundo
+  claro e escuro nas cores do site, nomes em português; trocar o tema não mexe na câmera nem recarrega os imóveis.
+- **De longe, agrupamentos** com a contagem ("1,4 mil") e a cor do deságio médio (legenda embaixo); **de perto (zoom 14+),
+  cada endereço com o lance num balão** ("R$ 43 mil", ou "3 imóveis" no mesmo prédio). Nomes das avenidas a partir do
+  zoom 13, das ruas a partir do 14,5, número das casas a partir do 17,5; estações de trem e metrô a partir do 13; os demais
+  pontos de interesse, discretos, a partir do 16. Os nomes de cidade do fundo desviam das bolhas (não ficam cortados).
+- **"Buscar ao mover o mapa"** (ligado por padrão): depois que a pessoa mexe no mapa (arrastar, pinça, roda, teclado ou
+  os botões), a lista ao lado mostra só os imóveis da área visível (filtro `bbox` na URL, aplicado no servidor, nos dois
+  planos). Ao abrir o mapa ou trocar de lugar na busca, a lista é a busca inteira (o enquadramento automático não vira
+  área). Desligado: "Buscar nesta área" e "Ver a busca inteira (N)". O centro e o zoom vão na URL
+  (`centro=lat,lon&zoom=`): o link e o "voltar" reabrem o mesmo lugar, com a mesma área.
+- **Cartão do lugar:** ao passar o mouse (foto, lance, deságio, bairro, link) e preso ao clicar ou tocar. O mouse num
+  cartão da lista acende o ponto no mapa, e o lugar no mapa acende os cartões da lista.
+- **Precisão do endereço, nunca um alfinete falso:** no número ou na rua, o ponto (na rua, aberto no cartão ou na página
+  do imóvel, com a área de incerteza em volta); **só o bairro**, um círculo de pelo menos 300 m ("em algum ponto do
+  círculo"), que some de perto e deixa o rótulo "N imóveis no bairro"; **só a cidade**, o marcador "sem endereço exato" no
+  centro, com "N imóveis sem endereço exato em <cidade>" e "Ver os N na lista" no cartão.
+- **Botões:** aproximar, afastar, ver o Brasil e "minha região" (localização do navegador, só ao clicar; a posição não é
+  enviada ao site). Teclado: setas, + e −, Esc fecha o cartão. Leitor de tela: o mapa tem descrição, e a lista é a
+  alternativa completa.
+- **Celular:** o mapa ocupa a tela abaixo da barra e a lista fica numa folha que se puxa (espiada, meio, cheia); pinça e
+  arrasto no mapa. Créditos e escala sempre acima da folha.
+- **Sem WebGL** (ou se a placa de vídeo derrubar o mapa): o mapa do Brasil em SVG de antes.
+- **Página do imóvel:** a seção Localização ganhou o mapa de verdade (só baixa quando a seção chega perto), com o ponto
+  e o lance, ou o círculo do bairro (desenhado em qualquer zoom), ou o marcador da cidade. A roda do mouse rola a página
+  (Ctrl/⌘ + roda aproxima); no toque, dois dedos movem o mapa. "Ver o ponto no OpenStreetMap" continua.
+
+**Como funciona (técnico):**
+- `GET /api/catalogo/pontos` (os mesmos filtros da lista, sem a área) devolve os **lugares** (imóveis no mesmo ponto e
+  precisão juntos), em ordem de Morton, latitude e longitude em diferenças × 100.000, lance em centenas. Brasil inteiro:
+  **9.741 lugares, 537 KB de JSON, 182 KB em gzip, 161 KB em brotli**; ~50 ms no servidor na primeira vez e ~5 ms depois
+  (cache por instância). Compressão feita na rota (o `next start` não comprime rotas). `/api/catalogo/pontos/itens`
+  devolve os imóveis de um lugar (até 40), com a versão da lista (409 se ela mudou).
+- **Peso:** o MapLibre (1.057 KB, **287 KB em gzip**) e o worker dele (519 KB, 147 KB em gzip, servido pelo próprio site
+  em `/mapa/maplibre-gl-worker.mjs`) só baixam na vista de mapa ou perto do mapa da página do imóvel. Conferido no build
+  de produção: a landing, a lista, os cards e o topo da página do imóvel não baixam nada do mapa.
+- **Desempenho:** os pontos entram no mapa (`setData`) só quando os filtros mudam; arrastar e aproximar não passam pelo
+  React (o MapLibre desenha na placa de vídeo e agrupa num worker); o cartão preso acompanha o mapa mexendo só na posição;
+  a área visível sai uma vez por movimento. O círculo do bairro some entre 140 e 220 px de raio e sai do desenho por
+  zoom: no Rio, no zoom 16, seriam 169 círculos com raio mediano de 760 px, um sobre o outro. As bolhas têm até 28 px de
+  raio e se agrupam num raio de 60 px (no celular, com 42 a 50 px, elas se cobriam).
+- **Medição no Actions** (Chromium sem placa de vídeo: o WebGL roda no SwiftShader, na CPU, e os quadros por segundo são
+  piores que os de qualquer celular; vale a comparação com e sem as camadas dos imóveis):
+
+  | Percurso (1440×900), quadros/s | 1ª rodada (40033977496): com imóveis / sem | Última (40037083842): com / sem |
+  | --- | --- | --- |
+  | Brasil → São Paulo (voo de 3 s) | 16 / 12 | 14 / 15 |
+  | arrasto São Paulo → Rio (2 s) | 6 / 8 | 6 / 6 |
+  | Rio, zoom 12 → 16 (1,5 s), 1ª vez na sessão | 2 / 12 | 1 / 8 |
+  | Rio, zoom 12 → 16, de novo (ladrilhos já baixados) | — | **12 / 11**, sem tarefa longa |
+
+  O tranco de ~1,8 s na primeira ida ao zoom de rua não vem das camadas dos imóveis: repetido com tudo baixado, escondendo
+  uma camada por vez, todas as combinações deram 11 a 12 quadros/s e nenhuma tarefa longa (só os preços, só os
+  círculos, sem nada). É o custo de primeira vez (ladrilhos novos e os programas da placa de vídeo, que no SwiftShader são
+  compilados na CPU); como a medição "com imóveis" vem antes da "sem", só ela paga. O sumiço dos círculos grandes de
+  perto não muda esse número no SwiftShader; ele evita pintar dezenas de círculos maiores que a tela, um sobre o outro,
+  na placa de vídeo do celular. Última rodada: pontos na tela 2,4 s depois de abrir a página; `setData` dos
+  9.741 lugares até desenhar, 480 ms; pedido dos pontos, 13 ms (538 KB, brotli). Rodadas: 40033977496, 40036326671 e
+  40037083842 (prints em `coletas-dados`, `prints/<id>/`).
+- **Prints:** `git push -f origin HEAD:acoes-mapa` e `gh workflow run site-prints.yml --ref acoes-mapa -f roteiro=mapa`
+  (roteiro em `scripts/prints/actions.mjs`); os PNGs e o `relatorio.txt` vão para o branch `coletas-dados`, pasta
+  `prints/<id da rodada>/`. Daqui (este ambiente) a rede não chega aos ladrilhos; no Actions, sim.
+
+**OpenFreeMap: termos e endereços (conferidos em 23/10/2026, openfreemap.org):**
+- Grátis, sem chave, sem cadastro, sem limite de uso e sem cookies; uso comercial permitido (FAQ: "Yes").
+- Pede a atribuição "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" (a parte do OpenFreeMap é opcional). O site
+  mostra, sempre aberta no canto do mapa: "OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap", com os links.
+- Termos: serviço "como está", sem garantia, e **pode acabar a qualquer momento**; servido pela Cloudflare; lei da Hungria.
+  Privacidade: dizem não guardar o IP nos registros de acesso.
+- Endereços usados: `https://tiles.openfreemap.org/planet` (TileJSON; ladrilhos em `/planet/<versão>/{z}/{x}/{y}.pbf`) e
+  `https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf` (Noto Sans). Sem sprite (os balões são desenhados na hora).
+  O estilo é nosso, feito a partir do Positron do OpenFreeMap (BSD-3 / CC BY 4.0).
+
+**Decisões suas:**
+- [ ] **Política de privacidade:** citar o OpenFreeMap. O navegador do visitante pede os ladrilhos direto a eles (via
+  Cloudflare), o que entrega o IP e a região vista no mapa; "minha região" usa a localização do navegador só ao clicar.
+- [ ] **Doação ao OpenFreeMap** (o projeto vive de doações e pede apoio de quem usa em produção) ou plano pago de reserva.
+- [ ] Vista padrão: hoje a lista (ou cards, a que ficou salva); o mapa é um modo de explorar que entra no histórico (o
+  "voltar" volta à lista) e não vira a preferência salva. Abrir no mapa por padrão em algum caso?
+
+**Falta (técnico):**
+- [ ] **Plano B dos ladrilhos:** se o OpenFreeMap sair do ar, o mapa avisa "As ruas do mapa não carregaram agora" e os
+  imóveis continuam no lugar. Alternativas: os mesmos ladrilhos do Brasil num arquivo PMTiles (Protomaps) num
+  armazenamento nosso, ou um serviço pago (MapTiler, Stadia).
+- [ ] **Testar num celular de verdade** (o Actions não tem placa de vídeo; aqui a rede não chega aos ladrilhos).
+- [ ] O worker do MapLibre sai sem compressão no `next start` (na Vercel a CDN comprime).
+- [ ] O print da folha do celular no Chromium sem placa de vídeo saía com faixas brancas (partes da página não pintadas
+  pelo SwiftShader); com a rasterização na CPU (como no roteiro agora) some. Conferir num celular.
+
+### Rodada 5 · mapa: revisão adversarial (23/10/2026)
+
+Pedido do dono (ponto 14): "o mapa no estado da arte, muito responsivo, rápido, respondendo bem aos zooms; de acordo com
+o zoom ele vai filtrando os casos; com zoom, mostra o nome da rua". A revisão tentou quebrar o mapa da frente M (commits
+9f7d20c a 865961b): desempenho com a CPU 4× mais lenta, memória depois de 50 zooms, troca de filtros e de tema, voltar e
+avançar, "Buscar nesta área" (vazia, no limite do Brasil, com texto), Lente × Luneta, teclado, celular deitado, sem WebGL,
+CLS, peso do JS da lista, precisão do endereço e créditos. Conferido com `next start` + Playwright aqui (sem os ladrilhos:
+o proxy bloqueia) e com os ladrilhos de verdade no Actions (roteiro `revisao` em `scripts/prints/actions.mjs`; rodadas
+40041271354, com o roteiro `mapa` inteiro, e 40042226074; prints em `coletas-dados`, `prints/<id>/`). Nos prints: nomes de
+rua a partir do zoom 13–14,5 nos dois temas (Rua Boqueirão, Rua Sabedoria, Avenida Abílio Augusto Távora em Nova Iguaçu;
+Rua da Assembléia, Rua da Carioca e Avenida República do Chile no Centro do Rio), cores do fundo e dos balões coerentes com o site no claro e no
+escuro; o número das casas (zoom 17,5) só aparece onde o OpenStreetMap tem o dado (em Nova Iguaçu, não tem).
+
+**Achados e correções** (todos com o código no commit da revisão; os números de CPU 4× são do Chromium daqui, sem placa de
+vídeo):
+1. **Alto · a lista perdia imóveis ao abrir o mapa.** Com "Buscar ao mover o mapa" ligado, o enquadramento automático
+   (percentis 2 a 98 dos pontos) virava a área da lista: abrir o Brasil escondia 12 imóveis no computador e **254 no
+   celular** (o oeste do país não cabia), sem aviso. Agora só o movimento da pessoa (gesto, teclado, botões, clique no
+   agrupamento) vira a área (`movimentoDaPessoa`, com teste); abrir, trocar de lugar ou voltar no histórico mostram a busca
+   inteira. Link antigo com a área e sem a câmera abre o mapa na área.
+2. **Alto · Lente ganhava um filtro da Luneta pelo mapa.** Os pontos eram pedidos sem o plano (o servidor entende a
+   Luneta): "casa 2 quartos" na busca filtrava os quartos no mapa do Lente (5.624 no mapa contra 7.896 na lista). O plano vai
+   no pedido e na chave quando muda os pontos (`consultaPontos`, `chaveMapa`, com teste). O mesmo valia para a chave do mapa
+   do Brasil em SVG.
+3. **Médio · voltar no histórico com o mapa aberto** reenquadrava o Brasil e a lista virava o Brasil inteiro: agora o mapa
+   pula para a câmera daquela entrada e a lista volta à área dela (conferido: arrastar em SP → buscar "Recife" → voltar =
+   SP, 279 imóveis).
+4. **Médio · "só o bairro" parecia endereço exato.** 30 lugares de bairro com desvio de 10 a 50 m na base viravam um ponto
+   de 7 px. Raio mínimo de 300 m no bairro (`raioDoNivel`, com teste); o imóvel de bairro sob o mouse na lista acende a área
+   do bairro, não um anel no centro; na cidade, um anel largo em volta do marcador "sem endereço exato".
+5. **Médio · notebook de 768 px de altura (1366×768, 1024×768):** com o cabeçalho que rola junto, a coluna do mapa passava
+   ~110 px do pé da tela: legenda, escala e créditos fora da tela até rolar (e 1 px em toda tela, pelo marco de 1 px acima
+   da barra). A conta da altura agora desconta tudo o que está à vista acima da barra; conferido no Actions: créditos à
+   vista em 1366×768 e 844×390. Ao rolar a lista, a coluna cresce junto com o cabeçalho saindo (CLS 0,008 em 1366×768;
+   0,002 em 1440×900, como já era com a faixa de aviso).
+6. **Médio · celular deitado (844×390):** a folha espiava 132 px de um mapa de 212, os botões de Brasil e minha região
+   ficavam embaixo dela, a escala caía em cima da chave e os créditos sumiam. Agora a folha espia só o título (78 px, por
+   consulta de mídia: sem pulo), e os botões vão para uma linha no alto.
+7. **Médio · desempenho na parada do mapa (CPU 4×, celular):** depois de cada arrasto, a lista nova travava o thread
+   principal por 215–260 ms (React) + 37–136 ms (layout dos 24 cartões, quase todos escondidos sob a folha). Agora o
+   resultado da vista de mapa é desenhado em segundo plano (`useDeferredValue`) e os cartões fora da tela não têm layout
+   (`content-visibility`): 105–140 ms + 43–54 ms. No Actions (CPU 4×, com os ladrilhos), as tarefas longas depois de três
+   paradas seguidas ficaram em [103, 115], [64, 51] e [56, 73] ms (antes: [216, 100] na primeira). Arrastar e aproximar
+   continuam fora do React.
+8. **Baixo · CLS da folha no tablet (até 0,10):** a folha nascia no topo padrão e descia ~120 px quando a barra era medida
+   um quadro depois; agora a medida sai antes da pintura (CLS 0 em 390, 667×375, 768, 844×390, 1366).
+9. **Baixo · sem WebGL o MapLibre (1 MB, 287 KB gzip) era baixado mesmo assim:** agora o teste vem antes; sem WebGL, cai no
+   mapa SVG sem baixar nada do mapa (conferido com `--disable-webgl`, no computador e no celular).
+10. **Baixo · teclado:** no computador o mapa vinha depois dos 24 cartões (~50 Tabs): novo atalho "Pular para o mapa" (2
+    Tabs, Enter, foco no mapa; + e − aproximam, setas movem, Esc fecha o cartão).
+11. **Baixo:** pontos pedidos de novo sem o cache HTTP quando o catálogo muda (409 no cartão); "Ver a busca inteira (N)"
+    conta também os imóveis sem posição; o zoom do mapa da página do imóvel respeita "reduzir movimento".
+
+**Conferido sem achado:** memória depois de 50 zooms (14,5 → 16,8 MB de heap, mesmo número de ouvintes); trocar o tema não
+mexe na câmera nem nos imóveis (9 lugares antes e depois); "Buscar nesta área" com a chave desligada (aparece só depois de
+arrastar; "Ver a busca inteira" tira a área); área no mar mostra "Nenhum imóvel nesta parte do mapa"; texto novo com área
+tira a área; bbox fora do Brasil, invertida ou fora do globo é ignorada no servidor; `/api/catalogo/pontos/itens` no Lente
+sem tags, selo e nota; a lista, os cards e a landing não baixam o MapLibre (só a vista de mapa e a página do imóvel perto do
+mapa).
+
+**Falta:**
+- [ ] O desenho da lista nova ainda ocupa 105–140 ms do thread principal com a CPU 4× (uma tarefa só: a parte que o React
+  não fatia). Se no celular de verdade o mapa engasgar logo depois de soltar o dedo, o próximo passo é desenhar a lista da
+  folha só quando ela for puxada (na espiada só o título aparece).
+- [ ] Conferir num celular de verdade: pinça, folha, celular deitado e a parada do mapa.
+
+### Rodada 5 · integração das frentes (24/10/2026)
+
+Um branch só com as duas faixas da rodada 5: a faixa 2 (`a91fafc`: landing L, "Ajuste o foco" F, vitrine V, simulador e
+metrô S) e o mapa de verdade com a revisão adversarial (`e47c8d8`). Nada foi para o main.
+
+**Como juntou:**
+- `maplibre-gl` 6.15.0 entrou com o `package-lock.json` do mapa (`npm install` no worktree; o lock não mudou).
+- Os dois filtros novos convivem:
+  - `Filtros.metroPerto` (Luneta, URL `metro=1`, pílula "Metrô a até 1 km");
+  - `Filtros.bbox` ("Buscar nesta área", dos dois planos, URL `bbox=`).
+  - No índice, o metrô usa o bit 25 e a área o 30.
+  - Os pontos do mapa saem da mesma passada de filtros da lista. Com "Metrô a até 1 km" na prévia, são 369 na lista e
+    369 no mapa. No Lente o filtro é ignorado nos dois: 21.229 na lista, 21.226 no mapa e 3 sem posição.
+- A lista da vista de mapa (coluna no computador, folha no celular) ganhou o que a vitrine pôs na lista: o aviso "Você
+  está vendo 10 de 21.229 imóveis reais da base", o rodapé com os planos e os exemplos fictícios.
+- `scripts/prints/actions.mjs`: o do mapa, com o desvio para os roteiros `fotos` e `fotos-site` da vitrine.
+
+**Ajustes da integração (decisões minhas; o dono pode mudar):**
+- **O mapa da /assinante só tem os 10 reais.** Os pontos e o cartão do mapa usam as posições da lista do índice. Antes,
+  pedir a posição 10 ao `/api/catalogo/pontos/itens` devolvia o primeiro exemplo fictício, que não está no mapa.
+  Agora ela é ignorada; o teste dos endpoints cobre isso.
+- A vitrine ganhou a incerteza de cada ponto (`desvios`), tirada do conjunto de origem, para o círculo do mapa.
+- Na vista de mapa da /assinante, o bloco "Exemplos fictícios (para ver os selos)" não aparece, porque eles não têm
+  lugar no mapa. O aviso e o rodapé da vitrine continuam. Na lista e nos cards, nada mudou.
+- "Com estes filtros: N dos 10 aqui e M na base completa" também aparece quando só a área do mapa recorta a vitrine.
+- `pontos.test.ts` agora vale para a vitrine (10 reais, no número ou na rua) e para os 6 fictícios (quando não há o
+  instantâneo da base).
+
+**Conferido:**
+- typegen + tsc, eslint, `test:site` (347 de 347), `base:testar` (487 de 487) e `next build`. O build parou na 1ª vez
+  com o aviso de segurança do Next 16.4.0 e passou na 2ª. Não rodei o `next upgrade`: fica para o dono decidir.
+- `next start` na porta 3340, Playwright com WebGL no SwiftShader:
+  - **landing** (1440 escuro, 390 claro): sem erro e sem rolagem lateral; o "Ajuste o foco" carrega; o MapLibre não
+    é baixado;
+  - **ida e volta**: landing → `ex-alvo-sp#simulador` (1440) e → `ex-semselo-rj#riscos` (390), com a seção certa no
+    topo e o "Voltar à apresentação" na tela; ao voltar, o link fica a 1 px e a 0 px de onde estava;
+  - **/previa**: na lista com `metro=1`, a pílula e 369 imóveis, sem MapLibre. Na vista de mapa, testei 1440 e 390
+    nos dois temas e o Lente com `metro=1`;
+  - **/assinante**: na lista e no mapa, em 1440 e 390 nos dois temas;
+  - **páginas de imóvel**: o real da vitrine em Salvador mostra o mapa de verdade e "Estação de metrô Campo da Pólvora
+    a 90 m"; um da prévia no Rio, no celular, mostra a estação a 210 m e o mapa ao rolar até ele; o exemplo
+    `ex-alvo-sp` tem o simulador abrindo no lucro e o "Editar a conta";
+  - **resultado**: sem erros no console e sem rolagem lateral.
+  - Os ladrilhos do mapa não abrem neste contêiner (proxy): os prints mostram o aviso "As ruas do mapa não carregaram
+    agora".
+- Prints em `scratchpad/prints/r5-int/`.
+
+**Falta:**
+- [ ] Prints do branch integrado no Actions (roteiros `mapa` e `fotos-site`, num branch `acoes-*`). Neste contêiner os
+  ladrilhos e as fotos da Caixa não abrem.
+- [ ] O botão "Metrô perto" do "Ajuste o foco" ainda tem `metro: null` em `FILTRO_DO_CATALOGO`
+  (`src/lib/demo-foco/busca.ts`). O filtro do catálogo já existe (`metroPerto`): trocar pela chave. Hoje o selo da Luneta
+  já aparece certo, porque o null conta como Luneta.
+- [ ] Avaliar o `next upgrade` que o aviso de segurança do Next 16.4.0 recomenda, antes do lançamento.
 
 ### Ler cada leilão com IA: é viável?
 

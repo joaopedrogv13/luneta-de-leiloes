@@ -47,6 +47,7 @@ export async function carregarCatalogo(
         chaveUrl: chaveDoEstado(estado),
         vista: estado.vista,
         mapa: estado.mapa,
+        camera: estado.camera,
       },
       preferencias: lerPreferencias(jarra.get(CHAVE_PREFERENCIAS)?.value),
       palpiteCelular: pareceCelular(cabecalhos, lerTela(jarra.get(CHAVE_TELA)?.value)),

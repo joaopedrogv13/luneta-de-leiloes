@@ -86,6 +86,11 @@ const B_VENCIDO = 1 << 23;
 const B_NOTA_LOCAL = 1 << 24;
 /** Luneta (filtro avançado): sem estação de metrô a menos de 1 km (a tag "Metrô a X m"; estacoes.ts). */
 const B_METRO = 1 << 25;
+/**
+ * Fora da área do mapa ("Buscar nesta área"). O bit mais alto que cabe no Int32 positivo, longe dos outros: um filtro
+ * novo pode usar os de 26 a 29 sem colidir com este.
+ */
+const B_BBOX = 1 << 30;
 
 const UM_DIA = 24 * 3600 * 1000;
 
@@ -160,6 +165,9 @@ export interface IndiceCatalogo {
   /** 1 = estação de metrô a menos de 1 km (a tag "metro-perto"; o filtro "Metrô a até 1 km") */
   readonly metroPerto: Uint8Array;
   readonly selo: Uint8Array;
+  /** Ponto no mapa (graus; NaN sem ponto), para a área do mapa (Filtros.bbox). */
+  readonly lat: Float64Array;
+  readonly lon: Float64Array;
   /** Tags: dicionário de slugs e, por imóvel, bits das confirmadas e de todas (confirmadas + em revisão). */
   readonly slugs: { slug: string; rotulo: string; severidade: Severidade }[];
   readonly palavrasTag: number;
@@ -234,6 +242,8 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
   const temFoto = new Uint8Array(n);
   const metroPerto = new Uint8Array(n);
   const selo = new Uint8Array(n);
+  const lat = new Float64Array(n);
+  const lon = new Float64Array(n);
 
   // Tags: dicionário na ordem de gravidade, depois na ordem em que aparecem (a exportação já ordena pelo catálogo).
   const vistas = new Map<string, { slug: string; rotulo: string; severidade: Severidade; ordem: number }>();
@@ -299,6 +309,8 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
     temFoto[k] = i.foto ? 1 : 0;
     metroPerto[k] = temMetroPerto(i.tags) ? 1 : 0;
     selo[k] = i.selo;
+    lat[k] = num(i.lat);
+    lon[k] = num(i.lon);
     let nAlertas = 0;
     for (const t of i.tags) {
       const s = slugId.get(t.slug)!;
@@ -336,7 +348,7 @@ export function criarIndice(itens: readonly ImovelResumo[], opcoes: OpcoesIndice
 
   return {
     itens, n, ufs, ufDe, cidades, cidadeDe, bairros, bairroDe, tipoDe, modalidadeDe, pracaDe, ocupacaoDe, naturezaDe,
-    fontes, fonteDe, dia, instante, numeros, financiamento, fgts, parcelamento, temFoto, metroPerto, selo, slugs, palavrasTag,
+    fontes, fonteDe, dia, instante, numeros, financiamento, fgts, parcelamento, temFoto, metroPerto, selo, lat, lon, slugs, palavrasTag,
     tagsConfirmadas, tagsTodas, alertas, suspeito, vocabulario, tokInicio, tokIds, rankId, ordens: new Map(), ordenadosPor: new Map(),
   };
 }
@@ -527,6 +539,11 @@ export interface OpcoesBusca {
   mapa?: boolean;
   /** false = facetas vazias (o pedido do mapa não as usa: ~80 KB a menos). Padrão true. */
   facetas?: boolean;
+  /**
+   * Recebe, logo depois da passada dos filtros, a máscara de cada imóvel (0 = está no resultado) e o plano já aplicado:
+   * os pontos do mapa de verdade (src/lib/catalogo/pontos.ts) saem da mesma regra de filtros, sem repeti-la.
+   */
+  aoFiltrar?: (mascaras: Int32Array) => void;
 }
 
 /** Tira o que o plano não vê (planos.ts): no Lente, tags, selo e a nota de localização. */
@@ -830,6 +847,7 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
   const com = bitsDeTags(ix, f.comTags);
   const sem = bitsDeTags(ix, f.semTags);
   const okSelo = temLista(f.selo) ? Uint8Array.from([0, 1, 2, 3], (s) => (f.selo!.includes(s as 1 | 2 | 3) ? 1 : 0)) : null;
+  const bbox = caixaValida(f.bbox);
   const W = ix.palavrasTag;
 
   // ---- contadores
@@ -930,6 +948,12 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
       if (semAcertos > 0) m |= B_SEM_TAGS;
     }
     if (okSelo && !okSelo[ix.selo[k]!]) m |= B_SELO;
+    if (bbox) {
+      // NaN (sem ponto) falha nas duas comparações
+      const la = ix.lat[k]!;
+      const lo = ix.lon[k]!;
+      if (!(la >= bbox[1] && la <= bbox[3] && lo >= bbox[0] && lo <= bbox[2])) m |= B_BBOX;
+    }
     mascaras[k] = m;
     // contagem da nota (o filtro da nota mínima mostra quantos daria cada valor): passa nos outros filtros
     if (veNota && (m === 0 || m === B_NOTA_LOCAL)) {
@@ -1028,6 +1052,8 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
         break;
     }
   }
+
+  opcoesBusca.aoFiltrar?.(mascaras);
 
   // ---- histogramas (itens que passam nos OUTROS filtros)
   const buffer = new Float64Array(n);
@@ -1175,6 +1201,13 @@ export function buscar(fonte: IndiceCatalogo | readonly ImovelResumo[], busca: B
 
   // sem facetas (o pedido do mapa): ~80 KB a menos na resposta
   return { total, pagina, porPagina, totalPaginas, itens, facetas: semFacetas ? FACETAS_VAZIAS : facetas, mapa, totalConjunto: n - vencidos, selosDesligados };
+}
+
+/** A área do mapa, se for um retângulo de verdade (números finitos, oeste < leste, sul < norte); senão não filtra. */
+function caixaValida(c: Filtros["bbox"]): readonly [number, number, number, number] | null {
+  if (!Array.isArray(c) || c.length !== 4 || !c.every((x) => typeof x === "number" && Number.isFinite(x))) return null;
+  const [o, s, l, n] = c;
+  return o < l && s < n ? [o, s, l, n] : null;
 }
 
 /** Soma de cima para baixo: saida[t] = quantos com valor ≥ t. */
