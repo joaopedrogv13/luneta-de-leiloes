@@ -1586,8 +1586,19 @@ para depois de 5 bloqueios seguidos, sem contornar anti-robô), reduz a 320 px c
 e as fotos para cada exemplo), 40042911905 (88) e 40098277361 (40, a fila da vitrine); 242 pedidos, 234 fotos, 8 com
 404. As fotos ruins para a vitrine ficaram em `vitrine-fotos.ts` (40: página de documento, mapa de satélite, colagem do
 laudo, 404, van na frente, entulho ou lixo em primeiro plano, preto e branco, tremida). O roteiro `fotos-site` (`scripts/prints/fotos-site.mjs`) tira os prints
-com as fotos de verdade: execução EXEC_SITE, `/assinante`, um imóvel real, `ex-alvo-sp` e a landing em 360, 390, 768,
-1024 e 1440, nos dois temas.
+com as fotos de verdade: execução 40098702645, `/assinante`, um imóvel real, `ex-alvo-sp` e a landing em 360, 390,
+768, 1024 e 1440, nos dois temas. **Todas as fotos da Caixa abriram** no navegador (16 de 16 na `/assinante`, 2 de 2
+em cada página de imóvel, 14 de 14 na landing a partir de 1024 px; abaixo disso, o 3º cartão do "Por dentro" fica
+escondido e a foto dele, preguiçosa, nem é pedida).
+
+**Navegador** (Playwright local, `next start`; daqui a Caixa não abre, então as fotos vieram das miniaturas baixadas no
+Actions; prints em `scratchpad/prints/r5-V/`, com as do Actions em `acoes-fotos-reais/` e as folhas de contato em
+`folhas-de-contato/`): `/assinante` (topo, fim da lista, exemplos, filtro SP com "Como escolhemos" aberto, Lente, sem
+fotos), imóvel real, `ex-alvo-sp`, `ex-semselo-go` e a landing (hero e exemplos), em 360, 390, 768, 1024 e 1440, nos
+dois temas: sem rolagem lateral e sem erro no console. **axe** (WCAG 2.2 AA) sem violações na `/assinante` (Luneta,
+Lente e com filtro), no imóvel real, no exemplo e nos cartões da landing, em 390 e 1440, nos dois temas. O "Abrir na
+demonstração" de um cartão da landing cai em `ex-namira-pr`, e o "Voltar à apresentação" volta ao mesmo ponto (0 px de
+diferença, em 390 e 1440).
 
 **Testes**: `vitrine.test.ts` (cada regra, pontuação, variedade, etapas, contagem dos ativos, textos sem "vendendo",
 fotos ilustrativas, e o instantâneo real: 10 no critério estrito, filtros só dentro deles, página de um real e de um
@@ -1607,6 +1618,10 @@ simples de tamanho fixo, e o endereço do real fora).
   foto do ar, o cartão volta ao desenho listrado; trocar a foto em `src/content/examples.ts` (`photoIlustrativa`).
 - **"Ajuste o foco"** continua sem foto nas linhas (decisão acima); se o dono quiser, dá para pôr a foto ilustrativa
   por tipo e cidade, ao custo de ~30 fotos da Caixa carregadas na landing.
+- Técnico (integração): a frente do mapa também criou `scripts/prints/actions.mjs` (roteiros `mapa`, `desempenho`,
+  `revisao`). Ao juntar, manter o dela e pôr no começo, antes de abrir o navegador:
+  `if (["fotos", "fotos-site"].includes(roteiro)) { await import("./" + roteiro + ".mjs"); process.exit(0); }` (os dois
+  roteiros desta frente moram em `fotos.mjs` e `fotos-site.mjs`).
 
 ### Ler cada leilão com IA: é viável?
 
