@@ -96,13 +96,30 @@ export function useMidia(consulta: string, doServidor: boolean): boolean {
 // Destaque ligado entre a lista e o mapa (fora do estado do app: passar o mouse não redesenha a página)
 // ---------------------------------------------------------------------------
 
+/** O imóvel sob o mouse na lista, para o mapa de verdade. */
+export interface ImovelDestacado {
+  id: string;
+  lat: number;
+  lon: number;
+  nivel: 0 | 1 | 2 | 3;
+}
+
 export interface LojaDestaque {
   /** cidade ("MG|Uberlândia") do imóvel sob o mouse (ou com foco) na lista: acende no mapa */
   daLista: string | null;
   /** cidade sob o mouse no mapa: acende os imóveis dela na lista */
   doMapa: string | null;
+  /**
+   * mapa de verdade (vista de mapa): o imóvel sob o mouse na lista, para marcar o lugar dele; `nivel` é a precisão do
+   * ponto (0 no número, 1 na rua, 2 no bairro, 3 só a cidade: src/lib/catalogo/pontos.ts), e o bairro vira uma área
+   */
+  imovel: ImovelDestacado | null;
+  /** mapa de verdade: os imóveis do lugar sob o mouse (ou aberto) no mapa, que a lista acende */
+  idsDoMapa: ReadonlySet<string> | null;
   definirDaLista(chave: string | null): void;
   definirDoMapa(chave: string | null): void;
+  definirImovel(i: ImovelDestacado | null): void;
+  definirIdsDoMapa(ids: readonly string[] | null): void;
   assinar(avisar: () => void): () => void;
 }
 
@@ -112,6 +129,8 @@ export function criarLojaDestaque(): LojaDestaque {
   const loja: LojaDestaque = {
     daLista: null,
     doMapa: null,
+    imovel: null,
+    idsDoMapa: null,
     definirDaLista(chave) {
       if (loja.daLista === chave) return;
       loja.daLista = chave;
@@ -122,6 +141,16 @@ export function criarLojaDestaque(): LojaDestaque {
       loja.doMapa = chave;
       avisar();
     },
+    definirImovel(i) {
+      if (loja.imovel?.id === i?.id) return;
+      loja.imovel = i;
+      avisar();
+    },
+    definirIdsDoMapa(ids) {
+      if (!ids?.length && !loja.idsDoMapa) return;
+      loja.idsDoMapa = ids?.length ? new Set(ids) : null;
+      avisar();
+    },
     assinar(f) {
       ouvintes.add(f);
       return () => ouvintes.delete(f);
@@ -130,11 +159,14 @@ export function criarLojaDestaque(): LojaDestaque {
   return loja;
 }
 
-/** Este imóvel (pela cidade) está aceso pelo mapa? Só os cartões que mudam de estado são redesenhados. */
-export function useAcesoPeloMapa(loja: LojaDestaque, chaveCidade: string): boolean {
+/**
+ * Este imóvel está aceso pelo mapa (a cidade dele no mapa do Brasil, ou o lugar dele no mapa de verdade)? Só os
+ * cartões que mudam de estado são redesenhados.
+ */
+export function useAcesoPeloMapa(loja: LojaDestaque, chaveCidade: string, id?: string): boolean {
   return useSyncExternalStore(
     loja.assinar,
-    () => loja.doMapa === chaveCidade,
+    () => loja.doMapa === chaveCidade || (id !== undefined && loja.idsDoMapa?.has(id) === true),
     () => false,
   );
 }

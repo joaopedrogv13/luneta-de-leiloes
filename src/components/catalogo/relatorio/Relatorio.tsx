@@ -2,6 +2,7 @@ import { conteudoTag, origemTag, partesEvidencia, SEVERIDADE_ORDEM } from "@/com
 import { AVISO_CLASSIFICACAO } from "@/content/avisos";
 import { SITE } from "@/content/site";
 import { MODALIDADE_ROTULO, numero, SELO_ROTULO, SEVERIDADE_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
+import { fraseEstacao } from "@/lib/catalogo/estacoes";
 import { pode } from "@/lib/catalogo/planos";
 import { rotaImovel } from "@/lib/catalogo/rotas";
 import {
@@ -122,7 +123,12 @@ export function Relatorio({
             </header>
 
             <section aria-labelledby="imovel-titulo">
-              <GradeCapa foto={foto} legenda={`Foto: ${i.fonte.nome} (publicada no anúncio)`}>
+              <GradeCapa
+                foto={foto}
+                ilustrativa={!!i.fotoIlustrativa}
+                recorte={i.fotoRecorte ?? null}
+                legenda={i.fotoIlustrativa ? "Foto ilustrativa: de um imóvel real parecido, de outro endereço (exemplo fictício)" : `Foto: ${i.fonte.nome} (publicada no anúncio)`}
+              >
                 <div className={s.identidade}>
                   <p className={s.sobretitulo}>{[tipo, i.fonte.nome, MODALIDADE_ROTULO[i.modalidade]].join(" · ")}</p>
                   <h1 id="imovel-titulo" className={s.titulo}>
@@ -180,7 +186,7 @@ export function Relatorio({
                 <li>{AVISO_CLASSIFICACAO}</li>
                 <li>
                   <span className={s.forte}>Confira o edital.</span> Preços, praças, datas, ocupação e dívidas mudam e vale sempre o que está no edital e no
-                  site da fonte. Leia a matrícula atualizada e, de preferência, converse com um advogado antes do lance.
+                  site da fonte. Leia a matrícula atualizada e, de preferência, converse com um especialista antes do lance.
                 </li>
                 <li>Fotos e anúncios pertencem às fontes; a Luneta não copia nem re-hospeda anúncios.</li>
                 {exemplo && <li>Exemplo fictício da demonstração: nenhum número deste relatório se refere a um imóvel real.</li>}
@@ -545,6 +551,16 @@ function LocalizacaoRel({ pagina, plano }: { pagina: PaginaImovel; plano: Plano 
         </div>
       )}
 
+      {/* estação de metrô, trem ou VLT a menos de 1 km (rodada 5): como na página do imóvel */}
+      {!exemplo && (loc.estacoes?.length ?? 0) > 0 && (
+        <div className={s.inteira}>
+          <p className={s.p}>
+            <span className={s.forte}>Transporte sobre trilhos perto.</span> {loc.estacoes!.map((e) => fraseEstacao(e)).join("; ")}. Em linha reta do ponto do
+            endereço, não pelo caminho a pé (estações do OpenStreetMap).
+          </p>
+        </div>
+      )}
+
       <div className={s.inteira}>
         {loc.alertas.length > 0 ? (
           loc.alertas.map((a, k) => (
@@ -665,7 +681,7 @@ function Alertas({ pagina, plano }: { pagina: PaginaImovel; plano: Plano }) {
       )}
       <p className={s.pequeno}>
         <span className={s.forte}>{pendente ? "Selo em análise" : i.selo === 0 ? "Sem selo" : `Selo ${SELO_ROTULO[i.selo]}`}.</span>{" "}
-        {i.porQueSelo || (pendente ? "Os critérios dos selos ainda estão em definição com o advogado." : "")}
+        {i.porQueSelo || (pendente ? "Os critérios dos selos ainda estão em definição com o especialista parceiro." : "")}
       </p>
     </Secao>
   );

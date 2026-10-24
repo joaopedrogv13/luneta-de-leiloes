@@ -1,5 +1,6 @@
 import type { TitleParts } from "@/components/ui/Heading";
 import { PRODUTO } from "../lib/catalogo/produto";
+import { CANCELAMENTO } from "./site";
 
 /**
  * Textos da seção "Por dentro, depois de assinar" (dentro de "A solução").
@@ -91,7 +92,7 @@ export const POR_DENTRO = {
           },
     ] satisfies readonly Point[],
     cta: { label: "Assinar Luneta", href: "#planos" },
-    ctaNote: "Cancele quando quiser.",
+    ctaNote: `${CANCELAMENTO.selo}.`,
   },
 
   /** A "janela do app" com os exemplos. */
@@ -107,7 +108,7 @@ export const POR_DENTRO = {
   },
 
   disclaimer:
-    "Exemplos fictícios. A classificação é uma análise dos dados de cada leilão, não uma garantia, e não substitui a avaliação de um advogado.",
+    "Exemplos fictícios. A classificação é uma análise dos dados de cada leilão, não uma garantia, e não substitui a avaliação de um especialista.",
   replay: "Ver a troca de novo",
   demo: "Abrir a demonstração completa →",
 } as const;

@@ -288,10 +288,19 @@ def osm_categorias():
         ({"public_transport": "platform", "bus": "yes"}, "onibus"),
         ({"highway": "bus_stop", "name": "BRT Alvorada"}, "brt"),
         ({"amenity": "bus_station", "name": "Terminal Rodoviário"}, "terminal"),
-        ({"railway": "station", "public_transport": "station", "train": "yes"}, "trilho"),
+        ({"railway": "station", "public_transport": "station", "train": "yes"}, "trem"),
         ({"railway": "station"}, None),  # estação velha só com railway=station: fora
-        ({"railway": "station", "station": "subway"}, "trilho"),
-        ({"railway": "subway_entrance"}, "trilho"),
+        ({"railway": "station", "station": "subway"}, "metro"),
+        ({"railway": "subway_entrance"}, "metro"),
+        ({"railway": "tram_stop", "name": "Parada dos Museus"}, "vlt"),
+        ({"railway": "station", "station": "light_rail"}, "vlt"),
+        ({"railway": "station", "station": "monorail"}, "monotrilho"),
+        ({"public_transport": "station", "monorail": "yes"}, "monotrilho"),
+        ({"railway": "halt", "public_transport": "station"}, "trem"),
+        # sem o modo nas tags: o nome ou a rede; sem nada, trem (o padrão do OSM)
+        ({"railway": "station", "public_transport": "station", "network": "Metrô Rio"}, "metro"),
+        ({"railway": "station", "public_transport": "station", "name": "VLT Parangaba"}, "vlt"),
+        ({"railway": "station", "public_transport": "station", "name": "Japeri"}, "trem"),
         ({"railway": "station", "public_transport": "station", "usage": "freight"}, None),
         ({"railway": "station", "public_transport": "station", "disused:railway": "station"}, None),
         ({"amenity": "ferry_terminal"}, "barca"),
@@ -307,6 +316,94 @@ def osm_categorias():
     ]
     for tags, esperado in casos:
         igual(osm.classificar(tags), esperado, f"{tags}:")
+    # estação de dois modos: uma linha em cada categoria
+    igual(osm.categorias({"railway": "station", "public_transport": "station", "subway": "yes", "train": "yes"}), ["metro", "trem"])
+    # nome só em estação de trilho; o acesso de metrô fica sem nome (é o da saída)
+    igual(osm.nome_estacao({"railway": "station", "name": "Estação  Sé "}, "metro"), "Estação Sé")
+    igual(osm.nome_estacao({"railway": "subway_entrance", "name": "Saída A"}, "metro"), "")
+    igual(osm.nome_estacao({"highway": "bus_stop", "name": "Ponto X"}, "onibus"), "")
+    igual(osm.rede_estacao({"railway": "station", "network": "CPTM", "operator": "CPTM"}, "trem"), "CPTM")
+    igual(osm.rede_estacao({"railway": "station", "network": "Metrô Rio", "operator": "MetrôRio"}, "metro"), "Metrô Rio · MetrôRio")
+    igual(osm.rede_estacao({"highway": "bus_stop", "network": "SPTrans"}, "onibus"), "")
+
+
+@teste
+def estacoes_regras():
+    import numpy as np
+
+    import estacoes as es
+
+    igual(es.nome_curto("Estação Botafogo"), "Botafogo")
+    igual(es.nome_curto("Estação de Metrô Sé"), "Sé")
+    igual(es.nome_curto("Estação Jaraguá;Jaraguá"), "Jaraguá")
+    igual(es.nome_curto("Jurubatuba- Senac"), "Jurubatuba - Senac")
+    igual(es.nome_curto("Carioca / Centro"), "Carioca / Centro")
+    igual(es.nome_curto(""), "")
+    # fora da tag: antiga, desativada, turística, bonde, funicular, plano inclinado numerado
+    assert es.fora("Antiga estação de trem")
+    assert es.fora("Estação Ferroviária desativada Mailasky")
+    assert es.fora("Largo das Neves", "Bonde de Santa Teresa")
+    assert es.fora("Funicular RioArte")
+    assert es.fora("Estação 3")
+    assert not es.fora("Central do Brasil", "SuperVia")
+    assert not es.fora("Vila Prudente", "Metropolitano de São Paulo")
+    # rede urbana conhecida (trem e VLT) e o monotrilho do Metrô
+    assert es.de_rede_passageiros("Carapicuíba", "Companhia Paulista de Trens Metropolitanos")
+    assert es.de_rede_passageiros("Santa Rita", "VLT João Pessoa · CBTU")
+    assert not es.de_rede_passageiros("Estação Ferroviária de Jacarezinho", "")
+    assert es.de_rede_passageiros("Oratório", "Metropolitano de São Paulo", monotrilho=True)
+    assert not es.de_rede_passageiros("Estação Cidade do Romeiro", "", monotrilho=True)
+    assert es.de_carga("MRS") and es.de_carga("Rumo S/A") and not es.de_carga("SuperVia")
+    # vizinhança: a estação sem rede a 800 m de uma da SuperVia entra; a de carga e a isolada no interior, não
+    lista = [
+        {"lat": -22.9000, "lon": -43.2000, "nome": "Madureira", "rede": "SuperVia", "cat": "trem"},
+        {"lat": -22.9070, "lon": -43.2000, "nome": "", "rede": "", "cat": "trem"},          # ~780 m
+        {"lat": -22.9140, "lon": -43.2000, "nome": "Oswaldo Cruz", "rede": "", "cat": "trem"},  # ~780 m da anterior
+        {"lat": -22.9075, "lon": -43.2050, "nome": "Pátio", "rede": "MRS", "cat": "trem"},
+        {"lat": -21.0000, "lon": -48.0000, "nome": "Pitangueiras", "rede": "", "cat": "trem"},
+    ]
+    igual([e["nome"] for e in es.pela_rede(lista)], ["Madureira", "", "Oswaldo Cruz"])
+    igual([e["nome"] for e in es.pela_rede(lista, vizinha_m=600)], ["Madureira"])
+    # metrô: o acesso sem nome longe de qualquer estação com nome sai
+    metro = [
+        {"lat": -22.9500, "lon": -43.1840, "nome": "Botafogo", "rede": "", "cat": "metro"},
+        {"lat": -22.9520, "lon": -43.1840, "nome": "", "rede": "", "cat": "metro"},  # ~220 m: acesso
+        {"lat": -22.9030, "lon": -43.2700, "nome": "", "rede": "", "cat": "metro"},  # órfão
+    ]
+    igual(len(es.sem_orfaos(metro)), 2)
+    d = es.distancias_m(-22.95, -43.184, np.array([-22.952]), np.array([-43.184]))[0]
+    assert 215 < d < 230, d
+    igual(es.arred10(447), 450)
+    # a mesma estação em dois modos vira uma tag só: metrô e VLT com o mesmo nome e a mesma distância (a Linha Sul do
+    # Metrofor) fica metrô; trem e VLT no mesmo ponto (a CBTU) fica VLT; nomes ou distâncias diferentes ficam os dois
+    def prep_de(**modos):
+        saida = {}
+        for modo, est in modos.items():
+            arr = (np.array([e["lat"] for e in est]), np.array([e["lon"] for e in est]))
+            idx = [k for k, e in enumerate(est) if e["nome"]]
+            saida[modo] = (est, arr, (np.array([est[k]["lat"] for k in idx]), np.array([est[k]["lon"] for k in idx]), idx))
+        return saida
+
+    esperanca_m = {"lat": -3.8000, "lon": -38.5600, "nome": "Esperança", "rede": "Metrofor", "cat": "metro"}
+    esperanca_v = {"lat": -3.8001, "lon": -38.5600, "nome": "Estação Esperança", "rede": "Metrofor", "cat": "vlt"}
+    outro_v = {"lat": -3.8001, "lon": -38.5600, "nome": "Parangaba", "rede": "VLT", "cat": "vlt"}
+    prep = prep_de(metro=[esperanca_m], vlt=[esperanca_v, outro_v])
+    igual(sorted(es.sem_duplicadas({"metro": (450.0, 0), "vlt": (452.0, 0)}, prep)), ["metro"])
+    igual(sorted(es.sem_duplicadas({"metro": (450.0, 0), "vlt": (520.0, 0)}, prep)), ["metro", "vlt"])  # distâncias diferentes
+    igual(sorted(es.sem_duplicadas({"metro": (450.0, 0), "vlt": (452.0, 1)}, prep)), ["metro", "vlt"])  # outro nome
+    trem = {"lat": -7.1200, "lon": -34.8800, "nome": "Santa Rita", "rede": "CBTU", "cat": "trem"}
+    vlt = {"lat": -7.1203, "lon": -34.8800, "nome": "Santa Rita", "rede": "VLT João Pessoa · CBTU", "cat": "vlt"}
+    igual(sorted(es.sem_duplicadas({"trem": (300.0, 0), "vlt": (310.0, 0)}, prep_de(trem=[trem], vlt=[vlt]))), ["vlt"])
+    # a seção da medição troca só o que está entre os marcadores
+    import tempfile
+    from pathlib import Path as P
+    with tempfile.TemporaryDirectory() as t:
+        arq = P(t) / "m.md"
+        arq.write_text("# Medição\n\ntexto da nota\n", encoding="utf-8")
+        es.gravar_medicao(arq, f"{es.INICIO}\nA\n{es.FIM}\n")
+        es.gravar_medicao(arq, f"{es.INICIO}\nB\n{es.FIM}\n")
+        txt = arq.read_text(encoding="utf-8")
+        assert "texto da nota" in txt and "\nB\n" in txt and "\nA\n" not in txt and txt.count(es.INICIO) == 1, txt
 
 
 @teste

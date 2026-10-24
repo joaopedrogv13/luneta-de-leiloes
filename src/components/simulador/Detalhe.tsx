@@ -24,8 +24,10 @@ export const ID_DETALHE = "sim-detalhe-titulo";
 /**
  * Detalhe da célula escolhida, o lugar único de ajuste: no topo, cenário, % da venda, prazo e lance editáveis;
  * os números-resumo (lucro total e anualizado); a comparação com uma aplicação; a cascata da venda ao lucro; e
- * a conta linha a linha. Cada linha tem um lápis discreto que abre o pop-up daquele tipo de despesa; dá para
- * tirar e religar linhas, criar custos ("+ Adicionar custo") e restaurar tudo.
+ * a conta linha a linha. A conta abre limpa (rodada 5, decisão 7): os controles de edição ficam atrás do botão
+ * "Editar a conta" (com ajustes salvos, "Editar a conta · ajustada"). Aberta, cada linha tem um lápis discreto
+ * que abre o pop-up daquele tipo de despesa; dá para tirar e religar linhas, criar custos ("+ Adicionar custo") e
+ * restaurar tudo.
  * Até lg, as abas do simulador escolhem a parte: "Conta" (os ajustes, os números e a conta linha a linha) ou
  * "Gráfico" (a cascata); no computador, tudo aparece.
  */
@@ -46,6 +48,10 @@ export function Detalhe({
   const p = r.modelo.premissas;
   const fin = sim.financiamento;
   const [desfazer, setDesfazer] = useState<EstadoSimulador["ajustes"] | null>(null);
+  // a conta abre limpa; "Editar a conta" mostra os lápis, o "Adicionar custo", o que está fora da conta e o
+  // "Restaurar tudo". Fica aberta enquanto a pessoa estiver na página (o pop-up de um lápis devolve o foco a ele).
+  const [editando, setEditando] = useState(false);
+  const ajustada = r.ajustes > 0;
   // a diferença sai dos dois números já arredondados que a frase mostra
   const diferenca = Math.round(sim.lucro) - Math.round(sim.rendimentoAplicacao);
   const pal = palavrasPreco(r.modelo.entrada);
@@ -71,51 +77,14 @@ export function Detalhe({
       aria-labelledby={ID_DETALHE}
       className="rounded-3xl border border-nevoa/20 bg-tinta p-4 sm:p-6 in-data-[theme=light]:shadow-[0_1px_2px_rgba(15,24,48,.05)]"
     >
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <p className="text-[12px] font-semibold tracking-[0.12em] text-nevoa uppercase">
-            Detalhe · cenário {CENARIO_ROTULO[sim.cenario].toLowerCase()}, venda em {meses(sim.meses)}
-          </p>
-          <h3 id={ID_DETALHE} tabIndex={-1} className="mt-1.5 font-display text-[19px] leading-tight font-bold tracking-[-0.01em] outline-none sm:text-[21px]">
-            Com o {pal.lance} de {moeda(sim.lance)} <span className="font-sans text-[14px] font-medium tracking-normal text-nevoa sm:text-[15px]">({qual})</span>
-          </h3>
-        </div>
-        <button
-          id="sim-restaurar-tudo"
-          type="button"
-          disabled={r.ajustes === 0}
-          onClick={() => {
-            setDesfazer(r.estado.ajustes);
-            atualizar((e) => ({ ...e, ajustes: {} }));
-            requestAnimationFrame(() => focar("sim-desfazer"));
-          }}
-          className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-nevoa/35 px-4 text-[13px] font-medium transition-colors hover:border-latao disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-nevoa/35 pointer-fine:min-h-9"
-        >
-          <IconeVoltar />
-          Restaurar tudo{r.ajustes > 0 ? ` (${r.ajustes})` : ""}
-        </button>
+      <div className="min-w-0">
+        <p className="text-[12px] font-semibold tracking-[0.12em] text-nevoa uppercase">
+          Detalhe · cenário {CENARIO_ROTULO[sim.cenario].toLowerCase()}, venda em {meses(sim.meses)}
+        </p>
+        <h3 id={ID_DETALHE} tabIndex={-1} className="mt-1.5 font-display text-[19px] leading-tight font-bold tracking-[-0.01em] outline-none sm:text-[21px]">
+          Com o {pal.lance} de {moeda(sim.lance)} <span className="font-sans text-[14px] font-medium tracking-normal text-nevoa sm:text-[15px]">({qual})</span>
+        </h3>
       </div>
-      <p role="status" className="mt-1 text-[13px] empty:hidden">
-        {/* some quando a pessoa volta a ajustar: desfazer, aí, apagaria o que ela acabou de fazer */}
-        {desfazer && r.ajustes === 0 && (
-          <>
-            Tudo de volta ao padrão.{" "}
-            <button
-              id="sim-desfazer"
-              type="button"
-              onClick={() => {
-                const anterior = desfazer;
-                setDesfazer(null);
-                atualizar((e) => ({ ...e, ajustes: anterior }));
-                requestAnimationFrame(() => focar("sim-restaurar-tudo"));
-              }}
-              className="-my-2 inline-flex min-h-11 cursor-pointer items-center font-semibold text-latao-texto underline underline-offset-4 pointer-fine:min-h-8"
-            >
-              Desfazer
-            </button>
-          </>
-        )}
-      </p>
 
       {/* ------------------------------------------------------------ cenário, % da venda, prazo e lance */}
       <div className={soConta}>
@@ -275,14 +244,56 @@ export function Detalhe({
 
       {/* ------------------------------------------------------------ a conta, linha a linha */}
       <div className={soConta}>
-        <div className="mt-7 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-          <h4 className="text-[16px] font-semibold">A conta, linha a linha</h4>
-          <p className="text-sm text-nevoa sm:text-[12.5px]">
-            <span className="pointer-fine:hidden">Toque no lápis de uma linha para ajustar aquele custo.</span>
-            <span className="hidden pointer-fine:inline">Clique no lápis de uma linha para ajustar aquele custo.</span>
-          </p>
+        <div className="mt-7 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <h4 id="sim-conta-titulo" className="text-[16px] font-semibold">
+            A conta, linha a linha
+          </h4>
+          <BotaoEditarConta editando={editando} ajustada={ajustada} aoAlternar={() => setEditando((v) => !v)} />
         </div>
-        <div className="mt-2 rounded-2xl border border-nevoa/15">
+        {editando && (
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <p className="text-sm text-nevoa sm:text-[12.5px]">
+              <span className="pointer-fine:hidden">Toque no lápis de uma linha para ajustar aquele custo.</span>
+              <span className="hidden pointer-fine:inline">Clique no lápis de uma linha para ajustar aquele custo.</span>
+            </p>
+            <button
+              id="sim-restaurar-tudo"
+              type="button"
+              disabled={r.ajustes === 0}
+              onClick={() => {
+                setDesfazer(r.estado.ajustes);
+                atualizar((e) => ({ ...e, ajustes: {} }));
+                requestAnimationFrame(() => focar("sim-desfazer"));
+              }}
+              className="-my-1 inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 px-1 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:text-nevoa disabled:no-underline pointer-fine:min-h-8"
+            >
+              <IconeVoltar />
+              Restaurar tudo{r.ajustes > 0 ? ` (${r.ajustes})` : ""}
+            </button>
+          </div>
+        )}
+        <p role="status" className="mt-1 text-[13px] empty:hidden">
+          {/* some quando a pessoa volta a ajustar (ou fecha a edição): desfazer, aí, apagaria o que ela acabou de fazer */}
+          {editando && desfazer && r.ajustes === 0 && (
+            <>
+              Tudo de volta ao padrão.{" "}
+              <button
+                id="sim-desfazer"
+                type="button"
+                onClick={() => {
+                  const anterior = desfazer;
+                  setDesfazer(null);
+                  atualizar((e) => ({ ...e, ajustes: anterior }));
+                  requestAnimationFrame(() => focar("sim-restaurar-tudo"));
+                }}
+                className="-my-2 inline-flex min-h-11 cursor-pointer items-center font-semibold text-latao-texto underline underline-offset-4 pointer-fine:min-h-8"
+              >
+                Desfazer
+              </button>
+            </>
+          )}
+        </p>
+        <div id="sim-conta" className="mt-2 rounded-2xl border border-nevoa/15">
           {grupos.map((g) => {
             const linhas = d.conta.filter((l) => l.grupo === g);
             if (!linhas.length) return null;
@@ -290,7 +301,11 @@ export function Detalhe({
             return (
               <section key={g} aria-label={GRUPO_ROTULO[g]} className="border-t border-nevoa/15 first:border-t-0">
                 {/* o subtotal fica na mesma coluna dos valores das linhas (à esquerda do lápis) */}
-                <div className="flex items-baseline justify-between gap-3 bg-noite/40 py-2 pr-[58px] pl-3 sm:pl-4 pointer-fine:pr-[46px] first:rounded-t-2xl">
+                <div
+                  className={`flex items-baseline justify-between gap-3 bg-noite/40 py-2 pl-3 sm:pl-4 first:rounded-t-2xl ${
+                    editando ? "pr-[58px] pointer-fine:pr-[46px]" : "pr-3 sm:pr-4"
+                  }`}
+                >
                   <h5 className="text-[12px] font-semibold tracking-[0.1em] text-nevoa uppercase">
                     {GRUPO_ROTULO[g]}
                     {g === "mensal" ? ` · ${meses(sim.meses)}` : ""}
@@ -299,69 +314,97 @@ export function Detalhe({
                 </div>
                 <ul>
                   {linhas.map((l) => (
-                    <LinhaDaConta key={l.id} l={l} onEditar={editar(l.editor === "extra" ? { editor: "extra", extraId: l.extraId } : { editor: l.editor })} />
+                    <LinhaDaConta
+                      key={l.id}
+                      l={l}
+                      onEditar={editando ? editar(l.editor === "extra" ? { editor: "extra", extraId: l.extraId } : { editor: l.editor }) : null}
+                    />
                   ))}
                 </ul>
               </section>
             );
           })}
           <dl className="border-t-2 border-nevoa/30">
-            <Total rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"} detalhe={`venda menos todos os custos, ${notaIr(p)}`} valor={moedaSinal(sim.lucro)} forte grave={sim.lucro < 0} />
             <Total
+              comLapis={editando}
+              rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"}
+              detalhe={`venda menos todos os custos, ${notaIr(p)}`}
+              valor={moedaSinal(sim.lucro)}
+              forte
+              grave={sim.lucro < 0}
+            />
+            <Total
+              comLapis={editando}
               rotulo="Lucro anualizado"
               detalhe={sim.meses === 12 ? "venda em 12 meses: igual ao lucro total" : `média por ano: lucro total × 12 ÷ ${sim.meses} meses; o % ao ano conta juros compostos`}
               valor={`${moedaSinal(sim.lucroAno)}/ano`}
               extra={`${pct(sim.roiAA)} ao ano`}
             />
             <Total
+              comLapis={editando}
               rotulo="Dinheiro investido"
               detalhe={fin ? "entrada + parcelas pagas + custos (sem o saldo quitado na venda)" : `${pal.lance} + custos de compra, regularização, reforma e meses`}
               valor={moeda(sim.capital)}
             />
-            <Total rotulo="Retorno no período" detalhe="lucro ÷ dinheiro investido" valor={pct(sim.roi)} />
+            <Total comLapis={editando} rotulo="Retorno no período" detalhe="lucro ÷ dinheiro investido" valor={pct(sim.roi)} />
           </dl>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            onClick={editar({ editor: "novo" })}
-            className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-dashed border-latao/60 px-4 text-[13.5px] font-semibold text-latao-texto transition-colors hover:border-latao hover:bg-latao/10 pointer-fine:min-h-10"
-          >
-            <IconeMais />
-            Adicionar custo
-          </button>
-          {r.adicionaveis.length > 0 && (
-            <p className="text-sm text-nevoa sm:text-[12.5px]">Ex.: {r.adicionaveis.map((a) => a.rotulo.toLowerCase()).join(", ")}, ou um custo seu.</p>
-          )}
-        </div>
+        {/* fechada: uma linha discreta diz que há custos fora da conta (a lista e o "Religar" ficam na edição) */}
+        {!editando && d.retiradas.length > 0 && (
+          <p className="mt-2 flex items-start gap-2 px-1 text-sm leading-relaxed text-nevoa sm:text-[12.5px]">
+            <IconeOlhoFechado className="mt-0.5 shrink-0 text-nevoa" />
+            <span>
+              {d.retiradas.length === 1 ? "1 custo fora da conta" : `${d.retiradas.length} custos fora da conta`}:{" "}
+              {d.retiradas.map((l) => l.rotulo.toLowerCase()).join(", ")}.
+            </span>
+          </p>
+        )}
 
-        {d.retiradas.length > 0 && (
-          <div className="mt-4 rounded-2xl border border-dashed border-nevoa/30 p-3 sm:p-4">
-            <p className="flex items-center gap-2 text-[13px] font-semibold">
-              <IconeOlhoFechado className="text-nevoa" />
-              Fora da conta ({d.retiradas.length})
-            </p>
-            <ul className="mt-1.5">
-              {d.retiradas.map((l) => (
-                <li key={l.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-nevoa/10 py-2 first:border-t-0">
-                  <span className="min-w-0 text-[13.5px]">
-                    <span className="text-nevoa line-through decoration-nevoa/50">{l.rotulo}</span>{" "}
-                    <span className="text-[12.5px] text-nevoa tabular-nums">(seria {moedaSinal(l.valor)})</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => religar(l.desligavel!)}
-                    className="-my-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8"
-                  >
-                    <IconeVoltar />
-                    Religar<span className="sr-only"> {l.rotulo}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {editando && (
+          <>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                onClick={editar({ editor: "novo" })}
+                className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-dashed border-latao/60 px-4 text-[13.5px] font-semibold text-latao-texto transition-colors hover:border-latao hover:bg-latao/10 pointer-fine:min-h-10"
+              >
+                <IconeMais />
+                Adicionar custo
+              </button>
+              {r.adicionaveis.length > 0 && (
+                <p className="text-sm text-nevoa sm:text-[12.5px]">Ex.: {r.adicionaveis.map((a) => a.rotulo.toLowerCase()).join(", ")}, ou um custo seu.</p>
+              )}
+            </div>
+
+            {d.retiradas.length > 0 && (
+              <div className="mt-4 rounded-2xl border border-dashed border-nevoa/30 p-3 sm:p-4">
+                <p className="flex items-center gap-2 text-[13px] font-semibold">
+                  <IconeOlhoFechado className="text-nevoa" />
+                  Fora da conta ({d.retiradas.length})
+                </p>
+                <ul className="mt-1.5">
+                  {d.retiradas.map((l) => (
+                    <li key={l.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-nevoa/10 py-2 first:border-t-0">
+                      <span className="min-w-0 text-[13.5px]">
+                        <span className="text-nevoa line-through decoration-nevoa/50">{l.rotulo}</span>{" "}
+                        <span className="text-[12.5px] text-nevoa tabular-nums">(seria {moedaSinal(l.valor)})</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => religar(l.desligavel!)}
+                        className="-my-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8"
+                      >
+                        <IconeVoltar />
+                        Religar<span className="sr-only"> {l.rotulo}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
         )}
 
         {fin && (
@@ -386,6 +429,48 @@ export function Detalhe({
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * O botão discreto que liga e desliga a edição da conta: um botão de alternar (aria-pressed), sempre com o mesmo nome,
+ * "Editar a conta" (o leitor de tela diz "pressionado" quando a edição está aberta; antes o nome virava "Concluir a
+ * edição da conta", e nome e estado mudavam juntos: revisão final da rodada 5, R5-TEC-11). Aberto, o desenho é o do
+ * botão ligado (latão, com o visto). Com ajustes salvos, "· ajustada" com o ponto de latão (a conta não é a padrão),
+ * nos dois estados. O mesmo botão sempre: o foco fica nele ao abrir e ao fechar. A conta (#sim-conta) fica sempre à
+ * vista; o que muda é o modo de edição, por isso aria-pressed e não aria-expanded.
+ */
+export function BotaoEditarConta({ editando, ajustada, aoAlternar }: { editando: boolean; ajustada: boolean; aoAlternar: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={editando}
+      onClick={aoAlternar}
+      className={`-my-1 inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-colors duration-150 motion-reduce:transition-none pointer-fine:min-h-9 ${
+        editando ? "border-latao/60 bg-latao/12 text-latao-texto hover:bg-latao/20" : "border-nevoa/30 text-luar hover:border-latao hover:bg-latao/10"
+      }`}
+    >
+      {editando ? <IconeConcluir /> : ajustada ? <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-latao" /> : <IconeLapis className="size-3 text-latao-texto" />}
+      Editar a conta
+      {/* os espaços entram no nome acessível ("Editar a conta · ajustada"); no flex, não mudam o desenho */}
+      {ajustada && (
+        <>
+          {" "}
+          <span aria-hidden="true" className="text-nevoa">
+            ·
+          </span>{" "}
+          <span className="text-latao-texto">ajustada</span>
+        </>
+      )}
+    </button>
+  );
+}
+
+function IconeConcluir() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.5 8.5l3 3 6-7" />
+    </svg>
   );
 }
 
@@ -444,10 +529,15 @@ function PctVenda({ r, atualizar }: { r: ResultadoCompleto; atualizar: (mudar: (
   );
 }
 
-function LinhaDaConta({ l, onEditar }: { l: LinhaConta; onEditar: (ev: { currentTarget: HTMLElement }) => void }) {
+/** Uma linha da conta. Sem `onEditar` (a conta fechada), sem o lápis: só o rótulo, a fórmula e o valor. */
+function LinhaDaConta({ l, onEditar }: { l: LinhaConta; onEditar: ((ev: { currentTarget: HTMLElement }) => void) | null }) {
   const positivo = l.valor > 0 && l.id === "venda";
   return (
-    <li className="group flex items-center gap-2 border-t border-nevoa/10 py-2.5 pr-1.5 pl-3 transition-colors first:border-t-0 hover:bg-nevoa/[0.04] sm:pl-4">
+    <li
+      className={`group flex items-center gap-2 border-t border-nevoa/10 py-2.5 pl-3 transition-colors first:border-t-0 sm:pl-4 ${
+        onEditar ? "pr-1.5 hover:bg-nevoa/[0.04]" : "pr-3 sm:pr-4"
+      }`}
+    >
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[14px] leading-snug font-medium">
           {l.rotulo}
@@ -460,14 +550,35 @@ function LinhaDaConta({ l, onEditar }: { l: LinhaConta; onEditar: (ev: { current
       <p className={`shrink-0 text-right text-[14px] font-semibold whitespace-nowrap tabular-nums ${positivo ? "" : l.valor === 0 ? "text-nevoa" : ""}`}>
         {positivo ? moeda(l.valor) : moedaSinal(l.valor)}
       </p>
-      <BotaoEditar rotulo={`Editar ${l.rotulo.toLowerCase()}`} onClick={onEditar} sempreVisivel={l.ajustada} destaque={l.ajustada} />
+      {onEditar && <BotaoEditar rotulo={`Editar ${l.rotulo.toLowerCase()}`} onClick={onEditar} sempreVisivel={l.ajustada} destaque={l.ajustada} />}
     </li>
   );
 }
 
-function Total({ rotulo, detalhe, valor, extra, forte, grave }: { rotulo: string; detalhe?: string; valor: string; extra?: string; forte?: boolean; grave?: boolean }) {
+function Total({
+  rotulo,
+  detalhe,
+  valor,
+  extra,
+  forte,
+  grave,
+  comLapis,
+}: {
+  rotulo: string;
+  detalhe?: string;
+  valor: string;
+  extra?: string;
+  forte?: boolean;
+  grave?: boolean;
+  /** a conta aberta para edição: o valor fica na coluna dos valores das linhas (à esquerda dos lápis) */
+  comLapis: boolean;
+}) {
   return (
-    <div className="flex items-start justify-between gap-3 border-t border-nevoa/10 py-2.5 pr-[58px] pl-3 first:border-t-0 sm:pl-4 pointer-fine:pr-[46px]">
+    <div
+      className={`flex items-start justify-between gap-3 border-t border-nevoa/10 py-2.5 pl-3 first:border-t-0 sm:pl-4 ${
+        comLapis ? "pr-[58px] pointer-fine:pr-[46px]" : "pr-3 sm:pr-4"
+      }`}
+    >
       <dt className="min-w-0">
         <span className={forte ? "text-[15px] font-bold" : "text-[14px] font-medium"}>{rotulo}</span>
         {detalhe && <span className="block text-[13px] leading-snug text-nevoa sm:text-[12px]">{detalhe}</span>}

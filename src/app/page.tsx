@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { MobileCtaBar } from "@/components/MobileCtaBar";
 import { MotionLayer } from "@/components/MotionLayer";
 import { InPageLinks } from "@/components/InPageLinks";
+import { SaidaDaApresentacao } from "@/components/apresentacao/SaidaDaApresentacao";
 import { HeroScene } from "@/components/hero/HeroScene";
 import { Problem } from "@/components/sections/Problem";
 import { Solution } from "@/components/sections/Solution";
@@ -23,6 +25,7 @@ import { LeadForm } from "@/components/LeadForm";
 import { LensPreview } from "@/components/LensPreview";
 import { PlansTable } from "@/components/PlansTable";
 import { FEATURED_EXAMPLES } from "@/content/examples";
+import { EXAMPLES } from "@/content/site";
 import { JsonLd } from "@/components/JsonLd";
 
 /**
@@ -51,6 +54,18 @@ export default function Home() {
             {FEATURED_EXAMPLES.map((l) => (
               <li key={l.id} data-reveal>
                 <AuctionCard listing={l} />
+                {/* rodada 5, ponto 10: a página do mesmo exemplo na demonstração */}
+                {!l.source && (
+                  <Link
+                    href={EXAMPLES.demoHref(l.id)}
+                    prefetch={false}
+                    className="mt-1 flex min-h-11 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold text-latao-texto underline decoration-latao/40 underline-offset-4 hover:text-luar"
+                  >
+                    {EXAMPLES.demo}
+                    <span className="sr-only">: {l.title}, {l.place}</span>
+                    <span aria-hidden="true">→</span>
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
@@ -75,6 +90,8 @@ export default function Home() {
       <MobileCtaBar />
       <MotionLayer />
       <InPageLinks />
+      {/* depois do InPageLinks: a volta da demonstração rola por último (rodada 5, ponto 10) */}
+      <SaidaDaApresentacao />
       <JsonLd />
     </>
   );

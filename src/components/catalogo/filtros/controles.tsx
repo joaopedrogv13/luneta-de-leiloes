@@ -20,6 +20,7 @@ import {
   removerFiltro,
   type FormatoFaixa,
 } from "@/lib/catalogo/filtros-rotulos";
+import { eTagEstacao, ROTULO_FILTRO_METRO, ROTULO_TAG_ESTACAO, SLUG_ESTACAO } from "@/lib/catalogo/estacoes";
 import { MODALIDADE_ROTULO, PRACA_ROTULO, SELO_ROTULO, TIPO_ROTULO, numero } from "@/lib/catalogo/rotulos";
 import { NAO_INFORMADO, type Facetas, type Filtros, type OpcaoFaceta, type Severidade } from "@/lib/catalogo/tipos";
 import { CampoFaixa, type AtalhoFaixa } from "../ui/CampoFaixa";
@@ -447,9 +448,13 @@ export function ControleTags({
   severidades,
   rotulo,
 }: PropsControle & { modo: "semTags" | "comTags"; severidades: readonly Severidade[]; rotulo: string }) {
-  const escolhidas = f[modo] ?? [];
+  // As tags de estação (metrô, trem, VLT a até 1 km) ficam só em "Entorno" (ControleEstacoes): aqui seriam o mesmo
+  // filtro duas vezes, com estados diferentes (revisão final da rodada 5, R5P-03). As escolhidas lá ficam guardadas.
+  const todas = f[modo] ?? [];
+  const deEstacao = todas.filter(eTagEstacao);
+  const escolhidas = todas.filter((v) => !eTagEstacao(v));
   const opcoes: OpcaoChip[] = (facetas.tags as TagFaceta[])
-    .filter((t) => severidades.includes(t.severidade))
+    .filter((t) => severidades.includes(t.severidade) && !eTagEstacao(t.valor))
     .map((t) => ({
       valor: t.valor,
       rotulo: t.rotulo,
@@ -467,7 +472,10 @@ export function ControleTags({
       opcoes={opcoes}
       valor={escolhidas}
       vazio="Nenhum imóvel desta busca tem essas tags."
-      onChange={(v) => aplicar(modo, (x) => ({ ...removerFiltro(x, modo), ...(v.length ? { [modo]: v } : {}) }))}
+      onChange={(v) => {
+        const lista = [...v, ...deEstacao];
+        aplicar(modo, (x) => ({ ...removerFiltro(x, modo), ...(lista.length ? { [modo]: lista } : {}) }));
+      }}
     />
   );
 }
@@ -566,6 +574,45 @@ export function ControleNotaLocal({ f, facetas, aplicar }: PropsControle) {
         </p>
       )}
     </div>
+  );
+}
+
+/** Os valores de trem e VLT nos chips de estação (vão para `comTags`; o metrô tem o filtro próprio, `metroPerto`). */
+const TAGS_TREM_VLT = [SLUG_ESTACAO.trem, SLUG_ESTACAO.vlt] as const;
+const VALOR_METRO = "metro";
+
+/**
+ * Estação perto, na seção "Entorno" (filtros avançados da Luneta; src/lib/catalogo/estacoes.ts): "Metrô a até 1 km"
+ * (o filtro `metroPerto`, URL `metro=1`) e, onde houver, "Trem a até 1 km" e "VLT a até 1 km" (as tags, em `comTags`),
+ * cada um com quantos imóveis desta busca têm a estação a menos de 1 km, em linha reta do ponto do endereço. Um lugar
+ * só para os três (antes, o metrô aparecia também em "Riscos › Só imóveis com", com outro estado, e trem e VLT só lá).
+ * Marcando dois, ficam os imóveis perto dos dois (como as tags). Imóvel sem endereço no número ou na rua não tem a
+ * distância e fica de fora.
+ */
+export function ControleEstacoes({ f, facetas, aplicar }: PropsControle) {
+  const daTag = (slug: string) => (facetas.tags as TagFaceta[]).find((t) => t.valor === slug)?.total ?? 0;
+  const opcoes: OpcaoChip[] = [
+    { valor: VALOR_METRO, rotulo: ROTULO_FILTRO_METRO, total: facetas.metroPerto },
+    { valor: SLUG_ESTACAO.trem, rotulo: ROTULO_TAG_ESTACAO.trem, total: daTag(SLUG_ESTACAO.trem) },
+    { valor: SLUG_ESTACAO.vlt, rotulo: ROTULO_TAG_ESTACAO.vlt, total: daTag(SLUG_ESTACAO.vlt) },
+  ];
+  const valor = [...(f.metroPerto ? [VALOR_METRO] : []), ...(f.comTags ?? []).filter((v) => (TAGS_TREM_VLT as readonly string[]).includes(v))];
+  return (
+    <Chips
+      rotulo="Estação a até 1 km"
+      opcoes={opcoes}
+      valor={valor}
+      vazio="Nenhum imóvel desta busca tem estação de metrô, trem ou VLT a menos de 1 km (só há a distância para endereço localizado no número ou na rua)."
+      onChange={(v) =>
+        aplicar("metro", (x) => {
+          // as outras tags de "Só imóveis com" ficam; trem e VLT são as daqui
+          const outras = (x.comTags ?? []).filter((t) => !(TAGS_TREM_VLT as readonly string[]).includes(t));
+          const comTags = [...outras, ...v.filter((t) => (TAGS_TREM_VLT as readonly string[]).includes(t))];
+          const resto = removerFiltro(removerFiltro(x, "metro"), "comTags");
+          return { ...resto, ...(v.includes(VALOR_METRO) ? { metroPerto: true } : {}), ...(comTags.length ? { comTags } : {}) };
+        })
+      }
+    />
   );
 }
 

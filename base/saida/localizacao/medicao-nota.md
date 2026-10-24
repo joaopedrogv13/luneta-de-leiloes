@@ -123,3 +123,64 @@ A mesma validação com a nota recalculada com outros pesos (cada linha é uma c
 | 5. renda 30 (só para comparar) (25/15/30/15/10/5) | 0,32 | -0,07 | 1 de 8 |
 | 6. sem renda (só para comparar) (35/25/0/20/12/8) | 0,15 | -0,24 | 3 de 8 |
 
+<!-- estacoes:inicio -->
+
+## Estação de metrô, trem e VLT perto (tag do site)
+
+Gerado em 24/10/2026 16:38 UTC por `base/fontes/localizacao/estacoes.py`, com o OSM de 2026-10-23T20:20:51Z. Distância em linha reta do ponto do endereço (número ou rua) até a estação mais perto; a tag do site vale abaixo de 1.000 m. Metrô inclui o monotrilho. A nota de localização não muda: ela segue com a distância até qualquer estação (`estacao_m`).
+
+Imóveis com endereço no número ou na rua: 13.692 de 21.230.
+
+| Tag | Imóveis (< 1 km) | % dos com número ou rua | < 500 m | 1 a 2 km | Pontos no OSM | Fora pelo nome | Usados |
+|---|---|---|---|---|---|---|---|
+| Metrô a X m | 369 | 2,7% | 128 | 388 | 1.015 | 38 | 928 |
+| Trem a X m | 604 | 4,4% | 227 | 1.278 | 788 | 122 | 260 |
+| VLT a X m | 43 | 0,3% | 21 | 93 | 376 | 65 | 176 |
+
+Com pelo menos uma das três tags: 907 (6,6% dos com número ou rua).
+
+Pontos: estações, paradas e acessos de metrô do OSM (uma estação costuma ter vários). Trem, VLT e monotrilho só contam estação de rede urbana de passageiros conhecida (nome, rede ou operador com CPTM, ViaMobilidade, SuperVia, Trensurb, CBTU, Metrofor, VLT...; no monotrilho, o Metrô) e as vizinhas dela a até 1 km; nenhum modo conta nome com "antiga", "desativada", "turística", "bonde", "funicular" etc. (`REDES_PASSAGEIROS`, `RE_FORA` e `RE_CARGA` em estacoes.py).
+
+Por cidade (as que têm pelo menos um imóvel com a tag):
+
+| Cidade | Imóveis com número ou rua | Metrô < 1 km | Trem < 1 km | VLT < 1 km | Alguma |
+|---|---|---|---|---|---|
+| Rio de Janeiro/RJ | 2.205 | 144 | 473 | 9 | 543 (24,6%) |
+| São Paulo/SP | 390 | 82 | 70 | 0 | 132 (33,8%) |
+| Jaboatão dos Guararapes/PE | 194 | 39 | 0 | 2 | 41 (21,1%) |
+| Salvador/BA | 100 | 23 | 0 | 0 | 23 (23,0%) |
+| Camaragibe/PE | 24 | 21 | 0 | 0 | 21 (87,5%) |
+| Nilópolis/RJ | 23 | 0 | 17 | 0 | 17 (73,9%) |
+| Fortaleza/CE | 80 | 13 | 0 | 6 | 13 (16,2%) |
+| Mesquita/RJ | 137 | 0 | 12 | 0 | 12 (8,8%) |
+| Canoas/RS | 44 | 11 | 0 | 0 | 11 (25,0%) |
+| São Vicente/SP | 16 | 0 | 0 | 10 | 10 (62,5%) |
+| São Leopoldo/RS | 45 | 10 | 0 | 0 | 10 (22,2%) |
+| Brasília/DF | 19 | 10 | 0 | 0 | 10 (52,6%) |
+| Nova Iguaçu/RJ | 700 | 0 | 5 | 0 | 5 (0,7%) |
+| São João de Meriti/RJ | 13 | 0 | 5 | 0 | 5 (38,5%) |
+| Porto Alegre/RS | 175 | 5 | 0 | 0 | 5 (2,9%) |
+| Teresina/PI | 53 | 0 | 0 | 4 | 4 (7,5%) |
+| Santa Rita/PB | 81 | 0 | 0 | 4 | 4 (4,9%) |
+| Recife/PE | 25 | 4 | 0 | 0 | 4 (16,0%) |
+| Duque de Caxias/RJ | 47 | 0 | 4 | 0 | 4 (8,5%) |
+| Osasco/SP | 16 | 0 | 4 | 0 | 4 (25,0%) |
+| Caucaia/CE | 15 | 0 | 0 | 3 | 3 (20,0%) |
+| Belford Roxo/RJ | 289 | 0 | 3 | 0 | 3 (1,0%) |
+| Queimados/RJ | 34 | 0 | 3 | 0 | 3 (8,8%) |
+| Maracanaú/CE | 9 | 2 | 0 | 0 | 2 (22,2%) |
+| Natal/RN | 22 | 0 | 0 | 2 | 2 (9,1%) |
+| Rio Largo/AL | 5 | 0 | 0 | 2 | 2 (40,0%) |
+| Guapimirim/RJ | 2 | 0 | 2 | 0 | 2 (100,0%) |
+| Carapicuíba/SP | 12 | 0 | 2 | 0 | 2 (16,7%) |
+| Novo Hamburgo/RS | 21 | 2 | 0 | 0 | 2 (9,5%) |
+| Maceió/AL | 13 | 0 | 0 | 1 | 1 (7,7%) |
+| Lauro de Freitas/BA | 27 | 1 | 0 | 0 | 1 (3,7%) |
+| Belo Horizonte/MG | 35 | 1 | 0 | 0 | 1 (2,9%) |
+| Contagem/MG | 16 | 1 | 0 | 0 | 1 (6,2%) |
+| Franco da Rocha/SP | 6 | 0 | 1 | 0 | 1 (16,7%) |
+| Itaquaquecetuba/SP | 9 | 0 | 1 | 0 | 1 (11,1%) |
+| Mogi das Cruzes/SP | 5 | 0 | 1 | 0 | 1 (20,0%) |
+| São Caetano do Sul/SP | 1 | 0 | 1 | 0 | 1 (100,0%) |
+
+<!-- estacoes:fim -->

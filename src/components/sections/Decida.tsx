@@ -5,7 +5,7 @@ import { LISTINGS } from "@/content/examples";
 import { DECIDA } from "@/content/ferramentas";
 import { SectionHeading } from "@/components/ui/Heading";
 import { RichText } from "@/components/ui/RichText";
-import { curto, moeda } from "@/lib/simulador/formato";
+import { curto, moeda, pct } from "@/lib/simulador/formato";
 import { juntar, miniSimulador, resumoItbi, totalCurto } from "./dados-landing";
 
 type Icone = (typeof DECIDA.tools)[number]["icon"];
@@ -201,20 +201,25 @@ export async function Decida() {
                         const k = i * colunas + j;
                         return (
                           <td key={cel.meses} className="p-0">
+                            {/* a visão que a página do imóvel abre: o lucro com o lance mínimo e o % ao ano (✓ atinge a meta) */}
                             <span
                               data-cell
                               style={{ ["--cell-delay" as string]: `${(0.35 + k * 0.04).toFixed(2)}s` }}
-                              className={`flex flex-col items-center gap-0.5 rounded-lg py-2 ${cel.atinge ? "bg-pos/10" : "bg-grave/10"} ${
+                              className={`flex flex-col items-center gap-1 rounded-lg py-2 ${cel.atingeMeta ? "bg-pos/10" : "bg-grave/10"} ${
                                 cel.escolhida ? "ring-2 ring-latao ring-offset-0" : ""
                               }`}
                             >
-                              <span className="text-[13px] leading-none font-semibold whitespace-nowrap text-luar tabular-nums">
-                                {cel.teto === null ? "—" : curto(cel.teto)}
+                              <span aria-hidden="true" className={`text-[13px] leading-none font-semibold whitespace-nowrap tabular-nums ${cel.lucro < 0 ? "text-grave-texto" : "text-luar"}`}>
+                                {cel.lucro < 0 ? "−" : ""}
+                                {curto(Math.abs(cel.lucro))}
                               </span>
-                              {cel.atinge ? <IconeOk className="size-3.5 text-pos" /> : <IconeNao className="size-3.5 text-grave-texto" />}
+                              <span aria-hidden="true" className="inline-flex items-center gap-0.5 text-[10.5px] leading-none whitespace-nowrap text-nevoa tabular-nums">
+                                {cel.atingeMeta ? <IconeOk className="size-3 text-pos" /> : <IconeNao className="size-3 text-grave-texto" />}
+                                {pct(cel.roiAA, 0)}
+                              </span>
                               <span className="sr-only">
-                                {cel.teto === null ? "" : `R$ ${cel.teto.toLocaleString("pt-BR")}, `}
-                                {cel.atinge ? c.atinge : c.naoAtinge}
+                                {cel.lucro < 0 ? "prejuízo de " : "lucro de "}
+                                {moeda(Math.abs(cel.lucro))}, {pct(cel.roiAA)} ao ano, {cel.atingeMeta ? c.atinge : c.naoAtinge}
                                 {cel.escolhida ? " (o cenário e o prazo do cartão)" : ""}
                               </span>
                             </span>
@@ -226,6 +231,7 @@ export async function Decida() {
                 </tbody>
               </table>
               <p className="mt-2 text-[12px] text-nevoa min-[480px]:hidden">{c.soBase}</p>
+              <p className="mt-2 text-[12px] leading-snug text-nevoa">{c.outraVisao}</p>
             </div>
 
             <p className="mt-5 text-[12px] leading-relaxed text-nevoa">

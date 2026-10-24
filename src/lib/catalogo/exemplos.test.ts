@@ -44,7 +44,19 @@ test("exemplos: os 6 da /assinante no formato do catálogo", async () => {
   for (const d of detalhes) {
     assert.match(d.descricao ?? "", /^Exemplo fictício/, d.id);
     assert.ok(d.links.every((l) => l.url.startsWith("https://")), d.id);
-    assert.equal(d.foto, null);
+    // foto ilustrativa (rodada 5): de um imóvel real da Caixa, sempre marcada como tal, uma por exemplo; o exemplo com
+    // risco grave fica sem (o desenho), para não ligar os riscos a um prédio real reconhecível
+    if (d.tags.some((t) => t.severidade === "grave")) {
+      assert.equal(d.foto, null, d.id);
+      assert.deepEqual(d.fotos, [], d.id);
+      assert.equal(d.fotoIlustrativa, undefined, d.id);
+    } else {
+      assert.match(d.foto ?? "", /^https:\/\/venda-imoveis\.caixa\.gov\.br\/fotos\/F\d{13}21\.jpg$/, d.id);
+      assert.equal(d.fotoIlustrativa, true, `${d.id}: rotulada como ilustrativa`);
+      assert.deepEqual(d.fotos, [d.foto], d.id);
+      assert.equal(d.totalFotos, 1, d.id);
+      assert.equal(resumoDe(d).fotoIlustrativa, true, `${d.id}: o resumo (cartões) leva o rótulo`);
+    }
     // tags: slugs da base (fora as duas sem equivalente), na ordem de gravidade
     for (const t of d.tags) {
       assert.ok(TAGS.some((x) => x.slug === t.slug) || ["sem-dividas-identificadas", "documentacao-regular"].includes(t.slug), `${d.id}: ${t.slug}`);

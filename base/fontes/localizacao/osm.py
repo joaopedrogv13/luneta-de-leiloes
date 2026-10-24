@@ -11,7 +11,10 @@ Categorias (uma por objeto; a primeira regra que casa vence):
 
 | categoria  | o que é | tags |
 |---|---|---|
-| trilho     | estação ou acesso de metrô, trem, VLT ou monotrilho | railway=station/halt (com public_transport ou o modo: estação velha só com railway=station fica fora), railway=tram_stop/subway_entrance; public_transport=station com train/subway/light_rail/tram/monorail=yes |
+| metro      | estação ou acesso de metrô | subway=yes, station=subway, railway=subway_entrance |
+| vlt        | estação ou parada de VLT (bonde moderno) | light_rail=yes, tram=yes, station=light_rail/tram, railway=tram_stop |
+| monotrilho | estação de monotrilho | monorail=yes, station=monorail |
+| trem       | estação de trem de passageiros | train=yes, station=train, railway=halt; railway=station sem o modo (o padrão do OSM) |
 | brt        | estação de BRT | nome, rede ou operador com "BRT" em estação, plataforma, terminal ou ponto de ônibus |
 | barca      | terminal de barcas | amenity=ferry_terminal |
 | terminal   | terminal de ônibus | amenity=bus_station; public_transport=station com bus=yes |
@@ -19,6 +22,12 @@ Categorias (uma por objeto; a primeira regra que casa vence):
 | praca      | praça | place=square; leisure=park ou highway=pedestrian (área) com nome "Praça ..." |
 | parque     | parque | leisure=park; landuse=recreation_ground |
 | playground | parquinho | leisure=playground |
+
+Trilhos (metro, vlt, monotrilho, trem): railway=station/halt só com public_transport ou o modo (estação velha só com
+railway=station fica fora), railway=tram_stop/subway_entrance, public_transport=station com o modo. Uma estação de
+mais de um modo (metrô e trem na mesma estação) sai uma vez em cada categoria. Sem o modo nas tags, vale o nome, a rede
+ou o operador ("Metrô", "VLT", "Monotrilho"); sem nada, trem (o padrão do OSM para railway=station). Até a rodada 4 os
+quatro eram uma categoria só, `trilho` (pois.py e metricas.py ainda leem arquivos antigos com ela).
 
 Fora: o que está desativado, abandonado, histórico, de carga ou só turístico (disused, abandoned, historic,
 railway:historic, usage=freight/tourism/military, railway=station com station=funicular é mantido) e lazer com
@@ -32,7 +41,9 @@ Recorte: só o que cai na caixa de alguma cidade da base (cidades-base.csv, que 
 endereço); estações, barcas e terminais com 5 km a mais (a distância até a estação vai até 5 km).
 
 Saída (pasta --saida):
-- `osm-pois.csv.gz`: `categoria,lat,lon,raio_m` (5 casas), com o aviso da ODbL nas primeiras linhas (começam com #);
+- `osm-pois.csv.gz`: `categoria,lat,lon,raio_m,nome,rede` (5 casas), com o aviso da ODbL nas primeiras linhas (começam
+  com #); `nome` e `rede` só nos trilhos: o nome da estação no OSM (vazio no acesso de metrô) e a rede ou o operador
+  (network, operator), que estacoes.py usa para separar trem de passageiros de estação antiga ou de carga;
 - `osm-LEIA-ME.txt`: licença, atribuição, data dos dados e como foi gerado;
 - `osm-cobertura.csv`: por cidade, quantos pontos de cada categoria caem na caixa (para medir a cobertura do OSM).
 
@@ -56,8 +67,9 @@ AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parents[2]
 CIDADES_PADRAO = RAIZ / "base" / "saida" / "localizacao" / "cidades-base.csv"
 
-CATEGORIAS = ["trilho", "brt", "barca", "terminal", "onibus", "praca", "parque", "playground"]
-ESTACOES = {"trilho", "brt", "barca", "terminal"}
+TRILHOS = ("metro", "trem", "vlt", "monotrilho")
+CATEGORIAS = [*TRILHOS, "brt", "barca", "terminal", "onibus", "praca", "parque", "playground"]
+ESTACOES = {*TRILHOS, "brt", "barca", "terminal"}
 LAZER = {"praca", "parque", "playground"}
 MARGEM_ESTACAO_KM = 5.0
 AREA_PEQUENA_M2 = 50_000
@@ -67,11 +79,14 @@ AVISO_ODBL = [
     "Dados do OpenStreetMap (c) contribuidores do OpenStreetMap, https://www.openstreetmap.org/copyright",
     "Disponibilizados sob a Open Database License (ODbL) 1.0: https://opendatacommons.org/licenses/odbl/1-0/",
     "Este arquivo é um banco de dados derivado do OpenStreetMap e também está sob a ODbL 1.0 (compartilhar pela mesma licença).",
-    "Gerado pela Luneta de Leilões (base/fontes/localizacao/osm.py): só categoria e coordenada; nenhum nome é gravado.",
+    "Gerado pela Luneta de Leilões (base/fontes/localizacao/osm.py): só categoria, coordenada e, nas estações de trilho, o nome da estação e a rede.",
 ]
 
 RE_BRT = re.compile(r"\bBRT\b", re.IGNORECASE)
 RE_PRACA = re.compile(r"^\s*pra[cç]a\b", re.IGNORECASE)
+RE_METRO = re.compile(r"\bmetr[oô]\b", re.IGNORECASE)
+RE_VLT = re.compile(r"\bVLT\b", re.IGNORECASE)
+RE_MONOTRILHO = re.compile(r"\bmonotrilho\b", re.IGNORECASE)
 SIM = {"yes", "true", "1"}
 
 
@@ -91,10 +106,36 @@ def desativado(t: dict) -> bool:
     return t.get("operational_status") in ("closed", "abandoned") or t.get("opening_hours") == "closed"
 
 
-def classificar(t: dict) -> str | None:
-    """Categoria do objeto pelas tags, ou None."""
+def modos_trilho(t: dict) -> list[str]:
+    """Os modos de uma estação de trilho (metro, vlt, monotrilho, trem), pelas tags; sem o modo, pelo nome, a rede ou o
+    operador; sem nada, trem (o padrão do OSM para railway=station)."""
+    st = t.get("station")
+    rail = t.get("railway")
+    modos = []
+    if t.get("subway") in SIM or st == "subway" or rail == "subway_entrance":
+        modos.append("metro")
+    if t.get("light_rail") in SIM or t.get("tram") in SIM or st in ("light_rail", "tram") or rail == "tram_stop":
+        modos.append("vlt")
+    if t.get("monorail") in SIM or st == "monorail":
+        modos.append("monotrilho")
+    if t.get("train") in SIM or st == "train" or (rail == "halt" and not modos):
+        modos.append("trem")
+    if modos:
+        return modos
+    nome = " ".join(str(t.get(k) or "") for k in ("name", "network", "operator", "official_name"))
+    if RE_MONOTRILHO.search(nome):
+        return ["monotrilho"]
+    if RE_VLT.search(nome):
+        return ["vlt"]
+    if RE_METRO.search(nome):
+        return ["metro"]
+    return ["trem"]
+
+
+def categorias(t: dict) -> list[str]:
+    """Categorias do objeto pelas tags ([] quando não entra). Só uma estação de trilho de mais de um modo tem mais de uma."""
     if not t or desativado(t):
-        return None
+        return []
     nome = " ".join(str(t.get(k) or "") for k in ("name", "network", "operator", "official_name"))
     pt = t.get("public_transport")
     rail = t.get("railway")
@@ -103,36 +144,62 @@ def classificar(t: dict) -> str | None:
     modo = any(t.get(k) in SIM for k in ("train", "subway", "light_rail", "tram", "monorail")) or t.get("station") in ("subway", "light_rail", "train", "monorail")
     if rail in ("station", "halt") and t.get("station") != "funicular" and not (t.get("tourism") or t.get("railway:tourism") in SIM):
         if pt in ("station", "stop_position", "platform") or modo:
-            return "trilho"
-        return None
+            return modos_trilho(t)
+        return []
     if rail in ("tram_stop", "subway_entrance"):
-        return "trilho"
+        return modos_trilho(t)
     if pt == "station" and modo:
-        return "trilho"
+        return modos_trilho(t)
     # BRT (antes de terminal e de ponto de ônibus)
     onibus_like = t.get("highway") == "bus_stop" or t.get("amenity") == "bus_station" or pt in ("station", "platform")
     if onibus_like and RE_BRT.search(nome):
-        return "brt"
+        return ["brt"]
     if t.get("amenity") == "ferry_terminal":
-        return "barca"
+        return ["barca"]
     if t.get("amenity") == "bus_station" or (pt == "station" and t.get("bus") in SIM):
-        return "terminal"
+        return ["terminal"]
     if t.get("highway") == "bus_stop" or (pt == "platform" and t.get("bus") in SIM):
-        return "onibus"
+        return ["onibus"]
     # lazer
     if t.get("access") in ("private", "no"):
-        return None
+        return []
     if t.get("place") == "square":
-        return "praca"
+        return ["praca"]
     if t.get("leisure") == "park":
-        return "praca" if RE_PRACA.search(t.get("name") or "") else "parque"
+        return ["praca" if RE_PRACA.search(t.get("name") or "") else "parque"]
     if t.get("highway") == "pedestrian" and t.get("area") in SIM and RE_PRACA.search(t.get("name") or ""):
-        return "praca"
+        return ["praca"]
     if t.get("landuse") == "recreation_ground":
-        return "parque"
+        return ["parque"]
     if t.get("leisure") == "playground":
-        return "playground"
-    return None
+        return ["playground"]
+    return []
+
+
+def classificar(t: dict) -> str | None:
+    """A primeira categoria do objeto (ou None)."""
+    cats = categorias(t)
+    return cats[0] if cats else None
+
+
+def nome_estacao(t: dict, categoria: str) -> str:
+    """O nome gravado: só em estação de trilho (o acesso de metrô fica sem nome: o nome dele é o da saída)."""
+    if categoria not in TRILHOS or t.get("railway") == "subway_entrance":
+        return ""
+    nome = str(t.get("name") or t.get("official_name") or "").strip()
+    return re.sub(r"\s+", " ", nome)[:80]
+
+
+def rede_estacao(t: dict, categoria: str) -> str:
+    """A rede e o operador de um trilho ("CPTM", "SuperVia", "Metrô Rio · Concessão Metroviária do Rio"); vazio fora dos trilhos."""
+    if categoria not in TRILHOS:
+        return ""
+    partes = []
+    for k in ("network", "operator"):
+        v = re.sub(r"\s+", " ", str(t.get(k) or "").strip())
+        if v and v not in partes:
+            partes.append(v)
+    return " · ".join(partes)[:120]
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -249,28 +316,29 @@ def reduzir(geojsonseq: Path, cidades: list[dict]) -> tuple[list[tuple], dict]:
         if k and k % 500_000 == 0:
             log(f"  {k} objetos lidos, {len(linhas)} pontos ({time.time() - t0:.0f} s)")
         cont["objetos"] += 1
-        cat = classificar(feat.get("properties") or {})
-        if not cat:
-            continue
-        cont[f"classificado:{cat}"] += 1
-        pontos = pontos_da_geometria(feat.get("geometry") or {}, cat)
-        indice = ix_est if cat in ESTACOES else ix
-        contou = False
-        for lat, lon, raio in pontos:
-            if not indice.dentro(lat, lon):
-                continue
-            chave = (cat, round(lat, 5), round(lon, 5))
-            if chave in vistos:
-                continue
-            vistos.add(chave)
-            linhas.append((cat, round(lat, 5), round(lon, 5), raio))
-            if not contou:
-                # cobertura: um objeto conta uma vez por cidade (pelo primeiro ponto dentro da caixa sem a margem extra)
-                for c in ix.dentro(lat, lon):
-                    cobertura[cidades[c]["codigo"]][cat] += 1
-                contou = True
-        if contou:
-            cont[f"gravado:{cat}"] += 1
+        props = feat.get("properties") or {}
+        for cat in categorias(props):
+            cont[f"classificado:{cat}"] += 1
+            pontos = pontos_da_geometria(feat.get("geometry") or {}, cat)
+            indice = ix_est if cat in ESTACOES else ix
+            nome = nome_estacao(props, cat)
+            rede = rede_estacao(props, cat)
+            contou = False
+            for lat, lon, raio in pontos:
+                if not indice.dentro(lat, lon):
+                    continue
+                chave = (cat, round(lat, 5), round(lon, 5))
+                if chave in vistos:
+                    continue
+                vistos.add(chave)
+                linhas.append((cat, round(lat, 5), round(lon, 5), raio, nome, rede))
+                if not contou:
+                    # cobertura: um objeto conta uma vez por cidade (pelo primeiro ponto dentro da caixa sem a margem extra)
+                    for c in ix.dentro(lat, lon):
+                        cobertura[cidades[c]["codigo"]][cat] += 1
+                    contou = True
+            if contou:
+                cont[f"gravado:{cat}"] += 1
     linhas.sort()
     return linhas, {"contagem": dict(cont), "cobertura": cobertura}
 
@@ -281,9 +349,10 @@ def gravar(saida: Path, linhas: list[tuple], extra: dict, cidades: list[dict], d
     for l in AVISO_ODBL:
         buf.write(f"# {l}\n")
     buf.write(f"# Dados do OSM de {data_osm or 'data não informada'} (Geofabrik, brazil-latest.osm.pbf)\n")
-    buf.write("categoria,lat,lon,raio_m\n")
-    for cat, lat, lon, raio in linhas:
-        buf.write(f"{cat},{lat:.5f},{lon:.5f},{raio}\n")
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(["categoria", "lat", "lon", "raio_m", "nome", "rede"])
+    for cat, lat, lon, raio, nome, rede in linhas:
+        w.writerow([cat, f"{lat:.5f}", f"{lon:.5f}", raio, nome, rede])
     with gzip.open(saida / "osm-pois.csv.gz", "wt", encoding="utf-8", compresslevel=9) as f:
         f.write(buf.getvalue())
     por_cat = collections.Counter(l[0] for l in linhas)
@@ -295,7 +364,7 @@ def gravar(saida: Path, linhas: list[tuple], extra: dict, cidades: list[dict], d
         f"Dados do OSM de: {data_osm or 'não informada'} (https://download.geofabrik.de/south-america/brazil-latest.osm.pbf)",
         f"Gerado em: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}",
         "Como: osmium tags-filter + osmium export (geojsonseq) + base/fontes/localizacao/osm.py (regras no topo do arquivo).",
-        "Colunas de osm-pois.csv.gz: categoria, lat, lon (5 casas), raio_m (parque pequeno: raio do círculo de mesma área).",
+        "Colunas de osm-pois.csv.gz: categoria, lat, lon (5 casas), raio_m (parque pequeno: raio do círculo de mesma área), nome e rede (só trilhos).",
         "",
         "Pontos por categoria:",
         *[f"  {c}: {por_cat.get(c, 0)}" for c in CATEGORIAS],

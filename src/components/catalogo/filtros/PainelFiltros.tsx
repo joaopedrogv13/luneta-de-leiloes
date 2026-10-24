@@ -21,6 +21,7 @@ import {
   ControleEstados,
   ControleFaixa,
   ControleLista,
+  ControleEstacoes,
   ControleMinimo,
   ControleNotaLocal,
   ControleSelo,
@@ -35,7 +36,7 @@ import type { Aplicar } from "./useAplicador";
 
 export const SECOES: readonly { id: SecaoFiltro; rotulo: string; grupos: readonly GrupoFiltro[] }[] = [
   { id: "local", rotulo: "Localização", grupos: ["uf", "cidade", "bairro"] },
-  { id: "nota", rotulo: "Nota de localização", grupos: ["notaLocal"] },
+  { id: "nota", rotulo: "Entorno", grupos: ["notaLocal", "metro"] },
   { id: "tipo", rotulo: "Tipo", grupos: ["tipo"] },
   { id: "valores", rotulo: "Valores", grupos: ["lance", "avaliacao", "desagio", "lanceM2"] },
   { id: "caracteristicas", rotulo: "Características", grupos: ["area", "quartos", "vagas"] },
@@ -73,6 +74,7 @@ const TRAVADO: Partial<Record<GrupoFiltro, { nome: string; texto?: string }>> = 
   natureza: { nome: "Natureza", texto: "Judicial ou extrajudicial" },
   fonte: { nome: "Fonte", texto: "Caixa, Leilões Judiciais e as outras fontes da base" },
   comFoto: { nome: "Com foto", texto: "Só os anúncios que publicam foto" },
+  metro: { nome: "Metrô a até 1 km", texto: "Estação de metrô a menos de 1 km do endereço" },
 };
 
 /**
@@ -378,24 +380,28 @@ export function PainelFiltros({
             </Campo>
           </Secao>
 
-          <Secao
-            uid={uid}
-            id="nota"
-            titulo="Nota de localização"
-            selo={secaoTravada(SECAO.nota) ? "Luneta" : undefined}
-            descricao={
-              travadoGrupo("notaLocal")
-                ? undefined
-                : "De 0 a 100: o entorno do imóvel comparado com onde moram as pessoas da mesma cidade. Imóveis sem nota (endereço só na cidade, cidade pequena, área rural) ficam de fora; a nota aproximada (só o bairro) conta pelo meio da faixa."
-            }
-          >
+          <Secao uid={uid} id="nota" titulo="Entorno do imóvel" selo={secaoTravada(SECAO.nota) ? "Luneta" : undefined}>
             {chamada("notaLocal", "Filtrar pela nota de localização é do plano Luneta", "Veja só os imóveis com o entorno acima de 60, 70 ou 80, comparado com a própria cidade.") ?? (
-              <ControleNotaLocal {...props} />
+              <Campo
+                rotulo="Nota de localização"
+                ajuda="De 0 a 100: o entorno do imóvel comparado com onde moram as pessoas da mesma cidade. Imóveis sem nota (endereço só na cidade, cidade pequena, área rural) ficam de fora; a nota aproximada (só o bairro) conta pelo meio da faixa."
+              >
+                <ControleNotaLocal {...props} />
+              </Campo>
             )}
             <Link href={ROTA_METODO_LOCAL} target="_blank" prefetch={false} className={`${LINK} -mt-2 self-start`}>
               Como a nota é calculada
               <span className="sr-only"> (abre em nova aba)</span>
             </Link>
+            <Divisor />
+            {trava("metro") ?? (
+              <Campo
+                rotulo="Metrô, trem ou VLT perto"
+                ajuda="Estação a menos de 1 km, em linha reta do ponto do endereço (OpenStreetMap). Só vale para endereço localizado no número ou na rua. Marcando dois, ficam os imóveis perto dos dois."
+              >
+                <ControleEstacoes {...props} />
+              </Campo>
+            )}
           </Secao>
 
           <Secao uid={uid} id="tipo" titulo="Tipo de imóvel">

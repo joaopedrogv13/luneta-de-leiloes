@@ -17,10 +17,19 @@ import type { ChaveComponenteLocal, ComponenteLocal, LocalizacaoImovel, Precisao
 /** Endereço da página pública do método (a página do imóvel leva até ela com ?de=<id>). */
 export const ROTA_METODO_LOCAL = "/metodologia/localizacao";
 
-/** Link da página do método vindo de um imóvel (o "Voltar ao imóvel" de lá usa o id e, no Lente, o plano). */
-export function rotaMetodoLocal(deId?: string | null, plano?: "lente" | "luneta") {
+/**
+ * Link da página do método vindo de um imóvel (o "Voltar ao imóvel" de lá usa o id, no Lente o plano e, para um imóvel
+ * real aberto na demonstração (a vitrine da /assinante), `c=assinante`: a volta é para a demonstração, não a prévia).
+ */
+export function rotaMetodoLocal(deId?: string | null, plano?: "lente" | "luneta", conjunto?: "previa" | "exemplos") {
   if (!deId) return ROTA_METODO_LOCAL;
-  return `${ROTA_METODO_LOCAL}?de=${encodeURIComponent(deId)}${plano === "lente" ? "&plano=lente" : ""}`;
+  const demo = conjunto === "exemplos" && !deId.startsWith("ex-");
+  return `${ROTA_METODO_LOCAL}?de=${encodeURIComponent(deId)}${plano === "lente" ? "&plano=lente" : ""}${demo ? "&c=assinante" : ""}`;
+}
+
+/** De que conjunto é o imóvel do "?de=" da página do método: os ex-* e os reais com `c=assinante` são da demonstração. */
+export function conjuntoDoMetodo(deId: string, c: string | null): "previa" | "exemplos" {
+  return deId.startsWith("ex-") || c === "assinante" ? "exemplos" : "previa";
 }
 
 /** Ids que a página do método aceita no "?de=" (os do catálogo: caixa-..., lj-..., ex-...). */

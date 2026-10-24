@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BACK_TO_SITE } from "@/components/assinante/shared";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoMark } from "@/components/ui/Logo";
+import { numero } from "@/lib/catalogo/rotulos";
 import type { Conjunto, Plano } from "@/lib/catalogo/tipos";
 import { TopoRecolhivel } from "./TopoRecolhivel";
 import { TrocaPlano } from "./TrocaPlano";
@@ -15,11 +16,26 @@ export const ALTURA_TOPO = "h-14 sm:h-16";
  * (ícone); logo (volta ao site), "Ver como: Lente | Luneta" (a mesma página no outro plano), tema e o convite ao
  * plano Luneta. No celular e no tablet ele sai de cena ao rolar para baixo (TopoRecolhivel).
  */
-export function TopoImovel({ conjunto, plano, id }: { conjunto: Conjunto; plano: Plano; id: string }) {
+export function TopoImovel({
+  conjunto,
+  plano,
+  id,
+  vitrine = null,
+}: {
+  conjunto: Conjunto;
+  plano: Plano;
+  id: string;
+  /** imóvel real da vitrine da demonstração */
+  vitrine?: { mostrados: number; totalBase: number } | null;
+}) {
   const faixa =
     conjunto === "previa"
       ? "Prévia interna com dados reais · classificação automática ainda sem revisão humana · selos desligados"
-      : "Demonstração com exemplos fictícios · sem login";
+      : vitrine
+        ? `Demonstração · imóvel real da vitrine (${numero(vitrine.mostrados)} de ${numero(vitrine.totalBase)}) · classificação automática ainda sem revisão humana · sem login`
+        : "Demonstração com exemplo fictício · sem login";
+  // celular: a faixa da vitrine em até duas linhas (as contagens estão no aviso logo abaixo)
+  const faixaCurta = vitrine && conjunto !== "previa" ? "Demonstração · imóvel real · classificação ainda sem revisão humana" : null;
   return (
     <>
       <a
@@ -33,7 +49,14 @@ export function TopoImovel({ conjunto, plano, id }: { conjunto: Conjunto; plano:
         className="bg-latao px-4 py-1.5 text-center text-[12px] leading-snug font-semibold text-noite-fixa sm:text-[13px]"
       >
         {/* tela baixa: numa linha só */}
-        <p className="baixa:truncate">{faixa}</p>
+        {faixaCurta ? (
+          <p className="baixa:truncate">
+            <span className="sm:hidden">{faixaCurta}</span>
+            <span className="max-sm:hidden">{faixa}</span>
+          </p>
+        ) : (
+          <p className="baixa:truncate">{faixa}</p>
+        )}
       </aside>
       {/* celular deitado (pouca altura): o cabeçalho rola junto e a navegação das seções cola no topo. Celular e
           tablet: sai de cena ao rolar para baixo e volta ao rolar para cima (TopoRecolhivel marca o <html>) */}

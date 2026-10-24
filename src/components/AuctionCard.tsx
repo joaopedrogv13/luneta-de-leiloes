@@ -1,13 +1,21 @@
-import Image from "next/image";
 import { brl, formatDate, listingLabel, type Listing } from "@/content/examples";
+import { estiloRecorte } from "@/lib/catalogo/recorte";
 import { Seal, SEAL_NAMES } from "@/components/ui/Seal";
 import { Tag } from "@/components/ui/Tag";
+import { FotoDaFonte } from "@/components/ui/FotoDaFonte";
 
 const RING_LABEL = ["só tags", "1 anel", "2 anéis", "3 anéis"] as const;
 
-/** Moldura de lente: anel de latão + um anel externo por nível de selo. */
+/**
+ * Moldura de lente: anel de latão + um anel externo por nível de selo. A foto é um <img> simples direto da fonte (nada
+ * de next/image: a foto da Caixa fica na Caixa), com largura e altura fixas (sem CLS), preguiçosa e sem referrer. O
+ * desenho listrado fica por baixo: sem foto, ou se ela não carregar, é ele que aparece. A foto quebrada sai do DOM pela
+ * ilha `FotoDaFonte` (com largura e altura fixas, o Chromium desenharia o ícone de imagem quebrada mesmo com alt vazio),
+ * que também marca o cartão (`data-foto="falhou"`) para o rótulo "foto ilustrativa" sumir.
+ */
 function LensPhoto({ listing, size }: { listing: Listing; size: number }) {
   const { seal } = listing;
+  const foto = listing.photo ?? listing.photoIlustrativa?.url ?? null;
   const rings =
     seal === 3
       ? "border-[3px] border-latao shadow-[0_0_0_3px_var(--tinta),0_0_0_4.5px_#C9A24D,0_0_0_9px_var(--tinta),0_0_0_10.5px_#C9A24D,0_0_28px_rgba(var(--luar-rgb),.35)]"
@@ -21,30 +29,37 @@ function LensPhoto({ listing, size }: { listing: Listing; size: number }) {
       className={`relative shrink-0 overflow-hidden rounded-full transition-shadow duration-300 ${rings}`}
       style={{ width: size, height: size }}
     >
-      {listing.photo ? (
-        <Image
-          src={listing.photo}
-          alt={`Foto do imóvel: ${listing.title}, ${listing.place}`}
-          fill
-          sizes={`${size}px`}
-          className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-        />
-      ) : (
-        <div
-          role="img"
-          aria-label="Foto do imóvel ainda não disponível"
-          className={`photo-placeholder flex h-full w-full items-center justify-center text-center font-mono text-[10px] leading-tight text-nevoa transition-transform duration-500 group-hover:scale-[1.04] ${
-            seal === 0 ? "blur-[1px]" : seal === 1 ? "blur-[0.4px]" : ""
-          }`}
-        >
-          foto do
-          <br />
-          imóvel
-        </div>
+      <div
+        role={foto ? undefined : "img"}
+        aria-label={foto ? undefined : "Foto do imóvel ainda não disponível"}
+        aria-hidden={foto ? true : undefined}
+        className={`photo-placeholder flex h-full w-full items-center justify-center text-center font-mono text-[10px] leading-tight text-nevoa transition-transform duration-500 group-hover:scale-[1.04] ${
+          seal === 0 ? "blur-[1px]" : seal === 1 ? "blur-[0.4px]" : ""
+        }`}
+      >
+        foto do
+        <br />
+        imóvel
+      </div>
+      {foto && (
+        <span className="absolute inset-0 overflow-hidden rounded-full">
+          <FotoDaFonte
+            src={foto}
+            size={size}
+            style={estiloRecorte(listing.photoIlustrativa?.recorte)}
+            className="absolute inset-0 size-full object-cover transition-[scale] duration-500 group-hover:scale-[1.04] motion-reduce:transition-none"
+          />
+        </span>
       )}
     </div>
   );
 }
+
+/** A foto do cartão é de outro imóvel (exemplo fictício com foto ilustrativa). */
+const fotoIlustrativa = (l: Listing) => !!l.photoIlustrativa && !l.photo;
+
+/** Rótulo do alto do cartão: "Exemplo fictício · foto ilustrativa" quando a foto é de outro imóvel. */
+const rotuloCartao = (l: Listing) => (fotoIlustrativa(l) ? `${listingLabel(l)} · foto ilustrativa` : listingLabel(l));
 
 /**
  * Cartão de leilão: foto em moldura de lente, endereço parcial, avaliação, lance mínimo, deságio,
@@ -72,8 +87,9 @@ export function AuctionCard({
 
   return (
     <article
-      aria-label={`${listingLabel(l)}: ${l.title}, ${l.place}, ${SEAL_NAMES[l.seal]}`}
-      className={`group relative isolate overflow-hidden rounded-[20px] bg-tinta transition-[transform,border-color,box-shadow] duration-300 ease-luneta hover:-translate-y-1 ${
+      aria-label={`${rotuloCartao(l)}: ${l.title}, ${l.place}, ${SEAL_NAMES[l.seal]}`}
+      data-foto={l.photo || l.photoIlustrativa ? "fonte" : undefined}
+      className={`group group/foto relative isolate overflow-hidden rounded-[20px] bg-tinta transition-[transform,border-color,box-shadow] duration-300 ease-luneta hover:-translate-y-1 ${
         compact ? "p-4" : "p-6"
       } ${
         alvo
@@ -98,7 +114,22 @@ export function AuctionCard({
         </>
       )}
 
-      <p className="text-[10px] font-medium tracking-[0.14em] text-nevoa uppercase">{listingLabel(l)}</p>
+      {/* cada parte quebra inteira (nunca "foto" numa linha e "ilustrativa" na outra); a mira do Alvo fica à direita.
+          Se a foto não carregar, o "· foto ilustrativa" some com ela (data-foto="falhou", marcado pela FotoDaFonte). */}
+      <p className={`text-[10px] font-medium tracking-[0.14em] text-nevoa uppercase ${alvo && !locked ? "pr-12" : ""}`}>
+        {fotoIlustrativa(l) ? (
+          <>
+            {/* quebrando, o ponto fica no fim da 1ª linha: "Exemplo fictício ·" / "foto ilustrativa" */}
+            <span className="whitespace-nowrap">
+              {listingLabel(l)}
+              <span className="group-data-[foto=falhou]/foto:hidden"> ·</span>
+            </span>{" "}
+            <span className="whitespace-nowrap group-data-[foto=falhou]/foto:hidden">foto ilustrativa</span>
+          </>
+        ) : (
+          listingLabel(l)
+        )}
+      </p>
 
       <div className="mt-4 flex items-center gap-3.5">
         <LensPhoto listing={l} size={compact ? 64 : 84} />

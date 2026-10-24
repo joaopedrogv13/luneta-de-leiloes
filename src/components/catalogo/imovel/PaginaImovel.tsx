@@ -3,6 +3,7 @@ import { BACK_TO_SITE } from "@/components/assinante/shared";
 import type { EntradaSimulador } from "@/components/simulador";
 import { cidadePequena, linhaResumoNota, ondeRisco } from "@/lib/catalogo/nota-texto";
 import { pode } from "@/lib/catalogo/planos";
+import { CTA_VITRINE, fraseVitrine } from "@/lib/catalogo/vitrine-textos";
 import type { Conjunto, PaginaImovel as DadosPagina, LocalizacaoImovel, Plano } from "@/lib/catalogo/tipos";
 import { CabecalhoImovel } from "./CabecalhoImovel";
 import { ProvedorImovel } from "./ContextoImovel";
@@ -22,6 +23,7 @@ import { SecaoRegiaoTravada, SecaoSimuladorTravada } from "./SecoesTravadas";
 import { TopoImovel } from "./TopoImovel";
 import { GradeImovel, LateralRecolhivel, PilulaResumo } from "./ResumoRecolhivel";
 import styles from "./imovel.module.css";
+import { AvisoVitrineImovel } from "./AvisoVitrineImovel";
 import { VoltarBusca } from "./VoltarBusca";
 
 /**
@@ -138,13 +140,15 @@ export function PaginaImovel({
 
   return (
     <ProvedorImovel conjunto={conjunto} plano={plano} id={i.id}>
-      <TopoImovel conjunto={conjunto} plano={plano} id={i.id} />
+      <TopoImovel conjunto={conjunto} plano={plano} id={i.id} vitrine={pagina.vitrine ?? null} />
 
       <main id="conteudo" tabIndex={-1} className="mx-auto max-w-[1280px] px-4 pb-16 outline-none sm:px-6 lg:px-8 2xl:max-w-[1440px]">
         {/* no celular e em tela baixa, "voltar à busca" é o ícone do cabeçalho */}
         <div className="py-4 max-sm:hidden baixa:hidden">
           <VoltarBusca conjunto={conjunto} plano={plano} />
         </div>
+        {/* imóvel real da vitrine da demonstração: quantos a vitrine mostra e o convite para ver todos */}
+        {pagina.vitrine && <AvisoVitrineImovel mostrados={pagina.vitrine.mostrados} totalBase={pagina.vitrine.totalBase} />}
 
         <GradeImovel recolhidoNoServidor={resumoRecolhido} className="grid md:gap-y-6 sm:baixa:pt-4">
           <div className={`min-w-0 ${styles.galeria}`}>
@@ -152,6 +156,8 @@ export function PaginaImovel({
               fotos={i.fotos}
               tipo={i.tipo}
               titulo={i.titulo}
+              ilustrativa={!!i.fotoIlustrativa}
+              recorte={i.fotoRecorte ?? null}
               semFotoTexto={exemplo ? "Exemplo fictício: sem fotos" : "A fonte não publicou fotos deste imóvel"}
             />
           </div>
@@ -186,7 +192,7 @@ export function PaginaImovel({
             <div className="@container mt-8 [&>*+*]:mt-14 sm:[&>*+*]:mt-20">
               <SecaoResumo imovel={i} agora={agora} />
               <SecaoRiscos imovel={i} plano={plano} selosDesligados={pagina.selosDesligados} />
-              <SecaoLocalizacao imovel={i} localizacao={pagina.localizacao} travada={pagina.travas.includes("localizacao")} />
+              <SecaoLocalizacao imovel={i} localizacao={pagina.localizacao} travada={pagina.travas.includes("localizacao")} conjunto={conjunto} />
               {pode(plano, "simulador") ? (
                 <SecaoSimulador imovel={entradaSimulador} referencias={pagina.vizinhanca.referencias} />
               ) : (
@@ -208,9 +214,14 @@ export function PaginaImovel({
             </p>
             <p>
               {exemplo
-                ? "Exemplos fictícios, para demonstrar a área do assinante."
+                ? `Exemplos fictícios, para demonstrar a área do assinante.${i.fotoIlustrativa ? " A foto é ilustrativa: de um imóvel real parecido, de outro endereço." : ""}`
                 : "Fotos e anúncios pertencem às fontes; a foto aparece direto do site de origem e, se não carregar, fica o desenho no lugar."}
             </p>
+            {pagina.vitrine && (
+              <p>
+                <strong className="font-semibold text-luar">{fraseVitrine(pagina.vitrine.mostrados, pagina.vitrine.totalBase)}</strong> {CTA_VITRINE}
+              </p>
+            )}
           </div>
           <Link href={BACK_TO_SITE} prefetch={false} className="inline-flex min-h-11 items-center font-medium text-latao-texto underline-offset-4 hover:text-luar hover:underline">
             <span aria-hidden="true">←&nbsp;</span>Voltar ao site

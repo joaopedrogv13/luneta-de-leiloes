@@ -1373,7 +1373,7 @@ function EdLance({
             ativo={qual === "outro"}
             aoEscolher={() => mudarEstado((x) => ({ ...x, meuLance: outro ?? Math.round(lance), lanceDetalhe: "meu" }))}
             titulo="Outro valor"
-            detalhe={pal.fixo ? "para comparar; vale também para a tabela, na visão “Lucro pelo preço”" : "vale também para a tabela, na visão “Lucro com meu lance”"}
+            detalhe={pal.fixo ? "para comparar; vale também para a tabela, na visão “Lucro pelo preço”" : "vale também para a tabela, na visão “Lucro com o meu lance”"}
           >
             <CampoNumero
               valor={qual === "outro" ? rascunho.meuLance : outro}

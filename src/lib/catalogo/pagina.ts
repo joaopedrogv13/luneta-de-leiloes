@@ -7,6 +7,7 @@ import type { DadosConjunto } from "./conjuntos";
 import { coberturaPrecos, contarPorCidade, itbiDaCidade, referenciasItbi, type DadosItbi } from "./itbi";
 import { aplicarPlanoPagina, pode } from "./planos";
 import type { ImovelResumo, PaginaImovel, Plano } from "./tipos";
+import { contarAtivos } from "./vitrine";
 import { vizinhanca } from "./vizinhanca";
 
 /** Imóveis da base por cidade (para a tabela de cobertura), contados uma vez por lista. */
@@ -27,6 +28,11 @@ function contagemPorCidade(itens: readonly ImovelResumo[]): Map<string, number> 
  * é lida), preço da região (`referencias: []`, e o ITBI nem é calculado) e buscas nos portais (`buscasExternas: []`).
  * A cobertura de preços (de quais cidades a Luneta tem o dado) e os parecidos continuam: são do Lente. `travas` lista o
  * que falta.
+ *
+ * Vitrine da demonstração (`d.origemDe`): o imóvel é montado com os dados do conjunto de origem (o real, com a região,
+ * o ITBI e a nota da base inteira; o fictício, com os exemplos). Os parecidos ficam só os que estão na vitrine (os
+ * outros não têm página na demonstração): `parecidosForaDaVitrine` diz quantos ficaram de fora, e `vitrine`, quantos a
+ * vitrine mostra e quantos a base tem.
  */
 export async function montarPaginaImovel(
   d: DadosConjunto,
@@ -35,27 +41,40 @@ export async function montarPaginaImovel(
   itbi: DadosItbi,
   agora: Date = new Date(),
 ): Promise<PaginaImovel | null> {
-  const k = d.posicao.get(id);
+  if (!d.posicao.has(id)) return null;
+  // a vitrine monta cada imóvel pelo conjunto de onde ele vem
+  const o = d.origemDe?.(id) ?? d;
+  const k = o.posicao.get(id);
   if (k === undefined) return null;
   const veRegiao = pode(plano, "regiao");
   const veLocal = pode(plano, "localizacao");
-  const [detalhe, localizacao] = await Promise.all([d.detalhe(id), veLocal ? d.localizacao(id) : Promise.resolve(null)]);
+  const [detalhe, localizacao] = await Promise.all([o.detalhe(id), veLocal ? o.localizacao(id) : Promise.resolve(null)]);
   if (!detalhe) return null;
-  const item = d.itens[k]!;
-  const contexto = d.contexto(k);
-  const viz = vizinhanca(item, d.itens, agora, contexto);
-  const previa = d.conjunto === "previa";
+  const item = o.itens[k]!;
+  const contexto = o.contexto(k);
+  const viz = vizinhanca(item, o.itens, agora, contexto);
+  const previa = o.conjunto === "previa";
   // ITBI também nos exemplos: o imóvel é fictício, mas o bairro e a cidade são reais (e a tela diz "Exemplo fictício")
   const precos = veRegiao ? referenciasItbi(itbiDaCidade(itbi, item), item, contexto.rua ?? null) : [];
+  // na vitrine, só os parecidos que também estão nela têm página na demonstração
+  const vitrine = o !== d && d.vitrine && o === d.vitrine.base;
+  const parecidos = vitrine ? viz.parecidos.filter((p) => d.posicao.has(p.id)) : viz.parecidos;
   // o que o plano não vê sai aqui (planos.ts › aplicarPlanoPagina, testado em planos.test.ts e pagina.test.ts)
   return aplicarPlanoPagina(
     {
       imovel: detalhe,
-      vizinhanca: { ...viz, referencias: [...viz.referencias, ...precos], cobertura: coberturaPrecos(itbi, item, previa ? contagemPorCidade(d.itens) : null) },
-      selosDesligados: d.selosDesligados,
-      sobre: d.sobre,
+      vizinhanca: {
+        ...viz,
+        parecidos,
+        referencias: [...viz.referencias, ...precos],
+        cobertura: coberturaPrecos(itbi, item, previa ? contagemPorCidade(o.itens) : null),
+        ...(vitrine ? { parecidosForaDaVitrine: viz.parecidos.length - parecidos.length } : {}),
+      },
+      selosDesligados: o.selosDesligados,
+      sobre: o.sobre,
       localizacao,
       travas: [],
+      ...(vitrine ? { vitrine: { mostrados: contarAtivos(d.indice.itens, agora), totalBase: contarAtivos(o.itens, agora) } } : {}),
     },
     plano,
   );

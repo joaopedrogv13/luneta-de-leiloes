@@ -10,7 +10,7 @@ type Errors = Partial<Record<Field, string>>;
 
 const INTENTS: Record<string, string> = {
   ...Object.fromEntries(PLANS.plans.map((p) => [p.id, p.id === "telescopio" ? "Falar sobre o Telescópio" : `Assinar ${p.name}`])),
-  advogado: "Falar com um advogado especialista",
+  especialista: "Falar com um especialista",
 };
 
 /** (11) 91234-5678 enquanto digita. */
@@ -40,7 +40,7 @@ export function validate(v: Values): Errors {
 /**
  * Formulário curto (nome, e-mail, WhatsApp) com validação no front e consentimento LGPD.
  * NÃO envia dados: ao validar, mostra a confirmação "Mira ajustada" (demonstração).
- * Botões de plano/advogado com data-intent marcam o assunto do contato.
+ * Botões de plano/especialista com data-intent marcam o assunto do contato.
  */
 export function LeadForm() {
   const id = useId();
@@ -52,7 +52,7 @@ export function LeadForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const doneRef = useRef<HTMLDivElement>(null);
 
-  // Clique em "Assinar Luneta", "Quero falar com um advogado" etc. → marca o assunto do contato.
+  // Clique em "Assinar Luneta", "Quero falar com um especialista" etc. → marca o assunto do contato.
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       const el = (e.target as HTMLElement).closest<HTMLElement>("[data-intent]");

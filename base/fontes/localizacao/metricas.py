@@ -66,7 +66,8 @@ CONTAGENS = {
     "comercio_1k": (("estab",), RAIO_SERVICO_M),
     "onibus_500": (("onibus",), RAIO_COMERCIO_M),
 }
-ESTACOES = ("trilho", "brt", "barca", "terminal")
+# metro, trem, vlt e monotrilho desde a rodada 5 (osm.py); "trilho" é a categoria única dos arquivos antigos
+ESTACOES = ("metro", "trem", "vlt", "monotrilho", "trilho", "brt", "barca", "terminal")
 LAZER = ("praca", "parque", "playground")
 CAMADAS = ["dom", "dom_r4", "r4", "dom_r6", "r6", "dom_ent", "pav", "calc", "ilum", "onib", "dom_esg", "esg", "dom_sem"]
 INDICADORES = [*CONTAGENS, "estacao_m", "parque_m", "renda", "pavimentacao", "calcada", "iluminacao", "onibus_face", "esgoto"]

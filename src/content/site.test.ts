@@ -6,15 +6,17 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { createJiti } from "jiti";
 import { FILTROS_AVANCADOS_CURTO, FILTROS_LENTE, pode, RECURSOS, RECURSOS_LUNETA } from "../lib/catalogo/planos";
-import { PRODUTO } from "../lib/catalogo/produto";
+import { ALERTA_PRACA, FAVORITOS_CHAMADA, PRODUTO, TOAST_FAVORITADO } from "../lib/catalogo/produto";
 import { CONVITE, CONVITE_PADRAO } from "../components/catalogo/planos/textos";
 import { PESOS_PADRAO, ROTULO_COMPONENTE } from "../lib/catalogo/localizacao";
 import { ESTADO_INICIAL } from "../lib/simulador/estado";
+import { simulacaoCompleta, VISAO_PADRAO } from "../lib/simulador/completa";
+import { converterExemplos } from "../lib/catalogo/exemplos";
 import { metaComoObjetivo } from "../lib/simulador/textos";
 import { EXEMPLO_LANDING, miniNota, miniSimulador, resumoItbi, totalCurto } from "../components/sections/dados-landing";
 import type { Filtros } from "../lib/catalogo/tipos";
@@ -23,7 +25,23 @@ import { AVISO_CLASSIFICACAO, AVISO_SIMULADOR } from "./avisos";
 import { DECIDA, NOTA_LOCAL } from "./ferramentas";
 import { POR_DENTRO } from "./por-dentro";
 import * as SITE_TS from "./site";
-import { FAQ, FILTERS, FILTROS_PROMETIDOS, FOOTER, HERO, NAV_LINKS, PLANS, SOLUTION, type FiltroSemLugar } from "./site";
+import {
+  CANCELAMENTO,
+  EXAMPLES,
+  FAQ,
+  FILTERS,
+  FILTROS_PROMETIDOS,
+  FOOTER,
+  HERO,
+  LAWYER,
+  LEVELS,
+  NAV_LINKS,
+  PLANS,
+  PRACAS,
+  SOCIAL,
+  SOLUTION,
+  type FiltroSemLugar,
+} from "./site";
 
 const RAIZ = process.cwd();
 const AGORA = new Date("2026-10-18T15:00:00Z");
@@ -227,6 +245,17 @@ test("simulador: o exemplo da landing confere com o motor real (Dê no máximo R
   // o que o relatório mediu: base a 6 e 12 meses atinge, a 18 não; otimista a 18 atinge; conservador a 12 não
   const base = s.linhas.find((l) => l.cenario === "base")!.celulas.map((c) => c.atinge);
   assert.deepEqual(base, [true, true, false, false]);
+  // a tabela da miniatura está na visão que a página abre (rodada 5, decisão 6): o lucro com o lance mínimo. Com o lance
+  // mínimo abaixo do lance máximo, o retorno passa da meta, e vice-versa (as duas visões contam a mesma história)
+  assert.equal(VISAO_PADRAO, "lucro");
+  for (const l of s.linhas) for (const c of l.celulas) if (c.teto !== null && Math.abs(c.teto - s.lanceMinimo) > 500) assert.equal(c.atingeMeta, c.atinge, `${l.cenario} ${c.meses}`);
+  // os mesmos números da página do exemplo (o simulador com o estado inicial e o lance mínimo)
+  const d = converterExemplos(listings, AGORA).find((x) => x.id === `ex-${EXEMPLO_LANDING}`)!;
+  const r = simulacaoCompleta(d, ESTADO_INICIAL);
+  assert.equal(r.visao, "lucro");
+  const conservador6 = s.linhas[0]!.celulas[0]!;
+  assert.equal(conservador6.lucro, Math.round(r.tabela![0]![0]!.comMeuLance.lucro));
+  assert.ok(DECIDA.card.matrizUnidade.startsWith("lucro com o lance mínimo"));
   assert.equal(EXEMPLO_LANDING, "alvo-sp");
   assert.ok(DECIDA.demoHref.includes(`ex-${EXEMPLO_LANDING}`));
 });
@@ -303,4 +332,119 @@ test("landing: hero, solução e Por dentro com os textos da rodada 4", () => {
   assert.ok(SOLUTION.cards.some((c) => c.title === "A página inteira do imóvel"));
   assert.ok(!SOLUTION.cards.some((c) => /sem você precisar ler/.test(c.text)), "o edital continua precisando ser lido");
   assert.ok(POR_DENTRO.luneta.points.some((p) => p.icon === "calc"));
+});
+
+/** Os arquivos .ts e .tsx de src/ (sem os testes), para varrer textos que vão à tela. */
+function fontesDoSite(dir = join(RAIZ, "src"), saida: string[] = []): string[] {
+  for (const nome of readdirSync(dir)) {
+    const caminho = join(dir, nome);
+    if (statSync(caminho).isDirectory()) fontesDoSite(caminho, saida);
+    else if (/\.tsx?$/.test(nome) && !/\.test\.ts$/.test(nome)) saida.push(caminho);
+  }
+  return saida;
+}
+/** O código sem os comentários (os comentários internos podem falar do advogado parceiro; a tela, não). */
+const semComentarios = (codigo: string) => codigo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
+
+test("rodada 5 (2): nenhuma frase da tela fala em advogado; o contato é com um especialista", () => {
+  // as duas exceções: a linha da OAB (pedida pelo dono) e o custo da ação de despejo no simulador (honorários de
+  // advogado são um custo real da ação, não um contato)
+  const permitidas = [/Quando o especialista for advogado/, /\(advogado e custas\)/];
+  for (const arquivo of fontesDoSite()) {
+    let codigo = semComentarios(readFileSync(arquivo, "utf8"));
+    for (const p of permitidas) codigo = codigo.replace(p, "");
+    assert.ok(!/advogad/i.test(codigo), `${arquivo.replace(RAIZ, "")} ainda fala em advogado`);
+  }
+  assert.equal(LAWYER.oab, "Quando o especialista for advogado, a publicidade segue as regras da OAB.");
+  assert.equal(LAWYER.cta, "Quero falar com um especialista");
+  assert.ok(NAV_LINKS.some((l) => l.href === "#especialista" && l.label === "Falar com especialista"));
+  assert.ok(PLANS.features.some((f) => f.label === "Prioridade para falar com um especialista"));
+  assert.match(AVISO_CLASSIFICACAO, /avaliação de um especialista/);
+  assert.match(FOOTER.legal, /avaliação de um especialista/);
+  assert.ok(FAQ.items.some((f) => f.q === "Como falo com um especialista?"));
+});
+
+test("rodada 5 (12): sem \"Suporte dedicado\" nos planos nem nos textos", () => {
+  const tudo = [...textos(SITE_TS), ...textos(POR_DENTRO), ...textos(CONVITE), ...textos(CONVITE_PADRAO), ...textos(RECURSOS_LUNETA)];
+  for (const t of tudo) assert.ok(!/suporte dedicado/i.test(t), t);
+  assert.ok(!PLANS.features.some((f) => /suporte/i.test(f.label)));
+});
+
+test("rodada 5 (13): \"Cancele grátis em até 7 dias\", sem colchete no 7 e sem prometer mais", () => {
+  assert.equal(CANCELAMENTO.selo, "Cancele grátis em até 7 dias");
+  assert.equal(HERO.garantia, CANCELAMENTO.selo);
+  // o [7] perdeu os colchetes em todo lugar (o dono confirmou os 7 dias)
+  for (const t of [...textos(SITE_TS), ...textos(POR_DENTRO)]) assert.ok(!/\[7\]/.test(t), t);
+  assert.equal(SOCIAL.guarantee, "7 dias");
+  const faq = FAQ.items.find((f) => f.q === "Posso cancelar quando quiser?");
+  assert.ok(faq, "a pergunta do cancelamento");
+  assert.match(faq.a, /7 dias/);
+  assert.match(faq.a, /art\. 49/);
+  assert.ok(!/\[[^\]]+\]/.test(faq.a), "sem placeholder: entra no JSON-LD");
+  // a pergunta sobe para o começo do FAQ (mais destaque)
+  assert.ok(FAQ.items.indexOf(faq) <= 3, "o cancelamento entre as primeiras perguntas");
+  assert.match(PLANS.note, /Cancele grátis em até 7 dias/);
+  assert.match(POR_DENTRO.luneta.ctaNote, /Cancele grátis em até 7 dias/);
+  // nada de prometer reembolso de outra forma, prazo maior ou "dinheiro de volta"
+  for (const t of [...textos(SITE_TS), ...textos(POR_DENTRO)]) {
+    assert.ok(!/reembols|dinheiro de volta|\b(8|9|[1-9][0-9]) dias para cancelar/i.test(t), t);
+  }
+  // o selo fica perto de cada botão de assinar
+  const fonte = (f: string) => readFileSync(join(RAIZ, "src", "components", f), "utf8");
+  for (const f of ["hero/HeroScene.tsx", "PlansTable.tsx", "sections/FinalCta.tsx", "MobileCtaBar.tsx"]) assert.match(fonte(f), /<SeloCancelamento/, f);
+});
+
+test("rodada 5 (8): o alerta de mudança de praça no marketing, e a demonstração sem prometer o envio que ainda não existe", () => {
+  // o dono decidiu promover o alerta (PRODUTO.alertaPraca); o envio de verdade depende do back-end
+  assert.equal(PRODUTO.alertaPraca, true);
+  assert.ok(PRACAS.mostrarAlerta);
+  assert.equal(PRACAS.passos.length, 3);
+  assert.match(PRACAS.passos[0].texto, /coração/);
+  assert.match(PRACAS.passos[2].texto, /novo lance mínimo e a data/);
+  assert.ok(FAQ.items.some((f) => f.q === "Como recebo o aviso quando a praça muda?" && /novo lance mínimo e a data/.test(f.a)));
+  assert.ok(PLANS.features.some((f) => f.grupo === "Acompanhar" && /Alerta por e-mail/.test(f.label) && f.luneta && !f.lente));
+  assert.match(FAVORITOS_CHAMADA, /e-mail quando a praça mudar/);
+  if (!PRODUTO.envioDeEmail) {
+    // a demonstração diz que é demonstração e que o envio começa no lançamento; nenhum e-mail é prometido para já
+    assert.match(ALERTA_PRACA.demonstracao ?? "", /o envio de e-mails começa no lançamento/);
+    assert.match(ALERTA_PRACA.ligado, /começa no lançamento/);
+    assert.ok(!/você será avisado/i.test(TOAST_FAVORITADO), TOAST_FAVORITADO);
+    // o back-end está anotado como obrigatório antes do lançamento
+    const pendencias = readFileSync(join(RAIZ, "PENDENCIAS.md"), "utf8");
+    assert.match(pendencias, /Back-end: favoritos e alerta de mudança de praça \(obrigatório antes do lançamento\)/);
+  }
+});
+
+test("rodada 5 (10): os links da landing para a demonstração vão direto à seção certa de um exemplo que existe", async () => {
+  const exemplos = await carregarExemplos();
+  const ids = new Set(exemplos.map((l) => `ex-${l.id}`));
+  const pagina = readFileSync(join(RAIZ, "src", "components", "catalogo", "imovel", "PaginaImovel.tsx"), "utf8");
+  const secoes = new Set(Array.from(pagina.matchAll(/\{ id: "([a-z-]+)", rotulo:/g), (m) => m[1]));
+  assert.ok(secoes.has("simulador") && secoes.has("riscos") && secoes.has("localizacao"), "as seções da página do imóvel");
+  const links = [DECIDA.demoHref, NOTA_LOCAL.demoHref, LEVELS.demoHref, PRACAS.demoHref, ...["alvo-sp", "namira-pr", "promissor-ba", "semselo-rj"].map(EXAMPLES.demoHref)];
+  for (const href of links) {
+    const m = /^\/assinante\/imovel\/([a-z0-9-]+)(?:#([a-z-]+))?$/.exec(href);
+    assert.ok(m, href);
+    assert.ok(ids.has(m[1]!), `${href}: o exemplo não existe`);
+    if (m[2]) assert.ok(secoes.has(m[2]) || m[2] === "alerta-praca", `${href}: a seção não existe`);
+  }
+  assert.match(DECIDA.demoHref, /#simulador$/);
+  assert.match(NOTA_LOCAL.demoHref, /#localizacao$/);
+  assert.match(LEVELS.demoHref, /#riscos$/);
+  // o caso dos riscos tem deságio alto e riscos graves (como a cena "Cuidado")
+  const riscos = exemplos.find((l) => LEVELS.demoHref.includes(`ex-${l.id}#`))!;
+  // a animação de "Cuidado" é o mesmo caso do link (CONT-07): tipo, lugar, deságio, lance e as tags graves
+  const ilustra = LEVELS.caution.demo;
+  assert.equal(ilustra.title, riscos.title);
+  assert.equal(ilustra.place, riscos.place);
+  assert.equal(ilustra.desagio, riscos.desagio);
+  assert.equal(ilustra.lance, `R$ ${riscos.lance.toLocaleString("pt-BR")}`);
+  assert.deepEqual(
+    ilustra.tags.map((t) => t.label).sort(),
+    riscos.tags.filter((t) => t.severity === "grave").map((t) => t.label).sort(),
+  );
+  assert.ok(riscos.tags.filter((t) => t.severity === "grave").length >= 2);
+  // o caso do alerta está em 2ª praça
+  const praca = exemplos.find((l) => PRACAS.demoHref.includes(`ex-${l.id}#`))!;
+  assert.equal(praca.praca, "2ª praça");
 });

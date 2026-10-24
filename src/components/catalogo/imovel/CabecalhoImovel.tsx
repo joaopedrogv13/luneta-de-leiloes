@@ -27,7 +27,7 @@ export function CabecalhoImovel({ imovel: i, pracaPassou }: { imovel: ImovelDeta
           {i.titulo}
         </h1>
         <AcoesTitulo
-          imovel={{ id: i.id, titulo: i.titulo, bairro: i.bairro, cidade: i.cidade, uf: i.uf, lance: i.lance }}
+          imovel={{ id: i.id, titulo: i.titulo, bairro: i.bairro, cidade: i.cidade, uf: i.uf, lance: i.lance, praca: i.praca }}
           className="-mt-1 -mr-1.5 md:hidden"
         />
       </div>

@@ -138,7 +138,7 @@ export function SecaoRiscos({ imovel: i, plano, selosDesligados }: { imovel: Imo
             {pendente ? "Selo em análise" : i.selo === 0 ? "Sem selo" : `Selo ${SELO_ROTULO[i.selo]}`}
           </h3>
           <p className="mt-1.5 text-[14px] leading-relaxed text-nevoa">
-            {i.porQueSelo || (pendente ? "Os critérios dos selos ainda estão em definição com o advogado." : "")}
+            {i.porQueSelo || (pendente ? "Os critérios dos selos ainda estão em definição com o especialista parceiro." : "")}
           </p>
         </div>
       </div>

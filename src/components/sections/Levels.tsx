@@ -13,7 +13,7 @@ import { SEVERITY_TONE, SeverityIcon } from "@/components/niveis/severity";
  *  3. Frase-ponte: por isso, no plano Luneta, a gente separa os melhores casos.
  *  4. Os três selos, do Promissor ao Alvo.
  *  5. Tags de risco: os riscos escondidos, a legenda de cores e as 8 categorias que abrem, com explicação de cada tag.
- *  6. Aviso: a classificação é uma análise, não substitui advogado.
+ *  6. Aviso: a classificação é uma análise, não substitui a avaliação de um especialista.
  */
 export function Levels() {
   const T = LEVELS.tags;

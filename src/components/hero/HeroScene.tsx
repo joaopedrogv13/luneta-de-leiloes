@@ -2,8 +2,15 @@ import { HERO } from "@/content/site";
 import { BrazilMap } from "@/components/ui/BrazilMap";
 import { RichText } from "@/components/ui/RichText";
 import { Seal } from "@/components/ui/Seal";
+import { SeloCancelamento } from "@/components/ui/SeloCancelamento";
+import { FotoDaFonte } from "@/components/ui/FotoDaFonte";
+import { LISTINGS } from "@/content/examples";
+import { estiloRecorte } from "@/lib/catalogo/recorte";
 import { ALVO_DESAGIO, BRASS, LENS_GLOW, LENS_SHADOW } from "./constants";
 import { HeroMotion } from "./HeroMotion";
+
+/** Foto ilustrativa do cartão do Alvo: a do exemplo "alvo-sp" (src/content/examples.ts). */
+const FOTO_ALVO = LISTINGS.find((l) => l.id === "alvo-sp")?.photoIlustrativa ?? null;
 
 /** Cartões desfocados ao fundo = os sites dos leiloeiros, cada um no seu canto. */
 const SITES = [
@@ -16,8 +23,8 @@ const SITES = [
 /**
  * HERO · a luneta chega ao alvo.
  *
- * A cena ocupa uma tela. No topo da página, UMA rolada (dois dedos no trackpad, roda do mouse, deslizar no
- * celular ou ↓/espaço) dispara a animação inteira, com tempo fixo (~2,5s), nas 6 etapas do blueprint (Passo 4):
+ * A cena ocupa uma tela. Ao abrir ou recarregar a página no topo, a animação roda sozinha (rodada 5), com tempo fixo
+ * (~2,5s) e sem travar a rolagem, nas 6 etapas do blueprint (Passo 4):
  *   1. Noite e névoa: estrelas, névoa densa e uma luneta pequena ao longe. Título já visível (estado inicial).
  *   2. A luneta se aproxima: cresce e se alinha ao centro; a névoa abre; os sites dos leiloeiros
  *      aparecem desfocados ao fundo (com leve parallax).
@@ -178,25 +185,40 @@ export function HeroScene() {
         <div className="absolute bottom-3 left-1/2 z-[4] w-[min(360px,calc(100cqw-32px))] -translate-x-1/2 sm:bottom-[8cqh] sm:left-[min(calc(66%+4cqw),calc(100cqw-376px))] sm:translate-x-0">
         <div
           data-h="card"
-          className="flex items-center gap-3 rounded-2xl border border-latao/45 bg-tinta p-3 pr-4 shadow-[0_20px_60px_rgba(0,0,0,.5)]"
+          data-foto={FOTO_ALVO ? "fonte" : undefined}
+          className="group/foto flex items-center gap-3 rounded-2xl border border-latao/45 bg-tinta p-3 pr-4 shadow-[0_20px_60px_rgba(0,0,0,.5)]"
         >
-          <div
-            aria-hidden="true"
-            className="photo-placeholder flex size-14 shrink-0 items-center justify-center rounded-full border-[3px] border-latao font-mono text-[9px] text-nevoa"
-          >
+          {/* foto ilustrativa do exemplo (a mesma do cartão do Alvo na landing): <img> simples da fonte, preguiçoso e de
+              baixa prioridade (não disputa com o título, que é o LCP). Se falhar, a ilha FotoDaFonte a tira (sem o ícone
+              de imagem quebrada), fica o desenho listrado de baixo e o "Foto ilustrativa" some (data-foto="falhou") */}
+          {/* celular baixo (360 × 640): o cartão numa linha de texto, sem a foto (e sem o rótulo dela), para não cobrir a
+              lente no fim da cena (revisão final da rodada 5, R5P-13) */}
+          <div aria-hidden="true" className="photo-placeholder relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-latao font-mono text-[9px] text-nevoa max-sm:[@media(max-height:700px)]:hidden">
             foto
+            {FOTO_ALVO && (
+              <FotoDaFonte src={FOTO_ALVO.url} size={56} style={estiloRecorte(FOTO_ALVO.recorte)} className="absolute inset-0 size-full object-cover" />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.14em] text-pos uppercase">
               <Seal level={3} size={18} /> Alvo · exemplo
             </p>
-            <p className="mt-1 text-[13px] leading-tight font-semibold text-luar">Apartamento 3 quartos · São Paulo/SP</p>
-            <p className="mt-0.5 text-[11px] leading-tight text-nevoa">Desocupado · sem dívidas identificadas</p>
+            <p className="mt-1 text-[13px] leading-tight font-semibold text-luar max-sm:[@media(max-height:700px)]:truncate">Apartamento 3 quartos · São Paulo/SP</p>
+            <p className="mt-0.5 text-[11px] leading-tight text-nevoa max-sm:[@media(max-height:700px)]:hidden">Desocupado · sem dívidas identificadas</p>
+            {FOTO_ALVO && <p className="mt-0.5 text-[10px] leading-tight text-nevoa group-data-[foto=falhou]/foto:hidden max-sm:[@media(max-height:700px)]:hidden">Foto ilustrativa</p>}
           </div>
           <div className="shrink-0 text-right">
             {/* o número anima de 0 a 48; leitores de tela recebem sempre o valor final */}
             <p aria-hidden="true" className="font-display text-[30px] leading-none font-bold tracking-[-0.03em] text-pos">
-              −<span data-h="count">{ALVO_DESAGIO}</span>%
+              {/* o espaço é o do número final (invisível); o que conta fica por cima: contar não muda a largura (CLS) */}
+              −
+              <span className="relative inline-block">
+                <span className="invisible">{ALVO_DESAGIO}</span>
+                <span data-h="count" className="absolute inset-0 text-right">
+                  {ALVO_DESAGIO}
+                </span>
+              </span>
+              %
             </p>
             <p className="mt-1 text-[10px] font-medium text-nevoa">
               <span className="sr-only">{ALVO_DESAGIO}% de </span>deságio
@@ -219,33 +241,26 @@ export function HeroScene() {
               {HERO.primary}
             </a>
             <a
-              href="#advogado"
+              href="#especialista"
               className="btn-ghost max-sm:min-h-11 max-sm:gap-1.5 max-sm:border-transparent max-sm:px-0 max-sm:underline max-sm:decoration-latao/60 max-sm:underline-offset-4"
             >
               {/* no tablet o texto curto também: o longo quebrava em 2 linhas na coluna de texto */}
               <span className="lg:hidden">{HERO.secondaryShort}</span>
               <span className="max-lg:hidden">{HERO.secondary}</span>
-              <span aria-hidden="true" className="text-latao-texto sm:hidden">
+              {/* abaixo de 380 px a seta sai: "Falar com especialista" cabe na linha do botão */}
+              <span aria-hidden="true" className="text-latao-texto max-[379px]:hidden sm:hidden">
                 →
               </span>
             </a>
           </div>
-          <p className="mt-5 text-xs leading-relaxed font-medium text-nevoa max-sm:mt-4">
+          {/* rodada 5, ponto 13: o selo do cancelamento logo abaixo dos botões (no celular, sem a moldura: uma linha
+              curta, para a lente continuar inteira entre o texto e o cartão; globals.css, --lens) */}
+          <SeloCancelamento className="mt-4 max-sm:mt-3 max-sm:border-transparent max-sm:bg-transparent max-sm:p-0 max-sm:text-[12.5px]" />
+          <p className="mt-4 text-xs leading-relaxed font-medium text-nevoa max-sm:mt-2.5">
             <RichText text={HERO.trust} />
           </p>
         </div>
 
-        {/* Dica de rolagem (some por CSS quando a intro começa) */}
-        <div
-          data-h="hint"
-          aria-hidden="true"
-          className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2 text-[11px] font-semibold tracking-[0.16em] whitespace-nowrap text-nevoa uppercase sm:bottom-6 sm:left-[6cqw] sm:translate-x-0 [html:not(.motion)_&]:hidden"
-        >
-          <span className="relative h-8 w-5 rounded-full border border-nevoa/50">
-            <span className="absolute top-1.5 left-1/2 h-1.5 w-[2px] -translate-x-1/2 animate-bounce rounded bg-latao" />
-          </span>
-          Role para mirar
-        </div>
       </div>
       <HeroMotion />
     </section>

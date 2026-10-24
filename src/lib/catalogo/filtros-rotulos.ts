@@ -7,6 +7,7 @@
  * Exemplos de pílula: "MG", "Uberlândia/MG", "Apartamento, Casa", "Lance até R$ 300 mil",
  * "Deságio ≥ 30%", "2+ quartos", "Praça: 2ª", "Sem: Ocupado".
  */
+import { eTagEstacao, MODOS_ESTACAO, ROTULO_FILTRO_METRO, ROTULO_TAG_ESTACAO, SLUG_ESTACAO } from "./estacoes";
 import { NAO_INFORMADO, ORDEM_PADRAO, type Facetas, type Filtros, type Modalidade, type Ocupacao, type Ordem, type Plano, type Praca, type Recurso, type Selo, type TipoImovel } from "./tipos";
 import { filtroPermitido, ordemDoPlano, recursoDoFiltro } from "./planos";
 import { MODALIDADE_ROTULO, OCUPACAO_ROTULO, SELO_ROTULO, TIPO_ROTULO, UF_NOME, area, moedaCurta, numero } from "./rotulos";
@@ -69,7 +70,8 @@ export function filtrosIguais(a: Filtros, b: Filtros) {
 export function chaveFiltros(f: Filtros) {
   const ordenado: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(limparVazios(f))) {
-    ordenado[k] = Array.isArray(v) ? [...v].map(String).sort() : v;
+    // a área do mapa é um retângulo (a ordem conta e são números), não uma lista
+    ordenado[k] = Array.isArray(v) && k !== "bbox" ? [...v].map(String).sort() : v;
   }
   return escreverBusca({ filtros: ordenado as Filtros }).toString();
 }
@@ -117,7 +119,8 @@ export type GrupoFiltro =
   | "lance" | "avaliacao" | "desagio" | "lanceM2" | "area" | "quartos" | "vagas"
   | "modalidade" | "praca" | "data"
   | "financiamento" | "fgts" | "parcelamento" | "ocupacao" | "natureza" | "fonte" | "comFoto"
-  | "semTags" | "comTags" | "selo" | "notaLocal";
+  | "semTags" | "comTags" | "selo" | "notaLocal" | "metro"
+  | "bbox";
 
 /** Chaves de Filtros que cada grupo ocupa. */
 export const CHAVES_DO_GRUPO: Record<GrupoFiltro, readonly (keyof Filtros)[]> = {
@@ -147,6 +150,8 @@ export const CHAVES_DO_GRUPO: Record<GrupoFiltro, readonly (keyof Filtros)[]> = 
   comTags: ["comTags"],
   selo: ["selo"],
   notaLocal: ["notaLocalMin"],
+  metro: ["metroPerto"],
+  bbox: ["bbox"],
 };
 
 /**
@@ -372,6 +377,8 @@ export const TAG_ROTULO_PADRAO: Record<string, string> = {
   "primeira-praca": "1ª praça",
   "segunda-praca": "2ª praça",
   "praca-unica": "Praça única",
+  // estação perto (rodada 5): o rótulo fixo do filtro; a tag de cada imóvel diz a distância
+  ...Object.fromEntries(MODOS_ESTACAO.map((m) => [SLUG_ESTACAO[m], ROTULO_TAG_ESTACAO[m]])),
 };
 
 const FONTE_ROTULO_PADRAO: Record<string, string> = {
@@ -456,6 +463,8 @@ export function pilulas(f: Filtros, nomes?: NomesDasFacetas): Pilula[] {
   };
 
   if (f.q) add("q", `Busca: “${f.q}”`);
+  // a área do mapa ("Buscar nesta área") vista na lista ou nos cards: dá para tirar aqui
+  if (f.bbox) add("bbox", "Na área do mapa");
   p.push(...pilulasDeLugar("uf", f.uf, (v) => v));
   p.push(...pilulasDeLugar("cidade", f.cidade, nomeCidade));
   p.push(...pilulasDeLugar("bairro", f.bairro, nomeBairro));
@@ -473,6 +482,7 @@ export function pilulas(f: Filtros, nomes?: NomesDasFacetas): Pilula[] {
   if (f.quartosMin !== undefined) add("quartos", textoMinimo(f.quartosMin, "quarto", "quartos"));
   if (f.vagasMin !== undefined) add("vagas", textoMinimo(f.vagasMin, "vaga", "vagas"));
   if (f.notaLocalMin !== undefined) add("notaLocal", `Localização: nota ${numero(f.notaLocalMin)}+`);
+  if (f.metroPerto) add("metro", ROTULO_FILTRO_METRO);
 
   if (f.modalidade?.length) add("modalidade", juntar(f.modalidade.map((m: Modalidade) => MODALIDADE_ROTULO[m] ?? m)));
   if (f.praca?.length) add("praca", `Praça: ${f.praca.map((x) => PRACA_CURTA[x] ?? x).join(", ")}`);
@@ -492,7 +502,10 @@ export function pilulas(f: Filtros, nomes?: NomesDasFacetas): Pilula[] {
   if (f.comFoto !== undefined) add("comFoto", SIM_NAO.comFoto[f.comFoto ? 0 : 1]);
 
   for (const slug of f.semTags ?? []) p.push({ id: `semTags:${slug}`, grupo: "semTags", valor: slug, rotulo: `Sem: ${nomeTag(slug, nomes)}` });
-  for (const slug of f.comTags ?? []) p.push({ id: `comTags:${slug}`, grupo: "comTags", valor: slug, rotulo: `Com: ${nomeTag(slug, nomes)}` });
+  // trem e VLT perto (escolhidos em "Entorno") dizem o próprio nome, como o metrô ("Trem a até 1 km", sem o "Com:")
+  for (const slug of f.comTags ?? []) {
+    p.push({ id: `comTags:${slug}`, grupo: "comTags", valor: slug, rotulo: eTagEstacao(slug) ? nomeTag(slug, nomes) : `Com: ${nomeTag(slug, nomes)}` });
+  }
   if (f.selo?.length) add("selo", `Selo: ${[...f.selo].sort((a, b) => b - a).map((s: Exclude<Selo, 0>) => SELO_ROTULO[s]).join(", ")}`);
   return p;
 }

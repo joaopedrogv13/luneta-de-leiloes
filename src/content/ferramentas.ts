@@ -34,7 +34,7 @@ export const DECIDA = {
       icon: "doc",
       plano: "luneta",
       title: "Relatório em PDF",
-      text: "A simulação inteira num relatório em PDF, em folhas A4: resultado, cenários, custos linha a linha, preço da região e alertas. Para guardar, imprimir ou levar ao advogado.",
+      text: "A simulação inteira num relatório em PDF, em folhas A4: resultado, cenários, custos linha a linha, preço da região e alertas. Para guardar, imprimir ou levar a um especialista.",
     },
     {
       icon: "casa",
@@ -46,7 +46,10 @@ export const DECIDA = {
   planos: { luneta: "Luneta", todos: "Todos os planos" },
   cta: "Assinar Luneta",
   demo: "Ver este exemplo na demonstração",
-  /** a página do mesmo exemplo na demonstração, que mostra os mesmos números */
+  /**
+   * a página do mesmo exemplo na demonstração, com o simulador: o mesmo "Dê no máximo" do cartão e a tabela "Cenários
+   * e prazos" na mesma visão da miniatura (o lucro com o lance mínimo; a outra visão, o lance máximo, fica a um toque)
+   */
   demoHref: "/assinante/imovel/ex-alvo-sp#simulador",
   card: {
     eyebrow: "Seu lance máximo",
@@ -58,11 +61,15 @@ export const DECIDA = {
     /** "sobram R$ 39.778 acima do lance mínimo" (a margem para disputar o lance) */
     folga: ["sobram", "acima do lance mínimo"],
     matriz: "Cenários e prazos",
-    matrizUnidade: "lance máximo, em reais",
-    matrizSr: "Lance máximo por cenário e prazo de venda, exemplo fictício. Atinge: o lance máximo fica acima do lance mínimo. Não atinge: nem o lance mínimo dá a meta.",
+    /** a visão que a página do imóvel abre (rodada 5, decisão 6): o lucro com o lance mínimo */
+    matrizUnidade: "lucro com o lance mínimo e % ao ano",
+    matrizSr:
+      "Lucro com o lance mínimo, depois do imposto, e retorno ao ano, por cenário e prazo de venda, exemplo fictício. Atinge: o retorno passa da meta. Não atinge: fica abaixo dela.",
     atinge: "atinge a meta",
     naoAtinge: "não atinge",
     soBase: "Conservador e otimista: na página do imóvel.",
+    /** a outra visão da tabela, a um toque na página do imóvel */
+    outraVisao: "Na página do imóvel, a mesma tabela também mostra o lance máximo para a meta.",
   },
   regiao: {
     eyebrow: "Preço do m² na região · ilustração",
@@ -101,6 +108,9 @@ export const NOTA_LOCAL = {
     },
   ],
   more: "Como a nota é calculada",
+  demo: "Ver esta nota na demonstração",
+  /** a página do mesmo exemplo, já na seção da nota (a mesma nota 91 da miniatura) */
+  demoHref: "/assinante/imovel/ex-alvo-sp#localizacao",
   card: {
     /** "Melhor localizado que 91% dos moradores de São Paulo/SP" */
     frase: (nota: number, cidade: string) => `Melhor localizado que ${nota}% dos moradores de ${cidade}`,

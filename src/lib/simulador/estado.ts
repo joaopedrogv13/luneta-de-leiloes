@@ -11,8 +11,9 @@
  *               // lucro em R$; as outras em fração (0.2 = 20%): no total, ao ano ou ao mês
  *     "celula": { "cenario": "conservador" | "base" | "otimista" | "personalizado", "meses": number },
  *               // o cenário e o prazo de venda do cartão "Seu lance máximo" e da célula escolhida na matriz
- *     "visao":  "teto" | "lucro" | null,   // o que a matriz mostra; null = o padrão do imóvel (lance máximo;
- *                                          // na venda direta, o lucro pelo preço pedido)
+ *     "visao":  "teto" | "lucro" | null,   // o que a matriz mostra; null = a pessoa nunca escolheu: vale o
+ *                                          // padrão (VISAO_PADRAO em completa.ts: o lucro com o lance da pessoa;
+ *                                          // até a rodada 4, o leilão abria no lance máximo)
  *     "meuLance": number | null,           // lance escolhido pela pessoa; null = o lance mínimo atual
  *     "lanceDetalhe": "meu" | "teto",      // o Detalhe usa o lance da pessoa (ou o mínimo) ou o lance máximo
  *     "ajustes": {                         // só o que a pessoa trocou; o resto é o padrão (premissas.ts)
@@ -50,7 +51,7 @@ export interface EstadoSimulador {
   ajustes: Ajustes;
   meta: Meta;
   celula: Celula;
-  /** o que a matriz mostra; null = o padrão do imóvel (resolvido em `completarModelo`) */
+  /** o que a matriz mostra; null = a pessoa nunca escolheu (vale o padrão, resolvido em `completarModelo`) */
   visao: Visao | null;
   /** lance escolhido pela pessoa; null = o lance mínimo atual */
   meuLance: number | null;

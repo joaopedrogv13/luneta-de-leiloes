@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SeloCancelamento } from "@/components/ui/SeloCancelamento";
 
 type Zone = "hero" | "plans" | "form";
 
@@ -58,14 +59,16 @@ export function MobileCtaBar() {
       }`}
       style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}
     >
-      <a href="#planos" className="btn-primary flex-1">
-        Ver planos
+      {/* rodada 5, ponto 13: o selo do cancelamento é a segunda linha do botão */}
+      <a href="#planos" className="btn-primary min-h-[52px] flex-1 flex-col !gap-1 !py-1.5 leading-none">
+        Ver planos{" "}
+        <SeloCancelamento variante="botao" />
       </a>
       <a
-        href="#advogado"
-        className="inline-flex min-h-12 items-center justify-center rounded-full px-4 text-sm font-medium text-luar no-underline"
+        href="#especialista"
+        className="inline-flex min-h-[52px] items-center justify-center rounded-full px-4 text-sm font-medium text-luar no-underline"
       >
-        Advogado
+        Especialista
       </a>
     </nav>
   );

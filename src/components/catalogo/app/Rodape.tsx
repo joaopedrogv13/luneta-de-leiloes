@@ -3,6 +3,7 @@ import { BACK_TO_SITE } from "@/components/assinante/shared";
 import { AVISO_CLASSIFICACAO } from "@/content/avisos";
 import { data, dataHora, numero, plural } from "@/lib/catalogo/rotulos";
 import type { SobreConjunto } from "@/lib/catalogo/tipos";
+import { CTA_VITRINE, fraseVitrine } from "@/lib/catalogo/vitrine-textos";
 
 export { AVISO_CLASSIFICACAO };
 
@@ -27,7 +28,19 @@ export function faixaDaPrevia(sobre: SobreConjunto) {
  * Rodapé do catálogo (do servidor, sem JavaScript): o aviso de que a classificação não é garantia, de quem
  * são as fotos e os anúncios e, na prévia, de onde e de quando vêm os dados (total da base e por fonte).
  */
-export function RodapeCatalogo({ sobre, total, exemplos = false }: { sobre: SobreConjunto; total: number; exemplos?: boolean }) {
+export function RodapeCatalogo({
+  sobre,
+  total,
+  exemplos = false,
+  vitrine = null,
+}: {
+  sobre: SobreConjunto;
+  total: number;
+  /** só exemplos fictícios (a demonstração sem a base) */
+  exemplos?: boolean;
+  /** a vitrine da demonstração: imóveis reais da base, mais os exemplos fictícios à parte */
+  vitrine?: { mostrados: number; totalBase: number } | null;
+}) {
   return (
     <footer className="border-t border-nevoa/15 bg-tinta/40 px-4 pt-10 pb-16 text-[13px] leading-relaxed text-nevoa sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-[1400px] flex-col gap-8 lg:flex-row lg:justify-between">
@@ -36,6 +49,12 @@ export function RodapeCatalogo({ sobre, total, exemplos = false }: { sobre: Sobr
             <strong className="font-semibold text-luar">Aviso:</strong> {AVISO_CLASSIFICACAO}
             {exemplos ? " Os imóveis desta demonstração são exemplos fictícios." : " Preços, praças e datas mudam: confira sempre o edital no site da fonte."}
           </p>
+          {vitrine && (
+            <p>
+              <strong className="font-semibold text-luar">{fraseVitrine(vitrine.mostrados, vitrine.totalBase)}</strong> {CTA_VITRINE} Os exemplos
+              fictícios, à parte, servem para ver os selos; as fotos deles são ilustrativas, de imóveis reais parecidos.
+            </p>
+          )}
           <p>
             Fotos e anúncios pertencem às fontes. A foto aparece direto do site de origem (a Luneta não copia nem guarda imagens) e, se não carregar,
             fica um desenho no lugar.

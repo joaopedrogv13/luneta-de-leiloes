@@ -1,6 +1,7 @@
 import type { SealLevel } from "@/components/ui/Seal";
 import { BRAZIL_PINS } from "@/lib/brazil";
 import type { LocalizacaoFicticia } from "@/lib/catalogo/localizacao";
+import type { RecorteFoto } from "@/lib/catalogo/tipos";
 import type { Severity } from "./tags";
 
 /**
@@ -43,11 +44,18 @@ export type Listing = {
   /** Por que recebeu (ou não) o selo. */
   why: string;
   /**
-   * Foto na fonte (URL do leiloeiro). Na área do assinante e na /previa vai num <img> simples (sem o otimizador
-   * do next/image, que baixaria e re-hospedaria a foto). O AuctionCard da landing ainda usa next/image: antes de pôr
-   * casos reais ali, trocar também (base/FASE1-SITE.md, passo 7). Sem foto (ou se ela falhar), placeholder.
+   * Foto na fonte (URL do leiloeiro), dos casos reais. Sempre num <img> simples (sem o otimizador do next/image, que
+   * baixaria e re-hospedaria a foto), inclusive no AuctionCard da landing (rodada 5). Sem foto (ou se ela falhar),
+   * placeholder.
    */
   photo?: string;
+  /**
+   * Foto ILUSTRATIVA dos exemplos fictícios (rodada 5, decisão 3): a foto de um imóvel real da base, do mesmo tipo e da
+   * mesma cidade (ou UF), escolhida a olho entre as candidatas (scripts/prints/fotos-candidatas.json, roteiro "fotos"
+   * do workflow de prints). Sempre rotulada "Foto ilustrativa"; o endereço do imóvel real nunca aparece junto.
+   * `url`: a foto na fonte (nada é re-hospedado); `de`: o id do imóvel real, para conferir e trocar.
+   */
+  photoIlustrativa?: { url: string; de: string; recorte?: RecorteFoto };
   /** Origem, quando o caso é real. */
   source?: ListingSource;
   // Casos reais da base (base/saida/amostra-site.json), usados na /previa:
@@ -88,6 +96,8 @@ export const LISTINGS: Listing[] = [
       { label: "2ª praça", severity: "positivo" },
     ],
     why: "Dados completos, deságio alto, posse livre, nenhuma dívida passando ao arrematante, documentação e processo limpos e praça favorável. Nenhum risco identificado nos dados do edital.",
+    // foto ilustrativa: apartamento de 3 quartos em São Paulo/SP (prédio com sacadas e árvores, sem pessoas)
+    photoIlustrativa: { url: "https://venda-imoveis.caixa.gov.br/fotos/F144442342833321.jpg", de: "caixa-1444423428333" },
     localizacao: {
       nota: 91,
       componentes: { servicos: 88, transporte: 93, renda: 85, infra: 96, comercio: 82, lazer: 71 },
@@ -116,6 +126,8 @@ export const LISTINGS: Listing[] = [
       { label: "Condomínio em atraso · R$ 4.300", severity: "atencao" },
     ],
     why: "Posse livre e nenhuma dívida passando ao arrematante. Segundo o edital, o condomínio em atraso é quitado com o valor da arrematação.",
+    // foto ilustrativa: casa de 2 quartos em Fazenda Rio Grande/PR, na Grande Curitiba (fachada com garagem)
+    photoIlustrativa: { url: "https://venda-imoveis.caixa.gov.br/fotos/F844442961698921.jpg", de: "caixa-8444429616989" },
     localizacao: {
       nota: 85,
       componentes: { servicos: 79, transporte: 74, renda: 88, infra: 94, comercio: 70, lazer: 83 },
@@ -144,6 +156,8 @@ export const LISTINGS: Listing[] = [
       { label: "Matrícula com pendência", severity: "atencao" },
     ],
     why: "Dados completos e deságio relevante, mas a ocupação não foi informada e a matrícula tem pendência.",
+    // foto ilustrativa: apartamento em Salvador/BA (prédios de 4 andares numa rua do bairro)
+    photoIlustrativa: { url: "https://venda-imoveis.caixa.gov.br/fotos/F144440451477721.jpg", de: "caixa-1444404514777" },
     localizacao: {
       nota: 86,
       componentes: { servicos: 85, transporte: 72, renda: 90, infra: 88, comercio: 86, lazer: 64 },
@@ -173,6 +187,10 @@ export const LISTINGS: Listing[] = [
       { label: "Dívida passa ao arrematante", severity: "grave" },
     ],
     why: "O maior desconto da lista vem com ocupante, ação judicial em curso e dívida que passa ao arrematante.",
+    // Sem foto ilustrativa, de propósito (revisão final da rodada 5, R5P-07/CONT-06): com três riscos graves, a foto de um
+    // prédio real reconhecível do Centro do Rio ligaria esses riscos a ele (o real não tem nenhum: venda direta, ocupação
+    // não informada), e o id na URL da foto leva ao endereço. Fica o desenho, com "Exemplo fictício: sem foto". Regra:
+    // exemplo com tag grave não leva foto de imóvel real (teste em src/lib/catalogo/vitrine.test.ts).
     localizacao: {
       nota: 82,
       componentes: { servicos: 70, transporte: 98, renda: 58, infra: 92, comercio: 99, lazer: 76 },
@@ -202,6 +220,8 @@ export const LISTINGS: Listing[] = [
       { label: "Sem vistoria", severity: "info" },
     ],
     why: "Desocupado e sem dívida passando ao arrematante. Sem vistoria disponível.",
+    // foto ilustrativa: apartamento em Belo Horizonte/MG (duas torres residenciais)
+    photoIlustrativa: { url: "https://venda-imoveis.caixa.gov.br/fotos/F178770238775021.jpg", de: "caixa-1787702387750" },
     localizacao: {
       nota: 94,
       componentes: { servicos: 92, transporte: 85, renda: 94, infra: 97, comercio: 95, lazer: 68 },
@@ -231,6 +251,10 @@ export const LISTINGS: Listing[] = [
       { label: "Área divergente", severity: "atencao" },
     ],
     why: "Deságio abaixo do relevante, venda de cota-parte e área divergente entre matrícula e edital.",
+    // foto ilustrativa: terreno com mato e calçada em Caldas Novas/GO, sem marca de data nem coordenadas na foto (a de
+    // antes, de Águas Lindas de Goiás, tinha a marca da vistoria no canto: o recorte a tirava da tela, mas a imagem
+    // aberta noutra aba e o fundo desfocado da galeria ainda a mostravam; revisão final da rodada 5, R5-TEC-12)
+    photoIlustrativa: { url: "https://venda-imoveis.caixa.gov.br/fotos/F000001029097621.jpg", de: "caixa-0000010290976" },
     localizacao: {
       nota: 87,
       componentes: { servicos: 83, transporte: 66, renda: 91, infra: 95, comercio: 84, lazer: 88 },

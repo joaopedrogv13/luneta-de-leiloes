@@ -586,6 +586,9 @@ export function MatrizRelatorio() {
     </>
   );
 
+  // a outra visão: o lance máximo para a meta (leilão) ou a margem para imprevistos (venda direta)
+  const outra = fixo ? tabelaMargem : tabelaTeto;
+
   return (
     <Secao
       numero="02"
@@ -599,8 +602,9 @@ export function MatrizRelatorio() {
         </>
       }
     >
-      {fixo ? tabelaLucro : tabelaTeto}
-      <div style={{ marginTop: "1.6em" }}>{fixo ? tabelaMargem : tabelaLucro}</div>
+      {/* a mesma visão da tela vem primeiro (a escolha da pessoa ou o padrão: o lucro com o lance); a outra, depois */}
+      {r.visao === "lucro" ? tabelaLucro : outra}
+      <div style={{ marginTop: "1.6em" }}>{r.visao === "lucro" ? outra : tabelaLucro}</div>
     </Secao>
   );
 }

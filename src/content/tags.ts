@@ -4,7 +4,7 @@
  * Os critérios exatos de cada tag devem ser validados com o advogado parceiro.
  *
  * `what` e `practice` alimentam o pop-up de explicação da seção "Tags de risco e selos":
- * linguagem simples, sem promessa, e sempre com a sugestão de conferir no edital ou com advogado
+ * linguagem simples, sem promessa, e sempre com a sugestão de conferir no edital ou com um especialista
  * quando fizer sentido. Revisar junto com os critérios.
  */
 export type Severity = "grave" | "atencao" | "positivo" | "info";
@@ -122,13 +122,13 @@ export const TAG_CATEGORIES: TagCategory[] = [
         label: "Ação judicial em curso",
         severity: "grave",
         what: "Existe um processo na Justiça que discute o imóvel ou o próprio leilão, como um pedido para anular a venda.",
-        practice: "Uma decisão pode atrasar a posse ou até desfazer a compra. Vale ler o processo com um advogado antes do lance.",
+        practice: "Uma decisão pode atrasar a posse ou até desfazer a compra. Vale ler o processo com um especialista antes do lance.",
       },
       {
         label: "Penhora de outros credores",
         severity: "grave",
         what: "Além da dívida que levou o imóvel a leilão, outros credores também bloquearam o imóvel na Justiça. Esse bloqueio se chama penhora.",
-        practice: "Muitas vezes essas penhoras são canceladas depois do leilão, mas isso pode levar tempo e gerar disputa. Confira com um advogado.",
+        practice: "Muitas vezes essas penhoras são canceladas depois do leilão, mas isso pode levar tempo e gerar disputa. Confira com um especialista.",
       },
       {
         label: "Leilão com recurso",
@@ -188,7 +188,7 @@ export const TAG_CATEGORIES: TagCategory[] = [
         label: "Só direitos sobre o imóvel",
         severity: "grave",
         what: "O leilão não vende o imóvel em si, mas os direitos de quem ainda o estava pagando, como num financiamento ou num contrato de compra.",
-        practice: "Você pode assumir parcelas e obrigações do contrato, e a escritura no seu nome pode demorar. Leia o edital com um advogado.",
+        practice: "Você pode assumir parcelas e obrigações do contrato, e a escritura no seu nome pode demorar. Leia o edital com um especialista.",
       },
     ],
   },
@@ -241,3 +241,40 @@ export const TAG_CATEGORIES: TagCategory[] = [
     ],
   },
 ];
+
+/**
+ * Tags de localização (rodada 5, decisão 11): estação de metrô, trem ou VLT a menos de 1 km. Não vêm do edital nem do
+ * anúncio: a Luneta calcula a distância no servidor (src/lib/catalogo/estacoes.ts), com as estações do OpenStreetMap,
+ * e a tag de cada imóvel diz a distância ("Metrô a 450 m"). São do plano Luneta, como as outras tags.
+ *
+ * Ficam fora de TAG_CATEGORIES de propósito: aquela lista é a das 8 categorias da análise do leilão, que a landing mostra
+ * em 2 linhas de 4 cartões (Levels, TagExplorer). O pop-up de explicação do catálogo lê daqui pelo slug.
+ */
+export const TAGS_LOCALIZACAO: { name: string; question: string; tags: Record<"metro-perto" | "trem-perto" | "vlt-perto", TagDef> } = {
+  name: "Localização",
+  question: "Tem metrô, trem ou VLT perto?",
+  tags: {
+    "metro-perto": {
+      label: "Metrô a até 1 km",
+      severity: "positivo",
+      what:
+        "Há uma estação de metrô a menos de 1 km do ponto do endereço, em linha reta. As estações vêm do OpenStreetMap, o mapa aberto feito por colaboradores (© contribuidores do OpenStreetMap), e vale o que ele marca como metrô: em algumas cidades, isso inclui o trem urbano que funciona como metrô, como a Trensurb e a CBTU. Só vale para endereço localizado no número ou na rua.",
+      practice:
+        "Linha reta não é o caminho a pé: confira no mapa o trajeto até a entrada da estação. Metrô perto costuma ajudar a vender e a alugar, mas não é garantia de preço.",
+    },
+    "trem-perto": {
+      label: "Trem a até 1 km",
+      severity: "positivo",
+      what:
+        "Há uma estação de trem urbano de passageiros (como as da CPTM e da SuperVia) a menos de 1 km do ponto do endereço, em linha reta. As estações vêm do OpenStreetMap (© contribuidores do OpenStreetMap); estação antiga, turística ou de carga fica de fora. Só vale para endereço localizado no número ou na rua.",
+      practice: "Veja no mapa o caminho até a estação e a frequência da linha nos horários que importam para você.",
+    },
+    "vlt-perto": {
+      label: "VLT a até 1 km",
+      severity: "positivo",
+      what:
+        "Há uma parada de VLT (veículo leve sobre trilhos) a menos de 1 km do ponto do endereço, em linha reta. As paradas vêm do OpenStreetMap (© contribuidores do OpenStreetMap). Só vale para endereço localizado no número ou na rua.",
+      practice: "Confira no mapa o caminho até a parada e se a linha leva aonde você precisa.",
+    },
+  },
+};

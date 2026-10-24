@@ -9,7 +9,7 @@ import { useLayoutEffect } from "react";
  * ganhassem a altura real. Por isso, no clique (antes da navegação), todas as seções são medidas de uma
  * vez; dois quadros depois voltam a ser puladas, já com o tamanho real guardado.
  *
- * Chegada à home já com a âncora, vindo de outra página ("Ver planos" do 404, /#advogado da área do
+ * Chegada à home já com a âncora, vindo de outra página ("Ver planos" do 404, /#especialista da área do
  * assinante): a medição é feita ao montar. O Next rola até a âncora logo depois deste efeito (o dele fica
  * num componente pai, e efeitos de layout rodam de dentro para fora), então ele já calcula com as alturas reais.
  * No carregamento completo com #âncora, ao recarregar e ao voltar/avançar, o script do <head> (layout.tsx)

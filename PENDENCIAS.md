@@ -1,22 +1,34 @@
 # Luneta de Leilões · onde estamos e pendências
 
 Este é o arquivo central do projeto: **onde estamos, que dados temos, o que falta e o próximo passo**. Atualizado a cada
-entrega (última atualização: 18/10/2026, rodada 4: nota de localização de 0 a 100 com dados, servidor e **tela pronta**
+entrega (última atualização: 24/10/2026, revisão final da rodada 5; em 18/10/2026, rodada 4: nota de localização de 0 a 100 com dados, servidor e **tela pronta**
 (página do imóvel, filtro, ordem, selo, PDF e a página pública `/metodologia/localizacao`); landing com as novidades do
 plano Luneta ("Decida com números", "Nota de localização", tabela de planos em grupos, FAQ novo); responsividade da
 prévia no celular, tablet e celular deitado; coleta no PC do dono pronta; **a trava dos planos pronta**: no Lente, cada
 recurso da Luneta vira uma chamada no mesmo lugar, e os filtros avançados ficam com cadeado; ver "Rodada 4 · a trava dos
 planos"; **revisão final da rodada 4**: 44 achados de três revisores corrigidos ou anotados, a landing sem promessa que o
-produto ainda não cumpre e a nota recalculada; ver "Rodada 4 · revisão final").
+produto ainda não cumpre e a nota recalculada; ver "Rodada 4 · revisão final"). Rodada 5 (23/10/2026): **mapa de
+verdade** no catálogo e na página do imóvel (ruas, agrupamentos, preços de perto, "Buscar ao mover o mapa"), já com a
+**revisão adversarial** (11 achados corrigidos: a lista não perde mais imóveis ao abrir o mapa, o "voltar" reabre o mesmo
+lugar, o Lente não ganha o filtro de quartos pelo mapa, bairro nunca como ponto, celular deitado e notebook de 768 px);
+ver "Rodada 5 · mapa de verdade" e "Rodada 5 · mapa: revisão adversarial". **Rodada 5 integrada (24/10/2026):** num
+branch só, a landing (abertura sozinha, "especialista", alerta de praça, 7 dias, "Voltar à apresentação"), o "Ajuste o
+foco" com 150 imóveis fictícios, a vitrine com os 10 melhores reais e fotos nos exemplos, o simulador (lucro primeiro,
+conta limpa), a tag e o filtro de metrô e o mapa de verdade; ver "Rodada 5 · integração das frentes". **Revisão final da
+rodada 5 (24/10/2026):** 40 achados de três revisores (pedido, técnica e conteúdo): 35 corrigidos, 1 fora do código
+(`npm install` no main) e 4 pendentes (fotos no "Ajuste o foco", que é decisão sua; um celular de verdade; a compressão
+na Vercel; o que já era assim no main); o Next foi para a 16.4.3 (a 16.4.0 tinha falhas de segurança graves); ver
+"Rodada 5 · revisão final".
 
 - **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
   https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
-  (exemplos fictícios) e prévia com dados reais em `/previa` (sem link, noindex).
+  (desde a rodada 5: vitrine com os 10 melhores imóveis reais da base e os 6 exemplos fictícios à parte; ver "Rodada 5 ·
+  demonstração (frente V)") e prévia com dados reais em `/previa` (sem link, noindex).
 - **Base de dados:** pasta `base/` (SQLite do Node, sem dependências). Detalhes em `base/README.md`, fontes em
   `base/FONTES.md`, caminho até o site em `base/FASE1-SITE.md`.
 - **Análise de negócio, conversão e jurídico:** https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7
 
-## Painel (14/10/2026)
+## Painel (atualizado em 24/10/2026, revisão final da rodada 5)
 
 ### Que dados temos hoje
 
@@ -100,6 +112,14 @@ a busca, os filtros, a ordem e a paginação no servidor; "Estado: Minas Gerais"
 
 ### Próximos passos (em ordem)
 
+0. **Rodada 5 para o main** (você aprova; eu faço): o branch da revisão final junta as duas faixas da rodada 5 com as
+   correções. Ao levar para o main, rodar `npm install` no checkout principal (o `node_modules` de lá não tem o
+   `maplibre-gl`; os próximos worktrees com `cp -al` não compilam sem ele) e conferir no site publicado o worker do mapa
+   comprimido (`curl -sI -H 'Accept-Encoding: br' .../mapa/maplibre-gl-worker.mjs?v=6.15.0`).
+0. **Alerta de praça** (rodada 5, decisão sua): a landing promete o e-mail quando a praça de um favorito muda. Para
+   cumprir, faltam os **dados de praça** (a base não sabe a praça nem a data de 4.569 dos 4.571 leilões: só as fichas da
+   Caixa, a coleta no PC do dono, trazem isso) e a **coleta diária automatizada**; depois, o back-end (login, favoritos no
+   servidor, fila de e-mails). Ver "Back-end: favoritos e alerta de mudança de praça", item 0.
 1. **Rede ou rotina de coleta** (você): liberar a rede do ambiente, ou aprovar a coleta agendada (ver "Atualização" abaixo).
    Com isso: primeira coleta ao vivo da Caixa, da Leilões Judiciais e do radar, e leitura das páginas da Caixa.
 2. **Lista do LeilãoMap** (você): mandar print ou lista dos leiloeiros/bancos/prefeituras que aparecem lá, para eu
@@ -119,7 +139,8 @@ a busca, os filtros, a ordem e a paginação no servidor; "Estado: Minas Gerais"
    - **preço de mercado:** autorizar o próximo passo com ITBI (Rio e SP primeiro, dados abertos e grátis) e mandar e-mail
      à Fipe pedindo autorização do FipeZAP; pedidos pela LAI nas capitais sem ITBI aberto;
    - **Querido Diário:** escrever à OKBR confirmando uso comercial (dados CC BY 4.0, mas os termos falam em "finalidade");
-   - conferir no seu navegador as **fotos da Caixa** e o **PDF da matrícula** (daqui a rede não chega à Caixa).
+   - conferir no seu navegador o **PDF da matrícula** (daqui a rede não chega à Caixa). ~~As fotos da Caixa~~: vistas no
+     Actions na rodada 5 (234 de 242 abriram; ver "Rodada 5 · demonstração (frente V)").
 
 ### Coleta no PC do dono (fichas da Caixa e ITBI de BH): **pronto para rodar** (17/10/2026; revisado em 18/10/2026)
 
@@ -192,7 +213,7 @@ Não existe "tempo real" nas fontes: cada uma publica no seu ritmo, e a base bus
 | Leilões Judiciais | a cada 6 h | lances e status mudam ao longo do dia |
 | Radar de editais | 1× por dia | publicações diárias |
 | Leilões com praça hoje ou amanhã | a cada 1 h | pegar suspensão, adiamento e resultado |
-| Alerta de 2ª praça | depois de cada coleta | compara a praça de cada favorito com a coleta anterior |
+| Alerta de mudança de praça | depois de cada coleta | compara a praça, a data, o lance mínimo e o status de cada favorito com a coleta anterior (ver "Back-end: favoritos e alerta de mudança de praça") |
 
 Onde rodar (decisão sua): (a) **Vercel Cron** com a função na região de São Paulo gravando num Postgres gerenciado (Neon ou
 Supabase): é o caminho natural quando o site for ler do banco; limites do plano grátis a confirmar na documentação da
@@ -1225,7 +1246,9 @@ o commit da trava dos planos (D1). Conferido com `next start` (porta 3330), Play
 - [ ] **Animação "Por dentro" no Lente:** ela ainda borra as tags dos exemplos (metáfora). Manter, ou trocar por cartões sem
   tags com o cadeado (mais fiel ao produto)?
 - [ ] **Ligar `PRODUTO.leituraDoEdital`** quando as fichas da Caixa e a leitura do edital entrarem na base (o teste confere a
-  proporção). **Ligar `PRODUTO.alertaPraca`** quando houver login e envio de e-mail.
+  proporção). ~~**Ligar `PRODUTO.alertaPraca`** quando houver login e envio de e-mail.~~ Ligado no marketing pelo dono
+  na rodada 5 (23/10/2026); o envio depende do back-end (`PRODUTO.envioDeEmail`, "Back-end: favoritos e alerta de
+  mudança de praça").
 - [ ] **ITBI de SP, Rio e POA** aparece na Luneta (prévia e demonstração) com "licença a confirmar com a prefeitura".
   Confirmar as licenças (base/FONTES.md) ou segurar essas três cidades atrás da mesma decisão do total (`mostrarTotalItbi`).
 - [ ] **"Atualizada todos os dias"** (hero, "Por dentro" e FAQ) é a promessa do lançamento; hoje a base é uma carga só.
@@ -1237,6 +1260,882 @@ o commit da trava dos planos (D1). Conferido com `next start` (porta 3330), Play
 - [ ] Testar a trava no `<body>` no Safari do iPhone (a propagação do overflow é a mesma do `<html>`, mas não houve iPhone).
 - [ ] Recálculo da nota encadeado na atualização da base (hoje manual; o texto diz isso).
 - [ ] O relatório ainda cresce ~45 px quando a simulação adiada chega (CLS 0,006).
+
+### Rodada 5 · landing (frente L): abertura automática, especialista, alerta de praça, 7 dias e a volta da demonstração (23/10/2026)
+
+Pedidos do dono atendidos aqui: (1) a animação inicial roda sozinha, (2) "advogado" virou "especialista", (8) mais foco
+nos favoritos com aviso de mudança de praça, (10) todo "ver na demonstração" vai direto à área certa e tem o botão de
+voltar, (12) saiu "Suporte dedicado", (13) "Cancele grátis em até 7 dias" em destaque. O site antes desta rodada está
+no branch `versao-site-v2`.
+
+**(1) A abertura do hero roda sozinha** (`HeroMotion.tsx`):
+- ao abrir ou recarregar a página no topo, a luneta chega ao alvo sozinha (~2,5 s), sem esperar a rolagem e sem travar
+  a página (a trava de rolagem e a dica "Role para mirar" saíram);
+- o GSAP é pedido assim que a página hidrata (antes era no ócio, à espera do gesto); a etapa 1 fica pelo menos 0,45 s na
+  tela antes de a luneta se mover; aba aberta em segundo plano espera ficar visível;
+- não roda (vai direto ao estado final) com menos movimento, sem JavaScript, na página aberta já rolada, na volta da
+  demonstração e se o GSAP não chegar em 2,2 s; Esc pula; rolar até o hero quase sair da tela também;
+- o número do cartão do Alvo conta com largura fixa (2 algarismos tabulares): sem deslocamento de layout.
+- **Medido**: o LCP ficou igual (dentro da variação) e o CLS foi a 0; ver "Rodada 5 · landing: LCP, CLS e navegador".
+
+**(2) Advogado → especialista, no site todo:** menu ("Falar com especialista", âncora `#especialista`), hero, seção
+"Consultoria com especialista" ("Quero falar com um especialista"), formulário (assunto "Falar com um especialista"),
+barra do celular ("Especialista"), tabela de planos ("Prioridade para falar com um especialista"), janela da Luneta,
+FAQ ("Como falo com um especialista?"), descrição do site, avisos ("não substitui a avaliação de um especialista":
+landing, rodapé, página do imóvel, relatório, "Por dentro"), textos das tags ("com um especialista"), PDF ("de
+preferência, converse com um especialista") e "critérios dos selos em definição com o especialista parceiro". A linha
+da OAB: "Quando o especialista for advogado, a publicidade segue as regras da OAB." Ficaram de propósito: os
+comentários internos ("advogado parceiro") e, no simulador, o custo "a ação na Justiça (advogado e custas)", que é o
+honorário da ação de despejo, não um contato. O teste varre `src/` e só aceita essas duas exceções.
+
+**(8) Favoritos e aviso de mudança de praça:**
+- `PRODUTO.alertaPraca` ligado (decisão do dono). Novo `PRODUTO.envioDeEmail` (hoje `false`): o marketing promete o
+  alerta, a demonstração diz a verdade sobre o envio.
+- Landing: a seção "Primeira e segunda praça" (`#pracas`) ganhou o e-mail de exemplo ("Seu favorito foi para a 2ª
+  praça", com o novo lance mínimo e a data) e o bloco "Como funciona o alerta de praça" em 3 passos (marque o
+  favorito → a Luneta confere a cada atualização → você recebe o e-mail com o novo lance mínimo e a data), com "Ver o
+  favorito com aviso na demonstração" e "Confira sempre o edital".
+- FAQ "Como recebo o aviso quando a praça muda?" (logo depois de "O que é primeira e segunda praça?"); na tabela de
+  planos, "Alerta por e-mail quando a praça de um favorito muda: 2ª praça, nova data ou novo lance mínimo" (Luneta e
+  Telescópio); no cartão, "Favoritos com alerta de praça"; "Por dentro" e a janela da Luneta falam do alerta.
+- Demonstração (`FavoritoAlerta.tsx`): o coração favorita e abre a opção **"Avisar por e-mail quando a praça mudar"**
+  (desligada: e-mail é consentimento), com a explicação e "Demonstração: a preferência fica só neste navegador; o envio
+  de e-mails começa no lançamento". Nos favoritos, o coração abre a mesma janelinha com "Tirar dos favoritos". O sino
+  aparece no coração com o aviso ligado. Nada é coletado: a preferência fica no `localStorage`
+  (`luneta-alerta-praca`). O link da landing (`#alerta-praca`) já abre a opção na chegada.
+- O que o back-end precisa fazer: seção "Back-end: favoritos e alerta de mudança de praça" logo abaixo.
+
+**(10) "Ver na demonstração" vai direto, e "Voltar à apresentação" volta ao mesmo ponto** (`src/lib/apresentacao.ts`,
+`SaidaDaApresentacao.tsx` na landing, `VoltarApresentacao.tsx` na demonstração e na página do método):
+- os links da landing para a demonstração, todos com a área certa: "Ver este exemplo" (Decida) →
+  `ex-alvo-sp#simulador` (o simulador com a conta); "Ver esta nota na demonstração" (Nota de localização, novo) →
+  `ex-alvo-sp#localizacao`; "Ver um caso assim na demonstração" (cartão "Cuidado", novo) → `ex-semselo-rj#riscos` (−55%
+  com três riscos graves); "Abrir na demonstração" sob cada cartão de Exemplos (novo) → a página do exemplo; "Ver o
+  favorito com aviso" (Praças, novo) → `ex-namira-pr#alerta-praca`; e os que já iam à lista (`/assinante`: "Por
+  dentro", Planos, menu, rodapé) e ao método da nota;
+- na demonstração, o botão fixo e discreto "← Voltar à apresentação" (canto de baixo à esquerda; sobe sozinho acima da
+  barra do lance e do "Ver no mapa" no celular) só aparece para quem veio da landing por um desses links (registro na
+  `sessionStorage` da aba, vale 12 h); quem entra direto não vê;
+- a volta: na primeira página depois da landing, `history.back()`; depois de navegar na demonstração, um link para "/"
+  sem rolar; nos dois casos a landing devolve o link clicado ao mesmo lugar da tela (se a página mudou de altura, o link
+  é que manda), ou a mesma rolagem quando o link era do menu fixo; o hero já vem pronto;
+- a chegada com âncora confere a posição por até 3 s: no Chrome, quando a página do imóvel chegava aos pedaços (o
+  esqueleto do carregamento encolhe a página), o navegador devolvia a rolagem antiga da landing e a página parava no
+  simulador em vez de nos riscos (1 em ~4 idas);
+- é um link de verdade: Tab, Enter, clique do meio (abre a landing do começo numa aba nova); some na impressão e no
+  relatório em PDF.
+
+**(12)** Saiu "Suporte dedicado" (a tabela e os cartões; o Telescópio fica com a base em planilha e vários usuários).
+
+**(13) "Cancele grátis em até 7 dias":** selo (escudo com o visto) logo abaixo do "Ver planos" no hero (no celular, uma
+linha sem moldura, e a lente cede o mesmo espaço), em pílula antes dos preços e sob o botão de cada um dos três planos,
+sob "Começar agora" na chamada final, como segunda linha do "Ver planos" da barra do celular, na nota dos planos, em "Por dentro" e
+na janela da Luneta. Prova social: "7 dias para cancelar grátis". FAQ "Posso cancelar quando quiser?" subiu para a 3ª
+posição: "Nos primeiros 7 dias depois de assinar, o cancelamento é grátis: é o direito de arrependimento das compras pela
+internet (Código de Defesa do Consumidor, art. 49). Depois desse prazo, você também pode cancelar quando quiser." O
+`[7]` perdeu os colchetes em todo lugar; sem pagamento ainda, nada promete reembolso de outro jeito (o teste confere).
+
+**Testes** (`npm run -s test:site`): `site.test.ts` ganhou 5 casos (nenhuma frase da tela com "advogado"; sem "Suporte
+dedicado"; o selo e o FAQ dos 7 dias sem colchete nem promessa a mais; o alerta no marketing com a demonstração
+honesta e esta seção no PENDENCIAS; os links da landing apontam para exemplos e seções que existem) e
+`src/lib/apresentacao.test.ts` (3 casos: destinos, o registro e a conta da volta).
+
+**Conferido no navegador** (`next start`, Playwright; prints em `scratchpad/prints/r5-L/`): ver "Rodada 5 · landing:
+LCP, CLS e navegador".
+
+**Decisões suas:**
+- [ ] O selo do hero no celular é uma linha simples (a pílula com moldura não cabe sem cobrir a lente em telas de 360 a
+  375 px de largura); no computador e no tablet, a pílula.
+- [ ] "Falar com especialista": o especialista é advogado? Se for, a linha da OAB vale; se não, ela pode sair.
+- [ ] O selo também sob "Assinar Luneta" de "Decida com números"? (hoje não: ficou nos botões que o pedido lista)
+
+**Falta (técnico):**
+- [ ] O back-end do alerta (seção abaixo) antes de tirar o "demonstração" do texto do favorito: com o envio de verdade,
+  `PRODUTO.envioDeEmail = true` troca os textos sozinho.
+- [ ] A volta da demonstração foi testada no Chromium (desktop e celular emulado). Conferir no Safari do iPhone (o
+  `history.back()` e a `sessionStorage` com a aba restaurada do bfcache).
+
+### Back-end: favoritos e alerta de mudança de praça (obrigatório antes do lançamento)
+
+A landing promete, desde a rodada 5 (decisão do dono), que o assinante Luneta marca os favoritos e **recebe um e-mail
+quando a praça muda** (2ª praça, nova data ou novo lance mínimo), "com o novo lance mínimo e a data". Hoje isso só
+existe na demonstração, no navegador (`PRODUTO.envioDeEmail = false`). Antes de lançar (e antes de tirar o
+"demonstração" do texto), o back-end precisa de:
+
+0. **Dados de praça (pré-requisito de tudo abaixo; revisão final da rodada 5, CONT-02).** Hoje a base **não sabe a praça
+   nem a data** dos leilões da Caixa: no instantâneo, `dataPraca` está preenchido em 4 de 21.230 imóveis, e `praca` é
+   nula em 4.569 dos 4.571 leilões (os outros 16.659 são venda direta ou online, de praça única). Sem isso não há o que
+   comparar, e o e-mail prometido ("com o novo lance mínimo e a data do leilão") não sai. É preciso:
+   - **ler as fichas da Caixa** (praça, data e hora do 1º e do 2º leilão) dos ~4,6 mil leilões SFI: é a coleta no PC do
+     dono (`node base/coleta-pc.mjs`, pronta; o anti-robô da Caixa barra o GitHub Actions);
+   - **coleta diária automatizada** (decisão sua: onde rodar, já que a Caixa só abre de uma internet no Brasil), gravando
+     o histórico do item 3 a cada passada.
+1. **Contas e login** (FASE1-SITE, passo 5): o e-mail do assinante confirmado (link de confirmação), o plano da sessão
+   (`planos.ts` já recebe o plano) e a exclusão da conta. **Com o plano vindo da sessão**, a rota dos pontos do mapa
+   (`/api/catalogo/pontos`, hoje `public` com cache na CDN por URL, porque o plano está na URL) passa a ser `private`, ou o
+   plano entra na chave da CDN (Vary ou caminho): senão a CDN serviria a um Lente os pontos filtrados por metrô, nota ou
+   tags pedidos por um Luneta (revisão final da rodada 5, R5-TEC-13).
+2. **Favoritos no servidor**: tabela `favorito (usuario_id, imovel_id, criado_em, avisar_por_email, avisado_em)`; a
+   lista do navegador (`luneta-favoritos:*` e `luneta-alerta-praca`) é importada no primeiro login. Limite por conta (ex.:
+   500), como hoje no navegador.
+3. **Histórico de praça de cada imóvel, gravado por quem atualiza a base** (é isso que permite detectar a mudança):
+   a cada coleta, para cada imóvel, guardar praça (1ª, 2ª, única), data e hora da praça, lance mínimo, status (ativo,
+   vendido, retirado, suspenso) e a data da coleta, numa tabela `praca_historico` (ou eventos `praca_mudou`), sem
+   apagar o anterior. A coleta da Caixa hoje sobrescreve o imóvel: precisa guardar o "antes".
+4. **Comparação a cada atualização da base** (depois de cada coleta; agenda em "Atualização: como funciona"): para cada
+   favorito com aviso ligado, comparar a última leitura com a anterior e gerar um evento quando mudar a praça (1ª → 2ª),
+   a data ou a hora da praça, o lance mínimo, ou o status (vendido, retirado, suspenso: avisar e parar de acompanhar).
+   Nos imóveis de **praça única** (venda direta, venda online, licitação), a opção do favorito promete só o que pode
+   mudar: "Avisar por e-mail se o preço mudar ou o imóvel sair da venda" (revisão final da rodada 5, CONT-03).
+   Imóvel que sumiu da fonte = "retirado ou vendido, confira no site do leiloeiro", nunca "vendido" sem confirmação.
+   Um evento por mudança (idempotente: a mesma mudança não gera dois e-mails se a coleta rodar de novo).
+5. **Fila de e-mails** com provedor transacional (ex.: Amazon SES, Resend, Postmark; custo e escolha: decisão do
+   dono): modelo "Seu favorito foi para a 2ª praça" com o imóvel, o novo lance mínimo, a data e o link da página;
+   agrupar as mudanças do dia num e-mail só por pessoa; limite de envio por pessoa e por dia; novas tentativas com
+   espera; registro do que foi enviado (`avisado_em`).
+6. **LGPD e consentimento**: o aviso só com a opção ligada pela pessoa (nunca ligado por padrão), registro do
+   consentimento (quando e o texto aceito), link de descadastro de um clique em todo e-mail (desliga o aviso daquele
+   imóvel ou de todos), política de privacidade publicada antes, e e-mails só com o necessário (sem dados de terceiros:
+   nada de nome de ocupante ou devedor, a máscara LGPD da base vale para o e-mail).
+7. **Testes**: a comparação (mudou a praça, a data, o lance; vendido; sumiu; nada mudou), a idempotência, o agrupamento
+   diário, o descadastro, o limite de envio e o texto (sem "risco zero", "confira o edital").
+8. **Tela**: a lista "Meus favoritos" com a praça atual e o histórico de cada um ("1ª praça em 14/11 → 2ª praça em
+   28/11, lance de R$ 400 mil para R$ 200 mil"); com o envio ligado, `PRODUTO.envioDeEmail = true` tira o
+   "demonstração" do texto do favorito.
+
+Quem atualiza a base (frente de dados): **gravar o histórico de praça (item 3) a partir da próxima coleta**, mesmo
+antes do login existir; sem o histórico, a primeira comparação só começa depois de duas coletas.
+
+### Rodada 5 · landing: LCP, CLS e navegador
+
+**LCP e CLS da landing** (`next start` de `origin/main` e desta frente lado a lado, intercalados, 9 rodadas de cada;
+celular 390 × 844 com a CPU 4× mais lenta; computador 1440 × 900; scripts `scratchpad/r5L/vitals-ab.mjs`):
+
+| | Antes (main) | Depois (frente L) |
+| --- | --- | --- |
+| LCP no celular (mediana) | 364 ms | 372 ms |
+| LCP no computador (mediana) | 228 ms | 232 ms |
+| CLS (pior rodada, com a intro rodando) | 0,0006 (o número do Alvo contando) | 0 |
+
+O LCP é o título do hero nos dois casos, pintado antes da hidratação; as diferenças ficam dentro da variação entre
+rodadas (numa primeira série de 7, o "depois" saiu melhor: 380 × 384 ms e 272 × 288 ms). O GSAP é pedido depois da
+primeira pintura (~0,9 s no celular lento), sem disputar com ela. O "antes" só mostra o CLS da intro quando ela é
+disparada (tecla ↓), porque sozinha ela não rodava.
+
+**Navegador** (`next start`, Playwright, Chromium; prints em `scratchpad/prints/r5-L/`):
+- **Hero** (`hero/`): 360 × 640, 360 × 780, 375 × 667, 390 × 844, 768, 1024 e 1440, nos dois temas: a cena roda sozinha
+  (1,5 s depois de abrir está no meio; aos 4 s, no fim, com o 48%), sem rolagem lateral nem erro no console. No celular,
+  a folga entre o texto e a lente é a mesma de antes (3 a 5 px a 360, 23 px a 375, 19 px a 390); "Ver planos" e "Falar
+  com especialista" na mesma linha de 360 px em diante. Com menos movimento, o estado final direto.
+- **Seções** (`secoes/`): hero, cartão "Cuidado", exemplos, praças, Decida, nota, planos, especialista, prova social,
+  FAQ (com a pergunta do cancelamento aberta), chamada final e a barra do celular; 360, 390, 768, 1024 e 1440, dois
+  temas: sem rolagem lateral, sem erro, nenhum "advogado", nenhum "[7]", nenhum "Suporte dedicado".
+- **Ida e volta** (`ida-e-volta/`; `scratchpad/r5L/ida-e-volta.mjs`): os 11 links da landing para a demonstração (10 no
+  celular, sem o do menu do computador) em 360, 390, 768, 1024 e 1440: a seção certa no topo (abaixo das barras fixas),
+  a opção do favorito aberta no `#alerta-praca`, o botão de voltar visível, e a volta no **mesmo ponto: diferença de 0 px**
+  em todos (limite pedido: 20 px). Também: voltar depois de navegar na demonstração (lista → outro imóvel), pelo teclado
+  (Enter no link, Enter no botão), e quem entra direto não vê o botão.
+- **Favorito** (`favorito/`): na lista e na página do imóvel, 390 e 1440, dois temas: o coração abre a opção, a chave
+  liga e desliga (fica em `luneta-alerta-praca`), Esc devolve o foco ao coração, "Tirar dos favoritos" tira os dois, e no
+  Lente o coração continua com o cadeado e a janela da Luneta.
+- **axe** (WCAG 2.2 AA), 390 e 1440, dois temas: sem violações no hero, praças, planos, especialista, chamada final,
+  cartão "Cuidado" e nota da landing, nem no botão de voltar e na opção do favorito da demonstração.
+
+### Rodada 5 · landing (frente F): "Ajuste o foco" com 150 imóveis fictícios (23/10/2026)
+
+Pedido do dono (9): "deixe uma simulação com dados fictícios, porém com muito mais dados e muito mais responsiva, com
+mais tipos de filtros, igual estava na prévia". A seção "Ajuste o foco. A lista responde na hora." deixou de filtrar os
+6 exemplos e virou uma demonstração com **150 imóveis fictícios** e os filtros da prévia.
+
+**Os dados** (`src/lib/demo-foco/dados.ts`; fictícios, sempre os mesmos, gerados no navegador a partir de uma semente):
+- 31 cidades reais em 17 UFs, com bairros reais (São Paulo 20 imóveis, Rio 14, BH 9, Brasília 8…);
+- preço = R$/m² típico da cidade (referência fictícia arredondada) × nível do bairro × tipo (casa 0,8; terreno, o m²
+  do lote); deságio pela praça (1ª 5–30%, 2ª 35–60%, única 15–50%; ocupado +4 pontos); lance abaixo da avaliação;
+- quartos e área conforme o tipo (comercial e terreno sem quartos), ocupação, financiamento (raro em terreno);
+- nota de localização fictícia que acompanha o nível do bairro, e ~1 em 10 sem nota (sem endereço preciso, como na
+  base);
+- **metrô** só nas 7 capitais com metrô (SP, RJ, BH, DF, Recife, Salvador, Fortaleza), nos bairros que têm estação de
+  verdade e só com endereço preciso: 37 imóveis a até 1 km. Porto Alegre ficou sem: o Trensurb é trem (a decisão (11)
+  separa metrô, trem e VLT).
+- Na tela: selo "Demonstração · 150 imóveis fictícios", a frase "Cidades e bairros reais; preços, praças, notas e
+  distâncias inventados" e o total "de 150 imóveis fictícios".
+
+**Os filtros** (`src/lib/demo-foco/busca.ts` + `src/components/sections/foco/`), com as mesmas peças da prévia (lista com
+busca, chips com contagem, faixa com barrinhas, Qualquer/Sim/Não, folha):
+- estado e cidade (vários), tipo (vários), preço, deságio e área (faixas com histograma, cursores, campos e atalhos),
+  praça, quartos, ocupação, financiamento, nota de localização e "Metrô perto" (um toque);
+- busca por texto sem acento ("tatuape 2 quartos": o "2" vai com "quartos", não com "2ª praça"); 5 ordens (Melhor
+  localização com o selo); o total corre até o número novo; "Limpar"; × em cada botão; lista vazia sugere tirar o
+  filtro que mais devolve imóveis;
+- as contagens de cada opção valem com os outros filtros (tocar dá exatamente aquele número), como na prévia;
+- **selo Luneta pela regra do produto** (`FILTROS_LENTE` em `planos.ts`): além dos quatro pedidos (ocupação,
+  financiamento, nota e metrô), praça, quartos e área também são da Luneta no produto, então levam o selo (é o que já
+  dizem o texto da seção e a tabela de planos). Na demonstração, todos funcionam;
+- computador: botões rápidos com pop-up (como na prévia) e "Todos os filtros" (folha à direita); celular e tablet: os
+  botões numa linha que rola de lado, cada um abre a folha na seção dele, com "Ver N imóveis" no rodapé;
+- lista com animação (quem continua desliza, quem entra sobe; parada enquanto se arrasta um cursor; sem animação com
+  "reduzir movimento"); no celular, 6 por vez com "Mostrar mais"; do tablet para cima, rola dentro do quadro;
+- mapinha por estado: as bolhas crescem, encolhem e apagam; passar o mouse num imóvel acende o estado, passar numa bolha
+  acende os imóveis dela, clicar filtra o estado (pelo teclado, o mesmo filtro está em "Estado").
+
+**Carregamento**: o código e os dados só vêm quando a seção está a 1.200 px da tela (`IntersectionObserver` + `import()`,
+sem o `next/dynamic`, cujo carregador custava 3,6 KB no JS inicial). Antes disso fica a **moldura**
+(`foco/Moldura.tsx`, componente de servidor, já no HTML), feita com a mesma casca (`foco/Casca.tsx`): a troca muda
+**0 px** de altura em 360, 390, 768, 1024, 1280 e 1440 (importa para o "Voltar à apresentação" e para os links #planos).
+Sem o pedaço (rede caiu), a moldura fica, sem erro.
+
+**Medido** (`next start` do 3736c2e e desta frente, intercalados, 7 rodadas; scripts em `scratchpad/r5F/`):
+
+| | Antes (3736c2e) | Depois (frente F) |
+| --- | --- | --- |
+| JS inicial da landing (scripts do HTML, gzip) | 218,0 KB | 217,0 KB |
+| JS baixado ao abrir (rede) | 206,5 KB | 205,4 KB |
+| JS que chega perto da seção (4 pedaços) | 0 (estava no inicial) | ~42 KB |
+| HTML de / (gzip) | 79,4 KB | 82,4 KB (a moldura vai pronta no HTML) |
+| LCP no celular, CPU 4× (mediana) | 356 ms | 340 ms |
+| LCP no computador (mediana) | 256 ms | 216 ms |
+| CLS rolando do topo até depois da seção | 0 | 0 |
+
+O LCP é o hero nos dois casos; as diferenças ficam dentro da variação. Filtrar, ordenar e contar os 150 leva menos de
+1 ms (teste).
+
+**Testes**: `src/lib/demo-foco/dados.test.ts` (determinismo, preço pelo m² da cidade e do bairro, deságio pela praça,
+quartos e área pelo tipo, metrô só onde há, nota, escalas das faixas, distância entre as bolhas do mapinha) e
+`busca.test.ts` (cada filtro, combinações, contagens com os outros filtros, histogramas, ordens, estado tira as cidades
+de fora, sugestão da lista vazia, resumos dos botões, selo Luneta, velocidade). `npm run test:site`: 292 testes passando.
+
+**Navegador** (Playwright; prints em `scratchpad/prints/r5-F/`): 360, 390, 768, 1024 e 1440 nos dois temas, a moldura
+(390 escuro, 1440 claro) e as interações (`interacao/`): pop-up de preço (tocar numa barrinha filtra; Esc fecha e volta
+o foco ao botão), × limpa, metrô (37), bolha de SP no mapa, hover na lista acende o estado, ordem por nota, lista vazia
+com sugestão, folha "Todos os filtros", teclado (Tab até "Estado", Enter abre com o foco na busca, "bahia" + Enter
+filtra), celular (6 linhas, "Mostrar mais", o botão "Deságio" abre a folha na seção, "≥ 40%", "Ver 79 imóveis" igual
+ao total da lista), sem rolagem lateral e sem erro no console. **axe** (WCAG 2.2 AA), 390 e 1440, dois temas: sem
+violações (quadro inicial, com metrô, pop-up e folha).
+
+**Pendências desta frente**:
+- **Metrô**: o botão "Metrô perto" da demonstração vale o filtro "Metrô a até 1 km" que a frente do metrô (decisão
+  (11)) põe nos filtros avançados do produto. Quando ele entrar, pôr o filtro em `FILTROS_PROMETIDOS` (`planos.ts`) e
+  trocar `metro: null` em `FILTRO_DO_CATALOGO` (`src/lib/demo-foco/busca.ts`) pela chave do catálogo; se ele não entrar,
+  tirar o botão da demonstração (`RAPIDOS_LUNETA` em `foco/FocoDemo.tsx` e o "Metrô perto" de `foco/Moldura.tsx`).
+- Os R$/m² das cidades em `dados.ts` são referências fictícias arredondadas: não usar como dado.
+- O mapinha é por estado, não por cidade (com 150 imóveis, cidades vizinhas como São Paulo e Campinas se encostariam);
+  o mapa de verdade (MapLibre, com ruas e zoom) é o da prévia e da área do assinante.
+- ~~Técnico: o `next build` para na primeira vez com o aviso de segurança do Next 16.4.0.~~ Resolvido na revisão final
+  da rodada 5 (Next 16.4.3).
+
+### Rodada 5 · demonstração (frente V): vitrine com 10 imóveis reais e fotos nos exemplos (24/10/2026)
+
+Pedidos do dono: (3) "Todos os pontos sem foto: adicione as melhores fotos que temos. Uma por caso." e (4) "No 'Abrir
+demonstração completa' pode sempre mostrar parte dos uns 10 imóveis (os melhores) da base real e deixe claro que para
+mostrar mais só assinando."
+
+**A vitrine (`/assinante`)**. O servidor escolhe os **10 melhores imóveis reais** da base a cada carga do instantâneo (e
+de novo a cada dia), por um critério objetivo em `src/lib/catalogo/vitrine.ts` (testado em `vitrine.test.ts`):
+1. **Regras** (todas valem):
+   - deságio de 35% a 75% (alto, sem o desconto extremo que costuma ser erro da fonte);
+   - avaliação coerente: R$/m² da avaliação até 1,8 vez a mediana do mesmo tipo na cidade (ou no estado);
+   - lance de R$ 40 mil a R$ 3 milhões e, em casa e apartamento, de R$ 500 a R$ 25 mil por m²;
+   - nota de localização de 70 para cima, com o endereço achado no número ou na rua;
+   - cidade com 300 mil moradores ou mais (IBGE);
+   - com foto, fora das fotos olhadas e recusadas (`src/lib/catalogo/vitrine-fotos.ts`);
+   - sem tag grave, nem em revisão;
+   - preço claro (venda direta, venda online, licitação ou leilão com a praça informada);
+   - praça ainda não passada, quando a fonte dá a data; área informada.
+2. **Pontuação** = deságio + nota ÷ 2 + 3 se o endereço foi achado no número (desempate: mais dados, depois o id).
+3. **Variedade**: no máximo 2 por estado, 1 por cidade, 4 apartamentos, 4 casas e 1 de cada outro tipo.
+4. Se faltar imóvel, as vagas que sobram usam regras afrouxadas em duas etapas (cada escolhido guarda a etapa e o
+   motivo). Hoje os 10 passam nas regras estritas (643 dos 21.229 passam; o teste com o instantâneo confere).
+
+**Os 10 de hoje** (instantâneo da lista da Caixa de 08/10; todos venda direta ou venda online, praça única, "Ocupação
+não informada", sem tag grave):
+
+| # | Imóvel | Deságio | Nota | Endereço | Pontos | A foto (a do próprio imóvel, vista no Actions) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Casa 1 quarto · Mutondo, São Gonçalo/RJ (R$ 58.764) | 70% | 98 | número | 122 | fachada com portão, nítida |
+| 2 | Apartamento 2 quartos · Areia Branca, Belford Roxo/RJ (R$ 64.001) | 63% | 89 | número | 110,5 | condomínio de torres |
+| 3 | Casa 3 quartos · Nazaré, Salvador/BA (R$ 81.070) | 56% | 100 | número | 109 | a viela com plantas |
+| 4 | Apartamento 2 quartos · Rua Nova, Feira de Santana/BA (R$ 52.217) | 62% | 94 | rua | 109 | entrada do condomínio |
+| 5 | Apartamento 1 quarto · Jardim Atlântico, Olinda/PE (R$ 45.065) | 60% | 91 | número | 108,5 | prédio de 4 andares |
+| 6 | Apartamento 4 quartos, 506 m² · Vila Bom Jesus, São José do Rio Preto/SP (R$ 1,02 mi) | 59% | 98 | rua | 108 | a torre, de baixo |
+| 7 | Loja 545 m² · Floresta, Porto Alegre/RS (R$ 755.609) | 50% | 98 | número | 102 | fachada com portas de garagem |
+| 8 | Casa 109,73 m² · Centro, Pelotas/RS (R$ 200.999) | 46% | 91 | número | 94,5 | fileira de casas antigas |
+| 9 | Casa 258 m² · Mooca, São Paulo/SP (R$ 934.217) | 45% | 92 | número | 94 | o sobrado (foto pequena, 252 px) |
+| 10 | Terreno 454,88 m² · Amambai, Campo Grande/MS (R$ 681.926) | 36% | 95 | número | 86,5 | muro e portão, de madrugada |
+
+Variedade: RJ, BA, SP e RS com 2; PE e MS com 1; 4 apartamentos, 4 casas, 1 loja, 1 terreno. A casa de São João de
+Meriti (69%, era a 2ª) saiu porque uma van cobre a fachada na foto; entraram o apartamento de Belford Roxo e a casa da
+Mooca. O terreno de Campo Grande ficou: os outros terrenos que passam nas regras estritas têm foto pior (preto e branco,
+entulho); sem ele, a 10ª vaga iria para as regras afrouxadas.
+
+**Na tela**:
+- topo da lista: "**Você está vendo 10 de 21.229 imóveis reais da base.** Para ver todos, com filtros, mapa e alertas,
+  assine.", o botão "Ver os planos", o "Cancele grátis em até 7 dias" e, no clique, "Como escolhemos estes 10";
+- com filtro ou busca (valem só dentro dos 10): "Com estes filtros: 2 dos 10 aqui e 2.841 imóveis na base completa.";
+- fim da lista: o mesmo convite, maior; página de cada imóvel real: faixa "imóvel real da vitrine", o aviso no topo e
+  no rodapé, e os parecidos só os da vitrine, com "Na base completa há pelo menos 6 imóveis parecidos com este, fora
+  da vitrine";
+- a troca Lente/Luneta continua: no Lente, sem tags, nota e simulador; no Luneta, tags em revisão, nota e o simulador
+  com os dados da base inteira (região, ITBI). Selos: desligados nos reais (critérios pendentes), como na prévia;
+- o "Como a nota é calculada" de um imóvel da vitrine volta para a demonstração (`?c=assinante`);
+- sem a base (instantâneo faltando), a `/assinante` volta a mostrar só os 6 exemplos, como antes.
+
+**Os 6 exemplos fictícios** ficam num bloco à parte, abaixo do convite: "**Exemplos fictícios (para ver os selos)**",
+fora dos filtros, da contagem e do mapa, com as mesmas páginas `/assinante/imovel/ex-*` (os links da landing e o "Voltar
+à apresentação" continuam iguais). Escolhi o bloco, e não só um link, porque os selos só aparecem neles e quem chega
+pela landing reconhece os cartões; no celular é uma fila que rola de lado (empilhados, os 6 alongavam a página em
+~3.500 px).
+
+**Fotos (decisão 3)**. Todo cartão que aparecia sem foto ganhou uma:
+- os 6 fictícios (os 4 cartões da landing, os 3 do "Por dentro", o cartão do Alvo no hero, a demonstração, a página e o
+  PDF de cada um) usam a foto de um **imóvel real compatível** da base, sempre com o rótulo **"Foto ilustrativa"**
+  ("Exemplo fictício · foto ilustrativa" no cartão da landing; "Foto ilustrativa · de um imóvel real parecido, de outro
+  endereço" na galeria). O endereço do imóvel real nunca aparece (teste);
+
+  | Exemplo | Foto de (imóvel real, mesmo tipo e UF, sem tag grave) | O que mostra |
+  | --- | --- | --- |
+  | Alvo · Apto 3 quartos, Vila Mariana, São Paulo/SP | `caixa-1444423428333`, apto 3 quartos, São Paulo/SP | prédio com sacadas e árvores |
+  | Na Mira · Casa 2 quartos, Água Verde, Curitiba/PR | `caixa-8444429616989`, casa 2 quartos, Fazenda Rio Grande/PR | fachada com garagem (a única de 35 casas do PR olhadas sem data, coordenadas ou rua gravadas na foto) |
+  | Promissor · Apto 2 quartos, Pituba, Salvador/BA | `caixa-1444404514777`, apto 3 quartos, Salvador/BA | prédios de 4 andares numa rua |
+  | Sem selo · Sala comercial, Centro, Rio/RJ | ~~`caixa-0000010139772`~~ **sem foto** desde a revisão final (três riscos graves num prédio real reconhecível) | o desenho, "Exemplo fictício: sem foto" |
+  | Na Mira · Apto 1 quarto, Savassi, BH/MG | `caixa-1787702387750`, apto 2 quartos, Belo Horizonte/MG | duas torres residenciais |
+  | Sem selo · Terreno, Setor Bueno, Goiânia/GO | `caixa-0000010290976`, terreno, Caldas Novas/GO (desde a revisão final; a de antes, de Águas Lindas, tinha data e coordenadas gravadas no canto) | terreno com mato e calçada, sem marca nenhuma |
+
+- compatibilidade: a Caixa não informa a ocupação de nenhum imóvel ("não informada"), então nenhum real contradiz o
+  exemplo; no exemplo "ocupado" (sala no Rio), a foto é a fachada do prédio inteiro;
+- os casos reais usam a foto deles (a vitrine e a prévia);
+- o `AuctionCard` da landing trocou o `next/image` por `<img>` de 84 px (64 no compacto) com largura e altura fixas (sem
+  CLS), `loading="lazy"`, `referrerPolicy="no-referrer"` e o desenho listrado por baixo, que fica se a foto falhar;
+- o cartão do Alvo no hero leva a mesma foto, preguiçosa e de baixa prioridade (o LCP continua o título);
+- o mapa não usa a foto ilustrativa na miniatura (não caberia o rótulo);
+- ficaram sem foto, de propósito: as 150 linhas do "Ajuste o foco" (linha com o ícone do tipo, sem moldura de foto;
+  seriam 150 pedidos à Caixa) e as miniaturas do "Decida com números" e da "Nota de localização" (não têm moldura de
+  foto).
+
+**Escolha das fotos no Actions** (`scripts/prints/actions.mjs`, roteiro `fotos` → `scripts/prints/fotos.mjs`): baixa as
+candidatas de `scripts/prints/fotos-candidatas.json` (um pedido por vez, 1,2 s de pausa, User-Agent que diz quem somos;
+para depois de 5 bloqueios seguidos, sem contornar anti-robô), reduz a 320 px com o sharp e monta folhas de contato em
+`coletas-dados/prints/<execução>/`. **A Caixa não bloqueou**: execuções 40042341202 (114 candidatas: a vitrine, a fila
+e as fotos para cada exemplo), 40042911905 (88) e 40098277361 (40, a fila da vitrine); 242 pedidos, 234 fotos, 8 com
+404. As fotos ruins para a vitrine ficaram em `vitrine-fotos.ts` (40: página de documento, mapa de satélite, colagem do
+laudo, 404, van na frente, entulho ou lixo em primeiro plano, preto e branco, tremida). O roteiro `fotos-site` (`scripts/prints/fotos-site.mjs`) tira os prints
+com as fotos de verdade: execução 40098702645, `/assinante`, um imóvel real, `ex-alvo-sp` e a landing em 360, 390,
+768, 1024 e 1440, nos dois temas. **Todas as fotos da Caixa abriram** no navegador (16 de 16 na `/assinante`, 2 de 2
+em cada página de imóvel, 14 de 14 na landing a partir de 1024 px; abaixo disso, o 3º cartão do "Por dentro" fica
+escondido e a foto dele, preguiçosa, nem é pedida).
+
+**Navegador** (Playwright local, `next start`; daqui a Caixa não abre, então as fotos vieram das miniaturas baixadas no
+Actions; prints em `scratchpad/prints/r5-V/`, com as do Actions em `acoes-fotos-reais/` e as folhas de contato em
+`folhas-de-contato/`): `/assinante` (topo, fim da lista, exemplos, filtro SP com "Como escolhemos" aberto, Lente, sem
+fotos), imóvel real, `ex-alvo-sp`, `ex-semselo-go` e a landing (hero e exemplos), em 360, 390, 768, 1024 e 1440, nos
+dois temas: sem rolagem lateral e sem erro no console. **axe** (WCAG 2.2 AA) sem violações na `/assinante` (Luneta,
+Lente e com filtro), no imóvel real, no exemplo e nos cartões da landing, em 390 e 1440, nos dois temas. O "Abrir na
+demonstração" de um cartão da landing cai em `ex-namira-pr`, e o "Voltar à apresentação" volta ao mesmo ponto (0 px de
+diferença, em 390 e 1440).
+
+**Testes**: `vitrine.test.ts` (cada regra, pontuação, variedade, etapas, contagem dos ativos, textos sem "vendendo",
+fotos ilustrativas, e o instantâneo real: 10 no critério estrito, filtros só dentro deles, página de um real e de um
+fictício, Lente sem nada da Luneta), `exemplos.test.ts` e `src/components/fotos-ilustrativas.test.ts` (renderiza no
+Node o cartão da landing, o hero, o cartão e a galeria da demonstração: a foto ilustrativa sempre com o rótulo, `<img>`
+simples de tamanho fixo, e o endereço do real fora).
+
+**Pendências desta frente**:
+- **Fotos da vitrine a cada atualização da base**: a escolha se refaz sozinha, mas a olhada nas fotos não. Imóvel novo
+  entra com a foto que tiver. Depois de cada atualização: `node --import jiti/register scripts/prints/gerar-candidatas.ts`
+  (a vitrine e a fila dela), push num `acoes-*`, `gh workflow run site-prints.yml --ref <branch> -f roteiro=fotos`,
+  olhar as folhas e anotar as ruins em `vitrine-fotos.ts`.
+- **Imóvel vendido continua na vitrine** enquanto a base não se atualiza sozinha (a lista da Caixa é de 08/10): o
+  mesmo problema da prévia (ver "Atualização: como funciona").
+- **Fotos ilustrativas**: confirmar com o especialista que usar a foto pública de um imóvel da Caixa, rotulada e sem o
+  endereço, para ilustrar um exemplo fictício está ok (a foto fica na Caixa; o site não a copia). Se a Caixa tirar a
+  foto do ar, o cartão volta ao desenho listrado; trocar a foto em `src/content/examples.ts` (`photoIlustrativa`).
+- **"Ajuste o foco"** continua sem foto nas linhas: **decisão sua** (está em "Rodada 5 · revisão final", decisões).
+- ~~Técnico (integração): a frente do mapa também criou `scripts/prints/actions.mjs`~~ **Feito na integração
+  (24/10/2026):** o `actions.mjs` é o do mapa (roteiros `mapa`, `tudo`, `desempenho`, `revisao`) e desvia `fotos`,
+  `fotos:<sub>` e `fotos-site` para `fotos.mjs` e `fotos-site.mjs` antes de abrir o navegador.
+
+### Rodada 5 · simulador e metrô (frente S): lucro com o lance primeiro, conta limpa e a tag "Metrô a 450 m" (24/10/2026)
+
+Pedidos do dono: (6) "No cenário e prazos, quero que a versão 'Lucro com o meu lance' seja a principal. Se quiser, muda
+para a outra."; (7) "No 'A conta linha a linha', quero que a parte de alterar a conta linha a linha seja escondida; se eu
+clico, ela abre."; (11) "Para cidade grande, quero que metrô perto seja uma flag (< 1 km). Dá para fazer?"
+
+**(6) "Cenários e prazos" abre em "Lucro com o meu lance".**
+- A opção vem primeiro no seletor e é o padrão (`VISAO_PADRAO` em `src/lib/simulador/completa.ts`). "Lance máximo para
+  a meta" fica a um toque.
+- **Quem já escolheu mantém a escolha**: o estado salvo (`luneta:simulador:v2:<id>`) guarda `visao: null` enquanto a
+  pessoa não toca no seletor, então dá para distinguir. Quem nunca escolheu (ou tem só ajustes) passa a ver o lucro;
+  quem escolheu o lance máximo continua nele.
+- O PDF segue a mesma vista: a tabela da tela vem primeiro e a outra depois.
+- Venda direta sem mudança: "Vale a pena comprar por R$ X?", a tabela abre no "Lucro pelo preço" e a outra vista é a
+  margem para imprevistos.
+- O "Como usar" explica as duas visões na ordem nova, a legenda das cores é a da visão aberta (com uma linha sobre a
+  outra) e o exemplo começa pelo lucro com o lance.
+
+**(7) "A conta, linha a linha" abre limpa.**
+- Os lápis, o "+ Adicionar custo", a lista "Fora da conta" (com o "Religar") e o "Restaurar tudo" ficam atrás de um
+  botão discreto ao lado do título, **"Editar a conta"**.
+- Aberta, tudo funciona como antes (os pop-ups por tipo de despesa) e o botão vira "Concluir".
+- **Com ajustes salvos**, o botão diz **"Conta ajustada · ver ajustes"**, com um ponto de latão. As linhas ajustadas
+  mantêm o selo "ajustado" mesmo fechada. Custo tirado da conta aparece numa linha discreta ("1 custo fora da conta:
+  registro").
+- Teclado e leitor de tela: é o mesmo botão nos três estados (`aria-expanded`, `aria-controls`), então o foco fica nele
+  ao abrir e ao fechar. O lápis abre o pop-up, e o Esc devolve o foco ao lápis.
+- Celular: as abas Tabela / Conta / Gráfico e as folhas dos pop-ups continuam iguais. A conta fica aberta enquanto a
+  pessoa estiver na página.
+- O "Restaurar tudo" saiu do cabeçalho do Detalhe e foi para dentro da edição da conta.
+
+**(11) Metrô perto: a tag "Metrô a 450 m" (e "Trem a…", "VLT a…").**
+- **Dados**: `base/fontes/localizacao/osm.py` separa a antiga categoria `trilho` em `metro`, `trem`, `vlt` e
+  `monotrilho`, pelas tags subway, train, light_rail, tram, monorail e station=*.
+  - O arquivo do OSM ganhou o nome e a rede de cada estação.
+  - Estação de dois modos sai nas duas categorias.
+  - Etapa `osm` rodada de novo no Actions (execuções 40099760538 e 40100163122, branch `coleta-localizacao`, OSM de
+    23/10/2026): 970 pontos de metrô, 788 de trem, 376 de VLT e 45 de monotrilho, em `coletas-dados/localizacao/40100163122/`.
+- **Cálculo**: `base/fontes/localizacao/estacoes.py`.
+  - Calcula, para cada imóvel com endereço no número ou na rua, a distância em linha reta até a estação mais perto de
+    metrô, de trem e de VLT, com o nome da estação.
+  - Grava as colunas `metro_m`, `trem_m`, `vlt_m`, `<modo>_nome` e `metro_mono` no `localizacao-osm.json.gz` (ODbL).
+  - **A nota não mudou**: só as colunas novas entraram, o resto do arquivo ficou igual.
+  - A etapa `nota` do Actions já chama o `estacoes.py` depois do `nota.py`.
+- **Só estação de passageiros de transporte urbano**: o OSM marca como estação muita parada antiga do interior, linha
+  de carga, trem turístico, bonde e funicular. Para a tag:
+  - saem os nomes com "antiga", "desativada", "turística", "bonde", "funicular", "plano inclinado" etc.;
+  - sai a linha Teresina–Parnaíba, marcada ao mesmo tempo como metrô, trem e VLT em cada estação;
+  - sai o acesso de metrô "órfão", longe de qualquer estação (havia um no Méier, a 2,6 km do metrô mais perto);
+  - trem e VLT só contam de rede urbana conhecida (CPTM, ViaMobilidade, TIC Trens, SuperVia, Trensurb, CBTU,
+    Metrofor, VLT, EMTU...) e das estações vizinhas dela;
+  - o monotrilho só conta o do Metrô de São Paulo (vira "Metrô a…", com a frase "estação de monotrilho"); o de
+    santuário e o de parque ficam fora.
+
+  Conferi à mão, cidade por cidade, as estações que dão tag: nomes de estações da SuperVia, da CPTM, dos metrôs e dos
+  VLTs.
+- **Quantos ganham a tag** (detalhe por cidade em `base/saida/localizacao/medicao-nota.md`, seção "Estação de metrô,
+  trem e VLT perto"):
+
+  | Tag (abaixo de 1 km) | Imóveis | % dos 13.692 com número ou rua |
+  | --- | --- | --- |
+  | Metrô | 369 | 2,7% |
+  | Trem | 604 | 4,4% |
+  | VLT | 43 (eram 46: a Linha Sul do Metrofor contava também como VLT; revisão final) | 0,3% |
+  | Pelo menos uma | 907 | 6,6% |
+
+  Rio de Janeiro: 543 (144 metrô, 473 trem). São Paulo: 132. Jaboatão: 41. Salvador: 23. Camaragibe: 21. Nilópolis: 17.
+  Fortaleza: 13. Canoas, São Vicente, São Leopoldo e Brasília: 10 a 11.
+- **No site** (`src/lib/catalogo/estacoes.ts`):
+  - a tag é calculada no servidor ao montar o resumo e o detalhe (`conjuntos.ts`). É positiva e confirmada, vem antes
+    das outras positivas no cartão e é do plano Luneta: no Lente sai com as outras tags;
+  - na página, a tag tem a evidência ("Estação de metrô Carioca / Centro a 150 m, em linha reta do ponto do endereço
+    (no número). Fonte: OpenStreetMap...") e a confiança: alta no número, média na rua;
+  - a explicação está em `src/content/tags.ts` (`TAGS_LOCALIZACAO`), fora das 8 categorias da landing;
+  - a faceta de tags usa o rótulo fixo "Metrô a até 1 km";
+  - **filtro avançado "Metrô a até 1 km"** (Luneta), com a contagem. Fica na seção **"Entorno"** do painel de filtros,
+    que antes se chamava "Nota de localização" e agora tem a nota e o metrô. URL `metro=1`, pílula, consulta no
+    servidor. No Lente aparece com o cadeado e é ignorado;
+  - na seção de localização da página do imóvel, o cartão do endereço diz "Estação de metrô Carioca / Centro a 150 m"
+    (sem nome, se o OSM não trouxer), em linha reta e com a atribuição do OSM. O PDF tem a mesma frase, em
+    "Transporte sobre trilhos perto";
+  - nas fontes da nota, o OSM cita as duas datas: a da nota (17/10) e a das estações (23/10).
+
+**Navegador** (`next start`, Playwright, prints em `scratchpad/prints/r5-S/`). Larguras 360, 390, 768, 1024 e 1440, nos
+dois temas: 218 conferências, sem erro (o script está em `scratchpad/r5s-prints.mjs`).
+- **Simulador**: abre no lucro; quem tinha escolhido o lance máximo continua nele; a conta fechada não tem lápis nem
+  "Adicionar custo". Enter no "Editar a conta" abre e o foco fica no botão. O lápis abre o pop-up, e o Esc volta ao
+  lápis. "Conta ajustada · ver ajustes" aparece com ajustes salvos. No celular, a aba Conta.
+- **Metrô**: a tag e a explicação no imóvel, a frase na localização, o filtro na URL, a pílula e o chip marcado no
+  painel. O Lente fica sem a estação e sem a tag, e o filtro aparece com o cadeado.
+- **PDF**: a tabela da vista escolhida vem primeiro, e a localização diz a estação.
+- Sem rolagem lateral.
+
+**Testes**: `src/lib/catalogo/estacoes.test.ts` (textos, leitura das colunas, conferência do arquivo, filtro com
+contagem, Lente, URL e pílula, dados reais), um caso real em `pagina.test.ts` (a tag com a evidência na Luneta, nada no
+Lente), a visão padrão em `simulador-v2.test.ts` e as regras do `estacoes.py` e do `osm.py` no `testar.py`.
+
+**Pendências desta frente**:
+- **Decisões do dono** (o que escolhi):
+  - monotrilho do Metrô de SP conta como metrô;
+  - o bonde de Santa Teresa e os trens de longa distância (Vitória a Minas, Carajás) não contam;
+  - a tag vale com endereço na rua (o ponto é o meio da rua: confiança média), não só no número;
+  - Trensurb (Porto Alegre) aparece como metrô, porque o OSM a marca assim.
+- **Atualização**: a cada etapa `osm` + `nota` do Actions a tag se refaz sozinha. Fora dela, depois de uma etapa `osm`
+  nova: `estacoes.py --osm osm-pois.csv.gz` (2 s) e commitar o `localizacao-osm.json.gz` e o `medicao-nota.md`.
+  Estação nova (uma linha que abre) entra quando o OSM a marcar; se a rede dela não estiver em `REDES_PASSAGEIROS`
+  nem perto de uma que esteja, acrescentar lá.
+- **Nota de localização**: o transporte da nota ainda usa a categoria inteira de 17/10, com as estações antigas do
+  interior, como na rodada 4. No próximo recálculo da nota, vale usar as mesmas regras da tag. Isso muda a nota de
+  algumas cidades pequenas, por isso não fiz agora.
+- A página pública "Como a nota é calculada" (`/metodologia/localizacao`) ainda não fala da tag de metrô. Dá para pôr
+  um parágrafo quando o dono aprovar as regras acima.
+- O Next avisou no `next build` que a versão 16.4.0 tem uma vulnerabilidade conhecida e recomendou atualizar. Não
+  mexi: fica para uma frente própria.
+
+### Rodada 5 · mapa de verdade (23/10/2026)
+
+Pedido (ponto 14): "um carinho maior com o mapa": filtrar os casos conforme o zoom, mostrar o nome da rua de perto,
+estado da arte, responsivo e rápido. Feito com **MapLibre GL JS 6.15.0** (código aberto, BSD) e os ladrilhos vetoriais
+do **OpenFreeMap** (grátis, sem chave). `package.json` e `package-lock.json` ganharam `maplibre-gl`.
+
+**O que mudou para quem usa:**
+- **Vista "Mapa" no catálogo** (/previa e /assinante, Lente e Luneta), ao lado de Lista e Cards (`?vista=mapa`). Fundo
+  claro e escuro nas cores do site, nomes em português; trocar o tema não mexe na câmera nem recarrega os imóveis.
+- **De longe, agrupamentos** com a contagem ("1,4 mil") e a cor do deságio médio (legenda embaixo); **de perto (zoom 14+),
+  cada endereço com o lance num balão** ("R$ 43 mil", ou "3 imóveis" no mesmo prédio). Nomes das avenidas a partir do
+  zoom 13, das ruas a partir do 14,5, número das casas a partir do 17,5; estações de trem e metrô a partir do 13; os demais
+  pontos de interesse, discretos, a partir do 16. Os nomes de cidade do fundo desviam das bolhas (não ficam cortados).
+- **"Buscar ao mover o mapa"** (ligado por padrão): depois que a pessoa mexe no mapa (arrastar, pinça, roda, teclado ou
+  os botões), a lista ao lado mostra só os imóveis da área visível (filtro `bbox` na URL, aplicado no servidor, nos dois
+  planos). Ao abrir o mapa ou trocar de lugar na busca, a lista é a busca inteira (o enquadramento automático não vira
+  área). Desligado: "Buscar nesta área" e "Ver a busca inteira (N)". O centro e o zoom vão na URL
+  (`centro=lat,lon&zoom=`): o link e o "voltar" reabrem o mesmo lugar, com a mesma área.
+- **Cartão do lugar:** ao passar o mouse (foto, lance, deságio, bairro, link) e preso ao clicar ou tocar. O mouse num
+  cartão da lista acende o ponto no mapa, e o lugar no mapa acende os cartões da lista.
+- **Precisão do endereço, nunca um alfinete falso:** no número ou na rua, o ponto (na rua, aberto no cartão ou na página
+  do imóvel, com a área de incerteza em volta); **só o bairro**, um círculo de pelo menos 300 m ("em algum ponto do
+  círculo"), que some de perto e deixa o rótulo "N imóveis no bairro"; **só a cidade**, o marcador "sem endereço exato" no
+  centro, com "N imóveis sem endereço exato em <cidade>" e "Ver os N na lista" no cartão.
+- **Botões:** aproximar, afastar, ver o Brasil e "minha região" (localização do navegador, só ao clicar; a posição não é
+  enviada ao site). Teclado: setas, + e −, Esc fecha o cartão. Leitor de tela: o mapa tem descrição, e a lista é a
+  alternativa completa.
+- **Celular:** o mapa ocupa a tela abaixo da barra e a lista fica numa folha que se puxa (espiada, meio, cheia); pinça e
+  arrasto no mapa. Créditos e escala sempre acima da folha.
+- **Sem WebGL** (ou se a placa de vídeo derrubar o mapa): o mapa do Brasil em SVG de antes.
+- **Página do imóvel:** a seção Localização ganhou o mapa de verdade (só baixa quando a seção chega perto), com o ponto
+  e o lance, ou o círculo do bairro (desenhado em qualquer zoom), ou o marcador da cidade. A roda do mouse rola a página
+  (Ctrl/⌘ + roda aproxima); no toque, dois dedos movem o mapa. "Ver o ponto no OpenStreetMap" continua.
+
+**Como funciona (técnico):**
+- `GET /api/catalogo/pontos` (os mesmos filtros da lista, sem a área) devolve os **lugares** (imóveis no mesmo ponto e
+  precisão juntos), em ordem de Morton, latitude e longitude em diferenças × 100.000, lance em centenas. Brasil inteiro:
+  **9.741 lugares, 537 KB de JSON, 182 KB em gzip, 161 KB em brotli**; ~50 ms no servidor na primeira vez e ~5 ms depois
+  (cache por instância). Compressão feita na rota (o `next start` não comprime rotas). `/api/catalogo/pontos/itens`
+  devolve os imóveis de um lugar (até 40), com a versão da lista (409 se ela mudou).
+- **Peso:** o MapLibre (1.057 KB, **287 KB em gzip**) e o worker dele (519 KB, 147 KB em gzip, servido pelo próprio site
+  em `/mapa/maplibre-gl-worker.mjs`) só baixam na vista de mapa ou perto do mapa da página do imóvel. Conferido no build
+  de produção: a landing, a lista, os cards e o topo da página do imóvel não baixam nada do mapa.
+- **Desempenho:** os pontos entram no mapa (`setData`) só quando os filtros mudam; arrastar e aproximar não passam pelo
+  React (o MapLibre desenha na placa de vídeo e agrupa num worker); o cartão preso acompanha o mapa mexendo só na posição;
+  a área visível sai uma vez por movimento. O círculo do bairro some entre 140 e 220 px de raio e sai do desenho por
+  zoom: no Rio, no zoom 16, seriam 169 círculos com raio mediano de 760 px, um sobre o outro. As bolhas têm até 28 px de
+  raio e se agrupam num raio de 60 px (no celular, com 42 a 50 px, elas se cobriam).
+- **Medição no Actions** (Chromium sem placa de vídeo: o WebGL roda no SwiftShader, na CPU, e os quadros por segundo são
+  piores que os de qualquer celular; vale a comparação com e sem as camadas dos imóveis):
+
+  | Percurso (1440×900), quadros/s | 1ª rodada (40033977496): com imóveis / sem | Última (40037083842): com / sem |
+  | --- | --- | --- |
+  | Brasil → São Paulo (voo de 3 s) | 16 / 12 | 14 / 15 |
+  | arrasto São Paulo → Rio (2 s) | 6 / 8 | 6 / 6 |
+  | Rio, zoom 12 → 16 (1,5 s), 1ª vez na sessão | 2 / 12 | 1 / 8 |
+  | Rio, zoom 12 → 16, de novo (ladrilhos já baixados) | — | **12 / 11**, sem tarefa longa |
+
+  O tranco de ~1,8 s na primeira ida ao zoom de rua não vem das camadas dos imóveis: repetido com tudo baixado, escondendo
+  uma camada por vez, todas as combinações deram 11 a 12 quadros/s e nenhuma tarefa longa (só os preços, só os
+  círculos, sem nada). É o custo de primeira vez (ladrilhos novos e os programas da placa de vídeo, que no SwiftShader são
+  compilados na CPU); como a medição "com imóveis" vem antes da "sem", só ela paga. O sumiço dos círculos grandes de
+  perto não muda esse número no SwiftShader; ele evita pintar dezenas de círculos maiores que a tela, um sobre o outro,
+  na placa de vídeo do celular. Última rodada: pontos na tela 2,4 s depois de abrir a página; `setData` dos
+  9.741 lugares até desenhar, 480 ms; pedido dos pontos, 13 ms (538 KB, brotli). Rodadas: 40033977496, 40036326671 e
+  40037083842 (prints em `coletas-dados`, `prints/<id>/`).
+- **Prints:** `git push -f origin HEAD:acoes-mapa` e `gh workflow run site-prints.yml --ref acoes-mapa -f roteiro=mapa`
+  (roteiro em `scripts/prints/actions.mjs`); os PNGs e o `relatorio.txt` vão para o branch `coletas-dados`, pasta
+  `prints/<id da rodada>/`. Daqui (este ambiente) a rede não chega aos ladrilhos; no Actions, sim.
+
+**OpenFreeMap: termos e endereços (conferidos em 23/10/2026, openfreemap.org):**
+- Grátis, sem chave, sem cadastro, sem limite de uso e sem cookies; uso comercial permitido (FAQ: "Yes").
+- Pede a atribuição "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" (a parte do OpenFreeMap é opcional). O site
+  mostra, sempre aberta no canto do mapa: "OpenFreeMap © OpenMapTiles © colaboradores do OpenStreetMap", com os links.
+- Termos: serviço "como está", sem garantia, e **pode acabar a qualquer momento**; servido pela Cloudflare; lei da Hungria.
+  Privacidade: dizem não guardar o IP nos registros de acesso.
+- Endereços usados: `https://tiles.openfreemap.org/planet` (TileJSON; ladrilhos em `/planet/<versão>/{z}/{x}/{y}.pbf`) e
+  `https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf` (Noto Sans). Sem sprite (os balões são desenhados na hora).
+  O estilo é nosso, feito a partir do Positron do OpenFreeMap (BSD-3 / CC BY 4.0).
+
+**Decisões suas:**
+- [ ] **Política de privacidade:** citar o OpenFreeMap. O navegador do visitante pede os ladrilhos direto a eles (via
+  Cloudflare), o que entrega o IP e a região vista no mapa; "minha região" usa a localização do navegador só ao clicar.
+- [ ] **Doação ao OpenFreeMap** (o projeto vive de doações e pede apoio de quem usa em produção) ou plano pago de reserva.
+- [ ] Vista padrão: hoje a lista (ou cards, a que ficou salva); o mapa é um modo de explorar que entra no histórico (o
+  "voltar" volta à lista) e não vira a preferência salva. Abrir no mapa por padrão em algum caso?
+
+**Falta (técnico):**
+- [ ] **Plano B dos ladrilhos:** se o OpenFreeMap sair do ar, o mapa avisa "As ruas do mapa não carregaram agora" e os
+  imóveis continuam no lugar. Alternativas: os mesmos ladrilhos do Brasil num arquivo PMTiles (Protomaps) num
+  armazenamento nosso, ou um serviço pago (MapTiler, Stadia).
+- [ ] **Testar num celular de verdade** (o Actions não tem placa de vídeo; aqui a rede não chega aos ladrilhos).
+- [ ] O worker do MapLibre sai sem compressão no `next start` (na Vercel a CDN comprime). A rota é estática de
+  propósito (sem função no servidor). Conferir no site publicado, depois do merge, com
+  `curl -sI -H 'Accept-Encoding: br' https://luneta-de-leiloes.vercel.app/mapa/maplibre-gl-worker.mjs?v=6.15.0`; se vier sem
+  `content-encoding`, comprimir na rota (como a dos pontos). O build também emite ~5 MB de `.mjs` do MapLibre que nenhuma
+  página pede (versões dev): só pesam no deploy, não no navegador.
+- [ ] O print da folha do celular no Chromium sem placa de vídeo saía com faixas brancas (partes da página não pintadas
+  pelo SwiftShader); com a rasterização na CPU (como no roteiro agora) some. Conferir num celular.
+
+### Rodada 5 · mapa: revisão adversarial (23/10/2026)
+
+Pedido do dono (ponto 14): "o mapa no estado da arte, muito responsivo, rápido, respondendo bem aos zooms; de acordo com
+o zoom ele vai filtrando os casos; com zoom, mostra o nome da rua". A revisão tentou quebrar o mapa da frente M (commits
+9f7d20c a 865961b): desempenho com a CPU 4× mais lenta, memória depois de 50 zooms, troca de filtros e de tema, voltar e
+avançar, "Buscar nesta área" (vazia, no limite do Brasil, com texto), Lente × Luneta, teclado, celular deitado, sem WebGL,
+CLS, peso do JS da lista, precisão do endereço e créditos. Conferido com `next start` + Playwright aqui (sem os ladrilhos:
+o proxy bloqueia) e com os ladrilhos de verdade no Actions (roteiro `revisao` em `scripts/prints/actions.mjs`; rodadas
+40041271354, com o roteiro `mapa` inteiro, e 40042226074; prints em `coletas-dados`, `prints/<id>/`). Nos prints: nomes de
+rua a partir do zoom 13–14,5 nos dois temas (Rua Boqueirão, Rua Sabedoria, Avenida Abílio Augusto Távora em Nova Iguaçu;
+Rua da Assembléia, Rua da Carioca e Avenida República do Chile no Centro do Rio), cores do fundo e dos balões coerentes com o site no claro e no
+escuro; o número das casas (zoom 17,5) só aparece onde o OpenStreetMap tem o dado (em Nova Iguaçu, não tem).
+
+**Achados e correções** (todos com o código no commit da revisão; os números de CPU 4× são do Chromium daqui, sem placa de
+vídeo):
+1. **Alto · a lista perdia imóveis ao abrir o mapa.** Com "Buscar ao mover o mapa" ligado, o enquadramento automático
+   (percentis 2 a 98 dos pontos) virava a área da lista: abrir o Brasil escondia 12 imóveis no computador e **254 no
+   celular** (o oeste do país não cabia), sem aviso. Agora só o movimento da pessoa (gesto, teclado, botões, clique no
+   agrupamento) vira a área (`movimentoDaPessoa`, com teste); abrir, trocar de lugar ou voltar no histórico mostram a busca
+   inteira. Link antigo com a área e sem a câmera abre o mapa na área.
+2. **Alto · Lente ganhava um filtro da Luneta pelo mapa.** Os pontos eram pedidos sem o plano (o servidor entende a
+   Luneta): "casa 2 quartos" na busca filtrava os quartos no mapa do Lente (5.624 no mapa contra 7.896 na lista). O plano vai
+   no pedido e na chave quando muda os pontos (`consultaPontos`, `chaveMapa`, com teste). O mesmo valia para a chave do mapa
+   do Brasil em SVG.
+3. **Médio · voltar no histórico com o mapa aberto** reenquadrava o Brasil e a lista virava o Brasil inteiro: agora o mapa
+   pula para a câmera daquela entrada e a lista volta à área dela (conferido: arrastar em SP → buscar "Recife" → voltar =
+   SP, 279 imóveis).
+4. **Médio · "só o bairro" parecia endereço exato.** 30 lugares de bairro com desvio de 10 a 50 m na base viravam um ponto
+   de 7 px. Raio mínimo de 300 m no bairro (`raioDoNivel`, com teste); o imóvel de bairro sob o mouse na lista acende a área
+   do bairro, não um anel no centro; na cidade, um anel largo em volta do marcador "sem endereço exato".
+5. **Médio · notebook de 768 px de altura (1366×768, 1024×768):** com o cabeçalho que rola junto, a coluna do mapa passava
+   ~110 px do pé da tela: legenda, escala e créditos fora da tela até rolar (e 1 px em toda tela, pelo marco de 1 px acima
+   da barra). A conta da altura agora desconta tudo o que está à vista acima da barra; conferido no Actions: créditos à
+   vista em 1366×768 e 844×390. Ao rolar a lista, a coluna cresce junto com o cabeçalho saindo (CLS 0,008 em 1366×768;
+   0,002 em 1440×900, como já era com a faixa de aviso).
+6. **Médio · celular deitado (844×390):** a folha espiava 132 px de um mapa de 212, os botões de Brasil e minha região
+   ficavam embaixo dela, a escala caía em cima da chave e os créditos sumiam. Agora a folha espia só o título (78 px, por
+   consulta de mídia: sem pulo), e os botões vão para uma linha no alto.
+7. **Médio · desempenho na parada do mapa (CPU 4×, celular):** depois de cada arrasto, a lista nova travava o thread
+   principal por 215–260 ms (React) + 37–136 ms (layout dos 24 cartões, quase todos escondidos sob a folha). Agora o
+   resultado da vista de mapa é desenhado em segundo plano (`useDeferredValue`) e os cartões fora da tela não têm layout
+   (`content-visibility`): 105–140 ms + 43–54 ms. No Actions (CPU 4×, com os ladrilhos), as tarefas longas depois de três
+   paradas seguidas ficaram em [103, 115], [64, 51] e [56, 73] ms (antes: [216, 100] na primeira). Arrastar e aproximar
+   continuam fora do React.
+8. **Baixo · CLS da folha no tablet (até 0,10):** a folha nascia no topo padrão e descia ~120 px quando a barra era medida
+   um quadro depois; agora a medida sai antes da pintura (CLS 0 em 390, 667×375, 768, 844×390, 1366).
+9. **Baixo · sem WebGL o MapLibre (1 MB, 287 KB gzip) era baixado mesmo assim:** agora o teste vem antes; sem WebGL, cai no
+   mapa SVG sem baixar nada do mapa (conferido com `--disable-webgl`, no computador e no celular).
+10. **Baixo · teclado:** no computador o mapa vinha depois dos 24 cartões (~50 Tabs): novo atalho "Pular para o mapa" (2
+    Tabs, Enter, foco no mapa; + e − aproximam, setas movem, Esc fecha o cartão).
+11. **Baixo:** pontos pedidos de novo sem o cache HTTP quando o catálogo muda (409 no cartão); "Ver a busca inteira (N)"
+    conta também os imóveis sem posição; o zoom do mapa da página do imóvel respeita "reduzir movimento".
+
+**Conferido sem achado:** memória depois de 50 zooms (14,5 → 16,8 MB de heap, mesmo número de ouvintes); trocar o tema não
+mexe na câmera nem nos imóveis (9 lugares antes e depois); "Buscar nesta área" com a chave desligada (aparece só depois de
+arrastar; "Ver a busca inteira" tira a área); área no mar mostra "Nenhum imóvel nesta parte do mapa"; texto novo com área
+tira a área; bbox fora do Brasil, invertida ou fora do globo é ignorada no servidor; `/api/catalogo/pontos/itens` no Lente
+sem tags, selo e nota; a lista, os cards e a landing não baixam o MapLibre (só a vista de mapa e a página do imóvel perto do
+mapa).
+
+**Falta:**
+- [ ] O desenho da lista nova ainda ocupa 105–140 ms do thread principal com a CPU 4× (uma tarefa só: a parte que o React
+  não fatia). Se no celular de verdade o mapa engasgar logo depois de soltar o dedo, o próximo passo é desenhar a lista da
+  folha só quando ela for puxada (na espiada só o título aparece).
+- [ ] Conferir num celular de verdade: pinça, folha, celular deitado e a parada do mapa.
+
+### Rodada 5 · integração das frentes (24/10/2026)
+
+Um branch só com as duas faixas da rodada 5: a faixa 2 (`a91fafc`: landing L, "Ajuste o foco" F, vitrine V, simulador e
+metrô S) e o mapa de verdade com a revisão adversarial (`e47c8d8`). Nada foi para o main.
+
+**Como juntou:**
+- `maplibre-gl` 6.15.0 entrou com o `package-lock.json` do mapa (`npm install` no worktree; o lock não mudou).
+- Os dois filtros novos convivem:
+  - `Filtros.metroPerto` (Luneta, URL `metro=1`, pílula "Metrô a até 1 km");
+  - `Filtros.bbox` ("Buscar nesta área", dos dois planos, URL `bbox=`).
+  - No índice, o metrô usa o bit 25 e a área o 30.
+  - Os pontos do mapa saem da mesma passada de filtros da lista. Com "Metrô a até 1 km" na prévia, são 369 na lista e
+    369 no mapa. No Lente o filtro é ignorado nos dois: 21.229 na lista, 21.226 no mapa e 3 sem posição.
+- A lista da vista de mapa (coluna no computador, folha no celular) ganhou o que a vitrine pôs na lista: o aviso "Você
+  está vendo 10 de 21.229 imóveis reais da base", o rodapé com os planos e os exemplos fictícios.
+- `scripts/prints/actions.mjs`: o do mapa, com o desvio para os roteiros `fotos` e `fotos-site` da vitrine.
+
+**Ajustes da integração (decisões minhas; o dono pode mudar):**
+- **O mapa da /assinante só tem os 10 reais.** Os pontos e o cartão do mapa usam as posições da lista do índice. Antes,
+  pedir a posição 10 ao `/api/catalogo/pontos/itens` devolvia o primeiro exemplo fictício, que não está no mapa.
+  Agora ela é ignorada; o teste dos endpoints cobre isso.
+- A vitrine ganhou a incerteza de cada ponto (`desvios`), tirada do conjunto de origem, para o círculo do mapa.
+- Na vista de mapa da /assinante, o bloco "Exemplos fictícios (para ver os selos)" não aparece, porque eles não têm
+  lugar no mapa. O aviso e o rodapé da vitrine continuam. Na lista e nos cards, nada mudou.
+- "Com estes filtros: N dos 10 aqui e M na base completa" também aparece quando só a área do mapa recorta a vitrine.
+- `pontos.test.ts` agora vale para a vitrine (10 reais, no número ou na rua) e para os 6 fictícios (quando não há o
+  instantâneo da base).
+
+**Conferido:**
+- typegen + tsc, eslint, `test:site` (347 de 347), `base:testar` (487 de 487) e `next build`. O build parou na 1ª vez
+  com o aviso de segurança do Next 16.4.0 e passou na 2ª. Não rodei o `next upgrade`: fica para o dono decidir.
+- `next start` na porta 3340, Playwright com WebGL no SwiftShader:
+  - **landing** (1440 escuro, 390 claro): sem erro e sem rolagem lateral; o "Ajuste o foco" carrega; o MapLibre não
+    é baixado;
+  - **ida e volta**: landing → `ex-alvo-sp#simulador` (1440) e → `ex-semselo-rj#riscos` (390), com a seção certa no
+    topo e o "Voltar à apresentação" na tela; ao voltar, o link fica a 1 px e a 0 px de onde estava;
+  - **/previa**: na lista com `metro=1`, a pílula e 369 imóveis, sem MapLibre. Na vista de mapa, testei 1440 e 390
+    nos dois temas e o Lente com `metro=1`;
+  - **/assinante**: na lista e no mapa, em 1440 e 390 nos dois temas;
+  - **páginas de imóvel**: o real da vitrine em Salvador mostra o mapa de verdade e "Estação de metrô Campo da Pólvora
+    a 90 m"; um da prévia no Rio, no celular, mostra a estação a 210 m e o mapa ao rolar até ele; o exemplo
+    `ex-alvo-sp` tem o simulador abrindo no lucro e o "Editar a conta";
+  - **resultado**: sem erros no console e sem rolagem lateral.
+  - Os ladrilhos do mapa não abrem neste contêiner (proxy): os prints mostram o aviso "As ruas do mapa não carregaram
+    agora".
+- Prints em `scratchpad/prints/r5-int/`.
+
+**Falta:**
+- [ ] Prints do branch integrado no Actions (roteiros `mapa` e `fotos-site`, num branch `acoes-*`). Neste contêiner os
+  ladrilhos e as fotos da Caixa não abrem.
+- [x] ~~O botão "Metrô perto" do "Ajuste o foco" ainda tem `metro: null`~~ Feito na revisão final: `metroPerto`.
+- [x] ~~Avaliar o `next upgrade`~~ Feito na revisão final: Next 16.4.3 (ver "Rodada 5 · revisão final").
+
+### Rodada 5 · revisão final (24/10/2026)
+
+Três revisores olharam o branch integrado da rodada 5: o **pedido do dono** ponto a ponto (R5P), a parte **técnica**
+(R5-TEC) e o **conteúdo** (CONT). Foram 40 achados: **35 corrigidos** (com teste quando dava), **1 fora do código** e
+**4 pendentes** (uma decisão sua, um celular de verdade, a CDN da Vercel e o que já era assim no main). O
+Next foi da 16.4.0 para a **16.4.3**: a 16.4.0 tinha três falhas de segurança graves (uma delas permite rodar código no
+servidor pelo otimizador de imagens, com SVG); `npm audit` agora não acha nada.
+
+**O que muda para quem usa:**
+- **Foto que não carrega** (imóvel vendido ou retirado, a Caixa bloqueando, sem rede): no hero e nos cartões da landing,
+  fica o desenho, sem o ícone de imagem quebrada, e o "foto ilustrativa" some junto. Na demonstração, o rótulo só aparece
+  quando a foto de fato aparece.
+- **"Ver o favorito com aviso na demonstração"** chega com o imóvel já nos favoritos, a janelinha inteira na tela
+  (título "Nos seus favoritos", a chave do e-mail desligada: só a pessoa liga) e acima do botão de voltar, em 360, 390,
+  768, 1024, 1366 e 1440. Antes, no computador, ela abria cortada no pé da tela, com "Fora dos favoritos".
+- **Metrô, trem e VLT num lugar só**: em "Todos os filtros › Entorno do imóvel", "Estação a até 1 km" com Metrô, Trem e
+  VLT (cada um com a contagem). Saíram de "Riscos › Só imóveis com" (o metrô aparecia duas vezes, com estados
+  diferentes). A pílula diz "Trem a até 1 km", sem o "Com:". Link antigo com `comTags=metro-perto` vira `metro=1`.
+- **"Voltar à apresentação"**: pelo teclado, o primeiro Tab da chegada vai a ele, e o Tab seguinte volta à seção (eram 49
+  a 82 Tabs); na volta, o foco fica no link de onde a pessoa saiu (antes caía no "Pular para o conteúdo"). Depois que a
+  pessoa rola, o botão encolhe à seta (o nome volta no mouse e no foco), e o fim da página ganha o espaço dele. Na vista
+  de mapa do celular, ele vai para a direita, só com a seta, acima da folha e dos créditos (cobria a folha, a "Legenda"
+  e a escala).
+- **"Decida com números"**: a tabela da miniatura está na visão que a página abre, o **lucro com o lance mínimo e o % ao
+  ano** (os mesmos números da página do exemplo: conservador em 6 meses, 92 mil e 50%), com a nota "Na página do imóvel,
+  a mesma tabela também mostra o lance máximo para a meta".
+- **Cartão "Cuidado"**: a animação é o mesmo caso do link (sala comercial no Centro do Rio, −55%, R$ 135.000, as três
+  tags graves); o link diz "Ver este caso na demonstração".
+- **Planos**: o selo dos 7 dias saiu do cartão do Telescópio (é uma conversa, não uma assinatura); a nota diz "Cancele
+  grátis em até 7 dias após a assinatura; depois disso, cancele quando quiser."; a barra do celular diz "em até 7 dias",
+  como o resto do site.
+- **Favorito de praça única** (venda direta, online, licitação: todos os 10 da vitrine): a opção diz "Avisar por e-mail
+  se o preço mudar ou o imóvel sair da venda", e não "quando a praça mudar".
+- **Textos do metrô**: o geral não cita mais o monotrilho de São Paulo em qualquer cidade (dizia isso num imóvel de
+  Salvador); o do trem não cita a Trensurb e a CBTU (que o mapa marca como metrô); a ajuda do "Ajuste o foco" diz "Só onde
+  há metrô". A mesma estação da Linha Sul do Metrofor (Esperança, Aracapé) não vira mais "Metrô a 450 m" e "VLT a 450 m":
+  fica o metrô (VLT abaixo de 1 km: de 46 para 43 imóveis).
+- **"Como escolhemos estes 10"**: "sem alerta grave nos dados da fonte (a ocupação, a fonte não informa)" e "Preço
+  claro: venda direta, venda online, licitação ou leilão com a praça conhecida".
+- **Mapa**: o ponto isolado tira o nome da cidade do fundo de baixo dele (como as bolhas: "Re●fe" e "Camp●Grande"); o
+  enquadramento inicial desconta a legenda, a escala e meio nome de cidade na borda; um "Ver mapa" só com a folha cheia;
+  "Legenda" e "Esconder" não perdem o foco do teclado e têm 44 px no toque (36 no mouse), como o "Fechar" do cartão.
+- **Hero no celular baixo (360 × 640)**: o cartão do Alvo vira uma linha, sem a foto e sem o rótulo dela, e não cobre
+  mais a lente.
+- **Busca da /assinante** abaixo de 390 px: "Buscar" (saía "Cidade ou bai").
+- **"Editar a conta"** é um botão de alternar com o nome fixo (o estado vai no "pressionado"); com ajustes salvos, "Editar
+  a conta · ajustada". O "Metrô perto" do "Ajuste o foco" também não muda mais de nome.
+
+**Por dentro (técnico):**
+- `--faixa-v` (a altura da coluna do mapa) só muda de lg para cima: no celular ela mudava a cada quadro e recalculava o
+  estilo da página inteira. Rolando 4.000 px a 390 px com a CPU 4× mais lenta: recálculo de estilo de **110 a 120 ms** na
+  /previa (eram 418 a 500; o main fazia 130) e **79 a 89 ms** na /assinante (eram 213 a 279); 0 mudanças de estilo na raiz
+  durante a rolagem.
+- **Cache dos pontos do mapa com o relógio**: a chave da memória leva o corte das praças vencidas e a versão da lista, e o
+  cache (navegador até 5 min, CDN até 1 dia, 1 min de resposta velha) nunca passa do próximo vencimento nem da virada do
+  dia em Brasília. Teste que avança o relógio: o mapa e a lista com o mesmo total antes e depois de cada vencimento (o
+  teste falha no código de antes). O brotli de qualidade 10 (~0,5 s de CPU) só para a busca sem filtros.
+- A casca da vista de mapa (Explorar e a folha) carrega por `dynamic()`: na lista e nos cards, nada dela nem do MapLibre
+  no JavaScript (conferido nos pedaços baixados); a vista de mapa baixa os dois.
+- `images.unoptimized`: o site não usa mais o `next/image`, e o otimizador `/_next/image` responde 404.
+- "Ajuste o foco": a lista e o mapinha desenham com o resultado adiado (`useDeferredValue`) e memorizados. Ligar o "Metrô
+  perto" no celular com a CPU 4×: 104 a 176 ms por interação (eram 160 a 224).
+- Fotos ilustrativas: a do terreno de GO trocada por uma sem data nem coordenadas (`caixa-0000010290976`); o exemplo com
+  três riscos graves (sala no Rio) ficou sem foto de imóvel real (regra com teste: exemplo com tag grave não leva foto de
+  imóvel real); o teste LGPD confere que os 13 dígitos do id real só aparecem na URL da foto.
+
+**Testes novos** (`npm run test:site`: 354 de 354; `base:testar`: 487 de 487; `testar.py`: as regras das estações,
+inclusive a nova, passam; 4 testes de geometria não rodam aqui por falta do `shapely`/`scipy`, como antes):
+`pontos.test.ts` (Lente com metrô, nota, tags e quartos igual ao Lente sem filtro; o relógio), `estacoes.test.ts` (um
+estado só para o metrô; pílulas), `maplibre-guarda.test.ts` (o `maplibre-gl` só em três módulos do mapa, e esses só
+por `import()`), `editar-conta.test.ts` (o nome fixo e o aviso da praça única), `fotos-ilustrativas.test.ts` (foto que
+falha marca o cartão; o exemplo de risco grave sem foto; os dígitos do id real), `site.test.ts` (a miniatura do Decida na
+visão de lucro, com os números da página; a animação do "Cuidado" igual ao caso do link), `estilo.test.ts` (o bloqueio
+do ponto isolado do tamanho do ponto) e o caso Metrofor no `testar.py`.
+
+**Navegador** (`next start` do build, Playwright; prints em `scratchpad/prints/r5-final/`): foto com 404 e sem rede
+(hero e cartões, 1440 e 390); favorito com aviso em 6 tamanhos; teclado na ida e na volta (4 links × 1440 e 390); vista
+de mapa com o botão de voltar em 390 × 844, 844 × 390 e 1440; painel de filtros e link antigo; placeholder em 360, 375 e
+390; hero em 360 × 640 e 390 × 844; Decida, planos, Cuidado e Praças. Sem erro no console e sem rolagem lateral.
+**Mapa de verdade** (Actions, execução 40114607892, roteiro `mapa`, 41 de 41 ok; prints em `coletas-dados`, pasta
+`prints/40114607892/`): o Brasil a 390 abre com todas as bolhas inteiras, longe da legenda e da escala (antes a de 226
+encostava na borda); a 1440, a bolha do Acre, que fica de fora do enquadramento de propósito (os 0,1% mais distantes não
+puxam o mapa), aparece quase inteira (antes, só a metade); os pontos isolados de São Paulo ficam ao lado dos nomes dos
+bairros, não em cima; com a folha cheia, um "Ver mapa" só.
+
+| Achado | Situação |
+| --- | --- |
+| R5P-01 foto quebrada no hero e nos cartões | corrigido (ilha `FotoDaFonte`; rótulo some junto) |
+| R5P-02 favorito com aviso cortado e "Fora dos favoritos" | corrigido |
+| R5P-03 metrô duas vezes nos filtros | corrigido |
+| R5P-04 49 a 64 Tabs até o "Voltar" | corrigido (1 Tab) |
+| R5P-05 "Voltar" cobrindo conteúdo | corrigido (encolhe ao rolar, espaço no pé; a chegada do favorito tira o chip de baixo dele) |
+| R5P-06 "Ajuste o foco" sem foto | pendente: **decisão sua** (abaixo) |
+| R5P-07 / CONT-06 foto real no exemplo de risco grave | corrigido (sem foto; pode voltar se o especialista aprovar) |
+| R5P-08 enquadramento do mapa no celular | corrigido (folga da legenda, escala e borda); prints no Actions |
+| R5P-09 ponto isolado sobre o nome da cidade | corrigido; prints no Actions |
+| R5P-10 dois "Ver mapa" | corrigido |
+| R5P-11 60 fps não confirmados | pendente: medir num celular com placa de vídeo |
+| R5P-12 / CONT-05 textos do metrô e do trem | corrigido |
+| R5P-13 hero em 360 × 640 | corrigido |
+| R5P-14 `maplibre-gl` fora do `node_modules` do main | fora do código: `npm install` ao levar ao main |
+| R5P-15 placeholder cortado | corrigido |
+| R5-TEC-01 `--faixa-v` a cada quadro no celular | corrigido (medido) |
+| R5-TEC-02 cache dos pontos sem o relógio | corrigido (teste com o relógio) |
+| R5-TEC-03 "Voltar" sobre a folha do mapa | corrigido |
+| R5-TEC-04 foco da legenda e alvos | corrigido |
+| R5-TEC-05 Next 16.4.0 com falhas e otimizador ligado | corrigido (16.4.3, `unoptimized`) |
+| R5-TEC-06 foco na volta | corrigido |
+| R5-TEC-07 INP do "Ajuste o foco" | corrigido (104 a 176 ms) |
+| R5-TEC-08 casca do mapa no JS da lista | corrigido |
+| R5-TEC-09 worker sem compressão no `next start` | pendente: conferir na Vercel depois do merge |
+| R5-TEC-10 alvos pequenos no mapa | corrigido |
+| R5-TEC-11 nomes que mudam com o estado | corrigido |
+| R5-TEC-12 foto de GO com coordenadas; id na URL; placas | corrigido (foto trocada, teste dos dígitos, risco da URL anotado); placas: pendente |
+| R5-TEC-13 cache público com o plano na sessão; brotli por URL | corrigido (brotli 10 só sem filtros) e anotado no back-end |
+| R5-TEC-14 CLS com UA de computador em janela estreita; INP dos filtros; CLS da folha | pendente: já era assim no main (abaixo) |
+| R5-TEC-15 testes que faltavam | corrigido (rota, relógio, guarda do MapLibre, botões); o smoke da ida e volta no Actions ficou pendente |
+| CONT-01 miniatura do Decida na visão antiga | corrigido |
+| CONT-02 dados de praça fora do back-end | corrigido (item 0 do back-end, próximos passos) |
+| CONT-03 aviso de 2ª praça em praça única | corrigido |
+| CONT-04 metrô e VLT na mesma estação | corrigido (`estacoes.py` rodado de novo, caso no `testar.py`) |
+| CONT-07 "Cuidado" × caso da demonstração | corrigido |
+| CONT-08 selo 5 vezes nos planos | corrigido |
+| CONT-09 texto do "Como escolhemos" | corrigido (o critério mais estrito para terreno, opcional, não mudou) |
+| CONT-10 PENDENCIAS desatualizado | corrigido (painel, próximos passos, fotos conferidas) |
+
+**Decisões suas:**
+- [ ] **"Ajuste o foco" com foto nas linhas?** Hoje cada linha tem o ícone do tipo. Pôr a foto ilustrativa custaria ~30
+  fotos da Caixa (uma por tipo e cidade), carregadas só nas linhas à vista (preguiçosas), com o rótulo e o desenho se
+  falharem. Recomendo deixar sem: são 150 imóveis inventados, e a foto de um real em cada um pesaria e confundiria.
+- [ ] **Foto no exemplo "Sala comercial, Centro, Rio"** (três riscos graves): ficou sem foto. Volta com uma linha em
+  `src/content/examples.ts` se você e o especialista acharem ok usar a fachada de um prédio real (o teste pede a troca da
+  regra junto).
+- [ ] **Risco aceito: a URL da foto ilustrativa** (`F<id>21.jpg`, na Caixa) leva os 13 dígitos do imóvel real, e por
+  eles se chega ao endereço dele. É consequência de não re-hospedar fotos (decisão da rodada 3). Se incomodar, a saída é
+  re-hospedar as 5 fotos (direito de imagem: conferir com o especialista).
+
+**Falta (técnico):**
+- [ ] **Placas de carro** nas fotos ilustrativas de `namira-pr`, `alvo-sp` e `namira-mg`: conferir em tamanho real, na
+  galeria em tela cheia (as da Caixa têm ~640 px de largura; nas folhas de contato, de 320 px, não dá para ler).
+- [ ] **Celular de verdade** (Android com placa de vídeo): quadros por segundo no zoom até a rua e no arrasto; se o
+  primeiro zoom engasgar, pré-aquecer as camadas num ócio logo depois de abrir.
+- [ ] **Já era assim no main** (R5-TEC-14): com o User-Agent de computador numa janela estreita (janela dividida,
+  "site para computador" no Android), a lista pula depois de hidratar (CLS 0,3); abrir "Filtros" na lista leva 300 a
+  400 ms com a CPU 4×; a folha do mapa ainda se ajusta uma vez (CLS 0,09). Caminho: decidir o layout do celular só por
+  CSS, desenhar o painel mais leve e fixar a posição inicial da folha antes da pintura.
+- [ ] **Smoke da ida e volta no Actions**: os scripts desta revisão (`scratchpad/r5f/teclado.mjs`, `alerta.mjs`,
+  `mapa-voltar.mjs`) podem virar um roteiro do `scripts/prints/actions.mjs`.
+- [ ] Ao levar ao main: `npm install` no checkout principal e o `curl` do worker na Vercel (próximos passos, item 0).
 
 ### Ler cada leilão com IA: é viável?
 
@@ -1308,11 +2207,13 @@ pelo valor real no arquivo de conteúdo.
 
 **Decisões suas** (detalhes e recomendação na análise: https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7)
 - [ ] Lançar em duas fases (reservas e e-mails sem cobrar; venda só com base real, login e pagamento)?
-- [ ] Advogado: manter "advogado especialista com prioridade" ou trocar por checklist/ficha até sair parecer da OAB.
-- [ ] Abertura do hero: manter na primeira rolada (atual) ou automática, sem trava.
+- [x] ~~Advogado: manter "advogado especialista com prioridade" ou trocar por checklist/ficha até sair parecer da OAB.~~
+  Rodada 5: o site fala em "especialista" (pedido do dono); a linha da OAB vale quando o especialista for advogado.
+- [x] ~~Abertura do hero: manter na primeira rolada (atual) ou automática, sem trava.~~ Rodada 5: automática, sem trava.
 - [ ] Título novo com "imóveis" e "risco" ("Leilões de imóveis de todo o Brasil. E o risco de cada um, na mira.").
 - [ ] Encurtar a página (Exemplos e Filtros dentro do Por dentro; Dados e Prova social só com números reais).
-- [ ] Preços, oferta de fundador, garantia (7 ou 30 dias) e Lente paga ou grátis. Com a Luneta mais completa (rodada 4),
+- [ ] Preços, oferta de fundador e Lente paga ou grátis (a garantia ficou em 7 dias: "Cancele grátis em até 7 dias",
+  rodada 5). Com a Luneta mais completa (rodada 4),
   rever o `R$ [129]`.
 - [ ] Landing (rodada 4): publicar o número de compras do ITBI só depois das licenças de SP, Rio e POA; manter o link
   "Ferramentas" no menu? (detalhes em "Rodada 4 · site original").
@@ -1328,9 +2229,11 @@ pelo valor real no arquivo de conteúdo.
 
 **Técnico (eu, quando as decisões e a rede permitirem)**
 - [ ] Base de dados de leilões: fontes com API pública primeiro (em andamento), depois raspagem de leiloeiros locais.
-- [ ] Casos reais no site (Exemplos, hero, Praças, Por dentro e `/assinante`) a partir da base.
+- [ ] Casos reais no site (Exemplos, hero, Praças e Por dentro) a partir da base. A `/assinante` já mostra a vitrine
+  com 10 imóveis reais, e os cartões fictícios da landing têm foto ilustrativa de um imóvel real (rodada 5, frente V).
 - [ ] Formulário que muda conforme o botão clicado e envia de verdade (servidor, anti-robô, LGPD).
-- [ ] Alerta de 2ª praça por e-mail (hoje é promessa na página).
+- [ ] Alerta de mudança de praça por e-mail: a landing promete (decisão do dono, rodada 5); o back-end é obrigatório antes
+  do lançamento (ver "Back-end: favoritos e alerta de mudança de praça").
 - [ ] Login e área do assinante com dados reais; pagamento só na fase de venda.
 - [ ] No lançamento: `npm run check:publicacao` sem bloqueios e `NEXT_PUBLIC_INDEXAR=1` (passos abaixo).
 
@@ -1340,7 +2243,9 @@ pelo valor real no arquivo de conteúdo.
   Judiciais (esta declara `ai-train=no`) e pedir autorização por escrito à Leilões Judiciais.
 - [ ] Definir com o advogado os critérios dos selos (hoje desligados) e os limiares (deságio alto ≥ 40% e baixo < 20% são
   provisórios), e quem revisa as tags marcadas "em revisão" (2.039 imóveis hoje, todos por preço acima da avaliação).
-- [ ] Conferir as fotos da Caixa ao vivo (a URL da capa segue um padrão confirmado por terceiros; nenhuma foi vista daqui).
+- [x] ~~Conferir as fotos da Caixa ao vivo.~~ Feito na rodada 5, pelo Actions (execuções 40042341202, 40042911905 e
+  40098277361: 242 pedidos, 234 fotos, 8 com 404; e 40098702645 com o site: todas abriram no navegador). Imóvel vendido ou
+  retirado pode dar 404: o site mostra o desenho do tipo, sem ícone de imagem quebrada (revisão final da rodada 5).
 - [ ] Município de 3 imóveis cuja cidade não existe no IBGE, a conferir na ficha da Caixa e cadastrar em
   `base/geo/apelidos.csv`: `QUEIMADAS`/CE (8444435692870), `TERRA VERMELHA`/PE (8444418921327) e `SAO LUIZ DO TAPAJOS`/PA
   (1444419144903). Até lá ficam fora do mapa, sem palpite.
@@ -1434,10 +2339,7 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
 | Dados de deságio | deságio médio `[X]%`, maior deságio do mês `[X]%`, total de leilões ativos `[X]` | `site.ts` → `STATS.items[].value` (número; `null` mostra `[X]`) |
 | Planos · preços sugeridos | Lente `R$ [49]`, Luneta `R$ [129]`, Telescópio `R$ [499]` (cartões e tabela) | `site.ts` → `PLANS.plans[].price` e `priceValue` (este alimenta o JSON-LD) |
 | Área do assinante (`/assinante`) | preço da Luneta `[129]` no aviso do plano Lente e na janela de upgrade | vem do mesmo `PLANS` (não precisa trocar em outro lugar) |
-| Planos · nota | `[7] dias para cancelar` | `site.ts` → `PLANS.note` |
-| Prova social · garantia | `[7] dias` | `site.ts` → `SOCIAL.guarantee` |
 | FAQ · "Os leilões de todo o Brasil estão aqui?" | `Hoje são [X] leiloeiros monitorados.` | `site.ts` → `FAQ.items[2].a` |
-| FAQ · "Posso cancelar quando quiser?" | `[7] dias para cancelar` | `site.ts` → `FAQ.items[10].a` |
 | Decida com números · preço do m² | `preço pago em [X] compras registradas na prefeitura` (o total do ITBI, ~203 mil, sai dos arquivos; liga depois das licenças de SP, Rio e POA) | `ferramentas.ts` → `DECIDA.mostrarTotalItbi` |
 | Rodapé | links `Política de privacidade [link]` e `Termos de uso [link]` (hoje apontam para `#`) | `Footer.tsx` |
 | Rodapé | `[Razão social] · CNPJ [X]` | `site.ts` → `FOOTER.company` |
@@ -1450,14 +2352,18 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
   de `src/lib/brazil.ts` para pôr o pino no lugar exato). Com `source`, o rótulo muda sozinho para "Caso real · leiloeiro".
   Tags e selo de um caso real devem ser marcados como análise ilustrativa até passarem pelo critério validado.
 - **Exemplos de leilão** (`src/content/examples.ts`): 6 imóveis fictícios, sempre rotulados como "Exemplo fictício".
-  O blueprint pede casos reais da base com a etiqueta "exemplo de oportunidade" e fotos; o cartão já aceita
-  `photo` (WebP, servido via `next/image` dentro da moldura de lente). Hoje as fotos são placeholders listrados.
+  O blueprint pede casos reais da base com a etiqueta "exemplo de oportunidade" e fotos; o cartão aceita `photo` (a foto
+  do caso real, num `<img>` simples direto da fonte, sem `next/image`). Desde a rodada 5, cada exemplo tem uma **foto
+  ilustrativa** de um imóvel real parecido (`photoIlustrativa`), sempre rotulada e sem o endereço do real (frente V).
   O Na Mira diz que, segundo o edital, o condomínio em atraso é quitado com o valor da arrematação: revisar com o
   advogado junto com as explicações das tags.
 - **Cartão do Alvo no hero** (deságio contando até 48%) e **praças** (apartamento em Campinas/SP, R$ 400.000 → R$ 200.000,
   e o aviso "Seu favorito foi para a 2ª praça"): fictícios, rotulados.
-- **"Por dentro, depois de assinar"** e **área do assinante** (`/assinante`): usam os mesmos exemplos fictícios.
-- **Demo de filtros e mapa**: filtra só os 6 exemplos fictícios ("N de 6 exemplos fictícios encontrados").
+- **"Por dentro, depois de assinar"** usa os mesmos exemplos fictícios. A **área do assinante** (`/assinante`) mostra a
+  vitrine com 10 imóveis reais e, à parte, os 6 exemplos fictícios (rodada 5, frente V).
+- **Demo de filtros e mapa** ("Ajuste o foco"): 150 imóveis fictícios gerados (`src/lib/demo-foco`), rotulados
+  "Demonstração · 150 imóveis fictícios"; cidades e bairros reais, preço, praça, ocupação, nota e metrô inventados
+  (rodada 5, frente F).
 - **Respostas do FAQ**: o blueprint só traz as perguntas; as respostas vieram do handoff do Claude Design. Revisar com o advogado parceiro.
 
 ## Pendências antes de publicar (blueprint, "Pontos de atenção")
@@ -1470,7 +2376,8 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
 - **Explicações das tags** (pop-up "O que é / Na prática", `src/content/tags.ts`): linguagem simples, mas são orientações
   jurídicas. Revisar todas com o advogado, em especial dívidas de condomínio e IPTU (quem paga depende do edital), ação
   judicial pendente, penhoras de outros processos e imóvel financiado/alienação fiduciária.
-- **Aviso de 2ª praça por e-mail** (Praças e plano Luneta): é uma promessa de funcionalidade. Só publicar quando o alerta existir.
+- **Aviso de mudança de praça por e-mail** (Praças, FAQ e plano Luneta): o dono decidiu promover (rodada 5). É promessa
+  de funcionalidade: o back-end precisa existir antes do lançamento ("Back-end: favoritos e alerta de mudança de praça").
 - **Consultoria**: validar o texto da seção com as regras de publicidade da OAB.
 - **Origem dos dados**: confirmar que a coleta nos sites dos leiloeiros respeita termos de uso e a lei.
 - **Preços e garantia**: validar valores e o prazo de cancelamento. O JSON-LD Product/Offer volta sozinho quando `price`
@@ -1498,14 +2405,13 @@ Para conferir agora (opcional): no Google Search Console, verifique `luneta-de-l
 
 ## Decisões de implementação
 
-- **Hero**: a intro inteira (as 6 etapas do Passo 4) roda de uma vez no primeiro gesto de rolar (dois dedos no trackpad,
-  roda do mouse, toque ou teclado): ~1,9 s até a cena montar (lente, mapa, mira e cartão do Alvo) e ~2,7 s com o brilho
-  final. Enquanto a cena monta, a página fica no topo e a inércia do trackpad é absorvida; com a cena montada, um gesto
-  novo já rola a página. Esc pula. Roda uma vez por visita (o "Voltar ao site" da `/assinante` leva aos planos com o
-  hero já no estado final; recarregar repete).
+- **Hero** (rodada 5): a intro inteira (as 6 etapas do Passo 4) roda sozinha ao abrir ou recarregar a página no topo,
+  sem esperar a rolagem e sem travar a página: ~2,5 s, com a etapa 1 pelo menos 0,45 s na tela. Esc pula; rolar até o
+  hero sair da tela também. Na volta da demonstração (o roteador do Next) o hero já vem no estado final; recarregar
+  repete. (Até a rodada 4, a intro esperava o primeiro gesto de rolar e segurava a rolagem enquanto montava.)
   No celular, a lente fica entre o texto e o cartão e encolhe em telas baixas, sem cobrir os botões.
-  A marcação vem do servidor, a etapa 1 vem do CSS (`html.motion`) e o GSAP é baixado no ócio (`HeroMotion.tsx`). Se o GSAP
-  não carregar, a página pula direto para o estado final (`#topo[data-done]`, só CSS) e nunca trava a rolagem.
+  A marcação vem do servidor, a etapa 1 vem do CSS (`html.motion`) e o GSAP é pedido assim que a página hidrata
+  (`HeroMotion.tsx`). Se o GSAP não chegar em 2,2 s, a página pula direto para o estado final (`#topo[data-done]`, só CSS).
 - **Animações de apoio** (entradas, números contando, anéis desenhados, tags em cascata): IntersectionObserver + transições CSS
   (`MotionLayer.tsx` e o bloco "Animações de apoio" em `globals.css`). Ficam bem mais leves que um ScrollTrigger por bloco.
   As entradas genéricas (`[data-reveal]`) são curtas: fade + 10 px em 0,45 s, cascata de no máximo 3 blocos (80 ms).

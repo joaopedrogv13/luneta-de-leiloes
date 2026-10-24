@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject, type UIEvent } from "react";
 import { IlustracaoTipo } from "@/components/catalogo/cartoes/Ilustracao";
 import { useDialog } from "@/components/catalogo/ui/useDialog";
-import type { TipoImovel } from "@/lib/catalogo/tipos";
+import { estiloRecorte } from "@/lib/catalogo/recorte";
+import type { RecorteFoto, TipoImovel } from "@/lib/catalogo/tipos";
 import { IconeFechar, IconeSetaDireita, IconeSetaEsquerda, IconeTelaCheia } from "./icones";
 
 /** Fundo da moldura (o mesmo da foto dos cartões): aparece atrás do desenho quando não há foto. */
@@ -97,8 +98,9 @@ function Foto({
   falhou,
   onFalha,
   prioridade = false,
-  ajuste = "contain",
+  ajuste: ajustePedido = "contain",
   aviso = true,
+  recorte = null,
   className = "",
 }: {
   url: string;
@@ -108,11 +110,14 @@ function Foto({
   onFalha: (url: string) => void;
   prioridade?: boolean;
   ajuste?: "contain" | "cover";
+  /** recorte da foto ilustrativa: preenche a moldura (cover) com o zoom */
+  recorte?: RecorteFoto | null;
   /** "Esta foto não carregou da fonte" sob o desenho (não nas miniaturas) */
   aviso?: boolean;
   className?: string;
 }) {
   const [carregou, setCarregou] = useState(false);
+  const ajuste = recorte ? "cover" : ajustePedido;
   // A foto pode ter carregado (ou falhado) antes da hidratação, quando onLoad/onError ainda não existiam.
   // "complete" sem largura não basta para dizer que falhou: há navegador que dá complete = true numa foto
   // "lazy" que ainda nem começou a baixar. decode() tira a dúvida: rejeita só se a foto quebrou e, numa foto
@@ -160,6 +165,7 @@ function Foto({
       draggable={false}
       onLoad={() => setCarregou(true)}
       onError={() => onFalha(url)}
+      style={estiloRecorte(recorte)}
       className={`absolute inset-0 size-full transition-opacity duration-300 motion-reduce:transition-none ${ajuste === "cover" ? "object-cover" : "object-contain"} ${carregou ? "opacity-100" : "opacity-0"} ${className}`}
     />
   );
@@ -182,12 +188,37 @@ function Ambiente({ url, ativo }: { url: string | null; ativo: boolean }) {
   );
 }
 
+/** Texto do rótulo da foto ilustrativa (exemplos fictícios), na galeria e na tela cheia. */
+export const ROTULO_ILUSTRATIVA = "Foto ilustrativa";
+const DETALHE_ILUSTRATIVA = "de um imóvel real parecido, de outro endereço";
+
 /**
  * Galeria da página do imóvel: foto grande (a foto inteira, com o fundo desfocado dela mesma), setas,
  * contador, miniaturas (coluna à direita no computador, fila embaixo no celular), deslizar com o dedo e
  * tela cheia (setas ← →, Home/End e Esc). Uma foto só: uma foto grande. Sem foto: o desenho do tipo.
+ * Foto ilustrativa (exemplo fictício): o rótulo sobre ela e, com `recorte`, a foto preenchendo a moldura com o zoom
+ * do recorte (a marca de data e coordenadas do canto fica fora).
  */
-export function Galeria({ fotos, tipo, titulo, semFotoTexto }: { fotos: string[]; tipo: TipoImovel; titulo: string; semFotoTexto: string }) {
+
+export function Galeria({
+  fotos,
+  tipo,
+  titulo: tituloImovel,
+  semFotoTexto,
+  ilustrativa = false,
+  recorte = null,
+}: {
+  fotos: string[];
+  tipo: TipoImovel;
+  titulo: string;
+  semFotoTexto: string;
+  /** a foto é ilustrativa (exemplo fictício): rótulo à vista sobre a foto e no texto alternativo */
+  ilustrativa?: boolean;
+  /** recorte da foto ilustrativa */
+  recorte?: RecorteFoto | null;
+}) {
+  // o texto alternativo de cada foto já diz que ela é ilustrativa
+  const titulo = ilustrativa ? `${tituloImovel} (${ROTULO_ILUSTRATIVA.toLowerCase()}, ${DETALHE_ILUSTRATIVA})` : tituloImovel;
   const [falhas, setFalhas] = useState<ReadonlySet<string>>(() => new Set(fotos.filter((f) => FALHAS.has(f))));
   const [telaCheia, setTelaCheia] = useState(false);
   const total = fotos.length;
@@ -245,7 +276,7 @@ export function Galeria({ fotos, tipo, titulo, semFotoTexto }: { fotos: string[]
   const atual = fotos[indice] ?? null;
 
   return (
-    <section aria-roledescription="carrossel" aria-label={`Fotos do imóvel (${total === 1 ? "1 foto" : `${total} fotos`})`} className={varias ? "lg:grid lg:grid-cols-[minmax(0,1fr)_8.5rem] lg:gap-3" : ""}>
+    <section aria-roledescription="carrossel" aria-label={ilustrativa ? `${ROTULO_ILUSTRATIVA}, ${DETALHE_ILUSTRATIVA}` : `Fotos do imóvel (${total === 1 ? "1 foto" : `${total} fotos`})`} className={varias ? "lg:grid lg:grid-cols-[minmax(0,1fr)_8.5rem] lg:gap-3" : ""}>
       <div
         // tablet em pé: 4:3 na coluna da esquerda, ao lado do título e do preço
         className="relative isolate -mx-4 aspect-[4/3] overflow-hidden sm:mx-0 sm:aspect-[16/10] sm:rounded-3xl sm:border sm:border-nevoa/15 md:max-lg:aspect-[4/3] lg:aspect-auto lg:h-[clamp(320px,58vh,560px)] baixa:max-h-[62vh]"
@@ -269,7 +300,7 @@ export function Galeria({ fotos, tipo, titulo, semFotoTexto }: { fotos: string[]
               aria-roledescription={varias ? "foto" : undefined}
               aria-label={varias ? `${i + 1} de ${total}` : undefined}
               onClick={falhas.has(url) ? undefined : () => abrir(botaoTelaCheia.current)}
-              className={`relative h-full w-full shrink-0 snap-center snap-always ${falhas.has(url) ? "" : "cursor-zoom-in"}`}
+              className={`relative h-full w-full shrink-0 snap-center snap-always ${recorte ? "overflow-hidden" : ""} ${falhas.has(url) ? "" : "cursor-zoom-in"}`}
             >
               <Foto
                 url={url}
@@ -278,6 +309,7 @@ export function Galeria({ fotos, tipo, titulo, semFotoTexto }: { fotos: string[]
                 falhou={falhas.has(url)}
                 onFalha={falhar}
                 prioridade={i === 0}
+                recorte={recorte}
               />
             </div>
           ))}
@@ -302,6 +334,12 @@ export function Galeria({ fotos, tipo, titulo, semFotoTexto }: { fotos: string[]
               <IconeSetaDireita />
             </button>
           </>
+        )}
+        {ilustrativa && !falhas.has(atual ?? "") && (
+          <p aria-hidden="true" className={`pointer-events-none absolute top-3 left-3 z-10 rounded-full px-3 py-1.5 text-xs leading-none font-semibold ${VIDRO} hover:bg-[#070b16]/72`}>
+            {ROTULO_ILUSTRATIVA}
+            <span className="font-normal text-white/75 max-sm:hidden"> · {DETALHE_ILUSTRATIVA}</span>
+          </p>
         )}
         <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex items-end justify-between gap-2">
           {varias ? (
@@ -358,6 +396,8 @@ export function Galeria({ fotos, tipo, titulo, semFotoTexto }: { fotos: string[]
           fotos={fotos}
           tipo={tipo}
           titulo={titulo}
+          ilustrativa={ilustrativa}
+          recorte={recorte}
           inicial={indice}
           falhas={falhas}
           onFalha={falhar}
@@ -377,6 +417,8 @@ function TelaCheia({
   fotos,
   tipo,
   titulo,
+  ilustrativa = false,
+  recorte = null,
   inicial,
   falhas,
   onFalha,
@@ -386,6 +428,8 @@ function TelaCheia({
   fotos: string[];
   tipo: TipoImovel;
   titulo: string;
+  ilustrativa?: boolean;
+  recorte?: RecorteFoto | null;
   inicial: number;
   falhas: ReadonlySet<string>;
   onFalha: (url: string) => void;
@@ -433,8 +477,8 @@ function TelaCheia({
     >
       <div className="flex items-center justify-between gap-4 px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 sm:px-6">
         <p aria-live="polite" className="min-w-0 truncate text-sm font-medium text-white/80 tabular-nums">
-          {total > 1 ? `Foto ${indice + 1} de ${total}` : "Foto do imóvel"}
-          <span className="hidden text-white/50 sm:inline"> · {titulo}</span>
+          {ilustrativa ? `${ROTULO_ILUSTRATIVA}, ${DETALHE_ILUSTRATIVA}` : total > 1 ? `Foto ${indice + 1} de ${total}` : "Foto do imóvel"}
+          {!ilustrativa && <span className="hidden text-white/50 sm:inline"> · {titulo}</span>}
         </p>
         <button
           ref={fechar}
@@ -458,8 +502,8 @@ function TelaCheia({
         >
           {fotos.map((url, i) => (
             <div key={url} className="relative h-full w-full shrink-0 snap-center snap-always px-2 sm:px-20">
-              <div className="relative size-full">
-                <Foto url={url} alt={`Foto ${i + 1} de ${total}: ${titulo}`} tipo={tipo} falhou={falhas.has(url)} onFalha={onFalha} prioridade={i === inicial} />
+              <div className={`relative size-full ${recorte ? "overflow-hidden" : ""}`}>
+                <Foto url={url} alt={`Foto ${i + 1} de ${total}: ${titulo}`} tipo={tipo} falhou={falhas.has(url)} onFalha={onFalha} prioridade={i === inicial} recorte={recorte} />
               </div>
             </div>
           ))}

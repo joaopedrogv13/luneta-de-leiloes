@@ -7,7 +7,7 @@ import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 /**
- * Menu mínimo (Como funciona, Níveis, Ferramentas, Planos, Falar com advogado) com âncoras que deslizam até a seção.
+ * Menu mínimo (Como funciona, Níveis, Ferramentas, Planos, Falar com especialista) com âncoras que deslizam até a seção.
  * Ao rolar > 64px a barra encolhe (64 → 56) e ganha borda. No celular, os links ficam num menu recolhível.
  * `base`: fora da landing (ex.: a página do método da nota, "/"), as âncoras levam às seções da home ("/#planos").
  */
