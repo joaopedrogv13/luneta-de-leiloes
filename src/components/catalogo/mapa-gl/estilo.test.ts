@@ -128,6 +128,20 @@ test("bolhas: a área que tira os nomes do fundo de baixo tem o tamanho da bolha
     assert.equal((texto as { layout: Record<string, unknown> }).layout["icon-image"], IMAGEM_BLOQUEIO);
     assert.equal((texto as { layout: Record<string, unknown> }).layout["icon-ignore-placement"], false);
   }
+  // o ponto isolado também ocupa o lugar dele (R5P-09): a imagem do tamanho do ponto com a borda, nos dois zooms
+  const ponto = e.layers.find((l) => l.id === CAMADAS.ponto)!;
+  const bloqueioPonto = e.layers.find((l) => l.id === "lu-ponto-bloqueio")!;
+  assert.ok(e.layers.indexOf(bloqueioPonto) > e.layers.indexOf(ponto), "logo acima do ponto");
+  for (const z of [8, 12, 16]) {
+    for (const n of [1, 3]) {
+      const raio = avaliar(ponto, "paint", "circle-radius", z, { n });
+      const borda = avaliar(ponto, "paint", "circle-stroke-width", z, { n });
+      const lado = avaliar(bloqueioPonto, "layout", "icon-size", z, { n }) * TAMANHO_BLOQUEIO;
+      assert.ok(Math.abs(lado - 2 * (raio + borda)) < 1e-9, `ponto z=${z} n=${n}: ${lado} × ${2 * (raio + borda)}`);
+    }
+  }
+  assert.equal((bloqueioPonto as { layout: Record<string, unknown> }).layout["icon-allow-overlap"], true);
+  assert.equal((bloqueioPonto as { layout: Record<string, unknown> }).layout["icon-ignore-placement"], false);
   // os nomes de cidade do fundo desviam (em vez de sumir embaixo da bolha)
   const capital = e.layers.find((l) => l.id === "nome-capital") as { layout: Record<string, unknown> };
   assert.deepEqual(capital.layout["text-variable-anchor"], ["center", "top", "bottom", "right", "left"]);

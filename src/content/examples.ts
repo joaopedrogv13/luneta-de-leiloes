@@ -187,8 +187,10 @@ export const LISTINGS: Listing[] = [
       { label: "Dívida passa ao arrematante", severity: "grave" },
     ],
     why: "O maior desconto da lista vem com ocupante, ação judicial em curso e dívida que passa ao arrematante.",
-    // foto ilustrativa: sala comercial no Centro do Rio de Janeiro/RJ (prédios altos da região)
-    photoIlustrativa: { url: "https://venda-imoveis.caixa.gov.br/fotos/F000001013977221.jpg", de: "caixa-0000010139772" },
+    // Sem foto ilustrativa, de propósito (revisão final da rodada 5, R5P-07/CONT-06): com três riscos graves, a foto de um
+    // prédio real reconhecível do Centro do Rio ligaria esses riscos a ele (o real não tem nenhum: venda direta, ocupação
+    // não informada), e o id na URL da foto leva ao endereço. Fica o desenho, com "Exemplo fictício: sem foto". Regra:
+    // exemplo com tag grave não leva foto de imóvel real (teste em src/lib/catalogo/vitrine.test.ts).
     localizacao: {
       nota: 82,
       componentes: { servicos: 70, transporte: 98, renda: 58, infra: 92, comercio: 99, lazer: 76 },
@@ -249,8 +251,10 @@ export const LISTINGS: Listing[] = [
       { label: "Área divergente", severity: "atencao" },
     ],
     why: "Deságio abaixo do relevante, venda de cota-parte e área divergente entre matrícula e edital.",
-    // foto ilustrativa: terreno plano em rua asfaltada em Águas Lindas de Goiás/GO (recortado: a marca de data e coordenadas da vistoria fica fora)
-    photoIlustrativa: { url: "https://venda-imoveis.caixa.gov.br/fotos/F144441758246621.jpg", de: "caixa-1444417582466", recorte: { escala: 1.3, origem: "left bottom" } },
+    // foto ilustrativa: terreno com mato e calçada em Caldas Novas/GO, sem marca de data nem coordenadas na foto (a de
+    // antes, de Águas Lindas de Goiás, tinha a marca da vistoria no canto: o recorte a tirava da tela, mas a imagem
+    // aberta noutra aba e o fundo desfocado da galeria ainda a mostravam; revisão final da rodada 5, R5-TEC-12)
+    photoIlustrativa: { url: "https://venda-imoveis.caixa.gov.br/fotos/F000001029097621.jpg", de: "caixa-0000010290976" },
     localizacao: {
       nota: 87,
       componentes: { servicos: 83, transporte: 66, renda: 91, infra: 95, comercio: 84, lazer: 88 },

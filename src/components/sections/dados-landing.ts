@@ -2,7 +2,8 @@
  * Os números das miniaturas da landing ("Decida com números" e "Nota de localização"), calculados no build com o código
  * de verdade, sem nada digitado à mão e sem JavaScript no navegador:
  * - o lance máximo e a matriz: o simulador (src/lib/simulador) com o estado inicial, sobre o exemplo fictício "alvo-sp",
- *   o mesmo que a demonstração (/assinante/imovel/ex-alvo-sp) mostra;
+ *   o mesmo que a demonstração (/assinante/imovel/ex-alvo-sp) mostra; a matriz na visão que a página abre, o lucro com o
+ *   lance mínimo (rodada 5, decisão 6);
  * - a nota: a nota fictícia do mesmo exemplo (src/content/examples.ts), montada por localizacaoExemplo, com os pesos de
  *   PESOS_PADRAO (src/lib/catalogo/localizacao.ts);
  * - o ITBI: as cidades e o total de compras dos arquivos de base/saida/site/itbi.
@@ -12,6 +13,7 @@
 import { converterExemplos, localizacaoDosExemplos } from "../../lib/catalogo/exemplos";
 import { lerItbi } from "../../lib/catalogo/itbi";
 import type { LocalizacaoImovel } from "../../lib/catalogo/tipos";
+import { atingeMeta } from "../../lib/simulador/calculo";
 import { simulacaoCompleta } from "../../lib/simulador/completa";
 import { ESTADO_INICIAL } from "../../lib/simulador/estado";
 import { CENARIO_ROTULO, metaComoObjetivo } from "../../lib/simulador/textos";
@@ -27,6 +29,15 @@ export interface CelulaMini {
   teto: number | null;
   /** o lance máximo fica acima do lance mínimo (há espaço para disputar) */
   atinge: boolean;
+  /**
+   * A visão que a tabela "Cenários e prazos" abre na página do imóvel desde a rodada 5 (decisão 6): o lucro com o lance
+   * mínimo (o lance da pessoa, que começa no mínimo), depois do IR, e o retorno ao ano. Os mesmos números da página
+   * /assinante/imovel/ex-alvo-sp#simulador.
+   */
+  lucro: number;
+  roiAA: number;
+  /** com o lance mínimo, o retorno atinge a meta (o ✓ da tabela da página) */
+  atingeMeta: boolean;
   /** a célula do cartão (cenário e prazo do estado inicial) */
   escolhida: boolean;
 }
@@ -80,6 +91,9 @@ export function miniSimulador(listings: readonly Listing[], agora: Date = new Da
           meses: cel.meses,
           teto: cel.teto,
           atinge: cel.teto !== null && cel.teto >= d.lance,
+          lucro: Math.round(cel.comMeuLance.lucro),
+          roiAA: cel.comMeuLance.roiAA,
+          atingeMeta: atingeMeta(cel.comMeuLance, r.meta),
           escolhida: c === r.celula.cenario && cel.meses === r.celula.meses,
         })),
       })),

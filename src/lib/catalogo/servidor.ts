@@ -102,12 +102,13 @@ function versaoDaLista(itens: readonly ImovelResumo[]): string {
  * filtros e de plano da lista (a passada de `buscar`). A área do mapa (`bbox`) não vale aqui: o mapa mostra tudo o que os
  * filtros deixam, e a lista ao lado é que segue a área.
  */
-export async function pontosDoMapa(busca: Busca): Promise<PontosCompactos> {
+export async function pontosDoMapa(busca: Busca, agora: Date = new Date()): Promise<PontosCompactos> {
   const d = await dadosDoConjunto(busca.conjunto);
   const filtros = { ...busca.filtros };
   delete filtros.bbox;
   const passada: { mascaras: Int32Array | null } = { mascaras: null };
   buscarNoIndice(d.indice, { ...busca, filtros, pagina: 1, porPagina: 1 }, {
+    agora,
     selosDesligados: d.selosDesligados,
     mapa: false,
     facetas: false,
@@ -120,6 +121,33 @@ export async function pontosDoMapa(busca: Busca): Promise<PontosCompactos> {
   // ficam fora do índice e do mapa), por isso a versão é a da lista do índice
   const desvios = d.desvios;
   return montarPontos(d.indice, passada.mascaras, { conjunto: versaoDaLista(d.indice.itens), raio: (k) => desvios[k] });
+}
+
+const UM_DIA = 24 * 3600 * 1000;
+/** Brasília (UTC−3, sem horário de verão desde 2019): a meia-noite de lá é 03:00 UTC. */
+const BRASILIA_MS = 3 * 3600 * 1000;
+
+/**
+ * O que muda os pontos do mapa com o relógio, para o cache da rota de pontos (src/app/api/catalogo/pontos): a lista
+ * carregada (a versão dela) e quantos imóveis já saíram por praça vencida há mais de 1 dia (a busca corta pelo relógio;
+ * como o corte só anda para a frente, a contagem identifica o conjunto que saiu). `validoAte`: o instante em que essa
+ * resposta deixa de valer: o próximo imóvel a vencer ou a virada do dia em Brasília (a vitrine é escolhida de novo a
+ * cada dia), o que vier antes.
+ */
+export async function corteDosPontos(conjunto: Conjunto, agora: Date = new Date()): Promise<{ chave: string; validoAte: number }> {
+  const d = await dadosDoConjunto(conjunto);
+  const t = agora.getTime();
+  const corte = t - UM_DIA;
+  const instantes = d.indice.instante;
+  let vencidos = 0;
+  let proximo = Infinity;
+  for (let k = 0; k < instantes.length; k++) {
+    const i = instantes[k]!; // NaN (sem data) não vence nunca: as duas comparações dão false
+    if (i < corte) vencidos++;
+    else if (i < proximo) proximo = i;
+  }
+  const virada = Math.floor((t - BRASILIA_MS) / UM_DIA + 1) * UM_DIA + BRASILIA_MS;
+  return { chave: `${versaoDaLista(d.indice.itens)}.${vencidos}`, validoAte: Math.min(virada, proximo + UM_DIA) };
 }
 
 /**

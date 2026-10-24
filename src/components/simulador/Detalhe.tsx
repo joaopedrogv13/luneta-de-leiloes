@@ -25,7 +25,7 @@ export const ID_DETALHE = "sim-detalhe-titulo";
  * Detalhe da célula escolhida, o lugar único de ajuste: no topo, cenário, % da venda, prazo e lance editáveis;
  * os números-resumo (lucro total e anualizado); a comparação com uma aplicação; a cascata da venda ao lucro; e
  * a conta linha a linha. A conta abre limpa (rodada 5, decisão 7): os controles de edição ficam atrás do botão
- * "Editar a conta" (com ajustes salvos, "Conta ajustada · ver ajustes"). Aberta, cada linha tem um lápis discreto
+ * "Editar a conta" (com ajustes salvos, "Editar a conta · ajustada"). Aberta, cada linha tem um lápis discreto
  * que abre o pop-up daquele tipo de despesa; dá para tirar e religar linhas, criar custos ("+ Adicionar custo") e
  * restaurar tudo.
  * Até lg, as abas do simulador escolhem a parte: "Conta" (os ajustes, os números e a conta linha a linha) ou
@@ -433,39 +433,33 @@ export function Detalhe({
 }
 
 /**
- * O botão discreto que abre e fecha a edição da conta. Fechada: "Editar a conta" ou, com ajustes salvos, "Conta
- * ajustada · ver ajustes" (o ponto de latão avisa que a conta não é a padrão). Aberta: "Concluir". O mesmo botão nos
- * três estados: o foco fica nele ao abrir e ao fechar.
+ * O botão discreto que liga e desliga a edição da conta: um botão de alternar (aria-pressed), sempre com o mesmo nome,
+ * "Editar a conta" (o leitor de tela diz "pressionado" quando a edição está aberta; antes o nome virava "Concluir a
+ * edição da conta", e nome e estado mudavam juntos: revisão final da rodada 5, R5-TEC-11). Aberto, o desenho é o do
+ * botão ligado (latão, com o visto). Com ajustes salvos, "· ajustada" com o ponto de latão (a conta não é a padrão),
+ * nos dois estados. O mesmo botão sempre: o foco fica nele ao abrir e ao fechar. A conta (#sim-conta) fica sempre à
+ * vista; o que muda é o modo de edição, por isso aria-pressed e não aria-expanded.
  */
-function BotaoEditarConta({ editando, ajustada, aoAlternar }: { editando: boolean; ajustada: boolean; aoAlternar: () => void }) {
+export function BotaoEditarConta({ editando, ajustada, aoAlternar }: { editando: boolean; ajustada: boolean; aoAlternar: () => void }) {
   return (
     <button
       type="button"
-      aria-expanded={editando}
-      aria-controls="sim-conta"
+      aria-pressed={editando}
       onClick={aoAlternar}
       className={`-my-1 inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-colors duration-150 motion-reduce:transition-none pointer-fine:min-h-9 ${
         editando ? "border-latao/60 bg-latao/12 text-latao-texto hover:bg-latao/20" : "border-nevoa/30 text-luar hover:border-latao hover:bg-latao/10"
       }`}
     >
-      {editando ? (
+      {editando ? <IconeConcluir /> : ajustada ? <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-latao" /> : <IconeLapis className="size-3 text-latao-texto" />}
+      Editar a conta
+      {/* os espaços entram no nome acessível ("Editar a conta · ajustada"); no flex, não mudam o desenho */}
+      {ajustada && (
         <>
-          <IconeConcluir />
-          Concluir<span className="sr-only"> a edição da conta</span>
-        </>
-      ) : ajustada ? (
-        <>
-          <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-latao" />
-          Conta ajustada
+          {" "}
           <span aria-hidden="true" className="text-nevoa">
             ·
-          </span>
-          <span className="text-latao-texto">ver ajustes</span>
-        </>
-      ) : (
-        <>
-          <IconeLapis className="size-3 text-latao-texto" />
-          Editar a conta
+          </span>{" "}
+          <span className="text-latao-texto">ajustada</span>
         </>
       )}
     </button>

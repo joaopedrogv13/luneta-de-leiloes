@@ -15,6 +15,8 @@ import { ALERTA_PRACA, FAVORITOS_CHAMADA, PRODUTO, TOAST_FAVORITADO } from "../l
 import { CONVITE, CONVITE_PADRAO } from "../components/catalogo/planos/textos";
 import { PESOS_PADRAO, ROTULO_COMPONENTE } from "../lib/catalogo/localizacao";
 import { ESTADO_INICIAL } from "../lib/simulador/estado";
+import { simulacaoCompleta, VISAO_PADRAO } from "../lib/simulador/completa";
+import { converterExemplos } from "../lib/catalogo/exemplos";
 import { metaComoObjetivo } from "../lib/simulador/textos";
 import { EXEMPLO_LANDING, miniNota, miniSimulador, resumoItbi, totalCurto } from "../components/sections/dados-landing";
 import type { Filtros } from "../lib/catalogo/tipos";
@@ -243,6 +245,17 @@ test("simulador: o exemplo da landing confere com o motor real (Dê no máximo R
   // o que o relatório mediu: base a 6 e 12 meses atinge, a 18 não; otimista a 18 atinge; conservador a 12 não
   const base = s.linhas.find((l) => l.cenario === "base")!.celulas.map((c) => c.atinge);
   assert.deepEqual(base, [true, true, false, false]);
+  // a tabela da miniatura está na visão que a página abre (rodada 5, decisão 6): o lucro com o lance mínimo. Com o lance
+  // mínimo abaixo do lance máximo, o retorno passa da meta, e vice-versa (as duas visões contam a mesma história)
+  assert.equal(VISAO_PADRAO, "lucro");
+  for (const l of s.linhas) for (const c of l.celulas) if (c.teto !== null && Math.abs(c.teto - s.lanceMinimo) > 500) assert.equal(c.atingeMeta, c.atinge, `${l.cenario} ${c.meses}`);
+  // os mesmos números da página do exemplo (o simulador com o estado inicial e o lance mínimo)
+  const d = converterExemplos(listings, AGORA).find((x) => x.id === `ex-${EXEMPLO_LANDING}`)!;
+  const r = simulacaoCompleta(d, ESTADO_INICIAL);
+  assert.equal(r.visao, "lucro");
+  const conservador6 = s.linhas[0]!.celulas[0]!;
+  assert.equal(conservador6.lucro, Math.round(r.tabela![0]![0]!.comMeuLance.lucro));
+  assert.ok(DECIDA.card.matrizUnidade.startsWith("lucro com o lance mínimo"));
   assert.equal(EXEMPLO_LANDING, "alvo-sp");
   assert.ok(DECIDA.demoHref.includes(`ex-${EXEMPLO_LANDING}`));
 });
@@ -420,6 +433,16 @@ test("rodada 5 (10): os links da landing para a demonstração vão direto à se
   assert.match(LEVELS.demoHref, /#riscos$/);
   // o caso dos riscos tem deságio alto e riscos graves (como a cena "Cuidado")
   const riscos = exemplos.find((l) => LEVELS.demoHref.includes(`ex-${l.id}#`))!;
+  // a animação de "Cuidado" é o mesmo caso do link (CONT-07): tipo, lugar, deságio, lance e as tags graves
+  const ilustra = LEVELS.caution.demo;
+  assert.equal(ilustra.title, riscos.title);
+  assert.equal(ilustra.place, riscos.place);
+  assert.equal(ilustra.desagio, riscos.desagio);
+  assert.equal(ilustra.lance, `R$ ${riscos.lance.toLocaleString("pt-BR")}`);
+  assert.deepEqual(
+    ilustra.tags.map((t) => t.label).sort(),
+    riscos.tags.filter((t) => t.severity === "grave").map((t) => t.label).sort(),
+  );
   assert.ok(riscos.tags.filter((t) => t.severity === "grave").length >= 2);
   // o caso do alerta está em 2ª praça
   const praca = exemplos.find((l) => PRACAS.demoHref.includes(`ex-${l.id}#`))!;

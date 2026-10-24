@@ -198,7 +198,7 @@ export function CartaoLugar({
           type="button"
           onClick={onFechar}
           aria-label="Fechar"
-          className="absolute top-2 right-2 z-10 grid size-10 place-items-center rounded-full bg-[#070b16]/70 text-white ring-1 ring-white/15 transition-colors hover:bg-[#070b16]/90 pointer-fine:size-8"
+          className="absolute top-1.5 right-1.5 z-10 grid size-11 place-items-center rounded-full bg-[#070b16]/70 text-white ring-1 ring-white/15 transition-colors hover:bg-[#070b16]/90 pointer-fine:size-9"
         >
           <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <path d="M6 6l12 12M18 6 6 18" />

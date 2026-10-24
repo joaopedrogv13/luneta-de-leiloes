@@ -80,7 +80,9 @@ export function FolhaMapa({
     };
   }, []);
 
-  // em que altura a folha está (para o botão "Ver mapa" e o rótulo do puxador); só muda o estado quando muda de faixa
+  // em que altura a folha está (para o rótulo do puxador: "Ver lista" ou "Ver mapa"); só muda o estado quando muda de
+  // faixa. Com a folha cheia, o "Ver mapa" é o do cabeçalho dela (a pílula flutuante que havia embaixo repetia o mesmo
+  // botão: dois "Ver mapa" na tela; revisão final da rodada 5, R5P-10)
   useEffect(() => {
     const el = rolo.current;
     const m = meio.current;
@@ -126,8 +128,10 @@ export function FolhaMapa({
           aria-label="Imóveis da área do mapa"
           className="pointer-events-auto relative min-h-full snap-start rounded-t-[28px] border-t border-nevoa/15 bg-noite shadow-[0_-16px_44px_rgba(0,0,0,.42)] [[data-theme=light]_&]:shadow-[0_-12px_36px_rgba(15,24,48,.16)]"
         >
+          {/* data-pe: o "Voltar à apresentação" (fixo no pé) sobe acima do cabeçalho da folha, sem cobri-lo */}
           <button
             type="button"
+            data-pe=""
             onClick={() => irPara(posicao === "espiada" ? "cheia" : "espiada")}
             aria-expanded={posicao !== "espiada"}
             className="sticky top-0 z-10 flex w-full cursor-pointer flex-col items-center gap-2 rounded-t-[28px] bg-noite px-4 pt-2.5 pb-3"
@@ -144,16 +148,6 @@ export function FolhaMapa({
           <div className="px-4 pb-24">{children}</div>
         </section>
       </div>
-      {posicao === "cheia" && (
-        <button
-          type="button"
-          onClick={() => irPara("espiada")}
-          className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-[26] inline-flex min-h-12 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full bg-luar px-5 text-[15px] font-semibold text-noite shadow-[0_14px_36px_rgba(0,0,0,.45)] active:scale-[0.96] motion-reduce:transition-none"
-        >
-          <IconeMapa />
-          Ver mapa
-        </button>
-      )}
     </div>
   );
 }

@@ -2,14 +2,16 @@ import { brl, formatDate, listingLabel, type Listing } from "@/content/examples"
 import { estiloRecorte } from "@/lib/catalogo/recorte";
 import { Seal, SEAL_NAMES } from "@/components/ui/Seal";
 import { Tag } from "@/components/ui/Tag";
+import { FotoDaFonte } from "@/components/ui/FotoDaFonte";
 
 const RING_LABEL = ["só tags", "1 anel", "2 anéis", "3 anéis"] as const;
 
 /**
  * Moldura de lente: anel de latão + um anel externo por nível de selo. A foto é um <img> simples direto da fonte (nada
  * de next/image: a foto da Caixa fica na Caixa), com largura e altura fixas (sem CLS), preguiçosa e sem referrer. O
- * desenho listrado fica por baixo: sem foto, ou se ela não carregar, é ele que aparece (sem JavaScript; com alt vazio,
- * a foto quebrada não desenha nada). Nos exemplos fictícios, a foto é ilustrativa (o rótulo fica no alto do cartão).
+ * desenho listrado fica por baixo: sem foto, ou se ela não carregar, é ele que aparece. A foto quebrada sai do DOM pela
+ * ilha `FotoDaFonte` (com largura e altura fixas, o Chromium desenharia o ícone de imagem quebrada mesmo com alt vazio),
+ * que também marca o cartão (`data-foto="falhou"`) para o rótulo "foto ilustrativa" sumir.
  */
 function LensPhoto({ listing, size }: { listing: Listing; size: number }) {
   const { seal } = listing;
@@ -41,17 +43,9 @@ function LensPhoto({ listing, size }: { listing: Listing; size: number }) {
       </div>
       {foto && (
         <span className="absolute inset-0 overflow-hidden rounded-full">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a foto fica na fonte: o next/image a baixaria e re-hospedaria */}
-          <img
+          <FotoDaFonte
             src={foto}
-            alt=""
-            width={size}
-            height={size}
-            loading="lazy"
-            decoding="async"
-            fetchPriority="low"
-            referrerPolicy="no-referrer"
-            draggable={false}
+            size={size}
             style={estiloRecorte(listing.photoIlustrativa?.recorte)}
             className="absolute inset-0 size-full object-cover transition-[scale] duration-500 group-hover:scale-[1.04] motion-reduce:transition-none"
           />
@@ -94,7 +88,8 @@ export function AuctionCard({
   return (
     <article
       aria-label={`${rotuloCartao(l)}: ${l.title}, ${l.place}, ${SEAL_NAMES[l.seal]}`}
-      className={`group relative isolate overflow-hidden rounded-[20px] bg-tinta transition-[transform,border-color,box-shadow] duration-300 ease-luneta hover:-translate-y-1 ${
+      data-foto={l.photo || l.photoIlustrativa ? "fonte" : undefined}
+      className={`group group/foto relative isolate overflow-hidden rounded-[20px] bg-tinta transition-[transform,border-color,box-shadow] duration-300 ease-luneta hover:-translate-y-1 ${
         compact ? "p-4" : "p-6"
       } ${
         alvo
@@ -119,12 +114,17 @@ export function AuctionCard({
         </>
       )}
 
-      {/* cada parte quebra inteira (nunca "foto" numa linha e "ilustrativa" na outra); a mira do Alvo fica à direita */}
+      {/* cada parte quebra inteira (nunca "foto" numa linha e "ilustrativa" na outra); a mira do Alvo fica à direita.
+          Se a foto não carregar, o "· foto ilustrativa" some com ela (data-foto="falhou", marcado pela FotoDaFonte). */}
       <p className={`text-[10px] font-medium tracking-[0.14em] text-nevoa uppercase ${alvo && !locked ? "pr-12" : ""}`}>
         {fotoIlustrativa(l) ? (
           <>
             {/* quebrando, o ponto fica no fim da 1ª linha: "Exemplo fictício ·" / "foto ilustrativa" */}
-            <span className="whitespace-nowrap">{listingLabel(l)} ·</span> <span className="whitespace-nowrap">foto ilustrativa</span>
+            <span className="whitespace-nowrap">
+              {listingLabel(l)}
+              <span className="group-data-[foto=falhou]/foto:hidden"> ·</span>
+            </span>{" "}
+            <span className="whitespace-nowrap group-data-[foto=falhou]/foto:hidden">foto ilustrativa</span>
           </>
         ) : (
           listingLabel(l)

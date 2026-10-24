@@ -3,14 +3,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Popover } from "@/components/catalogo/ui/Popover";
 import { useAlertasPraca } from "@/components/catalogo/useFavoritos";
-import { ALERTA_PRACA } from "@/lib/catalogo/produto";
+import { ANCORA_ALERTA } from "@/lib/apresentacao";
+import { ALERTA_PRACA, textoAlerta } from "@/lib/catalogo/produto";
 import { IconeCoracao } from "./icones";
-
-/**
- * Âncora que abre a opção do favorito já na chegada à página do imóvel ("Ver o favorito com aviso na demonstração", na
- * seção de praças da landing): /assinante/imovel/<id>#alerta-praca.
- */
-export const ANCORA_ALERTA = "alerta-praca";
 
 /** Sino pequeno (o aviso por e-mail ligado). */
 function IconeSino({ size = 10 }: { size?: number }) {
@@ -46,6 +41,7 @@ export function FavoritoComAlerta({
   icone,
   classeBotao,
   abrirComAncora = false,
+  pracaUnica = false,
 }: {
   id: string;
   titulo: string;
@@ -57,21 +53,36 @@ export function FavoritoComAlerta({
   /** as classes do botão (as mesmas do favorito sem alerta), pelo estado */
   classeBotao: (ligado: boolean) => string;
   abrirComAncora?: boolean;
+  /** praça única (venda direta, venda online, licitação): o aviso fala do preço e da saída da venda, não da 2ª praça */
+  pracaUnica?: boolean;
 }) {
   const { temAlerta, definir } = useAlertasPraca();
+  const texto = textoAlerta(pracaUnica);
   const alerta = favorito && temAlerta(id);
   const [aberto, setAberto] = useState(false);
   const raiz = useRef<HTMLSpanElement>(null);
   const uid = useId();
 
+  // o estado mais recente (a lista de favoritos do navegador chega depois da hidratação)
+  const favoritoAgora = useRef(favorito);
+  useEffect(() => {
+    favoritoAgora.current = favorito;
+  }, [favorito]);
+
   useEffect(() => {
     if (!abrirComAncora || window.location.hash !== `#${ANCORA_ALERTA}`) return;
     const botao = raiz.current?.querySelector("button");
     if (!botao || botao.getClientRects().length === 0) return; // a outra cópia (celular ou computador) está à vista
-    // depois da hidratação e da rolagem da chegada, para o pop-up abrir ancorado no lugar certo
-    const t = window.setTimeout(() => setAberto(true), 300);
+    // Depois da hidratação e da rolagem da chegada (VoltarApresentacao traz o coração para o alto da tela, com espaço
+    // para o pop-up embaixo), para ele abrir ancorado no lugar certo. Chega como o link promete ("o favorito com
+    // aviso"): o imóvel entra nos favoritos, como no toque do coração, e a chave do e-mail continua desligada (o aviso
+    // é consentimento: só a pessoa liga).
+    const t = window.setTimeout(() => {
+      if (!favoritoAgora.current) onFavoritar(id);
+      setAberto(true);
+    }, 300);
     return () => window.clearTimeout(t);
-  }, [abrirComAncora]);
+  }, [abrirComAncora, id, onFavoritar]);
 
   const mudarAberto = (v: boolean) => {
     if (v && !favorito) onFavoritar(id);
@@ -86,7 +97,7 @@ export function FavoritoComAlerta({
   const nome = `${estado}: ${titulo}${complemento}`;
 
   return (
-    <span ref={raiz} className="contents">
+    <span ref={raiz} data-alerta-praca="" className="contents">
       <Popover
         rotulo={`${favorito ? "Favorito" : "Favoritar"}: ${titulo}`}
         posicao={icone ? "bottom-end" : "bottom"}
@@ -144,10 +155,10 @@ export function FavoritoComAlerta({
               </span>
               <span className="min-w-0">
                 <span id={`${uid}-opcao`} className="block text-[14px] leading-snug font-medium text-luar">
-                  {ALERTA_PRACA.opcao}
+                  {texto.opcao}
                 </span>
                 <span id={`${uid}-explica`} className="mt-1 block text-[13px] leading-snug text-nevoa">
-                  {ALERTA_PRACA.explicacao}
+                  {texto.explicacao}
                   {ALERTA_PRACA.demonstracao && <span className="sr-only"> {ALERTA_PRACA.demonstracao}</span>}
                 </span>
               </span>

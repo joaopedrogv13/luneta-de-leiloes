@@ -42,7 +42,7 @@ export const FAVORITOS_CHAMADA = PRODUTO.alertaPraca
 
 /** O aviso ao favoritar, na demonstração (o e-mail é uma opção do favorito, e o envio só existe com `envioDeEmail`). */
 export const TOAST_FAVORITADO = PRODUTO.alertaPraca
-  ? "Favoritado. Ligue o aviso por e-mail para saber quando a praça mudar (demonstração)."
+  ? "Favoritado. Ligue o aviso por e-mail para saber se a praça ou o preço mudar (demonstração)."
   : "Favoritado. Ele fica na sua lista de favoritos (demonstração).";
 
 /** "favoritos com alerta de praça" ou só "favoritos", nas listas do que a Luneta tem. */
@@ -60,4 +60,18 @@ export const ALERTA_PRACA = {
     : "Demonstração: a preferência fica só neste navegador; o envio de e-mails começa no lançamento.",
   ligado: PRODUTO.envioDeEmail ? "Aviso por e-mail ligado." : "Aviso ligado (demonstração: o envio de e-mails começa no lançamento).",
   desligado: "Aviso por e-mail desligado.",
+  /**
+   * Praça única (venda direta, venda online, licitação: nunca vão à 2ª praça): o mesmo aviso, com o que de fato pode
+   * mudar (o preço, ou o imóvel sair da venda). O back-end compara os dois (PENDENCIAS.md, "Back-end: favoritos e alerta
+   * de mudança de praça", item 4). Revisão final da rodada 5, CONT-03.
+   */
+  unica: {
+    opcao: "Avisar por e-mail se o preço mudar ou o imóvel sair da venda",
+    explicacao: "Este imóvel é de praça única (não vai à 2ª praça). Se o preço mudar, ou se ele for vendido ou retirado da venda, você recebe um e-mail.",
+  },
 } as const;
+
+/** O texto da opção do aviso para o imóvel: o da mudança de praça, ou o da praça única. */
+export function textoAlerta(pracaUnica: boolean): { opcao: string; explicacao: string } {
+  return pracaUnica ? ALERTA_PRACA.unica : ALERTA_PRACA;
+}

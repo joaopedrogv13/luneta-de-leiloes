@@ -19,6 +19,12 @@ export const VALIDADE_MS = 12 * 60 * 60 * 1000;
 /** Marca, em history.state, a primeira entrada da demonstração depois da landing (para usar history.back()). */
 export const MARCA_HISTORICO = "__lunetaApresentacao";
 
+/**
+ * Âncora que abre a opção do favorito já na chegada à página do imóvel ("Ver o favorito com aviso na demonstração", na
+ * seção de praças da landing): /assinante/imovel/<id>#alerta-praca.
+ */
+export const ANCORA_ALERTA = "alerta-praca";
+
 /** Os destinos que contam como "sair da apresentação": a demonstração e a página do método da nota. */
 export const PREFIXOS_DESTINO = ["/assinante", "/metodologia"] as const;
 /** Seletor dos links da landing para esses destinos (a ordem no documento identifica o link clicado). */

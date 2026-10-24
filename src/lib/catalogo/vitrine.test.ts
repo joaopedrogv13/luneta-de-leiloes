@@ -193,13 +193,22 @@ test("vitrine: textos", () => {
   assert.doesNotMatch(todos, /vendendo|risco zero|garant/i);
 });
 
-test("fotos ilustrativas dos exemplos: uma por caso, sempre rotuladas, recorte válido e de imóvel real compatível", async () => {
+/** Exemplo com tag grave não leva foto de imóvel real: ligaria os riscos a um prédio real reconhecível (R5P-07). */
+const temTagGrave = (l: { tags: { severity: string }[] }) => l.tags.some((t) => t.severity === "grave");
+
+test("fotos ilustrativas dos exemplos: uma por caso (menos o de risco grave), sempre rotuladas, recorte válido e de imóvel real compatível", async () => {
   const ls = await listings();
   assert.equal(ls.length, 6);
   const ficticios = carregarExemplos(ls, AGORA);
   const urls = new Set<string>();
+  assert.deepEqual(ls.filter(temTagGrave).map((l) => l.id), ["semselo-rj"]);
   for (const l of ls) {
     const f = l.photoIlustrativa;
+    if (temTagGrave(l)) {
+      assert.equal(f, undefined, `${l.id}: com risco grave, sem foto de imóvel real`);
+      assert.equal(ficticios.itens.find((x) => x.id === `ex-${l.id}`)!.foto, null);
+      continue;
+    }
     assert.ok(f, `${l.id}: tem foto ilustrativa`);
     assert.equal(l.photo, undefined, `${l.id}: exemplo fictício não tem foto própria`);
     assert.equal(f.url, `https://venda-imoveis.caixa.gov.br/fotos/F${f.de.replace("caixa-", "")}21.jpg`, `${l.id}: a URL é a da foto do imóvel "de"`);
@@ -221,7 +230,8 @@ test("fotos ilustrativas dos exemplos: uma por caso, sempre rotuladas, recorte v
   // com a base: cada foto é de um imóvel real do mesmo tipo, da mesma UF, sem tag grave e fora da vitrine
   const previa = await carregarPrevia(PASTA);
   for (const l of ls) {
-    const k = previa.posicao.get(l.photoIlustrativa!.de);
+    if (!l.photoIlustrativa) continue;
+    const k = previa.posicao.get(l.photoIlustrativa.de);
     assert.ok(k !== undefined, `${l.id}: o imóvel da foto está na base (${l.photoIlustrativa!.de})`);
     const real = previa.itens[k]!;
     assert.equal(real.tipo, l.type, `${l.id}: mesmo tipo`);

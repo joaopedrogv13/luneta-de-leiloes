@@ -145,8 +145,10 @@ export function PlansTable() {
               <a href={p.href} data-intent={p.id} className={p.featured ? "btn-primary w-full shadow-[0_0_30px_rgba(201,162,77,.35)]" : "btn-outline w-full"}>
                 {p.cta}
               </a>
-              {/* rodada 5, ponto 13: o selo sob o botão de cada plano (os três têm mensalidade; os botões ficam alinhados) */}
-              <SeloCancelamento variante="linha" className="mt-3.5 justify-center" />
+              {/* rodada 5, ponto 13: o selo sob o botão de assinar (Lente e Luneta). O do Telescópio é uma conversa
+                  ("Falar sobre o Telescópio", preço também sob consulta), não uma assinatura: sem o selo (com o do topo da
+                  seção, a nota e os dos dois planos, ele aparecia 5 vezes; revisão final da rodada 5, CONT-08) */}
+              {p.id !== "telescopio" && <SeloCancelamento variante="linha" className="mt-3.5 justify-center" />}
             </div>
           );
         })}

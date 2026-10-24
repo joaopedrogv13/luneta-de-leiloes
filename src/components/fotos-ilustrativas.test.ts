@@ -29,15 +29,28 @@ test("cartões da landing: cada exemplo fictício leva a foto ilustrativa num <i
   for (const l of LISTINGS) {
     for (const props of [{}, { compact: true, locked: true }]) {
       const h = html(AuctionCard, { listing: l, ...props });
-      // a foto: <img> simples da fonte (sem next/image), com tamanho fixo, preguiçosa e sem referrer
+      if (!l.photoIlustrativa) {
+        // o exemplo com risco grave (sem foto de imóvel real): o desenho, sem <img> e sem o rótulo
+        assert.doesNotMatch(h, /<img /, `${l.id}: sem foto`);
+        assert.doesNotMatch(h, /foto ilustrativa/, `${l.id}: sem o rótulo`);
+        assert.match(h, /photo-placeholder/);
+        continue;
+      }
+      // a foto: <img> simples da fonte (sem next/image), com tamanho fixo, preguiçosa e sem referrer, numa ilha que a
+      // tira se falhar (o cartão marca data-foto para o rótulo sumir junto)
       const img = /<img [^>]*>/.exec(h)?.[0] ?? "";
+      assert.match(h, /<article [^>]*data-foto="fonte"/, `${l.id}: o cartão marca a foto da fonte`);
       assert.ok(img.includes(`src="${l.photoIlustrativa!.url}"`), `${l.id}: a foto ilustrativa no cartão`);
       assert.match(img, /width="(64|84)" height="(64|84)"/, `${l.id}: dimensões fixas (sem CLS)`);
       assert.match(img, /loading="lazy"/);
       assert.match(img, /referrerPolicy="no-referrer"/i);
       assert.doesNotMatch(h, /_next\/image/, `${l.id}: sem o otimizador do next/image`);
       // o rótulo à vista (inteiro numa linha) e no nome acessível do cartão
-      assert.match(h, /Exemplo fictício ·<\/span> <span class="whitespace-nowrap">foto ilustrativa<\/span>/, `${l.id}: rótulo visível`);
+      assert.match(
+        h,
+        /Exemplo fictício<span class="group-data-\[foto=falhou\]\/foto:hidden"> ·<\/span><\/span> <span class="whitespace-nowrap group-data-\[foto=falhou\]\/foto:hidden">foto ilustrativa<\/span>/,
+        `${l.id}: rótulo visível (e some se a foto falhar)`,
+      );
       assert.match(h, /aria-label="Exemplo fictício · foto ilustrativa:/, `${l.id}: rótulo no nome acessível`);
       // o desenho de fallback continua por baixo (a foto da Caixa pode não abrir)
       assert.match(h, /photo-placeholder/);
@@ -50,7 +63,11 @@ test("cartão do hero: a foto ilustrativa do Alvo vem com o rótulo e não dispu
   const { LISTINGS } = await exemplos();
   const h = html(HeroScene, {});
   assert.ok(h.includes(LISTINGS.find((l) => l.id === "alvo-sp")!.photoIlustrativa!.url), "a foto do exemplo Alvo");
-  assert.match(h, />Foto ilustrativa</);
+  assert.match(h, /group-data-\[foto=falhou\]\/foto:hidden[^"]*">Foto ilustrativa</, "o rótulo, que some se a foto falhar");
+  // no celular baixo (360 × 640) a foto e o rótulo saem juntos (nunca a foto sem o rótulo)
+  const baixa = "max-sm:[@media(max-height:700px)]:hidden";
+  assert.ok(h.includes(`${baixa}">Foto ilustrativa<`) && /photo-placeholder[^"]*max-sm:\[@media\(max-height:700px\)\]:hidden/.test(h), "foto e rótulo somem juntos");
+  assert.match(h, /data-h="card" data-foto="fonte"/);
   assert.match(h, /<img [^>]*loading="lazy"[^>]*fetchPriority="low"/);
 });
 
@@ -71,6 +88,13 @@ test("demonstração: o cartão e a galeria de cada exemplo rotulam a foto ilust
   const ficticios = carregarExemplos(LISTINGS, AGORA);
   assert.equal(ficticios.itens.length, 6);
   for (const i of ficticios.itens) {
+    if (!i.foto) {
+      // sem foto ilustrativa (o de risco grave): "Exemplo fictício: sem foto", sem o rótulo
+      const cartao = html(FotoImovel, { imovel: i });
+      assert.ok(cartao.includes("Exemplo fictício: sem foto"), i.id);
+      assert.ok(!cartao.includes(ROTULO_FOTO_ILUSTRATIVA), i.id);
+      continue;
+    }
     assert.equal(i.fotoIlustrativa, true, i.id);
     const cartao = html(FotoImovel, { imovel: i });
     assert.ok(cartao.includes(`src="${i.foto}"`), `${i.id}: a foto no cartão`);
@@ -91,7 +115,8 @@ test("o endereço do imóvel real da foto nunca aparece no exemplo", { skip: !ex
   const previa = await carregarPrevia(pastaPadrao());
   const ficticios = carregarExemplos(LISTINGS, AGORA);
   for (const l of LISTINGS) {
-    const real = (await previa.detalhe(l.photoIlustrativa!.de))!;
+    if (!l.photoIlustrativa) continue;
+    const real = (await previa.detalhe(l.photoIlustrativa.de))!;
     assert.ok(real, `${l.id}: o imóvel da foto está na base`);
     const d = (await ficticios.detalhe(`ex-${l.id}`))!;
     const texto = [JSON.stringify(d), html(AuctionCard, { listing: l })].join(" ");
@@ -100,6 +125,12 @@ test("o endereço do imóvel real da foto nunca aparece no exemplo", { skip: !ex
     for (const parte of [real.endereco, real.endereco.split(",")[0]!.trim()].filter((x) => x.length > 6)) {
       assert.ok(!texto.includes(parte), `${l.id}: "${parte}" (do imóvel real) não aparece`);
     }
-    assert.ok(!JSON.stringify(d).includes(l.photoIlustrativa!.de), `${l.id}: nem o id do imóvel real`);
+    assert.ok(!JSON.stringify(d).includes(l.photoIlustrativa.de), `${l.id}: nem o id do imóvel real`);
+    // A URL da foto (que fica na Caixa: o site não a re-hospeda) leva os 13 dígitos do id real (F<id>21.jpg), e por eles
+    // se chega ao imóvel real: risco aceito e anotado no PENDENCIAS (R5-TEC-12). O que o teste garante é que, fora da
+    // URL da foto, os dígitos não aparecem em nada que a página mostra ou entrega.
+    const digitos = l.photoIlustrativa.de.replace("caixa-", "");
+    assert.match(l.photoIlustrativa.url, new RegExp(`/F${digitos}21\\.jpg$`));
+    assert.ok(!texto.replaceAll(l.photoIlustrativa.url, "").includes(digitos), `${l.id}: os dígitos do id real só na URL da foto`);
   }
 });

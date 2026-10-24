@@ -195,6 +195,20 @@ test("URL, contagem e pílula do filtro", () => {
   assert.deepEqual(removerFiltro({ metroPerto: true, uf: ["RJ"] }, "metro"), { uf: ["RJ"] });
 });
 
+test("um estado só para o metrô: comTags=metro-perto vira metro=1; trem e VLT com o próprio nome na pílula (R5P-03)", () => {
+  // link antigo, de quando a tag aparecia também em "Riscos › Só imóveis com"
+  assert.deepEqual(lerBusca(new URLSearchParams("comTags=metro-perto")).filtros, { metroPerto: true });
+  assert.deepEqual(lerBusca(new URLSearchParams("comTags=metro-perto&comTags=desocupado&metro=1")).filtros, { comTags: ["desocupado"], metroPerto: true });
+  // a busca dá o mesmo com a tag e com o filtro (as duas contam o mesmo: metrô a menos de 1 km)
+  const pelaTag = buscar(IX, busca(lerBusca(new URLSearchParams("comTags=metro-perto")).filtros), { agora: AGORA });
+  assert.equal(pelaTag.total, buscar(IX, busca({ metroPerto: true }), { agora: AGORA }).total);
+  // as pílulas: uma por filtro, sem duplicar o metrô; trem e VLT sem o "Com:"
+  assert.deepEqual(
+    pilulas({ metroPerto: true, comTags: [SLUG_ESTACAO.trem, SLUG_ESTACAO.vlt, "desocupado"] }).map((x) => x.rotulo),
+    ["Metrô a até 1 km", "Trem a até 1 km", "VLT a até 1 km", "Com: Desocupado"],
+  );
+});
+
 // ---------------------------------------------------------------------------
 // Dados reais (base/saida/site)
 // ---------------------------------------------------------------------------

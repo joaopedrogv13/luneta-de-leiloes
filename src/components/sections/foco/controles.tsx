@@ -211,7 +211,7 @@ export const DICA: Partial<Record<GrupoFoco, string>> = {
   ocupacao: "Ocupado ou desocupado, como o leilão informa.",
   financiamento: "Se o leilão aceita pagar com financiamento.",
   nota: "Nota de 0 a 100 para o entorno do imóvel, comparado com o resto da cidade.",
-  metro: `Estação a até 1 km do imóvel. Só nas capitais com metrô (${CIDADES_COM_METRO.length} na demonstração).`,
+  metro: `Estação a até 1 km do imóvel. Só onde há metrô (${CIDADES_COM_METRO.length} cidades na demonstração).`,
 };
 
 /** O controle de cada grupo (pop-up rápido e painel). */

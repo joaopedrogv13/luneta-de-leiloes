@@ -28,8 +28,9 @@ export function fraseFiltrosVitrine(aqui: number, mostrados: number, naBase: num
 export const COMO_ESCOLHEMOS: readonly string[] = [
   "Maior deságio (de 35% a 75%), com a avaliação coerente com a da cidade.",
   "Nota de localização de 70 para cima, com o endereço achado no número ou na rua.",
-  "Cidades com 300 mil moradores ou mais, com foto e sem alerta grave.",
-  "Preço claro (venda direta, venda online ou licitação) e praça ainda por vir.",
+  // a ocupação a fonte não informa: "sem alerta grave" não quer dizer desocupado (revisão final da rodada 5, CONT-09)
+  "Cidades com 300 mil moradores ou mais, com foto e sem alerta grave nos dados da fonte (a ocupação, a fonte não informa).",
+  "Preço claro: venda direta, venda online, licitação ou leilão com a praça conhecida (e a data ainda por vir, quando a fonte a dá).",
   "Variedade: um imóvel por cidade, no máximo dois por estado.",
 ];
 

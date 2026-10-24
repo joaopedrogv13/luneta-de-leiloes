@@ -69,10 +69,10 @@ export const NAV_LINKS: readonly { href: string; label: string; largo?: boolean 
  */
 export const CANCELAMENTO = {
   selo: "Cancele grátis em até 7 dias",
-  /** barra do celular, onde o espaço é curto */
-  curto: "Cancele grátis em 7 dias",
+  /** barra do celular: o mesmo texto ("em até", como no resto do site; cabe na segunda linha do botão de 360 px em diante) */
+  curto: "Cancele grátis em até 7 dias",
   /** o complemento, nos planos */
-  depois: "Depois, cancele quando quiser.",
+  depois: "depois disso, cancele quando quiser.",
 } as const;
 
 /** Página pública do método da nota de localização (fora da área do assinante). */
@@ -132,12 +132,16 @@ export const LEVELS = {
       },
     ],
     cta: "Visível no plano Luneta",
-    /** Exemplo fictício da animação: o deságio chama atenção e a varredura revela o que ele esconde. */
+    /**
+     * Exemplo fictício da animação: o deságio chama atenção e a varredura revela o que ele esconde. É o mesmo caso do
+     * link "Ver este caso na demonstração" (ex-semselo-rj: a sala no Centro do Rio, −55%, lance de R$ 135.000, as três
+     * tags graves); o teste em site.test.ts confere (revisão final da rodada 5, CONT-07).
+     */
     demo: {
-      title: "Apartamento 2 quartos",
-      place: "Niterói/RJ",
+      title: "Sala comercial",
+      place: "Centro · Rio de Janeiro/RJ",
       desagio: 55,
-      lance: "R$ 270.000",
+      lance: "R$ 135.000",
       lente: "Visão Lente",
       luneta: "Visão Luneta",
       hiddenLabel: "Por trás do desconto",
@@ -146,15 +150,14 @@ export const LEVELS = {
       /** `source`: onde o risco foi encontrado (aparece ao lado da tag em telas maiores). */
       tags: [
         { label: "Ocupado", severity: "grave", source: "no edital" },
-        { label: "Dívida passa ao arrematante", severity: "grave", source: "no edital" },
         { label: "Ação judicial em curso", severity: "grave", source: "no processo" },
-        { label: "Leilão com recurso", severity: "atencao", source: "no processo" },
+        { label: "Dívida passa ao arrematante", severity: "grave", source: "no edital" },
       ],
     },
   },
   bridge: ["Por isso, no plano Luneta, a gente separa os", "melhores", "casos para você."],
-  /** um caso assim na demonstração: o maior desconto da lista, com os riscos à vista (a seção de riscos do exemplo) */
-  demo: "Ver um caso assim na demonstração",
+  /** o mesmo caso da animação na demonstração, já na seção de riscos do exemplo */
+  demo: "Ver este caso na demonstração",
   demoHref: "/assinante/imovel/ex-semselo-rj#riscos",
   sealsNote: "Três selos, do Promissor ao Alvo. Cada nível soma um anel e mais um critério cumprido.",
   seals: [
@@ -408,8 +411,8 @@ export const PLANS = {
   ],
   /** Linhas da tabela comparativa, em grupos (decisão da rodada 4: Lente = encontrar; Luneta = decidir). */
   features: FEATURES,
-  /** o selo de cancelamento vai perto de cada botão (CANCELAMENTO); a nota repete a regra inteira */
-  note: `${CANCELAMENTO.selo} depois de assinar. ${CANCELAMENTO.depois}`,
+  /** o selo de cancelamento vai perto de cada botão de assinar (CANCELAMENTO); a nota repete a regra inteira */
+  note: `${CANCELAMENTO.selo} após a assinatura; ${CANCELAMENTO.depois}`,
 } as const;
 
 export const LAWYER = {

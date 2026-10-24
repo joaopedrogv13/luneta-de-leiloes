@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { memo, useCallback, useDeferredValue, useEffect, useRef, useState, type ReactNode } from "react";
 import { UpgradeModal } from "@/components/assinante/UpgradeModal";
 import { filtrosEfetivos, filtrosIguais, gruposForaDoPlano, limparVazios, pilulas, recursoDoGrupo, removerGrupos } from "@/lib/catalogo/filtros-rotulos";
@@ -28,12 +29,18 @@ import { BarraFiltros } from "./filtros";
 import { ProvedorPedirLuneta } from "./planos/convite";
 import { consumirVoltaPropria, depoisDoHistorico } from "./ui/historico";
 import { semMovimento } from "./ui/useAdiado";
-import { Explorar } from "./mapa-gl/Explorar";
-import { FolhaMapa } from "./mapa-gl/FolhaMapa";
 import type { Folga } from "./mapa-gl/MapaGL";
 import { temWebGL } from "./mapa-gl/webgl";
 import { useBusca } from "./useBusca";
 import { useFavoritos } from "./useFavoritos";
+
+/**
+ * A casca da vista de mapa ("Buscar ao mover o mapa", a folha da lista no celular, o pedido dos pontos) só baixa quando
+ * a vista de mapa abre, como o MapLibre: na lista e nos cards, ela pesava ~15 KB (gzip) no JavaScript inicial sem uso
+ * (revisão final da rodada 5, R5-TEC-08). Com a página aberta já no mapa, o servidor a desenha e o pedaço vem junto.
+ */
+const Explorar = dynamic(() => import("./mapa-gl/Explorar").then((m) => m.Explorar));
+const FolhaMapa = dynamic(() => import("./mapa-gl/FolhaMapa").then((m) => m.FolhaMapa));
 
 const TOAST_FAVORITO = TOAST_FAVORITADO;
 /** Na prévia os selos estão desligados (critérios pendentes): o aviso não promete o que não aparece. */
@@ -250,6 +257,8 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
     const antes = html.style.scrollPaddingTop;
     const recolheMq = window.matchMedia(CONSULTA_BARRA_RECOLHE);
     const compactaMq = window.matchMedia(CONSULTA_BARRA_COMPACTA);
+    // as colunas do mapa (lista e vista de mapa no computador) só aparecem de lg (64rem) para cima
+    const colunaMq = window.matchMedia("(min-width: 64rem)");
     let quadro = 0;
     let ultimoY = window.scrollY;
     let faixaAntes = -1;
@@ -263,7 +272,10 @@ export function CatalogoApp({ conjunto, servidor, preferencias, palpiteCelular, 
       // junto, em tela baixa como 1366×768, ele também): a coluna do mapa encolhe o mesmo tanto, para caber inteira na
       // tela (legenda, escala e créditos) desde a primeira pintura. Sem o cabeçalho na conta, ela passava ~110 px do pé
       // da tela; sem o marco e o arredondamento para cima, 1 px.
-      const faixa = Math.max(0, Math.ceil(marco.getBoundingClientRect().bottom - cabFixo.current));
+      // Só existe coluna do mapa do computador (lg) para cima: no celular e no tablet a variável fica em 0 e não muda a
+      // cada quadro (cada mudança na raiz do app recalcula o estilo dos ~4 mil nós da página: no celular com a CPU 4×,
+      // a rolagem passava de 130 para ~450 ms de recálculo; revisão final da rodada 5, R5-TEC-01).
+      const faixa = colunaMq.matches ? Math.max(0, Math.ceil(marco.getBoundingClientRect().bottom - cabFixo.current)) : 0;
       if (faixa !== faixaAntes) {
         faixaAntes = faixa;
         r.style.setProperty("--faixa-v", `${faixa}px`);

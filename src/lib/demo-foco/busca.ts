@@ -60,7 +60,8 @@ const FILTRO_DO_CATALOGO: Record<GrupoFoco, keyof Filtros | null> = {
   ocupacao: "ocupacao",
   financiamento: "financiamento",
   nota: "notaLocalMin",
-  metro: null,
+  // o filtro "Metrô a até 1 km" do catálogo (Filtros.metroPerto, URL metro=1; Luneta)
+  metro: "metroPerto",
 };
 
 /**

@@ -258,7 +258,7 @@ export const TAGS_LOCALIZACAO: { name: string; question: string; tags: Record<"m
       label: "Metrô a até 1 km",
       severity: "positivo",
       what:
-        "Há uma estação de metrô (ou de monotrilho do Metrô de São Paulo) a menos de 1 km do ponto do endereço, em linha reta. As estações vêm do OpenStreetMap, o mapa aberto feito por colaboradores (© contribuidores do OpenStreetMap). Só vale para endereço localizado no número ou na rua.",
+        "Há uma estação de metrô a menos de 1 km do ponto do endereço, em linha reta. As estações vêm do OpenStreetMap, o mapa aberto feito por colaboradores (© contribuidores do OpenStreetMap), e vale o que ele marca como metrô: em algumas cidades, isso inclui o trem urbano que funciona como metrô, como a Trensurb e a CBTU. Só vale para endereço localizado no número ou na rua.",
       practice:
         "Linha reta não é o caminho a pé: confira no mapa o trajeto até a entrada da estação. Metrô perto costuma ajudar a vender e a alugar, mas não é garantia de preço.",
     },
@@ -266,7 +266,7 @@ export const TAGS_LOCALIZACAO: { name: string; question: string; tags: Record<"m
       label: "Trem a até 1 km",
       severity: "positivo",
       what:
-        "Há uma estação de trem urbano de passageiros (CPTM, SuperVia, Trensurb, CBTU e outras) a menos de 1 km do ponto do endereço, em linha reta. As estações vêm do OpenStreetMap (© contribuidores do OpenStreetMap); estação antiga, turística ou de carga fica de fora. Só vale para endereço localizado no número ou na rua.",
+        "Há uma estação de trem urbano de passageiros (como as da CPTM e da SuperVia) a menos de 1 km do ponto do endereço, em linha reta. As estações vêm do OpenStreetMap (© contribuidores do OpenStreetMap); estação antiga, turística ou de carga fica de fora. Só vale para endereço localizado no número ou na rua.",
       practice: "Veja no mapa o caminho até a estação e a frequência da linha nos horários que importam para você.",
     },
     "vlt-perto": {

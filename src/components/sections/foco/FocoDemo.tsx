@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { gerarImoveis } from "@/lib/demo-foco/dados";
 import {
   GRUPOS_LUNETA,
@@ -211,34 +211,54 @@ export function FocoDemo({ textos }: { textos: TextosFoco }) {
     return () => cancelAnimationFrame(id);
   }, [painel, uid]);
 
-  const sugestao = r.total === 0 ? sugestaoParaVazio(LISTA, f) : null;
-  const vazio = (
-    <div className="flex flex-col items-start gap-3">
-      <p className="text-[15px] font-semibold text-luar">Nenhum imóvel com esses filtros.</p>
-      {sugestao && (
-        <button type="button" onClick={() => mudar((x) => removerGrupo(x, sugestao.grupo))} className={`${CHIP} ${CHIP_OFF}`}>
-          {sugestao.grupo === "q" ? `Tirar a busca ${resumoGrupo(f, "q")}` : `Tirar “${resumoGrupo(f, sugestao.grupo)}”`}
-          <span className="text-xs text-nevoa tabular-nums">
-            mostra {numero(sugestao.total)}
-          </span>
-        </button>
-      )}
-      <button type="button" onClick={limpar} className="inline-flex min-h-11 cursor-pointer items-center text-[13px] font-semibold text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8">
-        Limpar todos os filtros
-      </button>
-    </div>
+  // A lista e o mapinha desenham com o resultado adiado (useDeferredValue): o botão tocado, o total e a pílula respondem
+  // já, e a lista e o mapa vêm logo depois, num desenho que o React pode interromper. Os dois elementos são memorizados
+  // (o mesmo objeto enquanto os dados adiados não mudam), para o desenho urgente não passar por eles. No celular com a
+  // CPU 4× mais lenta, ligar o "Metrô perto" ia a 160–224 ms (revisão final da rodada 5, R5-TEC-07).
+  const rd = useDeferredValue(r);
+  const fd = useDeferredValue(f);
+  const alternarUf = useCallback(
+    (uf: string) => mudar((x) => definirUfs(x, (x.uf ?? []).includes(uf) ? x.uf!.filter((u) => u !== uf) : [...(x.uf ?? []), uf])),
+    [mudar],
   );
-
-  const restantes = r.total - Math.min(limite, r.total);
-  const rodapeLista =
-    restantes > 0 ? (
-      <button type="button" onClick={() => setMais((m) => m + lote)} className={BOTAO_MAIS}>
-        Mostrar mais {numero(Math.min(lote, restantes))}
-        <span className="ml-1 text-nevoa tabular-nums">(faltam {numero(restantes)})</span>
-      </button>
-    ) : r.total > 0 ? (
-      <p className="text-center text-xs text-nevoa">Fim da lista · {textos.selo.toLowerCase()} com imóveis fictícios</p>
-    ) : null;
+  const mapaFoco = useMemo(
+    () => <MapaFoco itens={rd.itens} ufsEscolhidas={fd.uf ?? []} destaque={destaque} onDestaque={setDestaque} onAlternarUf={alternarUf} className={MAPA} />,
+    [rd, fd, destaque, alternarUf],
+  );
+  const listaFoco = useMemo(() => {
+    const sugestao = rd.total === 0 ? sugestaoParaVazio(LISTA, fd) : null;
+    const vazio = (
+      <div className="flex flex-col items-start gap-3">
+        <p className="text-[15px] font-semibold text-luar">Nenhum imóvel com esses filtros.</p>
+        {sugestao && (
+          <button type="button" onClick={() => mudar((x) => removerGrupo(x, sugestao.grupo))} className={`${CHIP} ${CHIP_OFF}`}>
+            {sugestao.grupo === "q" ? `Tirar a busca ${resumoGrupo(fd, "q")}` : `Tirar “${resumoGrupo(fd, sugestao.grupo)}”`}
+            <span className="text-xs text-nevoa tabular-nums">
+              mostra {numero(sugestao.total)}
+            </span>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => mudar(() => ({}))}
+          className="inline-flex min-h-11 cursor-pointer items-center text-[13px] font-semibold text-latao-texto underline-offset-4 hover:underline pointer-fine:min-h-8"
+        >
+          Limpar todos os filtros
+        </button>
+      </div>
+    );
+    const restantes = rd.total - Math.min(limite, rd.total);
+    const rodapeLista =
+      restantes > 0 ? (
+        <button type="button" onClick={() => setMais((m) => m + lote)} className={BOTAO_MAIS}>
+          Mostrar mais {numero(Math.min(lote, restantes))}
+          <span className="ml-1 text-nevoa tabular-nums">(faltam {numero(restantes)})</span>
+        </button>
+      ) : rd.total > 0 ? (
+        <p className="text-center text-xs text-nevoa">Fim da lista · {textos.selo.toLowerCase()} com imóveis fictícios</p>
+      ) : null;
+    return <ListaFoco itens={rd.itens} limite={limite} destaque={destaque} onDestaque={setDestaque} rodape={rodapeLista} vazio={vazio} rolaPorDentro={largo} />;
+  }, [rd, fd, limite, lote, destaque, largo, mudar, textos.selo]);
 
   /** Botão rápido: no computador, pop-up ancorado; abaixo de 1024 px, abre a folha na seção do filtro. */
   const botaoRapido = (g: GrupoFoco) => {
@@ -270,7 +290,8 @@ export function FocoDemo({ textos }: { textos: TextosFoco }) {
             <rect x="2.5" y="1.5" width="7" height="7" rx="2" />
             <path d="M4 10.5 3 11.5M8 10.5l1 1M2.5 5.5h7" />
           </svg>
-          {f.metro ? "Metrô a até 1 km" : nome}
+          {/* o nome não muda com o estado (botão de alternar: o leitor de tela diz "pressionado"; R5-TEC-11) */}
+          {nome}
           <span className={`text-xs tabular-nums ${f.metro ? "text-latao-texto" : "text-nevoa"}`}>
             <span className="sr-only">, </span>
             {numero(r.facetas.metro)}
@@ -397,17 +418,8 @@ export function FocoDemo({ textos }: { textos: TextosFoco }) {
           <IconeSeta className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-nevoa" />
         </>
       }
-      mapa={
-        <MapaFoco
-          itens={r.itens}
-          ufsEscolhidas={f.uf ?? []}
-          destaque={destaque}
-          onDestaque={setDestaque}
-          onAlternarUf={(uf) => mudar((x) => definirUfs(x, (x.uf ?? []).includes(uf) ? x.uf!.filter((u) => u !== uf) : [...(x.uf ?? []), uf]))}
-          className={MAPA}
-        />
-      }
-      lista={<ListaFoco itens={r.itens} limite={limite} destaque={destaque} onDestaque={setDestaque} rodape={rodapeLista} vazio={vazio} rolaPorDentro={largo} />}
+      mapa={mapaFoco}
+      lista={listaFoco}
       rodape={
         <>
           <p className="sr-only">{textos.nota}</p>

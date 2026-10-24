@@ -3,6 +3,7 @@ import { BrazilMap } from "@/components/ui/BrazilMap";
 import { RichText } from "@/components/ui/RichText";
 import { Seal } from "@/components/ui/Seal";
 import { SeloCancelamento } from "@/components/ui/SeloCancelamento";
+import { FotoDaFonte } from "@/components/ui/FotoDaFonte";
 import { LISTINGS } from "@/content/examples";
 import { estiloRecorte } from "@/lib/catalogo/recorte";
 import { ALVO_DESAGIO, BRASS, LENS_GLOW, LENS_SHADOW } from "./constants";
@@ -184,36 +185,27 @@ export function HeroScene() {
         <div className="absolute bottom-3 left-1/2 z-[4] w-[min(360px,calc(100cqw-32px))] -translate-x-1/2 sm:bottom-[8cqh] sm:left-[min(calc(66%+4cqw),calc(100cqw-376px))] sm:translate-x-0">
         <div
           data-h="card"
-          className="flex items-center gap-3 rounded-2xl border border-latao/45 bg-tinta p-3 pr-4 shadow-[0_20px_60px_rgba(0,0,0,.5)]"
+          data-foto={FOTO_ALVO ? "fonte" : undefined}
+          className="group/foto flex items-center gap-3 rounded-2xl border border-latao/45 bg-tinta p-3 pr-4 shadow-[0_20px_60px_rgba(0,0,0,.5)]"
         >
           {/* foto ilustrativa do exemplo (a mesma do cartão do Alvo na landing): <img> simples da fonte, preguiçoso e de
-              baixa prioridade (não disputa com o título, que é o LCP); se falhar, fica o desenho listrado de baixo */}
-          <div aria-hidden="true" className="photo-placeholder relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-latao font-mono text-[9px] text-nevoa">
+              baixa prioridade (não disputa com o título, que é o LCP). Se falhar, a ilha FotoDaFonte a tira (sem o ícone
+              de imagem quebrada), fica o desenho listrado de baixo e o "Foto ilustrativa" some (data-foto="falhou") */}
+          {/* celular baixo (360 × 640): o cartão numa linha de texto, sem a foto (e sem o rótulo dela), para não cobrir a
+              lente no fim da cena (revisão final da rodada 5, R5P-13) */}
+          <div aria-hidden="true" className="photo-placeholder relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-latao font-mono text-[9px] text-nevoa max-sm:[@media(max-height:700px)]:hidden">
             foto
             {FOTO_ALVO && (
-              // eslint-disable-next-line @next/next/no-img-element -- a foto fica na fonte: o next/image a baixaria e re-hospedaria
-              <img
-                src={FOTO_ALVO.url}
-                alt=""
-                width={56}
-                height={56}
-                loading="lazy"
-                decoding="async"
-                fetchPriority="low"
-                referrerPolicy="no-referrer"
-                draggable={false}
-                style={estiloRecorte(FOTO_ALVO.recorte)}
-                className="absolute inset-0 size-full object-cover"
-              />
+              <FotoDaFonte src={FOTO_ALVO.url} size={56} style={estiloRecorte(FOTO_ALVO.recorte)} className="absolute inset-0 size-full object-cover" />
             )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.14em] text-pos uppercase">
               <Seal level={3} size={18} /> Alvo · exemplo
             </p>
-            <p className="mt-1 text-[13px] leading-tight font-semibold text-luar">Apartamento 3 quartos · São Paulo/SP</p>
-            <p className="mt-0.5 text-[11px] leading-tight text-nevoa">Desocupado · sem dívidas identificadas</p>
-            {FOTO_ALVO && <p className="mt-0.5 text-[10px] leading-tight text-nevoa">Foto ilustrativa</p>}
+            <p className="mt-1 text-[13px] leading-tight font-semibold text-luar max-sm:[@media(max-height:700px)]:truncate">Apartamento 3 quartos · São Paulo/SP</p>
+            <p className="mt-0.5 text-[11px] leading-tight text-nevoa max-sm:[@media(max-height:700px)]:hidden">Desocupado · sem dívidas identificadas</p>
+            {FOTO_ALVO && <p className="mt-0.5 text-[10px] leading-tight text-nevoa group-data-[foto=falhou]/foto:hidden max-sm:[@media(max-height:700px)]:hidden">Foto ilustrativa</p>}
           </div>
           <div className="shrink-0 text-right">
             {/* o número anima de 0 a 48; leitores de tela recebem sempre o valor final */}

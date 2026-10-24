@@ -108,6 +108,21 @@ export default function MapaGL(props: PropsMapaGL) {
   const [altura, setAltura] = useState(0);
   const cartaoRef = useRef<HTMLDivElement>(null);
   const idDica = useId();
+  const idLegenda = useId();
+  // "Legenda" e "Esconder" são botões diferentes (um some quando o outro aparece): quem usou um deles fica com o foco no
+  // outro, em vez de cair no início da página (WCAG 2.4.3; revisão final da rodada 5, R5-TEC-04)
+  const botaoLegenda = useRef<HTMLButtonElement>(null);
+  const botaoEsconder = useRef<HTMLButtonElement>(null);
+  const focoNaLegenda = useRef(false);
+  const trocarLegenda = (aberta: boolean) => {
+    focoNaLegenda.current = true;
+    setLegendaAberta(aberta);
+  };
+  useEffect(() => {
+    if (!focoNaLegenda.current) return;
+    focoNaLegenda.current = false;
+    (legendaAberta ? botaoEsconder : botaoLegenda).current?.focus();
+  }, [legendaAberta]);
 
   // as últimas props, para os ouvintes do mapa (criados uma vez) lerem sem recriar o mapa
   const atual = useRef(props);
@@ -457,10 +472,12 @@ export default function MapaGL(props: PropsMapaGL) {
       <div className="absolute left-3 z-10 max-w-[calc(100%-24px)]" style={{ bottom: folga.baixo + 36 }}>
         {(compacto && !legendaAberta) || (!compacto && legendaAberta === false) ? (
           <button
+            ref={botaoLegenda}
             type="button"
-            onClick={() => setLegendaAberta(true)}
+            onClick={() => trocarLegenda(true)}
             aria-expanded={false}
-            className={`${s.vidro} inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-[12.5px] font-semibold text-luar pointer-fine:min-h-9`}
+            aria-controls={idLegenda}
+            className={`${s.vidro} inline-flex min-h-11 items-center gap-2 rounded-full px-3.5 text-[12.5px] font-semibold text-luar pointer-fine:min-h-9`}
           >
             <span aria-hidden="true" className="flex -space-x-1">
               {cores.fundo.slice(1).map((c) => (
@@ -470,7 +487,7 @@ export default function MapaGL(props: PropsMapaGL) {
             Legenda
           </button>
         ) : (
-          <div className={`${s.vidro} rounded-2xl px-3 py-2 text-[11.5px] leading-snug text-nevoa`}>
+          <div id={idLegenda} className={`${s.vidro} rounded-2xl px-3 py-2 text-[11.5px] leading-snug text-nevoa`}>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="font-semibold text-luar">Deságio médio</span>
               {ROTULOS_DESAGIO.map((r, k) => (
@@ -479,13 +496,16 @@ export default function MapaGL(props: PropsMapaGL) {
                   {r}
                 </span>
               ))}
+              {/* 44 px no toque e 36 no mouse, sem engordar a linha (margem negativa) */}
               <button
+                ref={botaoEsconder}
                 type="button"
-                onClick={() => setLegendaAberta(false)}
+                onClick={() => trocarLegenda(false)}
                 aria-expanded
-                className="ml-auto inline-flex min-h-8 items-center px-1 text-[11.5px] font-semibold text-latao-texto hover:underline"
+                aria-controls={idLegenda}
+                className="-my-2.5 ml-auto inline-flex min-h-11 items-center px-2 text-[11.5px] font-semibold text-latao-texto hover:underline pointer-fine:-my-2 pointer-fine:min-h-9"
               >
-                Esconder
+                Esconder<span className="sr-only"> a legenda</span>
               </button>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -578,7 +598,12 @@ function dadosDe(p: PontosLidos): GeoJSON.FeatureCollection {
   return d;
 }
 
-/** Folga do enquadramento: a linha de "Buscar ao mover" em cima, a legenda embaixo e os botões à direita. */
+/**
+ * Folga do enquadramento: a linha de "Buscar ao mover" em cima, a legenda (ou o botão "Legenda") e a escala embaixo, os
+ * botões à direita e, à esquerda, meio nome de cidade (as bolhas da borda ficavam sob o botão "Legenda" e com o nome
+ * cortado na borda, no celular; revisão final da rodada 5, R5P-08). Os números seguem os que posicionam esses controles
+ * (legenda a folga.baixo + 36, com 44 px de altura).
+ */
 function paddingDe(f: Folga, extra: number) {
-  return { top: f.cima + extra + 52, bottom: f.baixo + extra + (f.baixo > 0 ? 40 : 84), left: f.esq + extra, right: f.dir + extra + 52 };
+  return { top: f.cima + extra + 52, bottom: f.baixo + extra + 84, left: f.esq + extra + 24, right: f.dir + extra + 52 };
 }

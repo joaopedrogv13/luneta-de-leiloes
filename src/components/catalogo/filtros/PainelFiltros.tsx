@@ -21,7 +21,7 @@ import {
   ControleEstados,
   ControleFaixa,
   ControleLista,
-  ControleMetro,
+  ControleEstacoes,
   ControleMinimo,
   ControleNotaLocal,
   ControleSelo,
@@ -396,10 +396,10 @@ export function PainelFiltros({
             <Divisor />
             {trava("metro") ?? (
               <Campo
-                rotulo="Metrô perto"
-                ajuda="Estação de metrô a menos de 1 km, em linha reta do ponto do endereço (OpenStreetMap). Só vale para endereço localizado no número ou na rua; trem e VLT aparecem como tags no imóvel."
+                rotulo="Metrô, trem ou VLT perto"
+                ajuda="Estação a menos de 1 km, em linha reta do ponto do endereço (OpenStreetMap). Só vale para endereço localizado no número ou na rua. Marcando dois, ficam os imóveis perto dos dois."
               >
-                <ControleMetro {...props} />
+                <ControleEstacoes {...props} />
               </Campo>
             )}
           </Secao>

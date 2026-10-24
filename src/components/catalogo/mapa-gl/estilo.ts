@@ -258,6 +258,14 @@ const CONTAGEM: ExpressionSpecification = [
   ["to-string", ["get", "n"]],
 ];
 
+/** O ponto isolado (número ou rua): zooms das paradas, raio [1 imóvel, vários] e borda em cada uma. */
+const PONTO_Z = [8, 16] as const;
+const PONTO_RAIO = [
+  [5, 6.5],
+  [8, 10],
+] as const;
+const PONTO_BORDA = [1.5, 2.5] as const;
+
 const agrupado: ExpressionSpecification = ["has", "point_count"];
 const solto = (niveis: number[]): ExpressionSpecification => ["all", ["!", ["has", "point_count"]], ["match", ["get", "nv"], niveis, true, false]];
 
@@ -466,9 +474,27 @@ function camadasImoveis(tema: TemaMapa): LayerSpecification[] {
     filter: solto([0, 1]),
     paint: {
       "circle-color": fundo,
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, ["case", [">", ["get", "n"], 1], 6.5, 5], 16, ["case", [">", ["get", "n"], 1], 10, 8]],
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], PONTO_Z[0], ["case", [">", ["get", "n"], 1], PONTO_RAIO[0][1], PONTO_RAIO[0][0]], PONTO_Z[1], ["case", [">", ["get", "n"], 1], PONTO_RAIO[1][1], PONTO_RAIO[1][0]]],
       "circle-stroke-color": c.borda,
-      "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 8, 1.5, 16, 2.5],
+      "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], PONTO_Z[0], PONTO_BORDA[0], PONTO_Z[1], PONTO_BORDA[1]],
+    },
+  };
+  // A mesma imagem transparente das bolhas sob o ponto isolado: o nome da cidade do fundo desvia dele ("Re●fe" e
+  // "Camp●Grande" ficavam com o ponto em cima; revisão final da rodada 5, R5P-09). Sempre à vista (allow-overlap) e
+  // ocupando o lugar (ignore-placement false); do tamanho do ponto com a borda, no mesmo zoom.
+  const tamanhoPonto = (k: 0 | 1) =>
+    ["case", [">", ["get", "n"], 1], (2 * (PONTO_RAIO[k][1] + PONTO_BORDA[k])) / TAMANHO_BLOQUEIO, (2 * (PONTO_RAIO[k][0] + PONTO_BORDA[k])) / TAMANHO_BLOQUEIO] as ExpressionSpecification;
+  const pontoBloqueio: SymbolLayerSpecification = {
+    id: "lu-ponto-bloqueio",
+    type: "symbol",
+    source: FONTES.imoveis,
+    filter: solto([0, 1]),
+    layout: {
+      "icon-image": IMAGEM_BLOQUEIO,
+      "icon-size": ["interpolate", ["linear"], ["zoom"], PONTO_Z[0], tamanhoPonto(0), PONTO_Z[1], tamanhoPonto(1)],
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": false,
+      "icon-padding": 1,
     },
   };
   const preco: SymbolLayerSpecification = {
@@ -522,7 +548,7 @@ function camadasImoveis(tema: TemaMapa): LayerSpecification[] {
       "circle-stroke-width": 3,
     },
   };
-  return [incerteza, destaqueArea, agrupamento, agrupamentoN, cidade, cidadeN, cidadeRotulo, bairroN, ponto, preco, destaque];
+  return [incerteza, destaqueArea, agrupamento, agrupamentoN, cidade, cidadeN, cidadeRotulo, bairroN, ponto, pontoBloqueio, preco, destaque];
 }
 
 const VAZIO: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };

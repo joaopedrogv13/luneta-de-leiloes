@@ -5,6 +5,7 @@
  *
  *   /previa?uf=MG&tipo=apartamento&tipo=casa&lanceMax=300000&ordem=lance-asc&vista=cards&pagina=2
  */
+import { SLUG_ESTACAO } from "./estacoes";
 import { NAO_INFORMADO, ORDEM_PADRAO, type CaixaGeo, type Conjunto, type Filtros, type Modalidade, type Ordem, type Plano, type TipoImovel } from "./tipos";
 import { lerPlano } from "./planos";
 
@@ -187,8 +188,12 @@ export function lerBusca(p: Entrada): EstadoBusca {
     const b = simNao(p, c);
     if (b !== undefined) f[c] = b;
   }
-  const comTags = lista<string>(p, "comTags", undefined, 30);
-  if (comTags) f.comTags = comTags;
+  // "comTags=metro-perto" é o mesmo filtro que "metro=1" (a tag e o filtro contam o mesmo): um estado só, o metroPerto
+  // (links antigos, de quando a tag aparecia também em "Só imóveis com"; revisão final da rodada 5, R5P-03)
+  const comTagsLidas = lista<string>(p, "comTags", undefined, 30);
+  const comTags = comTagsLidas?.filter((t) => t !== SLUG_ESTACAO.metro);
+  if (comTags?.length) f.comTags = comTags;
+  if (comTagsLidas?.includes(SLUG_ESTACAO.metro)) f.metroPerto = true;
   const semTags = lista<string>(p, "semTags", undefined, 30);
   if (semTags) f.semTags = semTags;
   const selo = lista(p, "selo", ["1", "2", "3"] as const);

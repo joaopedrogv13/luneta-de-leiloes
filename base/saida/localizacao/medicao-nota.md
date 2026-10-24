@@ -127,7 +127,7 @@ A mesma validação com a nota recalculada com outros pesos (cada linha é uma c
 
 ## Estação de metrô, trem e VLT perto (tag do site)
 
-Gerado em 24/10/2026 14:05 UTC por `base/fontes/localizacao/estacoes.py`, com o OSM de 2026-10-23T20:20:51Z. Distância em linha reta do ponto do endereço (número ou rua) até a estação mais perto; a tag do site vale abaixo de 1.000 m. Metrô inclui o monotrilho. A nota de localização não muda: ela segue com a distância até qualquer estação (`estacao_m`).
+Gerado em 24/10/2026 16:38 UTC por `base/fontes/localizacao/estacoes.py`, com o OSM de 2026-10-23T20:20:51Z. Distância em linha reta do ponto do endereço (número ou rua) até a estação mais perto; a tag do site vale abaixo de 1.000 m. Metrô inclui o monotrilho. A nota de localização não muda: ela segue com a distância até qualquer estação (`estacao_m`).
 
 Imóveis com endereço no número ou na rua: 13.692 de 21.230.
 
@@ -135,7 +135,7 @@ Imóveis com endereço no número ou na rua: 13.692 de 21.230.
 |---|---|---|---|---|---|---|---|
 | Metrô a X m | 369 | 2,7% | 128 | 388 | 1.015 | 38 | 928 |
 | Trem a X m | 604 | 4,4% | 227 | 1.278 | 788 | 122 | 260 |
-| VLT a X m | 46 | 0,3% | 24 | 99 | 376 | 65 | 176 |
+| VLT a X m | 43 | 0,3% | 21 | 93 | 376 | 65 | 176 |
 
 Com pelo menos uma das três tags: 907 (6,6% dos com número ou rua).
 
@@ -151,7 +151,7 @@ Por cidade (as que têm pelo menos um imóvel com a tag):
 | Salvador/BA | 100 | 23 | 0 | 0 | 23 (23,0%) |
 | Camaragibe/PE | 24 | 21 | 0 | 0 | 21 (87,5%) |
 | Nilópolis/RJ | 23 | 0 | 17 | 0 | 17 (73,9%) |
-| Fortaleza/CE | 80 | 13 | 0 | 9 | 13 (16,2%) |
+| Fortaleza/CE | 80 | 13 | 0 | 6 | 13 (16,2%) |
 | Mesquita/RJ | 137 | 0 | 12 | 0 | 12 (8,8%) |
 | Canoas/RS | 44 | 11 | 0 | 0 | 11 (25,0%) |
 | São Vicente/SP | 16 | 0 | 0 | 10 | 10 (62,5%) |

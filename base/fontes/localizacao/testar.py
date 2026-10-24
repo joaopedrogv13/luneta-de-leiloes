@@ -374,6 +374,26 @@ def estacoes_regras():
     d = es.distancias_m(-22.95, -43.184, np.array([-22.952]), np.array([-43.184]))[0]
     assert 215 < d < 230, d
     igual(es.arred10(447), 450)
+    # a mesma estação em dois modos vira uma tag só: metrô e VLT com o mesmo nome e a mesma distância (a Linha Sul do
+    # Metrofor) fica metrô; trem e VLT no mesmo ponto (a CBTU) fica VLT; nomes ou distâncias diferentes ficam os dois
+    def prep_de(**modos):
+        saida = {}
+        for modo, est in modos.items():
+            arr = (np.array([e["lat"] for e in est]), np.array([e["lon"] for e in est]))
+            idx = [k for k, e in enumerate(est) if e["nome"]]
+            saida[modo] = (est, arr, (np.array([est[k]["lat"] for k in idx]), np.array([est[k]["lon"] for k in idx]), idx))
+        return saida
+
+    esperanca_m = {"lat": -3.8000, "lon": -38.5600, "nome": "Esperança", "rede": "Metrofor", "cat": "metro"}
+    esperanca_v = {"lat": -3.8001, "lon": -38.5600, "nome": "Estação Esperança", "rede": "Metrofor", "cat": "vlt"}
+    outro_v = {"lat": -3.8001, "lon": -38.5600, "nome": "Parangaba", "rede": "VLT", "cat": "vlt"}
+    prep = prep_de(metro=[esperanca_m], vlt=[esperanca_v, outro_v])
+    igual(sorted(es.sem_duplicadas({"metro": (450.0, 0), "vlt": (452.0, 0)}, prep)), ["metro"])
+    igual(sorted(es.sem_duplicadas({"metro": (450.0, 0), "vlt": (520.0, 0)}, prep)), ["metro", "vlt"])  # distâncias diferentes
+    igual(sorted(es.sem_duplicadas({"metro": (450.0, 0), "vlt": (452.0, 1)}, prep)), ["metro", "vlt"])  # outro nome
+    trem = {"lat": -7.1200, "lon": -34.8800, "nome": "Santa Rita", "rede": "CBTU", "cat": "trem"}
+    vlt = {"lat": -7.1203, "lon": -34.8800, "nome": "Santa Rita", "rede": "VLT João Pessoa · CBTU", "cat": "vlt"}
+    igual(sorted(es.sem_duplicadas({"trem": (300.0, 0), "vlt": (310.0, 0)}, prep_de(trem=[trem], vlt=[vlt]))), ["vlt"])
     # a seção da medição troca só o que está entre os marcadores
     import tempfile
     from pathlib import Path as P

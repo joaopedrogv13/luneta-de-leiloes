@@ -7,7 +7,7 @@
  * Exemplos de pílula: "MG", "Uberlândia/MG", "Apartamento, Casa", "Lance até R$ 300 mil",
  * "Deságio ≥ 30%", "2+ quartos", "Praça: 2ª", "Sem: Ocupado".
  */
-import { ROTULO_FILTRO_METRO } from "./estacoes";
+import { eTagEstacao, MODOS_ESTACAO, ROTULO_FILTRO_METRO, ROTULO_TAG_ESTACAO, SLUG_ESTACAO } from "./estacoes";
 import { NAO_INFORMADO, ORDEM_PADRAO, type Facetas, type Filtros, type Modalidade, type Ocupacao, type Ordem, type Plano, type Praca, type Recurso, type Selo, type TipoImovel } from "./tipos";
 import { filtroPermitido, ordemDoPlano, recursoDoFiltro } from "./planos";
 import { MODALIDADE_ROTULO, OCUPACAO_ROTULO, SELO_ROTULO, TIPO_ROTULO, UF_NOME, area, moedaCurta, numero } from "./rotulos";
@@ -377,6 +377,8 @@ export const TAG_ROTULO_PADRAO: Record<string, string> = {
   "primeira-praca": "1ª praça",
   "segunda-praca": "2ª praça",
   "praca-unica": "Praça única",
+  // estação perto (rodada 5): o rótulo fixo do filtro; a tag de cada imóvel diz a distância
+  ...Object.fromEntries(MODOS_ESTACAO.map((m) => [SLUG_ESTACAO[m], ROTULO_TAG_ESTACAO[m]])),
 };
 
 const FONTE_ROTULO_PADRAO: Record<string, string> = {
@@ -500,7 +502,10 @@ export function pilulas(f: Filtros, nomes?: NomesDasFacetas): Pilula[] {
   if (f.comFoto !== undefined) add("comFoto", SIM_NAO.comFoto[f.comFoto ? 0 : 1]);
 
   for (const slug of f.semTags ?? []) p.push({ id: `semTags:${slug}`, grupo: "semTags", valor: slug, rotulo: `Sem: ${nomeTag(slug, nomes)}` });
-  for (const slug of f.comTags ?? []) p.push({ id: `comTags:${slug}`, grupo: "comTags", valor: slug, rotulo: `Com: ${nomeTag(slug, nomes)}` });
+  // trem e VLT perto (escolhidos em "Entorno") dizem o próprio nome, como o metrô ("Trem a até 1 km", sem o "Com:")
+  for (const slug of f.comTags ?? []) {
+    p.push({ id: `comTags:${slug}`, grupo: "comTags", valor: slug, rotulo: eTagEstacao(slug) ? nomeTag(slug, nomes) : `Com: ${nomeTag(slug, nomes)}` });
+  }
   if (f.selo?.length) add("selo", `Selo: ${[...f.selo].sort((a, b) => b - a).map((s: Exclude<Selo, 0>) => SELO_ROTULO[s]).join(", ")}`);
   return p;
 }

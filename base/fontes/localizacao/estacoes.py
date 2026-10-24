@@ -32,6 +32,7 @@ Regras:
     longe de qualquer linha urbana, fica de fora; o trem de longa distância (Vitória a Minas, Carajás) também;
   - metrô não passa pela lista (só pelos nomes acima): o OSM só marca metrô onde há metrô.
 - Trem e VLT na mesma estação (a CBTU marca as linhas de João Pessoa, Natal e Maceió dos dois jeitos): fica só o VLT.
+- Metrô e VLT com o mesmo nome e a mesma distância (a Linha Sul do Metrofor, em Fortaleza): fica só o metrô.
 
 Uso (depois do nota.py; no Actions, a etapa `nota` chama sozinho; aqui, com o osm-pois.csv.gz da etapa `osm`):
 
@@ -263,6 +264,33 @@ def nome_da(est: list[dict], j: int, nomeados: tuple[np.ndarray, np.ndarray, lis
     return nome_curto(est[idx[k]]["nome"]) if d[k] <= NOME_ACESSO_M else ""
 
 
+#: metrô e VLT "na mesma estação": o mesmo nome e distâncias até ±20 m (os pontos da estação e do acesso diferem pouco)
+MESMA_ESTACAO_M = 20
+
+
+def sem_duplicadas(achadas: dict[str, tuple[float, int]], prep: dict) -> dict[str, tuple[float, int]]:
+    """A mesma estação marcada em dois modos vira uma tag só (`achadas`: modo → (distância, índice da estação)).
+
+    - Trem e VLT a até 100 m um do outro (a CBTU marca as linhas de João Pessoa, Natal e Maceió dos dois jeitos): fica o
+      VLT.
+    - Metrô e VLT com o mesmo nome e a mesma distância (±MESMA_ESTACAO_M): fica o metrô. A Linha Sul do Metrofor, em
+      Fortaleza, está marcada também como VLT (Esperança e Aracapé davam "Metrô a 450 m" e "VLT a 450 m" no mesmo imóvel;
+      revisão final da rodada 5, CONT-04).
+    """
+    saida = dict(achadas)
+    if "trem" in saida and "vlt" in saida:
+        et, ev = prep["trem"][0][saida["trem"][1]], prep["vlt"][0][saida["vlt"][1]]
+        if distancias_m(et["lat"], et["lon"], np.array([ev["lat"]]), np.array([ev["lon"]]))[0] <= 100:
+            del saida["trem"]
+    if "metro" in saida and "vlt" in saida:
+        (dm, jm), (dv, jv) = saida["metro"], saida["vlt"]
+        nm = nome_da(prep["metro"][0], jm, prep["metro"][2]).casefold()
+        nv = nome_da(prep["vlt"][0], jv, prep["vlt"][2]).casefold()
+        if nm and nm == nv and abs(dm - dv) <= MESMA_ESTACAO_M:
+            del saida["vlt"]
+    return saida
+
+
 def calcular(principal: dict, estacoes: dict[str, list[dict]]) -> tuple[dict[str, list], list[str]]:
     """Colunas novas (na ordem dos ids do arquivo principal) e a lista de nomes (as colunas *_nome são índices nela)."""
     c = principal["colunas"]
@@ -289,11 +317,7 @@ def calcular(principal: dict, estacoes: dict[str, list[dict]]) -> tuple[dict[str
             r = mais_perto(lat, lon, est, arr, nomeados)
             if r is not None:
                 achadas[modo] = r
-        # trem e VLT na mesma estação (a CBTU marca as linhas dos dois jeitos): fica só o VLT
-        if "trem" in achadas and "vlt" in achadas:
-            et, ev = prep["trem"][0][achadas["trem"][1]], prep["vlt"][0][achadas["vlt"][1]]
-            if distancias_m(et["lat"], et["lon"], np.array([ev["lat"]]), np.array([ev["lon"]]))[0] <= 100:
-                del achadas["trem"]
+        achadas = sem_duplicadas(achadas, prep)
         for modo, (d, j) in achadas.items():
             est, arr, nomeados = prep[modo]
             col[f"{modo}_m"][k] = arred10(d)

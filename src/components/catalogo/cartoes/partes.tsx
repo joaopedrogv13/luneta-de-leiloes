@@ -249,7 +249,7 @@ export function BotaoFavoritar({
   abrirComAncora = false,
 }: {
   /** com o local e o lance, o nome acessível distingue um imóvel do outro na lista */
-  imovel: Pick<ImovelResumo, "id" | "titulo"> & Partial<Pick<ImovelResumo, "bairro" | "cidade" | "uf" | "lance">>;
+  imovel: Pick<ImovelResumo, "id" | "titulo"> & Partial<Pick<ImovelResumo, "bairro" | "cidade" | "uf" | "lance" | "praca">>;
   plano: Plano;
   favorito: boolean;
   onFavoritar: (id: string) => void;
@@ -288,6 +288,7 @@ export function BotaoFavoritar({
         icone={icone}
         classeBotao={icone ? classeIcone : classeTexto}
         abrirComAncora={abrirComAncora}
+        pracaUnica={imovel.praca === "unica"}
       />
     );
   }

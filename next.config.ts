@@ -29,10 +29,9 @@ const nextConfig: NextConfig = {
     "/metodologia/localizacao": LOCALIZACAO,
   },
   images: {
-    // Fotos reais dos imóveis (quando houver) saem em AVIF/WebP, nos tamanhos da moldura de lente.
-    formats: ["image/avif", "image/webp"],
-    deviceSizes: [390, 640, 828, 1080, 1280, 1920],
-    imageSizes: [64, 96, 128, 168, 256],
+    // O site não usa mais o next/image (as fotos ficam na fonte, num <img> simples). Desligado, o otimizador
+    // /_next/image responde 404: menos superfície exposta (o 16.4.0 tinha uma falha grave nele, com SVG).
+    unoptimized: true,
   },
   turbopack: {
     rules: {

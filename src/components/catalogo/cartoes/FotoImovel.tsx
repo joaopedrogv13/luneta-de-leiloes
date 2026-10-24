@@ -151,12 +151,15 @@ export function FotoImovel({
         />
       )}
 
-      {/* foto de outro imóvel (exemplo fictício): o rótulo fica sempre à vista, também na linha compacta */}
+      {/* foto de outro imóvel (exemplo fictício): o rótulo fica à vista junto com a foto, também na linha compacta. Entra
+          e sai com ela: enquanto a foto não chegou (preguiçosa, fora da tela, ou a fonte demorando) é o desenho que
+          aparece, e "Foto ilustrativa" sobre o desenho seria falso; se ela falhar, o rótulo sai do DOM com o <img>. */}
       {src && imovel.fotoIlustrativa && (
         <span
-          className={`absolute bottom-3 left-3 z-[1] rounded-full px-2.5 py-1.5 text-[11px] leading-none font-semibold ${VIDRO} ${
-            enxutaNoCompacto ? "@max-xl:bottom-1.5 @max-xl:left-1.5 @max-xl:px-1.5 @max-xl:py-1 @max-xl:text-[9.5px]" : ""
-          }`}
+          aria-hidden={pronta ? undefined : true}
+          className={`absolute bottom-3 left-3 z-[1] rounded-full px-2.5 py-1.5 text-[11px] leading-none font-semibold transition-opacity duration-500 motion-reduce:transition-none ${VIDRO} ${
+            pronta ? "opacity-100" : "opacity-0"
+          } ${enxutaNoCompacto ? "@max-xl:bottom-1.5 @max-xl:left-1.5 @max-xl:px-1.5 @max-xl:py-1 @max-xl:text-[9.5px]" : ""}`}
         >
           {ROTULO_FOTO_ILUSTRATIVA}
         </span>

@@ -4,8 +4,8 @@ import { VoltarApresentacao } from "@/components/apresentacao/VoltarApresentacao
 export default function LayoutMetodologia({ children }: LayoutProps<"/metodologia">) {
   return (
     <>
-      {children}
       <VoltarApresentacao />
+      {children}
     </>
   );
 }

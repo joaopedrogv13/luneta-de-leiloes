@@ -7,6 +7,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { createJiti } from "jiti";
@@ -98,4 +99,58 @@ test("GET /api/catalogo/pontos/itens: os imóveis pela posição, com o plano; v
   const fora = (await (await pedir(rota, `conjunto=exemplos&versao=${p.conjunto}&k=999,-1,abc,${ix.n},${ks[0]}`)).json()) as { itens: ImovelResumo[]; ks: number[] };
   assert.deepEqual(fora.ks, [ks[0]]);
   assert.equal(fora.itens.length, 1);
+});
+
+// ---- revisão final da rodada 5 (R5-TEC-02, R5-TEC-15): a prévia inteira, quando o instantâneo está no repositório ----
+const temInstantaneo = existsSync(join(RAIZ, "base/saida/site/imoveis.json.gz"));
+type DadosPrevia = { dadosDoConjunto: (c: "previa") => Promise<DadosConjunto> };
+type BuscaPrevia = { conjunto: "previa"; plano: "lente" | "luneta"; filtros: object; ordem: "relevancia"; pagina: number };
+type Servidor = { buscar: (b: BuscaPrevia) => Promise<{ total: number }> };
+const servidor = () => jiti.import<Servidor>(join(RAIZ, "src/lib/catalogo/servidor.ts"));
+
+test("GET /api/catalogo/pontos no Lente: os filtros da Luneta (metrô, nota, tags) não mudam os pontos", { skip: !temInstantaneo }, async () => {
+  const rota = await rotaPontos();
+  const contar = async (consulta: string) => {
+    const d = lerPontos((await (await pedir(rota, consulta)).json()) as PontosCompactos);
+    return d.total + d.semPonto;
+  };
+  const lente = await contar("conjunto=previa&plano=lente");
+  assert.ok(lente > 20_000, "a prévia inteira");
+  for (const f of ["metro=1", "notaLocalMin=80", "comTags=metro-perto", "quartosMin=3"]) {
+    assert.equal(await contar(`conjunto=previa&plano=lente&${f}`), lente, `Lente com ${f}: ignorado, como na lista`);
+  }
+  // na Luneta, o metrô filtra, com o mesmo número da lista
+  const metro = await contar("conjunto=previa&metro=1");
+  assert.ok(metro > 0 && metro < lente / 10, `Luneta com metro=1: ${metro}`);
+  const { buscar } = await servidor();
+  assert.equal(metro, (await buscar({ conjunto: "previa", plano: "luneta", filtros: { metroPerto: true }, ordem: "relevancia", pagina: 1 })).total);
+});
+
+test("GET /api/catalogo/pontos acompanha o relógio: praça vencida sai do mapa como sai da lista, e o cache não passa do vencimento", { skip: !temInstantaneo }, async (t) => {
+  const { dadosDoConjunto } = await jiti.import<DadosPrevia>(join(RAIZ, "src/lib/catalogo/dados.ts"));
+  const ix = (await dadosDoConjunto("previa")).indice;
+  const datas = [...new Set([...ix.instante].filter((x) => Number.isFinite(x)))].sort((a, b) => a - b);
+  assert.ok(datas.length >= 2, "o instantâneo tem pelo menos duas datas de praça");
+  const DIA = 24 * 3600 * 1000;
+  const rota = await rotaPontos();
+  const { buscar } = await servidor();
+  const conferir = async (agora: number) => {
+    t.mock.timers.setTime(agora);
+    // a mesma URL nas três horas: a segunda e a terceira já encontram a resposta guardada na memória da instância
+    const r = await pedir(rota, "conjunto=previa&lanceMin=1");
+    const d = lerPontos((await r.json()) as PontosCompactos);
+    const lista = await buscar({ conjunto: "previa", plano: "luneta", filtros: { lanceMin: 1 }, ordem: "relevancia", pagina: 1 });
+    assert.equal(d.total + d.semPonto, lista.total, `em ${new Date(agora).toISOString()}: o mapa e a lista com o mesmo total`);
+    const sMaxAge = Number(/s-maxage=(\d+)/.exec(r.headers.get("cache-control") ?? "")?.[1]);
+    return { total: lista.total, sMaxAge };
+  };
+  // um minuto antes do primeiro vencimento; logo depois dele; depois do último
+  t.mock.timers.enable({ apis: ["Date"], now: datas[0]! + DIA - 60_000 });
+  const antes = await conferir(datas[0]! + DIA - 60_000);
+  assert.ok(antes.sMaxAge <= 60, `o cache vale no máximo até o vencimento (${antes.sMaxAge} s)`);
+  const depois = await conferir(datas[0]! + DIA + 1);
+  assert.ok(depois.total < antes.total, "o imóvel vencido saiu");
+  const fim = await conferir(datas.at(-1)! + DIA + 1);
+  assert.ok(fim.total < depois.total);
+  assert.ok(fim.sMaxAge <= 86_400 && fim.sMaxAge > 0, "sem vencimento adiante: até a virada do dia");
 });

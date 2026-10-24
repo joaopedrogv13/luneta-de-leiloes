@@ -106,7 +106,7 @@ export function AcoesTitulo({
   imovel,
   className = "",
 }: {
-  imovel: Pick<ImovelResumo, "id" | "titulo" | "bairro" | "cidade" | "uf" | "lance">;
+  imovel: Pick<ImovelResumo, "id" | "titulo" | "bairro" | "cidade" | "uf" | "lance" | "praca">;
   className?: string;
 }) {
   const { plano, ehFavorito, alternarFavorito, pedirLuneta } = useImovel();

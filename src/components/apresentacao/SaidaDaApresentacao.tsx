@@ -50,6 +50,10 @@ export function SaidaDaApresentacao() {
       root.style.scrollBehavior = "auto";
       void root.scrollHeight; // layout completo agora
       posicionar();
+      // o foco volta ao link de onde a pessoa saiu (sem rolar): pelo teclado, o próximo Tab segue dali, e não do
+      // "Pular para o conteúdo" no topo (revisão final da rodada 5, R5-TEC-06)
+      const origem = document.querySelectorAll<HTMLAnchorElement>(SELETOR_LINKS)[saida.link];
+      if (origem && origem.getAttribute("href") === saida.destino) origem.focus({ preventScroll: true });
       // a hidratação, as fontes e o content-visibility ainda podem mexer nas alturas: confere por ~1 s
       let quadros = 0;
       const conferir = () => {

@@ -15,17 +15,20 @@ const POR_GRUPO = { uf: 4, cidade: 6, bairro: 5 } as const;
 
 /** Tela estreita (celular): o texto de ajuda do campo precisa caber ao lado do botão "Filtros". */
 const ESTREITA = "(max-width: 30rem)";
-function useTelaEstreita() {
+/** Abaixo de 390 px (360, 375): nem "Cidade ou bairro" cabe (saía "Cidade ou bai"); fica "Buscar". */
+const MUITO_ESTREITA = "(max-width: 389px)";
+function useMidiaBusca(consulta: string) {
   return useSyncExternalStore(
     (avisar) => {
-      const m = window.matchMedia(ESTREITA);
+      const m = window.matchMedia(consulta);
       m.addEventListener("change", avisar);
       return () => m.removeEventListener("change", avisar);
     },
-    () => window.matchMedia(ESTREITA).matches,
+    () => window.matchMedia(consulta).matches,
     () => false,
   );
 }
+const useTelaEstreita = () => useMidiaBusca(ESTREITA);
 const GRUPO_ROTULO = { uf: "Estados", cidade: "Cidades", bairro: "Bairros" } as const;
 
 /** 0 começa igual, 1 alguma palavra começa igual, 2 contém; -1 não casa. */
@@ -128,6 +131,7 @@ export function BuscaLocal({
   const [ativo, setAtivo] = useState(-1);
   const [focado, setFocado] = useState(false);
   const estreita = useTelaEstreita();
+  const muitoEstreita = useMidiaBusca(MUITO_ESTREITA);
 
   // a busca aplicada mudou por fora (pílula removida, URL): o campo acompanha
   if (filtros.q !== qAnterior) {
@@ -246,7 +250,7 @@ export function BuscaLocal({
         aria-controls={listaId}
         aria-autocomplete="list"
         aria-activedescendant={mostrar && ativo >= 0 ? opId(ativo) : undefined}
-        placeholder={estreita ? "Cidade ou bairro" : "Cidade, bairro, estado ou palavra"}
+        placeholder={muitoEstreita ? "Buscar" : estreita ? "Cidade ou bairro" : "Cidade, bairro, estado ou palavra"}
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}
