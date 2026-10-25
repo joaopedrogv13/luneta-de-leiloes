@@ -16,7 +16,8 @@ import { pastaPadrao } from "./instantaneo";
 import { lerItbi, type DadosItbi } from "./itbi";
 import { montarPaginaImovel } from "./pagina";
 import { RECURSOS } from "./planos";
-import type { PaginaImovel } from "./tipos";
+import { melhorRecorte, MINIMO_ITBI, MINIMO_LEILOES_REFERENCIA, recorteFraco, referenciaLeiloes, referenciaPrincipal } from "./referencia";
+import type { PaginaImovel, ReferenciaM2 } from "./tipos";
 
 const AGORA = new Date("2026-10-14T15:00:00Z");
 const PASTA = pastaPadrao();
@@ -40,7 +41,7 @@ async function itbi(): Promise<DadosItbi> {
 
 /** Os pedaços que só a Luneta tem, tirados da página da Luneta (o que não pode aparecer no JSON do Lente). */
 function pedacosDaLuneta(luneta: PaginaImovel): string[] {
-  const p: string[] = ['"componentes":', '"indicadores":', '"alertas":[{', '"percentilLance":', '"fonte":"itbi"', '"fonte":"leiloes"', '"escopo":', '"evidencia":', '"confianca":'];
+  const p: string[] = ['"componentes":', '"indicadores":', '"alertas":[{', '"percentilLance":', '"fonte":"itbi"', '"fonte":"leiloes"', '"escopo":', '"evidencia":', '"confianca":', '"amostrasLeiloes"'];
   for (const t of luneta.imovel.tags) {
     p.push(`"slug":"${t.slug}"`);
     if (t.evidencia && t.evidencia.length > 12) p.push(JSON.stringify(t.evidencia).slice(1, -1));
@@ -60,6 +61,8 @@ function conferir(lente: PaginaImovel, luneta: PaginaImovel) {
   assert.equal(lente.imovel.selo, 0, `${id}: selo`);
   assert.equal(lente.imovel.porQueSelo, "", `${id}: porquê do selo`);
   assert.deepEqual(lente.vizinhanca.referencias, [], `${id}: preço da região`);
+  assert.equal("amostrasLeiloes" in lente.vizinhanca, false, `${id}: quantos imóveis cada recorte tem (é do preço da região)`);
+  assert.ok(luneta.vizinhanca.amostrasLeiloes, `${id}: a Luneta tem as contagens de cada recorte`);
   assert.deepEqual(lente.vizinhanca.buscasExternas, [], `${id}: buscas nos portais`);
   for (const x of lente.vizinhanca.parecidos) assert.ok(x.tags.length === 0 && x.selo === 0 && x.notaLocal === null, `${id}: parecido ${x.id}`);
   assert.deepEqual(lente.travas, [...RECURSOS], `${id}: travas`);
@@ -125,6 +128,60 @@ test("instantâneo real: caixa-1444419640129 e um imóvel de São Paulo com ITBI
     const { lente, luneta } = await paginas(d, dadosItbi, id);
     conferir(lente, luneta);
   }
+});
+
+test("instantâneo real: o raio de 1 km (rodada 6) entra entre a rua e o bairro, com as contagens de cada recorte", { skip: !TEM_PREVIA }, async () => {
+  const [d, dadosItbi] = await Promise.all([carregarPrevia(PASTA), itbi()]);
+  let achou = 0;
+  for (const i of d.itens) {
+    if (i.cidade !== "Rio de Janeiro" || i.precisaoGeo !== "exata") continue;
+    const { lente, luneta } = await paginas(d, dadosItbi, i.id);
+    const leiloes = luneta.vizinhanca.referencias.filter((r) => r.fonte === "leiloes");
+    const perto = leiloes.find((r) => r.escopo === "perto");
+    if (!perto) continue;
+    // a ordem: rua → perto → bairro → cidade → UF
+    const ordem = ["rua", "perto", "bairro", "cidade", "uf"];
+    const escopos = leiloes.map((r) => ordem.indexOf(r.escopo));
+    assert.deepEqual(escopos, [...escopos].sort((a, b) => a - b), `${i.id}: ordem dos recortes`);
+    assert.ok(perto.amostra >= 5, `${i.id}: mínimo do bairro`);
+    assert.equal(luneta.vizinhanca.amostrasLeiloes?.perto, perto.amostra, `${i.id}: a contagem do raio é a amostra`);
+    assert.equal(perto.nome, `Até 1 km, ${i.cidade}/${i.uf}`);
+    conferir(lente, luneta);
+    if (++achou >= 3) break;
+  }
+  assert.ok(achou > 0, "algum imóvel do Rio com o raio de 1 km");
+  // posição aproximada: sem o raio e sem a contagem dele
+  const aprox = d.itens.find((i) => i.precisaoGeo === "bairro" && i.cidade === "Rio de Janeiro");
+  if (aprox) {
+    const p = await montarPaginaImovel(d, aprox.id, "luneta", dadosItbi, AGORA);
+    assert.ok(!p!.vizinhanca.referencias.some((r) => r.escopo === "perto"));
+    assert.equal(p!.vizinhanca.amostrasLeiloes?.perto, undefined);
+  }
+});
+
+test("instantâneo real: o aviso de rua e bairro segue a frase (revisão da rodada 6)", { skip: !TEM_PREVIA }, async (t) => {
+  const [d, dadosItbi] = await Promise.all([carregarPrevia(PASTA), itbi()]);
+  // Campo Grande/MS: 4 apartamentos na mesma rua (média na tabela) e a frase na cidade (52); Praça da Bandeira, Rio: um
+  // imóvel comercial com 8 compras do ITBI no bairro (mínimo 10) e a frase no preço pago da cidade. Antes, os dois
+  // ficavam com o aviso discreto. Confere só se o instantâneo ainda tem esse desenho (ele muda a cada atualização).
+  const casos = [
+    { id: "caixa-1444403509516", tem: (r: ReferenciaM2) => r.fonte === "leiloes" && r.escopo === "rua" && r.amostra < MINIMO_LEILOES_REFERENCIA },
+    { id: "caixa-0000010218366", tem: (r: ReferenciaM2) => r.fonte === "itbi" && r.escopo === "bairro" && r.amostra < MINIMO_ITBI.bairro },
+  ];
+  let conferidos = 0;
+  for (const { id, tem } of casos) {
+    if (!d.posicao.has(id)) continue;
+    const p = (await montarPaginaImovel(d, id, "luneta", dadosItbi, AGORA))!;
+    const refs = p.vizinhanca.referencias;
+    const principal = referenciaPrincipal(refs);
+    if (!refs.some(tem) || !principal || principal.escopo !== "cidade") continue;
+    const segunda = principal.fonte === "itbi" ? referenciaLeiloes(refs) : null;
+    if (segunda && !recorteFraco(segunda.escopo)) continue;
+    assert.equal(recorteFraco(melhorRecorte(refs)!), true, `${id}: a frase compara com a cidade, o aviso fica em destaque`);
+    conferidos++;
+  }
+  // o instantâneo mudou e nenhum dos dois casos tem mais esse desenho: a regra continua coberta em vizinhanca.test.ts
+  if (conferidos === 0) t.diagnostic("nenhum dos dois casos do instantâneo confere mais (atualizar os ids)");
 });
 
 test("instantâneo real: a tag de metrô (rodada 5) chega à Luneta com a evidência e à seção de localização; o Lente não leva nada", { skip: !TEM_PREVIA }, async () => {

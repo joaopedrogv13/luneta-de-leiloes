@@ -13,7 +13,10 @@ import { multiplicador, PADRAO, reformaPadrao, ROTULO_NIVEL, type Modelo } from 
 import { CENARIO_ROTULO, vendaDoCenario } from "../../../lib/simulador/textos";
 import type { Ajustes, EntradaSimulador, LinhaDesligavel, Premissas } from "../../../lib/simulador/tipos";
 import { areaDetalhada, descricaoReferencia, nomeValorItbi, precoPorArea } from "../imovel/formato";
+import { faltaAmostra, LUGAR_PERTO, MINIMO_LEILOES, motivoSemLocal } from "../imovel/formato";
 import { referenciaLeiloes, referenciaPrincipal } from "../../../lib/catalogo/referencia";
+import { ESCOPOS_M2, melhorRecorte, recorteFraco } from "../../../lib/catalogo/referencia";
+import type { AmostrasRegiao, EscopoM2 } from "../../../lib/catalogo/tipos";
 
 // ---------------------------------------------------------------------------
 // Imóvel
@@ -498,13 +501,16 @@ export function nomesRetirados(p: Pick<Premissas, "desligados" | "custosExtras">
 }
 
 // ---------------------------------------------------------------------------
-// Preço da região: rua, bairro, cidade e estado (leilões) e ITBI
+// Preço da região: rua, até 1 km, bairro, cidade e estado (leilões) e ITBI
 // ---------------------------------------------------------------------------
 
-export const ESCOPOS_REL: readonly ReferenciaM2["escopo"][] = ["rua", "bairro", "cidade", "uf"];
-export const ESCOPO_ROTULO: Record<ReferenciaM2["escopo"], string> = { rua: "Rua", bairro: "Bairro", cidade: "Cidade", uf: "Estado" };
-const ESCOPO_DA: Record<ReferenciaM2["escopo"], string> = { rua: "da rua", bairro: "do bairro", cidade: "da cidade", uf: "do estado" };
-const ESCOPO_NO: Record<ReferenciaM2["escopo"], string> = { rua: "na rua", bairro: "no bairro", cidade: "na cidade", uf: "no estado" };
+/** Rua, até 1 km (rodada 6), bairro, cidade e estado: a mesma ordem da página (src/lib/catalogo/referencia.ts). */
+export const ESCOPOS_REL: readonly EscopoM2[] = ESCOPOS_M2;
+export const ESCOPO_ROTULO: Record<EscopoM2, string> = { rua: "Rua", perto: "Até 1 km", bairro: "Bairro", cidade: "Cidade", uf: "Estado" };
+const ESCOPO_DA: Record<EscopoM2, string> = { rua: "da rua", perto: "num raio de 1 km", bairro: "do bairro", cidade: "da cidade", uf: "do estado" };
+const ESCOPO_NO: Record<EscopoM2, string> = { rua: "na rua", perto: "num raio de 1 km", bairro: "no bairro", cidade: "na cidade", uf: "no estado" };
+/** "os mesmos imóveis da rua", "... do raio de 1 km" */
+const MESMOS_DO: Record<EscopoM2, string> = { ...ESCOPO_DA, perto: "do raio de 1 km" };
 
 /** Os 5 níveis da comparação (os mesmos da página do imóvel). */
 export const NIVEIS_REL = ["Muito abaixo", "Abaixo", "Na média", "Acima", "Muito acima"] as const;
@@ -541,8 +547,9 @@ export function diferencaRel(c: ComparacaoRel): string {
 export const mediaRef = (r: Pick<ReferenciaM2, "media" | "avaliacaoM2">): number | null => (r.media === undefined ? (r.avaliacaoM2?.mediana ?? null) : r.media);
 const fonteRef = (r: Pick<ReferenciaM2, "fonte">) => r.fonte ?? "leiloes";
 
-/** "Rua X", "Centro", "São Gonçalo/RJ", "Rio de Janeiro" (o lugar do recorte, sem repetir a cidade). */
+/** "Rua X", "em volta deste imóvel", "Centro", "São Gonçalo/RJ", "Rio de Janeiro" (o lugar do recorte, sem repetir a cidade). */
 export function lugarRef(r: Pick<ReferenciaM2, "escopo" | "nome">): string {
+  if (r.escopo === "perto") return LUGAR_PERTO;
   if (r.escopo === "rua" || r.escopo === "bairro") {
     const k = r.nome.lastIndexOf(", ");
     return k > 0 ? r.nome.slice(0, k) : r.nome;
@@ -562,7 +569,7 @@ export function periodoRel(p: readonly [string, string] | null | undefined): str
 }
 
 export interface LinhaRegiaoRel {
-  escopo: ReferenciaM2["escopo"];
+  escopo: EscopoM2;
   fonte: "leiloes" | "itbi";
   lugar: string;
   media: number;
@@ -575,11 +582,12 @@ export interface LinhaRegiaoRel {
 }
 
 /**
- * Uma linha da tabela dos leilões, sempre nos quatro recortes (rua, bairro, cidade e estado): o método do dono. Sem
- * média, `falta` diz por quê (poucos imóveis, a fonte não informa a rua, os mesmos imóveis do recorte anterior).
+ * Uma linha da tabela dos leilões, sempre nos cinco recortes (rua, até 1 km, bairro, cidade e estado): o método do
+ * dono. Sem média, `falta` diz por quê (poucos imóveis, com a contagem; a fonte não informa a rua; a posição é
+ * aproximada; os mesmos imóveis do recorte anterior).
  */
 export interface RecorteRel {
-  escopo: ReferenciaM2["escopo"];
+  escopo: EscopoM2;
   /** "Rua Expedicionário...", "Tribobo", "São Gonçalo/RJ", "Rio de Janeiro" (null: a fonte não informa) */
   lugar: string | null;
   linha: LinhaRegiaoRel | null;
@@ -596,19 +604,30 @@ export interface RegiaoRel {
   nivel: ComparacaoRel["nivel"] | null;
   /** só os recortes com média */
   leiloes: LinhaRegiaoRel[];
-  /** os quatro recortes dos leilões, com ou sem média */
+  /** os cinco recortes dos leilões, com ou sem média */
   recortes: RecorteRel[];
   itbi: LinhaRegiaoRel[];
+  /**
+   * O aviso da rodada 6 (decisão 4): a melhor referência que existe é só a cidade ou o estado (comparação fraca: em
+   * destaque). false com referência na rua, no raio ou no bairro, ou sem referência nenhuma.
+   */
+  fraco: boolean;
+  /** com `fraco`, por que não há o bairro nem o raio ("Na base há só 2 casas em leilão no bairro..."); null sem o dado */
+  motivoFraco: string | null;
 }
 
 /** Mínimo de imóveis do mesmo tipo para cada recorte ter média (o mesmo de src/lib/catalogo/vizinhanca.ts). */
-export const MINIMO_RECORTE: Record<ReferenciaM2["escopo"], number> = { rua: 3, bairro: 5, cidade: 5, uf: 3 };
-/** O conjunto de cada recorte contém o do recorte da lista? A rua pode atravessar bairros: o bairro não contém a rua. */
-const CONTEM: Record<ReferenciaM2["escopo"], readonly ReferenciaM2["escopo"][]> = {
+export const MINIMO_RECORTE: Record<EscopoM2, number> = MINIMO_LEILOES;
+/**
+ * O conjunto de cada recorte contém o do recorte da lista? A rua e o raio podem atravessar bairros: o bairro não contém
+ * nenhum dos dois. O raio fica dentro da cidade.
+ */
+const CONTEM: Record<EscopoM2, readonly EscopoM2[]> = {
   rua: [],
+  perto: [],
   bairro: [],
-  cidade: ["rua", "bairro"],
-  uf: ["rua", "bairro", "cidade"],
+  cidade: ["rua", "perto", "bairro"],
+  uf: ["rua", "perto", "bairro", "cidade"],
 };
 
 /** "Rua Expedicionario Benoni Falcao Gouveia, N. 338, Lt 28" → "Rua Expedicionario Benoni Falcao Gouveia". */
@@ -618,8 +637,9 @@ export function logradouroRel(endereco: string | null | undefined): string | nul
 }
 
 /**
- * Comparação com a região para o relatório: as médias de R$/m² da rua, do bairro, da cidade e do estado (outros
- * imóveis em leilão na base) e, quando houver, o preço pago nas transações registradas na prefeitura (ITBI).
+ * Comparação com a região para o relatório: as médias de R$/m² da rua, do raio de 1 km, do bairro, da cidade e do
+ * estado (outros imóveis em leilão na base) e, quando houver, o preço pago nas transações registradas na prefeitura
+ * (ITBI). O aviso (`fraco`, rodada 6) segue o recorte que as frases usam (`melhorRecorte`).
  * A frase principal usa a avaliação deste imóvel (o lance, se não houver avaliação) contra a referência principal
  * (`referenciaPrincipal`, a mesma da página e do simulador): o preço pago (ITBI) no recorte mais local com compras
  * suficientes; sem ele, a média de leilões mais local com pelo menos 5 imóveis. Com o ITBI na frase, os leilões
@@ -628,6 +648,7 @@ export function logradouroRel(endereco: string | null | undefined): string | nul
 export function regiaoRel(
   i: Pick<ImovelDetalhe, "avaliacaoM2" | "lanceM2" | "area" | "tipo" | "endereco" | "bairro" | "cidade" | "uf">,
   refs: readonly ReferenciaM2[],
+  amostras: AmostrasRegiao | null = null,
 ): RegiaoRel {
   const linha = (r: ReferenciaM2): LinhaRegiaoRel | null => {
     const media = mediaRef(r);
@@ -650,10 +671,10 @@ export function regiaoRel(
   const leiloes = porEscopo("leiloes");
   const itbi = porEscopo("itbi");
 
-  // os quatro recortes dos leilões; o que falta diz por quê
+  // os cinco recortes dos leilões; o que falta diz por quê (com as contagens, quantos imóveis o recorte tem)
   const rua = logradouroRel(i.endereco);
   const bairro = i.bairro && normalizar(i.bairro).trim() !== normalizar(i.cidade).trim() ? i.bairro : null;
-  const lugarPadrao: Record<ReferenciaM2["escopo"], string | null> = { rua, bairro, cidade: `${i.cidade}/${i.uf}`, uf: UF_NOME[i.uf] ?? i.uf };
+  const lugarPadrao: Record<EscopoM2, string | null> = { rua, perto: LUGAR_PERTO, bairro, cidade: `${i.cidade}/${i.uf}`, uf: UF_NOME[i.uf] ?? i.uf };
   let anterior: LinhaRegiaoRel | null = null;
   const recortes: RecorteRel[] = ESCOPOS_REL.map((escopo) => {
     const l = leiloes.find((x) => x.escopo === escopo) ?? null;
@@ -662,16 +683,24 @@ export function regiaoRel(
       return { escopo, lugar: l.lugar, linha: l, falta: null };
     }
     const a = anterior as LinhaRegiaoRel | null;
-    const falta =
-      a && CONTEM[escopo].includes(a.escopo) && a.amostra >= MINIMO_RECORTE[escopo]
-        ? `os mesmos imóveis ${ESCOPO_DA[a.escopo]}`
-        : escopo === "rua" && !rua
-          ? "a fonte não informa a rua"
-          : escopo === "bairro" && !bairro
-            ? "a fonte não informa o bairro"
-            : `menos de ${MINIMO_RECORTE[escopo]} imóveis do mesmo tipo em leilão`;
+    const n = amostras ? (amostras[escopo] ?? null) : null;
+    // com as contagens, a regra é exata: amostra suficiente e sem média = os mesmos imóveis do recorte anterior
+    const mesmos = a && (amostras ? (n ?? 0) >= MINIMO_RECORTE[escopo] : CONTEM[escopo].includes(a.escopo) && a.amostra >= MINIMO_RECORTE[escopo]);
+    const falta = mesmos
+      ? `os mesmos imóveis ${MESMOS_DO[a.escopo]}`
+      : escopo === "rua" && !rua
+        ? "a fonte não informa a rua"
+        : escopo === "bairro" && !bairro
+          ? "a fonte não informa o bairro"
+          : escopo === "perto" && amostras && n === null
+            ? "posição deste imóvel aproximada"
+            : amostras
+              ? faltaAmostra(n, MINIMO_RECORTE[escopo], i.tipo)
+              : `menos de ${MINIMO_RECORTE[escopo]} imóveis do mesmo tipo em leilão`;
     return { escopo, lugar: lugarPadrao[escopo], linha: null, falta };
   });
+  const melhor = melhorRecorte(refs);
+  const fraco = melhor !== null && recorteFraco(melhor);
   const refPrincipal = referenciaPrincipal(refs);
   const principal = refPrincipal ? linha(refPrincipal) : null;
 
@@ -716,7 +745,17 @@ export function regiaoRel(
       frase = `A fonte não informa a área deste imóvel: sem ela, não dá para comparar o preço por m². A média ${ESCOPO_DA[principal.escopo]} é ${media}.`;
     }
   }
-  return { frase, fraseLeiloes, fontePrincipal: principal?.fonte ?? null, nivel, leiloes, recortes, itbi };
+  return {
+    frase,
+    fraseLeiloes,
+    fontePrincipal: principal?.fonte ?? null,
+    nivel,
+    leiloes,
+    recortes,
+    itbi,
+    fraco,
+    motivoFraco: fraco ? motivoSemLocal(i, amostras, refs) : null,
+  };
 }
 
 // ---------------------------------------------------------------------------

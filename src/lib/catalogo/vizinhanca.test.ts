@@ -1,7 +1,22 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { ImovelResumo } from "./tipos";
-import { buscasExternas, chaveRuaNaCidade, consultaExterna, indiceDeRuas, mediaAparada, parecidos, referenciasM2, vizinhanca } from "./vizinhanca";
+import { ESCOPOS_M2, melhorRecorte, referenciaLeiloes } from "./referencia";
+import {
+  amostrasLeiloes,
+  buscasExternas,
+  chaveRuaNaCidade,
+  consultaExterna,
+  distanciaM,
+  gradePerto,
+  imoveisPerto,
+  indiceDeRuas,
+  mediaAparada,
+  parecidos,
+  posicaoParaRaio,
+  referenciasM2,
+  vizinhanca,
+} from "./vizinhanca";
 
 function imovel(id: string, s: Partial<ImovelResumo> = {}): ImovelResumo {
   const area = s.area === undefined ? 60 : s.area;
@@ -189,4 +204,150 @@ test("vizinhanca: junta as três partes", () => {
   const comRua = vizinhanca(ALVO, BASE, new Date(), { rua: { chave: "goias", nome: "Rua Goiás" }, mesmaRua: [] });
   assert.equal(comRua.buscasExternas.length, 18);
   assert.equal(comRua.referencias.length, 3, "rua sem amostra não entra");
+});
+
+// ---------------------------------------------------------------------------
+// Perto: raio de 1 km (rodada 6)
+// ---------------------------------------------------------------------------
+
+/** Um ponto a `metros` ao norte e `leste` metros a leste de (lat, lon). */
+function deslocar(lat: number, lon: number, norte: number, leste = 0): { lat: number; lon: number } {
+  const m = 6_371_008.8 * (Math.PI / 180);
+  return { lat: lat + norte / m, lon: lon + leste / (m * Math.cos((lat * Math.PI) / 180)) };
+}
+
+const CENTRO = { lat: -18.9186, lon: -48.2772 };
+const noPonto = (id: string, norte: number, leste: number, s: Partial<ImovelResumo> = {}) =>
+  imovel(id, { ...deslocar(CENTRO.lat, CENTRO.lon, norte, leste), precisaoGeo: "exata", lance: 120000, area: 60, ...s });
+
+test("distanciaM e posicaoParaRaio: haversine em metros; só número e rua servem para o raio", () => {
+  const p = deslocar(CENTRO.lat, CENTRO.lon, 1000);
+  assert.ok(Math.abs(distanciaM(CENTRO.lat, CENTRO.lon, p.lat, p.lon) - 1000) < 0.5);
+  const q = deslocar(CENTRO.lat, CENTRO.lon, 0, 1000);
+  assert.ok(Math.abs(distanciaM(CENTRO.lat, CENTRO.lon, q.lat, q.lon) - 1000) < 1, "a leste também (com o cosseno da latitude)");
+  assert.equal(posicaoParaRaio({ ...CENTRO, precisaoGeo: "exata" }), true);
+  assert.equal(posicaoParaRaio({ ...CENTRO, precisaoGeo: "rua" }), true);
+  for (const p of ["cep", "bairro", "cidade", null] as const) assert.equal(posicaoParaRaio({ ...CENTRO, precisaoGeo: p }), false, String(p));
+  assert.equal(posicaoParaRaio({ lat: null, lon: null, precisaoGeo: "exata" }), false);
+});
+
+test("imoveisPerto: até 1 km, mesmo tipo e mesma cidade, posição no número ou na rua dos dois lados", () => {
+  const alvo = noPonto("alvo", 0, 0);
+  const itens = [
+    alvo,
+    noPonto("n-300", 300, 0),
+    noPonto("rua-800", 0, 800, { precisaoGeo: "rua" }),
+    noPonto("diag-990", 700, 700), // 990 m na diagonal: entra
+    noPonto("1010", 0, -1010), // 1.010 m: fora
+    noPonto("bairro-100", 100, 0, { precisaoGeo: "bairro" }), // posição aproximada: fora
+    noPonto("cidade-0", 0, 0, { precisaoGeo: "cidade" }),
+    noPonto("casa-100", 100, 0, { tipo: "casa" }), // outro tipo
+    noPonto("vizinha-200", 200, 0, { cidade: "Araguari" }), // outra cidade, mesmo perto
+  ];
+  assert.deepEqual(imoveisPerto(alvo, itens)!.map((i) => i.id).sort(), ["diag-990", "n-300", "rua-800"]);
+  assert.equal(imoveisPerto({ ...alvo, precisaoGeo: "bairro" }, itens), null, "posição deste aproximada: o recorte não se aplica");
+  assert.equal(imoveisPerto({ ...alvo, precisaoGeo: "rua" }, itens)!.length, 3, "na rua também vale");
+  assert.equal(gradePerto(itens), gradePerto(itens), "a grade é montada uma vez por lista");
+});
+
+test("imoveisPerto: a grade acha os mesmos que a conta ponto a ponto (Porto Alegre, 600 pontos aleatórios)", () => {
+  // gerador determinístico (sem Math.random: o teste repete igual)
+  let s = 42;
+  const aleatorio = () => ((s = (s * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+  const poa = { lat: -30.0346, lon: -51.2177 };
+  const itens = Array.from({ length: 600 }, (_, k) => {
+    const p = deslocar(poa.lat, poa.lon, (aleatorio() - 0.5) * 8000, (aleatorio() - 0.5) * 8000);
+    return imovel(`p${k}`, { ...p, cidade: "Porto Alegre", uf: "RS", precisaoGeo: k % 7 === 0 ? "rua" : "exata" });
+  });
+  for (const alvo of itens.slice(0, 60)) {
+    const forca = itens.filter((i) => i.id !== alvo.id && distanciaM(alvo.lat!, alvo.lon!, i.lat!, i.lon!) <= 1000).map((i) => i.id).sort();
+    assert.deepEqual(imoveisPerto(alvo, itens)!.map((i) => i.id).sort(), forca, alvo.id);
+  }
+});
+
+test("recorte perto: entre a rua e o bairro, mínimo 5 (o do bairro), média sem os 10% de cada ponta", () => {
+  const alvo = noPonto("alvo", 0, 0, { lance: 100000, area: 50 });
+  // 10 apartamentos a até 1 km (avaliação/m² de 1.000 a 10.000: a média aparada tira o 1.000 e o 10.000)
+  const perto = Array.from({ length: 10 }, (_, k) => noPonto(`p${k}`, 50 * (k + 1), 0, { avaliacao: (k + 1) * 1000 * 60, lance: (k + 1) * 500 * 60 }));
+  const longe = Array.from({ length: 6 }, (_, k) => noPonto(`l${k}`, 3000 + 100 * k, 0, { bairro: "Centro" }));
+  const itens = [alvo, ...perto, ...longe];
+  const refs = referenciasM2(alvo, itens);
+  // a cidade e a UF têm os mesmos 16 do bairro: não se repetem
+  assert.deepEqual(refs.map((r) => [r.escopo, r.amostra]), [["perto", 10], ["bairro", 16]], "ordem: perto antes do bairro");
+  const r = refs.find((x) => x.escopo === "perto")!;
+  assert.equal(r.nome, "Até 1 km, Uberlândia/MG");
+  assert.equal(r.media, 5500, "média de 2.000 a 9.000 (os 10% de cada ponta saem)");
+  assert.equal(r.fonte, "leiloes");
+  assert.deepEqual(amostrasLeiloes(alvo, itens), { perto: 10, bairro: 16, cidade: 16, uf: 16 });
+
+  // 4 a até 1 km: abaixo do mínimo, não vira referência, mas a contagem aparece
+  const poucos = [alvo, ...perto.slice(0, 4), ...longe];
+  assert.ok(!referenciasM2(alvo, poucos).some((x) => x.escopo === "perto"));
+  assert.equal(amostrasLeiloes(alvo, poucos).perto, 4);
+
+  // posição deste imóvel aproximada: sem o recorte e sem a contagem
+  const aprox = { ...alvo, precisaoGeo: "bairro" as const };
+  assert.ok(!referenciasM2(aprox, itens).some((x) => x.escopo === "perto"));
+  assert.equal("perto" in amostrasLeiloes(aprox, itens), false);
+});
+
+test("ordem dos recortes: rua → perto → bairro → cidade → UF; o raio igual à rua não se repete", () => {
+  assert.deepEqual(ESCOPOS_M2, ["rua", "perto", "bairro", "cidade", "uf"]);
+  const alvo = noPonto("alvo", 0, 0);
+  const naRua = [1, 2, 3].map((k) => noPonto(`r${k}`, 100 * k, 0, { lance: 90000 }));
+  const perto = [4, 5, 6].map((k) => noPonto(`p${k}`, 100 * k, 100));
+  const bairro = Array.from({ length: 5 }, (_, k) => noPonto(`b${k}`, 2000 + 100 * k, 0));
+  const outroBairro = Array.from({ length: 3 }, (_, k) => noPonto(`o${k}`, 5000, 100 * k, { bairro: "Tibery" }));
+  const outraCidade = noPonto("uberaba", 0, 0, { cidade: "Uberaba" });
+  const itens = [alvo, ...naRua, ...perto, ...bairro, ...outroBairro, outraCidade];
+  const ctx = { rua: { chave: "goias", nome: "Rua Goiás" }, mesmaRua: [alvo, ...naRua] };
+  const refs = referenciasM2(alvo, itens, ctx);
+  assert.deepEqual(refs.map((r) => [r.escopo, r.amostra]), [["rua", 3], ["perto", 6], ["bairro", 11], ["cidade", 14], ["uf", 15]]);
+  // a referência dos leilões é a mais local com pelo menos 5: o raio, não o bairro
+  assert.equal(referenciaLeiloes(refs)?.escopo, "perto");
+  // o aviso segue o recorte da frase: o raio (a rua, com 3, fica só na tabela)
+  assert.equal(melhorRecorte(refs), "perto");
+  // só os 3 da rua a até 1 km: abaixo do mínimo do raio (5); a cidade e a UF = o bairro, não repetem
+  const soRua = [alvo, ...naRua, ...bairro];
+  assert.deepEqual(referenciasM2(alvo, soRua, ctx).map((r) => [r.escopo, r.amostra]), [["rua", 3], ["bairro", 8]]);
+  assert.deepEqual(amostrasLeiloes(alvo, soRua, ctx), { rua: 3, perto: 3, bairro: 8, cidade: 8, uf: 8 });
+  // os 5 da rua são os únicos a até 1 km: o raio tem os mesmos imóveis da rua e não se repete
+  const rua5 = [1, 2, 3, 4, 5].map((k) => noPonto(`r5-${k}`, 100 * k, 0));
+  const ctx5 = { rua: { chave: "goias", nome: "Rua Goiás" }, mesmaRua: [alvo, ...rua5] };
+  assert.deepEqual(referenciasM2(alvo, [alvo, ...rua5, ...bairro], ctx5).map((r) => [r.escopo, r.amostra]), [["rua", 5], ["bairro", 10]]);
+  // sem rua conhecida, a contagem da rua não sai (o recorte não se aplica)
+  assert.equal("rua" in amostrasLeiloes(alvo, soRua), false);
+});
+
+test("melhorRecorte: o recorte que as frases usam (a referência principal e, com o ITBI nela, a dos leilões); null sem média", () => {
+  const ref = (escopo: (typeof ESCOPOS_M2)[number], media: number | null, fonte: "leiloes" | "itbi" = "leiloes", amostra = 9) =>
+    ({ escopo, fonte, media, nome: "x", tipo: "casa", amostra, avaliacaoM2: null, lanceM2: null, imovel: { avaliacaoM2: null, lanceM2: null }, percentilLance: null }) as const;
+  assert.equal(melhorRecorte([ref("uf", 100), ref("cidade", 100)]), "cidade");
+  assert.equal(melhorRecorte([ref("cidade", 100), ref("bairro", 100, "itbi", 12)]), "bairro", "ITBI do bairro com compras suficientes");
+  assert.equal(melhorRecorte([ref("cidade", 100), ref("perto", null)]), "cidade", "sem média não conta");
+  assert.equal(melhorRecorte([]), null);
+  // revisão da rodada 6: o que só aparece na tabela, abaixo do mínimo da frase, não tira o destaque do aviso
+  // - ITBI do bairro com 8 compras (mínimo 10) e a cidade com 4.005 (Praça da Bandeira, Rio, imóvel comercial)
+  assert.equal(melhorRecorte([ref("cidade", 5673, "leiloes", 19), ref("uf", 4090, "leiloes", 47), ref("bairro", 6299, "itbi", 8), ref("cidade", 5738, "itbi", 4005)]), "cidade");
+  // - 4 apartamentos na mesma rua (a frase pede 5) e 52 na cidade (Campo Grande/MS)
+  assert.equal(melhorRecorte([ref("rua", 4137, "leiloes", 4), ref("cidade", 3536, "leiloes", 52), ref("uf", 3541, "leiloes", 55)]), "cidade");
+  // - o ITBI só na cidade e o raio dos leilões na segunda linha (Brás de Pina, Rio; decisão anotada): o raio
+  assert.equal(melhorRecorte([ref("perto", 2970, "leiloes", 6), ref("cidade", 3041, "leiloes", 66), ref("cidade", 3684, "itbi", 5524)]), "perto");
+  // - sem nenhum recorte com 5, a frase usa a rua com 3: a rua
+  assert.equal(melhorRecorte([ref("rua", 4000, "leiloes", 3), ref("uf", 3800, "leiloes", 4)]), "rua");
+});
+
+test("imoveisPerto: um ponto do grupo geocodificado longe (outra latitude) não faz a grade perder vizinhos", () => {
+  // Porto Alegre (-30°) com imóveis da mesma cidade e tipo postos, por erro da fonte, perto do equador: a latitude média
+  // do grupo (e o cosseno da grade) muda e a célula fica com menos de 1 km de largura ali; a 999 m a leste ou a oeste,
+  // o vizinho continua dentro
+  const poa = { lat: -30.0346, lon: -51.2177 };
+  const longe = Array.from({ length: 6 }, (_, k) => imovel(`erro-${k}`, { lat: 0.5, lon: -51.2 + k / 100, cidade: "Porto Alegre", uf: "RS", precisaoGeo: "exata" }));
+  const daqui = (id: string, leste: number) => imovel(id, { ...deslocar(poa.lat, poa.lon, 0, leste), cidade: "Porto Alegre", uf: "RS", precisaoGeo: "exata" });
+  // o alvo percorre uma célula inteira, de 10 em 10 m (perto da borda, a grade antiga perdia o vizinho de 999 m)
+  for (const base of Array.from({ length: 110 }, (_, k) => k * 10)) {
+    const alvo = daqui(`alvo-${base}`, base);
+    const itens = [alvo, ...longe, daqui(`l-${base}`, base + 999), daqui(`o-${base}`, base - 999), daqui(`fora-${base}`, base + 1010)];
+    assert.deepEqual(imoveisPerto(alvo, itens)!.map((i) => i.id).sort(), [`l-${base}`, `o-${base}`], `deslocamento ${base} m`);
+  }
 });

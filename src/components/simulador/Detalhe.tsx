@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { posicoesCascata, type Etapa } from "@/lib/simulador/calculo";
+import { lanceMaisCustos, posicoesCascata, type Etapa } from "@/lib/simulador/calculo";
 import type { ResultadoCompleto } from "@/lib/simulador/completa";
 import { GRUPO_ROTULO, type GrupoConta, type LinhaConta } from "@/lib/simulador/conta";
 import type { EstadoSimulador } from "@/lib/simulador/estado";
@@ -9,8 +9,9 @@ import { meses, moeda, moedaSinal, pct } from "@/lib/simulador/formato";
 import { LIMITES, multiplicador, PADRAO } from "@/lib/simulador/premissas";
 import { CENARIO_ROTULO, notaIr, palavrasPreco } from "@/lib/simulador/textos";
 import { TODOS_CENARIOS, type Ajustes, type CenarioFixo, type LinhaDesligavel } from "@/lib/simulador/tipos";
-import { BotaoEditar, CampoNumero, focar, IconeLapis, IconeMais, IconeOlhoFechado, IconeVoltar, Segmentado } from "./controles";
+import { BotaoEditar, CampoNumero, focar, IconeLapis, IconeMais, IconeOlhoFechado, IconeSeta, IconeVoltar, Segmentado } from "./controles";
 import type { AbaSimulador } from "./AbasSimulador";
+import { Equacao, ID_CONTA, ID_CONTA_CORPO } from "./Decomposicao";
 import type { AlvoEditor } from "./Editores";
 
 const CHAVE_CENARIO: Record<CenarioFixo, "cenarioConservador" | "cenarioBase" | "cenarioOtimista"> = {
@@ -24,10 +25,11 @@ export const ID_DETALHE = "sim-detalhe-titulo";
 /**
  * Detalhe da célula escolhida, o lugar único de ajuste: no topo, cenário, % da venda, prazo e lance editáveis;
  * os números-resumo (lucro total e anualizado); a comparação com uma aplicação; a cascata da venda ao lucro; e
- * a conta linha a linha. A conta abre limpa (rodada 5, decisão 7): os controles de edição ficam atrás do botão
- * "Editar a conta" (com ajustes salvos, "Editar a conta · ajustada"). Aberta, cada linha tem um lápis discreto
- * que abre o pop-up daquele tipo de despesa; dá para tirar e religar linhas, criar custos ("+ Adicionar custo") e
- * restaurar tudo.
+ * a conta linha a linha. A conta vem sempre fechada (rodada 6, decisão 3; na rodada 5 só a edição ficava atrás de um
+ * botão): fechada, uma linha de resumo ("lance + custos = investidos" e o lucro, com "conta ajustada" quando há
+ * ajustes salvos) e o botão "Ver e editar a conta". Aberta, tudo como antes: cada linha tem um lápis discreto que
+ * abre o pop-up daquele tipo de despesa; dá para tirar e religar linhas, criar custos ("+ Adicionar custo") e
+ * restaurar tudo. O estado aberto fica no Simulador (os links "Editar custos ↓" abrem a conta) e não é guardado.
  * Até lg, as abas do simulador escolhem a parte: "Conta" (os ajustes, os números e a conta linha a linha) ou
  * "Gráfico" (a cascata); no computador, tudo aparece.
  */
@@ -36,21 +38,23 @@ export function Detalhe({
   aoEditar,
   atualizar,
   aba = "conta",
+  contaAberta,
+  aoAlternarConta,
 }: {
   r: ResultadoCompleto;
   aoEditar: (alvo: AlvoEditor, quem: HTMLElement | null) => void;
   atualizar: (mudar: (e: EstadoSimulador) => EstadoSimulador) => void;
   /** a aba aberta no celular e no tablet */
   aba?: AbaSimulador;
+  /** a conta linha a linha aberta (com os lápis); começa fechada a cada visita */
+  contaAberta: boolean;
+  aoAlternarConta: () => void;
 }) {
   const d = r.detalhe!;
   const sim = d.sim;
   const p = r.modelo.premissas;
   const fin = sim.financiamento;
   const [desfazer, setDesfazer] = useState<EstadoSimulador["ajustes"] | null>(null);
-  // a conta abre limpa; "Editar a conta" mostra os lápis, o "Adicionar custo", o que está fora da conta e o
-  // "Restaurar tudo". Fica aberta enquanto a pessoa estiver na página (o pop-up de um lápis devolve o foco a ele).
-  const [editando, setEditando] = useState(false);
   const ajustada = r.ajustes > 0;
   // a diferença sai dos dois números já arredondados que a frase mostra
   const diferenca = Math.round(sim.lucro) - Math.round(sim.rendimentoAplicacao);
@@ -142,8 +146,9 @@ export function Detalhe({
           <div className="col-span-2 min-w-0 sm:col-span-3">
             <p aria-hidden="true" className="mb-1 text-[12px] font-medium text-nevoa">{pal.Lance} usado na conta</p>
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-              {fixo && d.qualLance === "minimo" ? (
-                // venda direta: só há o preço pedido (o preço não sobe); outro valor, para comparar, pelo lápis ao lado
+              {fixo && d.qualLance === "minimo" && r.teto === null ? (
+                // venda direta sem lance máximo (nenhum preço atinge a meta): só há o preço pedido; outro valor, para
+                // comparar, pelo lápis ao lado
                 <p className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl border border-nevoa/25 bg-noite px-3.5 text-[13px] pointer-fine:min-h-9">
                   <span className="font-semibold">Preço pedido</span>
                   <span className="font-semibold tabular-nums">{moeda(r.modelo.entrada.lance)}</span>
@@ -162,7 +167,8 @@ export function Detalhe({
                   }}
                   opcoes={[
                     { valor: "minimo", rotulo: pal.Minimo, detalhe: moeda(r.modelo.entrada.lance) },
-                    ...(!fixo && r.teto !== null ? [{ valor: "teto" as const, rotulo: "Seu teto", detalhe: moeda(r.teto) }] : []),
+                    // o lance máximo também na venda direta (rodada 6): o maior preço que ainda bate a meta
+                    ...(r.teto !== null ? [{ valor: "teto" as const, rotulo: fixo ? "Seu máximo" : "Seu teto", detalhe: moeda(r.teto) }] : []),
                     ...(d.qualLance === "meu" ? [{ valor: "meu" as const, rotulo: fixo ? "Seu preço" : "Seu lance", detalhe: moeda(sim.lance) }] : []),
                   ]}
                 />
@@ -245,124 +251,111 @@ export function Detalhe({
       {/* ------------------------------------------------------------ a conta, linha a linha */}
       <div className={soConta}>
         <div className="mt-7 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-          <h4 id="sim-conta-titulo" className="text-[16px] font-semibold">
+          {/* recebe o foco (e a rolagem) quando um "Editar custos ↓" abre a conta */}
+          <h4 id={ID_CONTA} tabIndex={-1} className="scroll-mt-4 text-[16px] font-semibold outline-none">
             A conta, linha a linha
           </h4>
-          <BotaoEditarConta editando={editando} ajustada={ajustada} aoAlternar={() => setEditando((v) => !v)} />
+          <BotaoEditarConta
+            aberta={contaAberta}
+            aoAlternar={() => {
+              // fechar a conta encerra o "Desfazer" do "Restaurar tudo" (reaberta, a conta não o traz de volta)
+              if (contaAberta) setDesfazer(null);
+              aoAlternarConta();
+            }}
+          />
         </div>
-        {editando && (
-          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-            <p className="text-sm text-nevoa sm:text-[12.5px]">
-              <span className="pointer-fine:hidden">Toque no lápis de uma linha para ajustar aquele custo.</span>
-              <span className="hidden pointer-fine:inline">Clique no lápis de uma linha para ajustar aquele custo.</span>
-            </p>
-            <button
-              id="sim-restaurar-tudo"
-              type="button"
-              disabled={r.ajustes === 0}
-              onClick={() => {
-                setDesfazer(r.estado.ajustes);
-                atualizar((e) => ({ ...e, ajustes: {} }));
-                requestAnimationFrame(() => focar("sim-desfazer"));
-              }}
-              className="-my-1 inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 px-1 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:text-nevoa disabled:no-underline pointer-fine:min-h-8"
-            >
-              <IconeVoltar />
-              Restaurar tudo{r.ajustes > 0 ? ` (${r.ajustes})` : ""}
-            </button>
-          </div>
-        )}
-        <p role="status" className="mt-1 text-[13px] empty:hidden">
-          {/* some quando a pessoa volta a ajustar (ou fecha a edição): desfazer, aí, apagaria o que ela acabou de fazer */}
-          {editando && desfazer && r.ajustes === 0 && (
-            <>
-              Tudo de volta ao padrão.{" "}
+        {contaAberta ? (
+          <div id={ID_CONTA_CORPO}>
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+              <p className="text-sm text-nevoa sm:text-[12.5px]">
+                <span className="pointer-fine:hidden">Toque no lápis de uma linha para ajustar aquele custo.</span>
+                <span className="hidden pointer-fine:inline">Clique no lápis de uma linha para ajustar aquele custo.</span>
+              </p>
               <button
-                id="sim-desfazer"
+                id="sim-restaurar-tudo"
                 type="button"
+                disabled={r.ajustes === 0}
                 onClick={() => {
-                  const anterior = desfazer;
-                  setDesfazer(null);
-                  atualizar((e) => ({ ...e, ajustes: anterior }));
-                  requestAnimationFrame(() => focar("sim-restaurar-tudo"));
+                  setDesfazer(r.estado.ajustes);
+                  atualizar((e) => ({ ...e, ajustes: {} }));
+                  requestAnimationFrame(() => focar("sim-desfazer"));
                 }}
-                className="-my-2 inline-flex min-h-11 cursor-pointer items-center font-semibold text-latao-texto underline underline-offset-4 pointer-fine:min-h-8"
+                className="-my-1 inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 px-1 text-[12.5px] font-semibold text-latao-texto underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:text-nevoa disabled:no-underline pointer-fine:min-h-8"
               >
-                Desfazer
+                <IconeVoltar />
+                Restaurar tudo{r.ajustes > 0 ? ` (${r.ajustes})` : ""}
               </button>
-            </>
-          )}
-        </p>
-        <div id="sim-conta" className="mt-2 rounded-2xl border border-nevoa/15">
-          {grupos.map((g) => {
-            const linhas = d.conta.filter((l) => l.grupo === g);
-            if (!linhas.length) return null;
-            const subtotal = linhas.reduce((t, l) => t + l.valor, 0);
-            return (
-              <section key={g} aria-label={GRUPO_ROTULO[g]} className="border-t border-nevoa/15 first:border-t-0">
-                {/* o subtotal fica na mesma coluna dos valores das linhas (à esquerda do lápis) */}
-                <div
-                  className={`flex items-baseline justify-between gap-3 bg-noite/40 py-2 pl-3 sm:pl-4 first:rounded-t-2xl ${
-                    editando ? "pr-[58px] pointer-fine:pr-[46px]" : "pr-3 sm:pr-4"
-                  }`}
-                >
-                  <h5 className="text-[12px] font-semibold tracking-[0.1em] text-nevoa uppercase">
-                    {GRUPO_ROTULO[g]}
-                    {g === "mensal" ? ` · ${meses(sim.meses)}` : ""}
-                  </h5>
-                  <span className="text-[12.5px] font-semibold text-nevoa tabular-nums">{g === "venda" ? `fica ${moedaSinal(subtotal)}` : moedaSinal(subtotal)}</span>
-                </div>
-                <ul>
-                  {linhas.map((l) => (
-                    <LinhaDaConta
-                      key={l.id}
-                      l={l}
-                      onEditar={editando ? editar(l.editor === "extra" ? { editor: "extra", extraId: l.extraId } : { editor: l.editor }) : null}
-                    />
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
-          <dl className="border-t-2 border-nevoa/30">
-            <Total
-              comLapis={editando}
-              rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"}
-              detalhe={`venda menos todos os custos, ${notaIr(p)}`}
-              valor={moedaSinal(sim.lucro)}
-              forte
-              grave={sim.lucro < 0}
-            />
-            <Total
-              comLapis={editando}
-              rotulo="Lucro anualizado"
-              detalhe={sim.meses === 12 ? "venda em 12 meses: igual ao lucro total" : `média por ano: lucro total × 12 ÷ ${sim.meses} meses; o % ao ano conta juros compostos`}
-              valor={`${moedaSinal(sim.lucroAno)}/ano`}
-              extra={`${pct(sim.roiAA)} ao ano`}
-            />
-            <Total
-              comLapis={editando}
-              rotulo="Dinheiro investido"
-              detalhe={fin ? "entrada + parcelas pagas + custos (sem o saldo quitado na venda)" : `${pal.lance} + custos de compra, regularização, reforma e meses`}
-              valor={moeda(sim.capital)}
-            />
-            <Total comLapis={editando} rotulo="Retorno no período" detalhe="lucro ÷ dinheiro investido" valor={pct(sim.roi)} />
-          </dl>
-        </div>
+            </div>
+            <p role="status" className="mt-1 text-[13px] empty:hidden">
+              {/* some quando a pessoa volta a ajustar (ou fecha a conta): desfazer, aí, apagaria o que ela acabou de fazer */}
+              {desfazer && r.ajustes === 0 && (
+                <>
+                  Tudo de volta ao padrão.{" "}
+                  <button
+                    id="sim-desfazer"
+                    type="button"
+                    onClick={() => {
+                      const anterior = desfazer;
+                      setDesfazer(null);
+                      atualizar((e) => ({ ...e, ajustes: anterior }));
+                      requestAnimationFrame(() => focar("sim-restaurar-tudo"));
+                    }}
+                    className="-my-2 inline-flex min-h-11 cursor-pointer items-center font-semibold text-latao-texto underline underline-offset-4 pointer-fine:min-h-8"
+                  >
+                    Desfazer
+                  </button>
+                </>
+              )}
+            </p>
+            <div id="sim-conta" className="mt-2 rounded-2xl border border-nevoa/15">
+              {grupos.map((g) => {
+                const linhas = d.conta.filter((l) => l.grupo === g);
+                if (!linhas.length) return null;
+                const subtotal = linhas.reduce((t, l) => t + l.valor, 0);
+                return (
+                  <section key={g} aria-label={GRUPO_ROTULO[g]} className="border-t border-nevoa/15 first:border-t-0">
+                    {/* o subtotal fica na mesma coluna dos valores das linhas (à esquerda do lápis) */}
+                    <div className="flex items-baseline justify-between gap-3 bg-noite/40 py-2 pr-[58px] pl-3 first:rounded-t-2xl sm:pl-4 pointer-fine:pr-[46px]">
+                      <h5 className="text-[12px] font-semibold tracking-[0.1em] text-nevoa uppercase">
+                        {GRUPO_ROTULO[g]}
+                        {g === "mensal" ? ` · ${meses(sim.meses)}` : ""}
+                      </h5>
+                      <span className="text-[12.5px] font-semibold text-nevoa tabular-nums">{g === "venda" ? `fica ${moedaSinal(subtotal)}` : moedaSinal(subtotal)}</span>
+                    </div>
+                    <ul>
+                      {linhas.map((l) => (
+                        <LinhaDaConta key={l.id} l={l} onEditar={editar(l.editor === "extra" ? { editor: "extra", extraId: l.extraId } : { editor: l.editor })} />
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })}
+              <dl className="border-t-2 border-nevoa/30">
+                <Total
+                  comLapis
+                  rotulo={sim.lucro >= 0 ? "Lucro total" : "Prejuízo total"}
+                  detalhe={`venda menos todos os custos, ${notaIr(p)}`}
+                  valor={moedaSinal(sim.lucro)}
+                  forte
+                  grave={sim.lucro < 0}
+                />
+                <Total
+                  comLapis
+                  rotulo="Lucro anualizado"
+                  detalhe={sim.meses === 12 ? "venda em 12 meses: igual ao lucro total" : `média por ano: lucro total × 12 ÷ ${sim.meses} meses; o % ao ano conta juros compostos`}
+                  valor={`${moedaSinal(sim.lucroAno)}/ano`}
+                  extra={`${pct(sim.roiAA)} ao ano`}
+                />
+                <Total
+                  comLapis
+                  rotulo="Dinheiro investido"
+                  detalhe={fin ? "entrada + parcelas pagas + custos (sem o saldo quitado na venda)" : `${pal.lance} + custos de compra, regularização, reforma e meses`}
+                  valor={moeda(sim.capital)}
+                />
+                <Total comLapis rotulo="Retorno no período" detalhe="lucro ÷ dinheiro investido" valor={pct(sim.roi)} />
+              </dl>
+            </div>
 
-        {/* fechada: uma linha discreta diz que há custos fora da conta (a lista e o "Religar" ficam na edição) */}
-        {!editando && d.retiradas.length > 0 && (
-          <p className="mt-2 flex items-start gap-2 px-1 text-sm leading-relaxed text-nevoa sm:text-[12.5px]">
-            <IconeOlhoFechado className="mt-0.5 shrink-0 text-nevoa" />
-            <span>
-              {d.retiradas.length === 1 ? "1 custo fora da conta" : `${d.retiradas.length} custos fora da conta`}:{" "}
-              {d.retiradas.map((l) => l.rotulo.toLowerCase()).join(", ")}.
-            </span>
-          </p>
-        )}
-
-        {editando && (
-          <>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
               <button
                 type="button"
@@ -404,28 +397,30 @@ export function Detalhe({
                 </ul>
               </div>
             )}
-          </>
-        )}
 
-        {fin && (
-          <div className="mt-4 rounded-xl border border-nevoa/15 px-3 py-2.5 text-sm leading-relaxed sm:text-[13px]">
-            <p className="font-semibold">{fin.tipo === "banco" ? "Financiamento (tabela SAC)" : "Parcelamento da fonte"}</p>
-            <p className="mt-1 text-nevoa">
-              {fin.tipo === "banco" ? (
-                <>
-                  Entrada de {moeda(fin.entrada)} e {moeda(fin.financiado)} financiados a {pct(p.jurosAA)} ao ano ({pct(fin.taxaMensal, 2)} ao mês). Primeira
-                  parcela: {moeda(fin.primeiraParcela)}. Até a venda: {fin.parcelasPagas} parcelas, {moeda(fin.totalParcelas)} pagos ({moeda(fin.jurosPagos)} de
-                  juros). Saldo quitado com a venda: {moeda(fin.saldoDevedor)}.
-                </>
-              ) : (
-                <>
-                  Entrada de {moeda(fin.entrada)} e {moeda(fin.financiado)} em {fin.prazo} parcelas mensais corrigidas a {pct(p.parcelasCorrecaoAA)} ao ano
-                  (estimativa do índice). Primeira parcela: {moeda(fin.primeiraParcela)}. Até a venda: {fin.parcelasPagas} parcelas, {moeda(fin.totalParcelas)}{" "}
-                  pagos. Saldo quitado com a venda, já corrigido: {moeda(fin.saldoDevedor)}.
-                </>
-              )}
-            </p>
+            {fin && (
+              <div className="mt-4 rounded-xl border border-nevoa/15 px-3 py-2.5 text-sm leading-relaxed sm:text-[13px]">
+                <p className="font-semibold">{fin.tipo === "banco" ? "Financiamento (tabela SAC)" : "Parcelamento da fonte"}</p>
+                <p className="mt-1 text-nevoa">
+                  {fin.tipo === "banco" ? (
+                    <>
+                      Entrada de {moeda(fin.entrada)} e {moeda(fin.financiado)} financiados a {pct(p.jurosAA)} ao ano ({pct(fin.taxaMensal, 2)} ao mês). Primeira
+                      parcela: {moeda(fin.primeiraParcela)}. Até a venda: {fin.parcelasPagas} parcelas, {moeda(fin.totalParcelas)} pagos ({moeda(fin.jurosPagos)} de
+                      juros). Saldo quitado com a venda: {moeda(fin.saldoDevedor)}.
+                    </>
+                  ) : (
+                    <>
+                      Entrada de {moeda(fin.entrada)} e {moeda(fin.financiado)} em {fin.prazo} parcelas mensais corrigidas a {pct(p.parcelasCorrecaoAA)} ao ano
+                      (estimativa do índice). Primeira parcela: {moeda(fin.primeiraParcela)}. Até a venda: {fin.parcelasPagas} parcelas, {moeda(fin.totalParcelas)}{" "}
+                      pagos. Saldo quitado com a venda, já corrigido: {moeda(fin.saldoDevedor)}.
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
           </div>
+        ) : (
+          <ContaFechada r={r} ajustada={ajustada} />
         )}
       </div>
     </section>
@@ -433,46 +428,71 @@ export function Detalhe({
 }
 
 /**
- * O botão discreto que liga e desliga a edição da conta: um botão de alternar (aria-pressed), sempre com o mesmo nome,
- * "Editar a conta" (o leitor de tela diz "pressionado" quando a edição está aberta; antes o nome virava "Concluir a
- * edição da conta", e nome e estado mudavam juntos: revisão final da rodada 5, R5-TEC-11). Aberto, o desenho é o do
- * botão ligado (latão, com o visto). Com ajustes salvos, "· ajustada" com o ponto de latão (a conta não é a padrão),
- * nos dois estados. O mesmo botão sempre: o foco fica nele ao abrir e ao fechar. A conta (#sim-conta) fica sempre à
- * vista; o que muda é o modo de edição, por isso aria-pressed e não aria-expanded.
+ * O botão que abre e fecha a conta linha a linha (rodada 6, decisão 3): um botão de mostrar e esconder (aria-expanded,
+ * aria-controls), "Ver e editar a conta" fechada e "Fechar a conta" aberta, sempre o mesmo elemento (o foco fica nele
+ * ao abrir e ao fechar). Na rodada 5 era um botão de alternar ("Editar a conta", aria-pressed) que só ligava os lápis
+ * numa conta sempre à vista; agora a conta inteira fica atrás dele.
  */
-export function BotaoEditarConta({ editando, ajustada, aoAlternar }: { editando: boolean; ajustada: boolean; aoAlternar: () => void }) {
+export function BotaoEditarConta({ aberta, aoAlternar }: { aberta: boolean; aoAlternar: () => void }) {
   return (
     <button
       type="button"
-      aria-pressed={editando}
+      aria-expanded={aberta}
+      aria-controls={ID_CONTA_CORPO}
       onClick={aoAlternar}
       className={`-my-1 inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-colors duration-150 motion-reduce:transition-none pointer-fine:min-h-9 ${
-        editando ? "border-latao/60 bg-latao/12 text-latao-texto hover:bg-latao/20" : "border-nevoa/30 text-luar hover:border-latao hover:bg-latao/10"
+        aberta ? "border-nevoa/30 text-luar hover:border-nevoa/60 hover:bg-nevoa/[0.07]" : "border-latao/60 bg-latao/10 text-latao-texto hover:border-latao hover:bg-latao/20"
       }`}
     >
-      {editando ? <IconeConcluir /> : ajustada ? <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-latao" /> : <IconeLapis className="size-3 text-latao-texto" />}
-      Editar a conta
-      {/* os espaços entram no nome acessível ("Editar a conta · ajustada"); no flex, não mudam o desenho */}
-      {ajustada && (
-        <>
-          {" "}
-          <span aria-hidden="true" className="text-nevoa">
-            ·
-          </span>{" "}
-          <span className="text-latao-texto">ajustada</span>
-        </>
-      )}
+      {aberta ? <IconeSeta className="size-3.5 rotate-180" /> : <IconeLapis className="size-3" />}
+      {aberta ? "Fechar a conta" : "Ver e editar a conta"}
     </button>
   );
 }
 
-function IconeConcluir() {
+/**
+ * A conta fechada: uma linha de resumo com "lance + custos = investidos" (os mesmos números do cartão e do "Meu
+ * lance") e o lucro; com ajustes salvos, "conta ajustada"; com linhas tiradas, quais estão fora da conta.
+ */
+function ContaFechada({ r, ajustada }: { r: ResultadoCompleto; ajustada: boolean }) {
+  const d = r.detalhe!;
+  const sim = d.sim;
+  const pal = palavrasPreco(r.modelo.entrada);
+  const rotuloLance = d.qualLance === "teto" ? "lance máximo" : d.qualLance === "minimo" ? pal.minimo : pal.fixo ? "seu preço" : "seu lance";
   return (
-    <svg aria-hidden="true" viewBox="0 0 16 16" className="size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3.5 8.5l3 3 6-7" />
-    </svg>
+    <div className="mt-2 rounded-2xl border border-nevoa/15 bg-noite/40 px-3.5 py-3 sm:px-4">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2.5">
+        <Equacao d={lanceMaisCustos(sim)} rotuloLance={rotuloLance} tamanho="sm" />
+        <p className="inline-flex flex-col tabular-nums sm:items-end">
+          <span className={`text-[14px] leading-tight font-bold whitespace-nowrap ${sim.lucro < 0 ? "text-grave-texto" : "text-luar"}`}>{moedaSinal(sim.lucro)}</span>
+          <span className="mt-0.5 text-[11.5px] leading-tight text-nevoa">
+            {sim.lucro >= 0 ? "lucro" : "prejuízo"} em {meses(sim.meses)}
+          </span>
+        </p>
+      </div>
+      {(ajustada || d.retiradas.length > 0) && (
+        <p className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-nevoa/10 pt-2 text-sm leading-relaxed text-nevoa sm:text-[12.5px]">
+          {ajustada && (
+            <span className="inline-flex items-center gap-1.5 font-semibold text-latao-texto">
+              <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-latao" />
+              conta ajustada
+            </span>
+          )}
+          {d.retiradas.length > 0 && (
+            <span className="inline-flex items-start gap-1.5">
+              <IconeOlhoFechado className="mt-1 shrink-0 text-nevoa" />
+              <span>
+                {d.retiradas.length === 1 ? "1 custo fora da conta" : `${d.retiradas.length} custos fora da conta`}:{" "}
+                {d.retiradas.map((l) => l.rotulo.toLowerCase()).join(", ")}
+              </span>
+            </span>
+          )}
+        </p>
+      )}
+    </div>
   );
 }
+
 
 /** "% da venda" do cenário escolhido (ou o valor, no personalizado em reais), editável no topo do Detalhe. */
 function PctVenda({ r, atualizar }: { r: ResultadoCompleto; atualizar: (mudar: (e: EstadoSimulador) => EstadoSimulador) => void }) {

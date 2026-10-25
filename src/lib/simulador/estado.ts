@@ -114,6 +114,18 @@ export function interpretarEstado(bruto: string | null, versao1 = false): Estado
   }
 }
 
+/**
+ * O estado ao abrir a conta linha a linha por um "Editar custos ↓" (revisão da rodada 6): a conta passa a usar o
+ * mesmo lance da conta "lance + custos = total" ao lado do link, o lance máximo no cartão e o seu lance no "Meu
+ * lance". Assim a pessoa vê, linha a linha, os mesmos custos que acabou de ler (antes, o cartão dizia "R$ 60.352 de
+ * custos" e a conta aberta mostrava os do lance mínimo). Sem lance máximo (nenhum lance atinge a meta), ou já com o
+ * mesmo lance, devolve o próprio estado (nada a gravar).
+ */
+export function lanceDaContaPeloLink(e: EstadoSimulador, lance: LanceDetalhe, temTeto: boolean): EstadoSimulador {
+  if (e.lanceDetalhe === lance || (lance === "teto" && !temTeto)) return e;
+  return { ...e, lanceDetalhe: lance };
+}
+
 /** O texto que vai para o localStorage. */
 export function serializarEstado(e: EstadoSimulador): string {
   return JSON.stringify({ v: 2, ...e });

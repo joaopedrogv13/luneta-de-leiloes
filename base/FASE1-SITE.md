@@ -8,6 +8,10 @@ Guia para o dono. "Fase 1" = dados reais das fontes com API ou arquivo público 
 > imóvel em `/previa/imovel/<id>`, simulador e preço do m² na região. A seção abaixo descreve a primeira versão e fica
 > como histórico; o estado atual está no PENDENCIAS.md (Painel). `amostra-site.json` e `estatisticas-uf.json` continuam
 > sendo gerados, mas o site não os lê mais.
+>
+> **Atualização de 25/10/2026:** o roteiro até o lançamento (bloqueadores, onde rodar a coleta diária e quanto custa,
+> fontes por ordem de retorno e a abertura da prévia em fases) está no topo do `PENDENCIAS.md`, no "Painel do dono".
+> As seções 2 a 5 abaixo continuam valendo como detalhe técnico.
 
 ## 1. O que a prévia mostra
 

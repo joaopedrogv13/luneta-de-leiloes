@@ -1,6 +1,7 @@
 /**
  * Textos curtos do simulador que a tela e o relatório em PDF dividem (sem React, sem "@/").
  */
+import { mediaReferencia, NIVEL_CURTO } from "../catalogo/referencia";
 import { multiplicador, type Modelo } from "./premissas";
 import { meses as mesesTexto, moeda, pct } from "./formato";
 import type { Cenario, EntradaSimulador, Meta, Premissas, TipoMeta } from "./tipos";
@@ -75,6 +76,36 @@ export function baseDaVenda(modelo: Pick<Modelo, "origemVenda">): string {
   if (o.tipo === "avaliacao") return "da avaliação";
   if (o.tipo === "referencia") return "da referência da região";
   return "do valor que você informou";
+}
+
+/**
+ * Nível da referência da região, curto ("bairro", "até 1 km"): os nomes da seção "Preço do m² na região"
+ * (`NIVEL_CURTO`), com "mesma rua" no lugar de "rua"; um nível novo sem rótulo aparece como vem.
+ */
+const NIVEL_REFERENCIA: Record<string, string> = { ...NIVEL_CURTO, rua: "mesma rua" };
+export const nivelReferencia = (escopo: string): string => NIVEL_REFERENCIA[escopo] ?? escopo;
+
+export interface ComparacaoVenda {
+  /** a avaliação da fonte em reais e por m² (o R$/m² só com a área informada); null: a fonte não informa */
+  avaliacao: { valor: number; m2: number | null } | null;
+  /** a referência da região (R$/m²), com o nível do recorte e a fonte; null: não há referência para este tipo */
+  regiao: { m2: number; nivel: string; fonte: "ITBI" | "leilões" } | null;
+}
+
+/**
+ * A avaliação e a referência da região lado a lado, para comparar (rodada 6, decisão 2: sempre à vista no "% de venda
+ * sobre", seja qual for a base escolhida). O R$/m² da avaliação usa a área da conta, e só quando ela é informada (pela
+ * fonte ou pela pessoa): com a área típica, o número enganaria.
+ */
+export function comparacaoVenda(modelo: Pick<Modelo, "opcoesVenda" | "referencia" | "premissas">): ComparacaoVenda {
+  const av = modelo.opcoesVenda.avaliacao;
+  const ref = modelo.referencia;
+  const m2Ref = modelo.opcoesVenda.regiao?.m2 ?? (ref ? mediaReferencia(ref) : null);
+  const area = modelo.premissas.area;
+  return {
+    avaliacao: av !== null ? { valor: av, m2: !modelo.premissas.areaEstimada && area > 0 ? av / area : null } : null,
+    regiao: ref && m2Ref !== null ? { m2: m2Ref, nivel: nivelReferencia(ref.escopo), fonte: ref.fonte === "itbi" ? "ITBI" : "leilões" } : null,
+  };
 }
 
 /** "100% da avaliação", "R$ 230.000 (personalizado)". */

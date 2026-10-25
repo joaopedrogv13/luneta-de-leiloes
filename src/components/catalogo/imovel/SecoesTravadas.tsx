@@ -68,7 +68,7 @@ export function SecaoRegiaoTravada({ imovel: i, vizinhanca: v }: { imovel: Imove
           recurso="regiao"
           variante="faixa"
           titulo={null}
-          texto={`a avaliação comparada com a média da rua, do bairro e da cidade${
+          texto={`a avaliação comparada com a média da rua, do raio de 1 km, do bairro e da cidade${
             v.cobertura?.cidadeTemItbi ? `, e com as compras registradas na prefeitura (ITBI) ${exemplo ? "da cidade deste exemplo" : `de ${cidade}`}` : ""
           }, com buscas prontas nos portais de anúncios.`}
         />

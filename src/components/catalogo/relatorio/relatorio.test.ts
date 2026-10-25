@@ -268,27 +268,76 @@ test("região: níveis da comparação e a frase com a referência principal (IT
   assert.equal(semItbi.nivel, 1);
   assert.equal(semItbi.fraseLeiloes, null);
 
-  // a tabela dos leilões tem sempre os quatro recortes; o estado sem média diz por quê
+  // a tabela dos leilões tem sempre os cinco recortes (com o raio de 1 km, rodada 6); o que fica sem média diz por quê
   assert.deepEqual(
     r.recortes.map((c) => [c.escopo, c.linha?.media ?? null, c.falta]),
     [
       ["rua", 2000, null],
+      ["perto", null, "menos de 5 imóveis do mesmo tipo em leilão"],
       ["bairro", 3050, null],
       ["cidade", 3000, null],
       ["uf", null, "os mesmos imóveis da cidade"],
     ],
   );
+  assert.equal(r.fraco, false, "com o bairro, o aviso fica discreto");
   // sem rua nem bairro na base: o lugar vem do endereço e o motivo é a falta de imóveis (ou de bairro na fonte)
   const so2 = regiaoRel({ ...casa, bairro: "São Gonçalo" }, [refs[2]!]);
   assert.deepEqual(
     so2.recortes.map((c) => [c.escopo, c.lugar, c.falta]),
     [
       ["rua", "Rua Expedicionario Benoni Falcao Gouveia", "menos de 3 imóveis do mesmo tipo em leilão"],
+      ["perto", "deste imóvel", "menos de 5 imóveis do mesmo tipo em leilão"],
       ["bairro", null, "a fonte não informa o bairro"],
       ["cidade", "São Gonçalo/RJ", null],
       ["uf", "Rio de Janeiro", "os mesmos imóveis da cidade"],
     ],
   );
+  assert.equal(so2.fraco, true, "só a cidade: o aviso fica em destaque");
+  assert.equal(so2.motivoFraco, null, "sem as contagens (resposta antiga), sem o motivo");
+
+  // com as contagens de cada recorte (rodada 6): quantos imóveis cada um tem, e a regra exata do "os mesmos de"
+  const comContagem = regiaoRel(casa, [refs[2]!], { rua: 1, perto: 2, bairro: 4, cidade: 813, uf: 813 });
+  assert.deepEqual(
+    comContagem.recortes.map((c) => [c.escopo, c.falta]),
+    [
+      ["rua", "só 1 casa (mínimo\u00a03)"],
+      ["perto", "só 2 casas (mínimo\u00a05)"],
+      ["bairro", "só 4 casas (mínimo\u00a05)"],
+      ["cidade", null],
+      ["uf", "os mesmos imóveis da cidade"],
+    ],
+  );
+  assert.equal(comContagem.fraco, true);
+  assert.equal(comContagem.motivoFraco, "Na base há só 4 casas em leilão no bairro Tribobo e 2 a até 1 km; o mínimo é 5.");
+  // posição aproximada (sem a contagem do raio) e nenhuma casa no bairro
+  const aprox = regiaoRel(casa, [refs[2]!], { bairro: 0, cidade: 813, uf: 813 });
+  assert.deepEqual(aprox.recortes.slice(0, 3).map((c) => c.falta), ["sem dados suficientes", "posição deste imóvel aproximada", "nenhuma outra casa"]);
+  assert.equal(aprox.motivoFraco, "Na base não há outras casas em leilão no bairro Tribobo; o mínimo é 5.");
+  // o raio com média (12 casas a até 1 km): o aviso fica discreto
+  const perto = ref({ escopo: "perto", nome: "Até 1 km, São Gonçalo/RJ", amostra: 12, media: 2900 });
+  const comRaio = regiaoRel(casa, [perto, refs[2]!], { perto: 12, bairro: 4, cidade: 813, uf: 813 });
+  assert.equal(comRaio.fraco, false);
+  assert.equal(comRaio.frase, "A avaliação deste imóvel (R$ 2.682/m²) está 8% abaixo da média num raio de 1 km (R$ 2.900/m²).");
+  assert.deepEqual(comRaio.recortes[1], {
+    escopo: "perto",
+    lugar: "deste imóvel",
+    linha: comRaio.leiloes[0],
+    falta: null,
+  });
+  // revisão da rodada 6: a rua com 4 casas tem média na tabela, mas a frase (mínimo 5) compara com a cidade: o aviso
+  // fica em destaque e o motivo conta a rua
+  const rua4 = ref({ escopo: "rua", nome: "Rua X, São Gonçalo/RJ", amostra: 4, media: 2500 });
+  const soRua4 = regiaoRel(casa, [rua4, refs[2]!], { rua: 4, perto: 2, bairro: 1, cidade: 813, uf: 813 });
+  assert.match(soRua4.frase!, /média da cidade/);
+  assert.equal(soRua4.fraco, true);
+  assert.equal(soRua4.motivoFraco, "Na base há só 4 casas em leilão na mesma rua, 1 no bairro Tribobo e 2 a até 1 km; o mínimo é 5.");
+  // e o ITBI do bairro com poucas compras (8; mínimo 10), com a frase no preço pago da cidade
+  const itbiBairro = ref({ escopo: "bairro", fonte: "itbi", nome: "Tribobo, São Gonçalo/RJ", amostra: 8, media: 2600, lanceM2: null, percentilLance: null });
+  const itbiCidade = ref({ escopo: "cidade", fonte: "itbi", nome: "São Gonçalo/RJ", amostra: 400, media: 2700, lanceM2: null, percentilLance: null });
+  const poucasCompras = regiaoRel(casa, [refs[2]!, itbiBairro, itbiCidade], { perto: 0, bairro: 0, cidade: 813, uf: 813 });
+  assert.equal(poucasCompras.fontePrincipal, "itbi");
+  assert.equal(poucasCompras.fraco, true);
+  assert.match(poucasCompras.motivoFraco!, /Na prefeitura \(ITBI\), só 8 compras registradas no bairro; o mínimo é 10\.$/);
   assert.equal(regiaoRel({ ...casa, endereco: null }, [refs[2]!]).recortes[0]!.falta, "a fonte não informa a rua");
   assert.equal(logradouroRel("R. das Perolas, N. 1109, Cs 13"), "R. das Perolas");
   assert.equal(logradouroRel(", 123"), null);

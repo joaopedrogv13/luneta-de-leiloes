@@ -225,6 +225,45 @@ export function simular(modelo: Modelo, lance: number, cenario: Cenario, meses: 
   };
 }
 
+/**
+ * "Lance + custos = total", em reais inteiros que fecham a soma (rodada 6: o cartão "Seu lance máximo", a linha
+ * "Considerado com despesas" do "Meu lance" e o resumo da conta fechada).
+ *
+ *   custos = tudo o que se paga até vender, além do lance: compra (comissão, ITBI, registro, reserva), desocupação e
+ *            dívidas, reforma, os meses até vender (com os seguros do banco), os custos criados e, a prazo, os juros
+ *            (ou a correção das parcelas). Cada um com os ajustes da pessoa (linha tirada entra como zero).
+ *   total  = lance + custos. À vista, é o dinheiro investido (`capital`, o mesmo número do "Dinheiro investido" da
+ *            conta); a prazo, passa dele pelo saldo quitado com o dinheiro da venda (`saldoNaVenda`).
+ *
+ * A corretagem e o imposto de renda saem do dinheiro da venda (`daVenda`): não entram nos custos, mas entram no
+ * lucro e, portanto, no lance máximo.
+ */
+export interface LanceMaisCustos {
+  lance: number;
+  custos: number;
+  total: number;
+  /** a prazo: o total inclui o saldo quitado na venda; à vista, false (total = dinheiro investido) */
+  aPrazo: boolean;
+  saldoNaVenda: number;
+  daVenda: number;
+}
+
+export function lanceMaisCustos(s: Simulacao): LanceMaisCustos {
+  const fin = s.financiamento;
+  const lance = Math.round(s.lance);
+  // à vista, o total é o capital já arredondado (o "Dinheiro investido" da conta); os custos são a diferença, e a
+  // soma fecha no real
+  const total = fin ? Math.round(s.lance + s.aquisicao + s.desocupacao + s.dividas + s.reforma + s.custosMensais + s.extrasTotal + fin.jurosPagos) : Math.round(s.capital);
+  return {
+    lance,
+    custos: total - lance,
+    total,
+    aPrazo: !!fin,
+    saldoNaVenda: fin ? Math.round(fin.saldoDevedor) : 0,
+    daVenda: Math.round(s.corretagem + s.ir),
+  };
+}
+
 /** A simulação atinge a meta? */
 export function atingeMeta(s: Simulacao, meta: Meta): boolean {
   switch (meta.tipo) {

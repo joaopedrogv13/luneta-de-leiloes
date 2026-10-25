@@ -201,23 +201,23 @@ export function EditorCusto({
                 <span className="text-nevoa">Lucro total: </span>
                 <Mudanca antes={antes.lucro} depois={depois.lucro} />
               </span>
-              {fixo ? (
-                // venda direta: o preço não sobe; o que muda é a folga para imprevistos
+              {/* o lance máximo usa todos os custos da conta: o pop-up mostra o número mudando (rodada 6) */}
+              <span>
+                <span className="text-nevoa">Seu lance máximo: </span>
+                {atual.teto === null && previa.teto === null ? (
+                  <span className="font-semibold">nenhum</span>
+                ) : (
+                  <Mudanca antes={atual.teto} depois={previa.teto} />
+                )}
+              </span>
+              {fixo && (
+                // venda direta: a folga para imprevistos pelo preço pedido continua, como informação secundária
                 <span>
                   <span className="text-nevoa">Margem de segurança: </span>
                   {atual.margem === null && previa.margem === null ? (
                     <span className="font-semibold">nenhuma</span>
                   ) : (
                     <Mudanca antes={atual.margem} depois={previa.margem} vazio="nenhuma" />
-                  )}
-                </span>
-              ) : (
-                <span>
-                  <span className="text-nevoa">Seu lance máximo: </span>
-                  {atual.teto === null && previa.teto === null ? (
-                    <span className="font-semibold">nenhum</span>
-                  ) : (
-                    <Mudanca antes={atual.teto} depois={previa.teto} />
                   )}
                 </span>
               )}
@@ -1342,7 +1342,8 @@ function EdLance({
   const e = m.entrada;
   const lance = e.lance;
   const pal = palavrasPreco(e);
-  const qual: "minimo" | "teto" | "outro" = !pal.fixo && rascunho.lanceDetalhe === "teto" && r.teto !== null ? "teto" : rascunho.meuLance === null ? "minimo" : "outro";
+  // o lance máximo também vale na venda direta (rodada 6, decisão 1): o maior preço que ainda bate a meta
+  const qual: "minimo" | "teto" | "outro" = rascunho.lanceDetalhe === "teto" && r.teto !== null ? "teto" : rascunho.meuLance === null ? "minimo" : "outro";
   const [outro, setOutro] = useState<number | null>(rascunho.meuLance);
   const sim = r.detalhe?.sim ?? null;
   return (
@@ -1358,16 +1359,14 @@ function EdLance({
             titulo={pal.fixo ? "Preço pedido" : "Lance mínimo atual"}
             detalhe={moeda(lance)}
           />
-          {!pal.fixo && (
-            <OpcaoRadio
-              nome="sim-ed-lance"
-              ativo={qual === "teto"}
-              desabilitado={r.teto === null}
-              aoEscolher={() => mudarEstado((x) => ({ ...x, lanceDetalhe: "teto" }))}
-              titulo="Seu lance máximo para a meta"
-              detalhe={r.teto !== null ? moeda(r.teto) : "nenhum lance atinge a meta"}
-            />
-          )}
+          <OpcaoRadio
+            nome="sim-ed-lance"
+            ativo={qual === "teto"}
+            desabilitado={r.teto === null}
+            aoEscolher={() => mudarEstado((x) => ({ ...x, lanceDetalhe: "teto" }))}
+            titulo="Seu lance máximo para a meta"
+            detalhe={r.teto !== null ? moeda(r.teto) : pal.fixo ? "nenhum preço atinge a meta" : "nenhum lance atinge a meta"}
+          />
           <OpcaoRadio
             nome="sim-ed-lance"
             ativo={qual === "outro"}

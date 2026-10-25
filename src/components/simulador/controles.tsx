@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { arrumarRotulos } from "./marcas";
 import { cursorDepois, formatarNumero, interpretar, mascarar } from "./mascara";
 
 // ---------------------------------------------------------------------------
@@ -413,6 +414,78 @@ export function Deslizante({
       style={{ "--p": `${p}%` } as CSSProperties}
       className={`deslizante h-11 w-full min-w-0 cursor-pointer appearance-none bg-transparent pointer-fine:h-9 ${CLASSE_DESLIZANTE} ${className}`}
     />
+  );
+}
+
+/** Uma marca discreta no trilho de um deslizante (o mínimo e o máximo do "Meu lance"). */
+export interface MarcaDeslizante {
+  chave: string;
+  valor: number;
+  /** "mínimo", "máximo" */
+  rotulo: string;
+  /** "R$ 150 mil" */
+  valorTexto: string;
+  tom: "neutro" | "latao";
+}
+
+/** Largura do polegar do deslizante (size-5): o centro dele anda de 10 px até a largura − 10 px. */
+const POLEGAR = 20;
+
+/**
+ * Deslizante com marcas (rodada 6, decisão 2): um traço fino cruzando o trilho em cada valor (o lance mínimo e o seu
+ * lance máximo) e, embaixo, rótulos curtos que nunca se sobrepõem (`arrumarRotulos`: medidos depois de desenhar, sem
+ * estado do React; até a medida, ficam invisíveis, na altura já reservada). Só visual: o texto de ajuda do campo diz
+ * o mesmo ao leitor de tela.
+ */
+export function DeslizanteComMarcas({ marcas, ...deslizante }: Parameters<typeof Deslizante>[0] & { marcas: MarcaDeslizante[] }) {
+  const caixa = useRef<HTMLDivElement>(null);
+  const { min, max } = deslizante;
+  const fracao = (v: number) => (max > min ? Math.min(1, Math.max(0, (v - min) / (max - min))) : 0);
+  // o que muda a arrumação dos rótulos: as posições e os textos
+  const chave = marcas.map((m) => `${fracao(m.valor)}|${m.rotulo} ${m.valorTexto}`).join(";");
+
+  useLayoutEffect(() => {
+    const el = caixa.current;
+    if (!el) return;
+    const medir = () => {
+      const rotulos = Array.from(el.querySelectorAll<HTMLElement>("[data-rotulo-marca]"));
+      const faixa = el.clientWidth;
+      const fracoes = chave ? chave.split(";").map((p) => Number(p.split("|")[0])) : [];
+      const centros = fracoes.map((f) => POLEGAR / 2 + (faixa - POLEGAR) * f);
+      const esq = arrumarRotulos(centros, rotulos.map((r) => r.offsetWidth), faixa, 10);
+      rotulos.forEach((r, i) => {
+        r.style.left = `${Math.round(esq[i] ?? 0)}px`;
+        r.style.visibility = "visible";
+      });
+    };
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [chave]);
+
+  return (
+    <div ref={caixa} className="relative min-w-0 flex-1">
+      {/* os traços ficam embaixo do deslizante: aparecem acima e abaixo do trilho, e o polegar passa por cima */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-11 pointer-fine:h-9">
+        {marcas.map((m) => (
+          <span
+            key={m.chave}
+            className={`absolute top-1/2 h-3.5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${m.tom === "latao" ? "bg-latao-texto" : "bg-luar/75"}`}
+            style={{ left: `calc(${POLEGAR / 2}px + (100% - ${POLEGAR}px) * ${fracao(m.valor)})` }}
+          />
+        ))}
+      </div>
+      <Deslizante {...deslizante} className="relative" />
+      <div aria-hidden="true" className="relative -mt-1 h-4 text-[11.5px] leading-4 select-none pointer-fine:mt-0">
+        {marcas.map((m) => (
+          <span key={m.chave} data-rotulo-marca="" className="absolute top-0 whitespace-nowrap" style={{ visibility: "hidden" }}>
+            <span className={`font-semibold ${m.tom === "latao" ? "text-latao-texto" : "text-luar"}`}>{m.rotulo}</span>{" "}
+            <span className="text-nevoa tabular-nums">{m.valorTexto}</span>
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 

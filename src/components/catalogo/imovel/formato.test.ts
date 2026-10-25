@@ -3,7 +3,14 @@ import assert from "node:assert/strict";
 import type { LinkImovel, ReferenciaM2 } from "../../../lib/catalogo/tipos";
 import {
   alvoDaReferencia,
+  AVISO_RECORTE,
   compararComMedia,
+  contagemTipo,
+  criteriosBusca,
+  ESCOPOS,
+  faltaAmostra,
+  motivoSemLocal,
+  ROTULO_ESCOPO,
   deEstado,
   diferencaCurta,
   formaDeNome,
@@ -289,23 +296,37 @@ test("tabela de leilões: rua, bairro, cidade e estado; recorte repetido vira \"
     linhas.map((l) => [l.escopo, l.ref?.amostra ?? null, l.igualA]),
     [
       ["rua", null, null],
+      ["perto", null, null],
       ["bairro", 14, null],
       // a cidade contém o bairro, que tem amostra suficiente: é a mesma amostra (o servidor não repete)
       ["cidade", null, "bairro"],
       ["uf", 900, null],
     ],
   );
-  // a rua pode atravessar bairros: bairro ausente depois da rua não é "o mesmo"
+  // a rua pode atravessar bairros (e o raio também): bairro ausente depois da rua não é "o mesmo"
   const rua = ref({ escopo: "rua", fonte: "leiloes", amostra: 8, media: 4100, nome: "Rua X, Uberlândia/MG" });
   assert.deepEqual(
     linhasLeiloes([rua]).map((l) => l.igualA),
-    [null, null, "rua", "rua"],
+    [null, null, null, "rua", "rua"],
   );
   // rua com poucos: a cidade ausente é falta de dados
   assert.deepEqual(
     linhasLeiloes([{ ...rua, amostra: 3 }]).map((l) => l.igualA),
-    [null, null, null, "rua"],
+    [null, null, null, null, "rua"],
   );
+  // com as contagens (rodada 6), a regra é exata: amostra suficiente e sem referência = os mesmos do recorte anterior
+  const comContagem = linhasLeiloes([rua], { rua: 8, perto: 8, bairro: 2, cidade: 8, uf: 8 });
+  assert.deepEqual(
+    comContagem.map((l) => [l.escopo, l.igualA, l.amostra]),
+    [
+      ["rua", null, 8],
+      ["perto", "rua", 8],
+      ["bairro", null, 2],
+      ["cidade", "rua", 8],
+      ["uf", "rua", 8],
+    ],
+  );
+  assert.equal(linhasLeiloes([rua], {})[1]!.amostra, null, "posição aproximada: sem a contagem do raio");
   assert.equal(lugarDoRecorte({ escopo: "rua", nome: "Rua X, Uberlândia/MG" }), "Rua X");
   assert.equal(lugarDoRecorte({ escopo: "bairro", nome: "Centro, Uberlândia/MG" }), "Centro");
   assert.equal(lugarDoRecorte({ escopo: "uf", nome: "MG" }), "Minas Gerais");
@@ -313,6 +334,77 @@ test("tabela de leilões: rua, bairro, cidade e estado; recorte repetido vira \"
   assert.equal(ondeRecorte({ escopo: "rua", nome: "Largo do Machado, Rio de Janeiro/RJ" }), "no Largo do Machado, Rio de Janeiro/RJ");
   assert.equal(periodoCurto(["2025-09-01", "2026-09-30"]), "set/2025 a set/2026");
   assert.equal(periodoCurto(null), null);
+});
+
+test("raio de 1 km (rodada 6): textos do recorte, contagens e o aviso de rua e bairro", () => {
+  const perto = { escopo: "perto" as const, nome: "Até 1 km, Uberlândia/MG" };
+  assert.equal(ondeRecorte(perto), "num raio de 1 km");
+  assert.equal(lugarDoRecorte(perto), "deste imóvel", "curto: no celular, \"em volta deste imóvel\" saía cortado");
+  assert.equal(ROTULO_ESCOPO.perto, "Até 1 km");
+  assert.deepEqual(ESCOPOS, ["rua", "perto", "bairro", "cidade", "uf"]);
+  assert.equal(predicadoComparacao(compararComMedia(90, 100)!, alvoDaReferencia({ escopo: "perto", fonte: "leiloes" })), "está 10% abaixo da média num raio de 1 km");
+  assert.match(descricaoReferencia({ ...perto, fonte: "leiloes", amostra: 12, tipo: "casa" }), /^avaliação média de 12 casas em leilão num raio de 1 km$/);
+  assert.equal(
+    frasePercentil(ref({ ...perto, amostra: 12, percentilLance: 50 })),
+    "Por m², o lance deste imóvel é menor que o de 50% dos apartamentos em leilão num raio de 1 km.",
+  );
+
+  // contagens: "12 casas", "1 apartamento"; o que falta: "nenhuma outra casa", "só 2 casas (mínimo 5)"
+  assert.equal(contagemTipo(12, "casa"), "12 casas");
+  assert.equal(contagemTipo(1, "apartamento"), "1 apartamento");
+  assert.equal(contagemTipo(1, "comercial"), "1 imóvel comercial");
+  assert.equal(faltaAmostra(0, 5, "casa"), "nenhuma outra casa");
+  assert.equal(faltaAmostra(0, 5, "apartamento"), "nenhum outro apartamento");
+  assert.equal(faltaAmostra(2, 5, "casa"), "só 2 casas (mínimo\u00a05)", "espaço que não quebra antes do número");
+  assert.equal(faltaAmostra(1, 3, "terreno"), "só 1 terreno (mínimo\u00a03)");
+  assert.equal(faltaAmostra(null, 5, "casa"), "sem dados suficientes", "resposta antiga, sem as contagens");
+
+  // o aviso: o texto do dono e o motivo quando a melhor referência é a cidade ou o estado
+  assert.equal(AVISO_RECORTE.titulo, "O ideal é comparar com a mesma rua ou o mesmo bairro.");
+  assert.equal(AVISO_RECORTE.fraco, "Só cidade ou estado é uma comparação fraca: use com cuidado.");
+  const casa = { tipo: "casa" as const, bairro: "Tribobo" };
+  assert.equal(motivoSemLocal(casa, { bairro: 2, perto: 0 }), "Na base há só 2 casas em leilão no bairro Tribobo e nenhuma a até 1 km; o mínimo é 5.");
+  assert.equal(motivoSemLocal(casa, { bairro: 1, perto: 3 }), "Na base há só 1 casa em leilão no bairro Tribobo e 3 a até 1 km; o mínimo é 5.");
+  assert.equal(motivoSemLocal(casa, { bairro: 0, perto: 0 }), "Na base não há outras casas em leilão no bairro Tribobo nem a até 1 km; o mínimo é 5.");
+  assert.equal(motivoSemLocal({ tipo: "apartamento", bairro: "Centro" }, { bairro: 0, perto: 2 }), "Na base não há outros apartamentos em leilão no bairro Centro, e só 2 a até 1 km; o mínimo é 5.");
+  assert.equal(motivoSemLocal({ tipo: "apartamento", bairro: "Centro" }, { bairro: 3 }), "Na base há só 3 apartamentos em leilão no bairro Centro; o mínimo é 5.", "posição aproximada: sem o raio");
+  assert.equal(motivoSemLocal({ tipo: "casa", bairro: null }, { cidade: 2 }), "A fonte não informa o bairro deste imóvel.");
+  assert.equal(motivoSemLocal(casa, undefined), null);
+
+  // revisão da rodada 6: a rua com média na tabela (3 ou 4), mas pouca para a frase (5), entra no motivo
+  const apto = { tipo: "apartamento" as const, bairro: "Tiradentes" };
+  assert.equal(
+    motivoSemLocal(apto, { rua: 4, perto: 2, bairro: 4, cidade: 52, uf: 55 }),
+    "Na base há só 4 apartamentos em leilão na mesma rua, 4 no bairro Tiradentes e 2 a até 1 km; o mínimo é 5.",
+  );
+  assert.equal(
+    motivoSemLocal(apto, { rua: 3, perto: 0, bairro: 0 }),
+    "Na base há só 3 apartamentos em leilão na mesma rua, nenhum no bairro Tiradentes e nenhum a até 1 km; o mínimo é 5.",
+  );
+  assert.equal(motivoSemLocal(apto, { rua: 2, bairro: 1 }), "Na base há só 1 apartamento em leilão no bairro Tiradentes; o mínimo é 5.", "rua com 1 ou 2: só na tabela");
+  // sem bairro, mas com o raio
+  assert.equal(
+    motivoSemLocal({ tipo: "casa", bairro: null }, { perto: 2, cidade: 9 }),
+    "A fonte não informa o bairro deste imóvel. Na base há só 2 casas em leilão a até 1 km; o mínimo é 5.",
+  );
+  assert.equal(motivoSemLocal({ tipo: "casa", bairro: null }, { perto: 0, cidade: 9 }), "A fonte não informa o bairro deste imóvel. Na base não há outras casas em leilão a até 1 km; o mínimo é 5.");
+  // ITBI da rua ou do bairro com poucas compras (mínimo 10): na tabela, mas não na frase
+  const itbi = (escopo: "rua" | "bairro" | "cidade", amostra: number) => ref({ escopo, fonte: "itbi", amostra, media: 6000, nome: "x" });
+  const comercial = { tipo: "comercial" as const, bairro: "Praca da Bandeira" };
+  assert.equal(
+    motivoSemLocal(comercial, { rua: 0, perto: 0, bairro: 0, cidade: 19, uf: 47 }, [itbi("bairro", 8), itbi("cidade", 4005)]),
+    "Na base não há outros imóveis comerciais em leilão no bairro Praca da Bandeira nem a até 1 km; o mínimo é 5. Na prefeitura (ITBI), só 8 compras registradas no bairro; o mínimo é 10.",
+  );
+  assert.match(motivoSemLocal(casa, { bairro: 0 }, [itbi("rua", 1), itbi("bairro", 7)])!, /Na prefeitura \(ITBI\), só 1 compra registrada na rua e 7 no bairro; o mínimo é 10\.$/);
+  assert.doesNotMatch(motivoSemLocal(casa, { bairro: 0 }, [itbi("bairro", 12)])!, /prefeitura/, "com 10 ou mais, o ITBI do bairro valeria para a frase");
+});
+
+test("buscas nos portais: o resumo dos critérios (tipo, quartos, área e faixa de preço ± 20%)", () => {
+  assert.deepEqual(criteriosBusca({ tipo: "apartamento", quartos: 2, area: 62, avaliacao: 200_000 }), ["Apartamento", "2 quartos", "50 a 75 m²", "R$ 160 mil a R$ 240 mil"]);
+  assert.deepEqual(criteriosBusca({ tipo: "casa", quartos: 1, area: 24, avaliacao: null }), ["Casa", "1 quarto", "19 a 29 m²"]);
+  assert.deepEqual(criteriosBusca({ tipo: "terreno", quartos: 3, area: 1200, avaliacao: 1_000_000 }), ["Terreno", "960 a 1.440 m²", "R$ 800 mil a R$ 1,2 mi"], "terreno sem quartos");
+  assert.deepEqual(criteriosBusca({ tipo: "rural", quartos: null, area: 500_000, avaliacao: null }), ["Rural"], "gleba (10 ha ou mais): sem a faixa de área");
+  assert.deepEqual(criteriosBusca({ tipo: "outro", quartos: null, area: null, avaliacao: null }), ["Imóvel"]);
 });
 
 test("registro na tela: ficha da Caixa lida, pendente, Leilões Judiciais e PDFs de matrícula", () => {

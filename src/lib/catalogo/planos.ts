@@ -115,7 +115,10 @@ export const RECURSOS_LUNETA: Record<Recurso, { rotulo: string; chamada: string 
   favoritos: { rotulo: "Favoritos", chamada: FAVORITOS_CHAMADA },
   simulador: { rotulo: "Simulador de lance", chamada: "Até quanto vale dar de lance para a sua meta, com os custos do leilão e três cenários de venda." },
   relatorio: { rotulo: "Relatório em PDF", chamada: "O imóvel, a simulação e os alertas num relatório em folhas A4, pronto para imprimir." },
-  regiao: { rotulo: "Preço do m² na região", chamada: "A avaliação comparada com a rua, o bairro e a cidade e, em 5 capitais, com as compras registradas na prefeitura (ITBI)." },
+  regiao: {
+    rotulo: "Preço do m² na região",
+    chamada: "A avaliação comparada com a rua, os imóveis a até 1 km, o bairro e a cidade e, em 5 capitais, com as compras registradas na prefeitura (ITBI).",
+  },
   portais: { rotulo: "Buscas nos portais", chamada: "Anúncios parecidos na mesma rua, no bairro e na cidade, a um clique." },
   localizacao: {
     rotulo: "Nota de localização",
@@ -229,6 +232,9 @@ export function aplicarPlanoPagina(p: PaginaImovel, plano: Plano): PaginaImovel 
   const tags = pode(plano, "tags");
   const selos = pode(plano, "selos");
   const nota = pode(plano, "localizacao");
+  const regiao = pode(plano, "regiao");
+  // quantos imóveis cada recorte tem também é do preço da região: sem ele, a chave nem sai
+  const { amostrasLeiloes, ...vizinhanca } = p.vizinhanca;
   return {
     ...p,
     imovel: {
@@ -238,8 +244,9 @@ export function aplicarPlanoPagina(p: PaginaImovel, plano: Plano): PaginaImovel 
       ...(nota ? {} : { notaLocal: null }),
     },
     vizinhanca: {
-      ...p.vizinhanca,
-      referencias: pode(plano, "regiao") ? p.vizinhanca.referencias : [],
+      ...vizinhanca,
+      ...(regiao && amostrasLeiloes ? { amostrasLeiloes } : {}),
+      referencias: regiao ? p.vizinhanca.referencias : [],
       buscasExternas: pode(plano, "portais") ? p.vizinhanca.buscasExternas : [],
       parecidos: p.vizinhanca.parecidos.map((x) => paraPlano(x, plano)),
     },

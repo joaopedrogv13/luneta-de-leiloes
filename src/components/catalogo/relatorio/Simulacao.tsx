@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { useEstadoSimulador } from "@/components/simulador/estado";
 import type { ReferenciaM2 } from "@/lib/catalogo/tipos";
-import { atingeMeta, posicoesCascata } from "@/lib/simulador/calculo";
+import { atingeMeta, lanceMaisCustos, posicoesCascata } from "@/lib/simulador/calculo";
 import { simulacaoCompleta, type ResultadoCompleto } from "@/lib/simulador/completa";
 import { GRUPO_ROTULO, type GrupoConta } from "@/lib/simulador/conta";
 import { area, juntar, meses, moeda, moedaCurta, moedaSinal, pct } from "@/lib/simulador/formato";
@@ -114,7 +114,7 @@ export function CarimboData({ reservar = false }: { reservar?: boolean }) {
 /** Texto curto do lance usado na conta detalhada. */
 function qualLance(r: ResultadoCompleto) {
   const q = r.detalhe?.qualLance;
-  if (r.semDisputa) return q === "minimo" ? "preço pedido" : "o preço que você informou";
+  if (r.semDisputa) return q === "minimo" ? "preço pedido" : q === "teto" ? "seu lance máximo para a meta" : "o preço que você informou";
   return q === "minimo" ? "lance mínimo atual" : q === "teto" ? "seu lance máximo para a meta" : "seu lance";
 }
 
@@ -140,7 +140,7 @@ export function ResultadoSimulacao() {
         <div className={s.resultado}>
           <div className={s.resultadoTopo}>
             <div>
-              <p className={s.rotuloPequeno}>{r.semDisputa ? "Lucro pelo preço pedido" : "Lance máximo para a sua meta"}</p>
+              <p className={s.rotuloPequeno}>Lance máximo para a sua meta</p>
               <p className={s.tetoNenhum}>Falta o valor de venda</p>
               <p className={s.tetoFrase}>
                 A fonte não informa a avaliação deste imóvel e não há referência de preço da região (ou falta a área). Sem um valor de venda não dá para
@@ -176,25 +176,90 @@ export function ResultadoSimulacao() {
   const pal = palavrasPreco(e);
   const comPreco = r.comLanceMinimo;
   const atinge = atingeMeta(comPreco, meta);
+  // "lance máximo + custos = investidos" (a mesma conta do cartão da tela)
+  const decomposicao = r.comTeto ? lanceMaisCustos(r.comTeto) : null;
 
   return (
     <Secao numero="01" titulo="Resultado da simulação" id="resultado">
       <div className={s.resultado}>
         <div className={s.resultadoTopo}>
-          {fixo ? (
-            // venda direta: preço fixo, sem disputa. A capa responde "vale a pena comprar por este preço?": o lucro pelo
-            // preço pedido, se atinge a meta e a margem de segurança (nada de "lance máximo" nem "sobra até o teto")
-            <div>
-              <p className={s.rotuloPequeno}>{comPreco.lucro >= 0 ? "Lucro pelo preço pedido" : "Prejuízo pelo preço pedido"}</p>
-              <p className={`${s.teto} ${comPreco.lucro < 0 ? s.negativo : ""}`}>{moeda(Math.abs(Math.round(comPreco.lucro)))}</p>
-              <p className={s.tetoFrase}>
-                Em <span className={s.forte}>{meses(celula.meses)}</span> ({pct(comPreco.roiAA)} ao ano), comprando por {moeda(e.lance)} e vendendo por{" "}
-                {moeda(venda)} ({deOndeVenda}), no cenário {cenarioTexto}; {notaIr(p, true)}.
+          {/* rodada 6 (decisão 1): a venda direta também responde com o lance máximo (o maior preço a pagar), comparado
+              com o preço pedido; o lucro pelo preço pedido e a margem de segurança seguem como informação secundária */}
+          <div>
+            <p className={s.rotuloPequeno}>Lance máximo para a sua meta</p>
+            {teto === null ? (
+              <p className={s.tetoNenhum}>Nenhum {fixo ? "preço" : "lance"} atinge a meta</p>
+            ) : (
+              <p className={s.teto}>{moeda(teto)}</p>
+            )}
+            <p className={s.tetoFrase}>
+              Para <span className={s.forte}>{metaComoObjetivo(meta)}</span> vendendo em <span className={s.forte}>{meses(celula.meses)}</span> por{" "}
+              {moeda(venda)} ({deOndeVenda}), no cenário {cenarioTexto}.
+            </p>
+            {decomposicao && (
+              <p className={s.decomposicao}>
+                Lance máximo <span className={s.forte}>{moeda(decomposicao.lance)}</span> + custos <span className={s.forte}>{moeda(decomposicao.custos)}</span> ={" "}
+                <span className={s.forte}>{moeda(decomposicao.total)}</span> {decomposicao.aPrazo ? "no total" : "investidos"}
+                <small>
+                  {/* a seção 03 pode estar em outro lance (o mínimo, o seu): os itens são os mesmos, o valor de cada um muda com o lance */}
+                  Os custos são os itens da conta linha a linha (seção 03), com os seus ajustes, calculados sobre o lance máximo; a corretagem e o imposto de
+                  renda saem da venda.
+                </small>
               </p>
+            )}
+            <p className={s.folga}>
+              {folga === null ? (
+                <>
+                  <IconeAtencao className={s.aten} />
+                  <span>
+                    {pal.Minimo}
+                    {fixo ? "" : " hoje"}: <span className={s.forte}>{moeda(e.lance)}</span>. Com essas premissas, nem {fixo ? "o preço" : "o lance"} zero atinge a
+                    meta: tente outra meta, prazo ou cenário.
+                  </span>
+                </>
+              ) : folga >= 0 ? (
+                <>
+                  <IconeOk className={s.pos} />
+                  <span>
+                    {fixo ? (
+                      <>
+                        O preço pedido (<span className={s.forte}>{moeda(e.lance)}</span>) está <span className={s.forte}>{moeda(folga)}</span> abaixo do seu
+                        máximo: atinge a sua meta{semDividas ? " (sem as dívidas apontadas)" : ""}.
+                      </>
+                    ) : (
+                      <>
+                        Lance mínimo hoje: <span className={s.forte}>{moeda(e.lance)}</span>. Sobra <span className={s.forte}>{moeda(folga)}</span> até o seu teto
+                        {semDividas ? " (sem as dívidas apontadas)" : ""}.
+                      </>
+                    )}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <IconeNao className={s.grave} />
+                  <span>
+                    {fixo ? (
+                      <>
+                        O preço pedido (<span className={s.forte}>{moeda(e.lance)}</span>) está <span className={s.forte}>{moeda(-folga)}</span> acima do seu
+                        máximo: pelo preço pedido, a meta não é atingida.
+                      </>
+                    ) : (
+                      <>
+                        Lance mínimo hoje: <span className={s.forte}>{moeda(e.lance)}</span>, <span className={s.forte}>{moeda(-folga)}</span> acima do seu
+                        teto: pelo lance mínimo, a meta não é atingida.
+                      </>
+                    )}
+                  </span>
+                </>
+              )}
+            </p>
+            {fixo && (
               <p className={s.folga}>
-                {atinge ? <IconeOk className={s.pos} /> : <IconeNao className={s.grave} />}
+                <IconeInfo className={s.info} />
                 <span>
-                  {atinge ? "Atinge" : "Não atinge"} a sua meta (<span className={s.forte}>{metaPorExtenso(meta)}</span>).{" "}
+                  Pelo preço pedido: {comPreco.lucro >= 0 ? "lucro" : "prejuízo"} de{" "}
+                  <span className={s.forte}>{moeda(Math.abs(Math.round(comPreco.lucro)))}</span> em {meses(celula.meses)} ({pct(comPreco.roiAA)} ao ano;{" "}
+                  {notaIr(p, true)}).{" "}
                   {r.margem !== null ? (
                     <>
                       Margem de segurança: cabem mais <span className={s.forte}>{moeda(r.margem)}</span> de custos imprevistos e você ainda consegue{" "}
@@ -202,58 +267,17 @@ export function ResultadoSimulacao() {
                       {semDividas ? " (sem as dívidas apontadas)" : ""}.
                     </>
                   ) : (
-                    <>Mesmo sem imprevistos, a conta não chega à meta: tente outro prazo ou cenário.</>
+                    <>Margem de segurança: nenhuma ({atinge ? "a meta fica no limite" : "mesmo sem imprevistos, a conta não chega à meta"}).</>
                   )}
                 </span>
               </p>
-              {semDividas && (
-                <p className={s.selosResultado}>
-                  <Marca tom="alerta">Sem as dívidas apontadas</Marca>
-                </p>
-              )}
-            </div>
-          ) : (
-            <div>
-              <p className={s.rotuloPequeno}>Lance máximo para a sua meta</p>
-              {teto === null ? <p className={s.tetoNenhum}>Nenhum lance atinge a meta</p> : <p className={s.teto}>{moeda(teto)}</p>}
-              <p className={s.tetoFrase}>
-                Para <span className={s.forte}>{metaComoObjetivo(meta)}</span> vendendo em <span className={s.forte}>{meses(celula.meses)}</span> por{" "}
-                {moeda(venda)} ({deOndeVenda}), no cenário {cenarioTexto}.
+            )}
+            {semDividas && (
+              <p className={s.selosResultado}>
+                <Marca tom="alerta">Sem as dívidas apontadas</Marca>
               </p>
-              <p className={s.folga}>
-                {folga === null ? (
-                  <>
-                    <IconeAtencao className={s.aten} />
-                    <span>
-                      Lance mínimo hoje: <span className={s.forte}>{moeda(e.lance)}</span>. Com essas premissas, nem o lance zero atinge a meta: tente outra meta,
-                      prazo ou cenário.
-                    </span>
-                  </>
-                ) : folga >= 0 ? (
-                  <>
-                    <IconeOk className={s.pos} />
-                    <span>
-                      Lance mínimo hoje: <span className={s.forte}>{moeda(e.lance)}</span>. Sobra <span className={s.forte}>{moeda(folga)}</span> até o seu teto
-                      {semDividas ? " (sem as dívidas apontadas)" : ""}.
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <IconeNao className={s.grave} />
-                    <span>
-                      Lance mínimo hoje: <span className={s.forte}>{moeda(e.lance)}</span>, <span className={s.forte}>{moeda(-folga)}</span> acima do seu teto:
-                      pelo lance mínimo, a meta não é atingida.
-                    </span>
-                  </>
-                )}
-              </p>
-              {semDividas && (
-                <p className={s.selosResultado}>
-                  <Marca tom="alerta">Sem as dívidas apontadas</Marca>
-                </p>
-              )}
-            </div>
-          )}
+            )}
+          </div>
           <dl className={s.escolha}>
             <div>
               <dt>Meta</dt>
@@ -425,17 +449,20 @@ export function MatrizRelatorio() {
   );
   const dica = <p className={s.dicaRolagem}>Arraste a tabela para o lado para ver todos os prazos.</p>;
 
-  // leilão: o lance máximo que atinge a meta em cada célula, comparado com o lance mínimo de hoje
+  // o lance máximo que atinge a meta em cada célula, comparado com o lance mínimo de hoje (na venda direta, desde a
+  // rodada 6, com o preço pedido; e a margem para imprevistos pelo preço pedido, que antes era uma tabela à parte)
+  const comparado = fixo ? `comparado com o preço pedido (${moeda(lance)})` : `comparado com o lance mínimo de hoje (${moeda(lance)})`;
   const tabelaTeto = (
     <>
       <div className={s.inteira}>
         <p className={s.tituloTabela} aria-hidden="true">
-          Lance máximo para {metaComoObjetivo(meta)} <span>· comparado com o lance mínimo de hoje ({moeda(lance)})</span>
+          Lance máximo para {metaComoObjetivo(meta)} <span>· {comparado}</span>
         </p>
         <div className={s.rolagem} tabIndex={0} role="region" aria-label="Lance máximo por cenário e prazo (tabela; role para o lado para ver todos os prazos)">
           <table className={`${s.tabela} ${s.matriz}`}>
             <caption className="sr-only">
-              Lance máximo para {metaComoObjetivo(meta)}, comparado com o lance mínimo de hoje ({moeda(lance)})
+              Lance máximo para {metaComoObjetivo(meta)}, {comparado}
+              {fixo ? ", com a margem para imprevistos pelo preço pedido" : ""}
             </caption>
             {cabeca}
             <tbody>
@@ -453,6 +480,7 @@ export function MatrizRelatorio() {
                           {ok ? <IconeOk className={s.pos} /> : <IconeNao className={s.grave} />}
                           {folga === null ? "não atinge" : ok ? `sobra ${moedaCurta(folga)}` : `faltam ${moedaCurta(-folga)}`}
                         </span>
+                        {fixo && cel.margem != null && <span>margem {moedaCurta(cel.margem)}</span>}
                       </td>
                     );
                   })}
@@ -465,11 +493,12 @@ export function MatrizRelatorio() {
       </div>
       <p className={s.legenda}>
         <span>
-          <IconeOk className={s.pos} /> dá para cobrir o lance mínimo e atingir a meta
+          <IconeOk className={s.pos} /> {fixo ? "dá para pagar o preço pedido e atingir a meta" : "dá para cobrir o lance mínimo e atingir a meta"}
         </span>
         <span>
-          <IconeNao className={s.grave} /> o lance mínimo já passa do teto (ou nenhum lance atinge)
+          <IconeNao className={s.grave} /> {fixo ? "o preço pedido já passa do máximo (ou nenhum preço atinge)" : "o lance mínimo já passa do teto (ou nenhum lance atinge)"}
         </span>
+        {fixo && <span>margem: o custo imprevisto que ainda cabe comprando pelo preço pedido, mantendo a meta</span>}
         <span>
           <i className={s.quadradoEscolhido} aria-hidden="true" /> sua escolha
         </span>
@@ -477,56 +506,8 @@ export function MatrizRelatorio() {
     </>
   );
 
-  // venda direta: o preço não sobe; a outra tabela é a margem para custos imprevistos mantendo a meta
-  const tabelaMargem = (
-    <>
-      <div className={s.inteira}>
-        <p className={s.tituloTabela} aria-hidden="true">
-          Margem para custos imprevistos <span>· comprando por {moeda(lance)} e mantendo a meta ({metaPorExtenso(meta)})</span>
-        </p>
-        <div className={s.rolagem} tabIndex={0} role="region" aria-label="Margem para imprevistos por cenário e prazo (tabela; role para o lado para ver todos os prazos)">
-          <table className={`${s.tabela} ${s.matriz}`}>
-            <caption className="sr-only">
-              Margem para custos imprevistos, comprando por {moeda(lance)} e mantendo a meta ({metaPorExtenso(meta)})
-            </caption>
-            {cabeca}
-            <tbody>
-              {linhas.map((c, k) => (
-                <tr key={c}>
-                  {cabecaLinha(c)}
-                  {tabela[k]!.map((cel) => {
-                    const m = cel.margem ?? null;
-                    const classes = [escolhida(c, cel.meses) ? s.escolhida : "", m !== null ? "" : s.naoAtinge].filter(Boolean).join(" ") || undefined;
-                    return (
-                      <td key={cel.meses} className={classes} data-prazo={meses(cel.meses)}>
-                        <strong>{m === null ? "nenhuma" : moeda(m)}</strong>
-                        <span>
-                          {m !== null ? <IconeOk className={s.pos} /> : <IconeNao className={s.grave} />}
-                          {m !== null ? "de folga" : "não atinge"}
-                        </span>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {dica}
-      </div>
-      <p className={s.legenda}>
-        <span>
-          <IconeOk className={s.pos} /> atinge a meta; o número é quanto de custo imprevisto ainda cabe
-        </span>
-        <span>
-          <IconeNao className={s.grave} /> não atinge a meta, nem sem imprevistos
-        </span>
-        <span>
-          <i className={s.quadradoEscolhido} aria-hidden="true" /> sua escolha
-        </span>
-      </p>
-    </>
-  );
+  // até a rodada 5, a venda direta tinha aqui a tabela da margem para imprevistos; a margem agora vai em cada célula
+  // da tabela do lance máximo, acima
 
   const doLance = fixo
     ? r.meuLance === lance
@@ -586,8 +567,8 @@ export function MatrizRelatorio() {
     </>
   );
 
-  // a outra visão: o lance máximo para a meta (leilão) ou a margem para imprevistos (venda direta)
-  const outra = fixo ? tabelaMargem : tabelaTeto;
+  // a outra visão: o lance máximo para a meta (na venda direta também, com a margem para imprevistos em cada célula)
+  const outra = tabelaTeto;
 
   return (
     <Secao
@@ -598,7 +579,9 @@ export function MatrizRelatorio() {
         <>
           Cada linha é um cenário de venda (por quanto você vende) e cada coluna, em quanto tempo vende. Os percentuais são sobre o valor de referência para a
           venda ({moeda(p.valorVenda ?? 0)}). A célula marcada é a do resultado da capa.
-          {fixo ? " Venda direta: o preço é fixo (sem disputa), então a tabela mostra o lucro por esse preço e quanto de imprevisto ainda cabe." : ""}
+          {fixo
+            ? " Venda direta: o preço é fixo (sem disputa); a tabela mostra o lucro por esse preço e o maior preço a pagar para a meta, com a margem para imprevistos."
+            : ""}
         </>
       }
     >

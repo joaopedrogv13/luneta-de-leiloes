@@ -45,7 +45,7 @@ import { IconeGravidade, MarcaLente } from "./icones";
 import { Folha, Secao } from "./partes";
 import s from "./relatorio.module.css";
 import { CarimboData, CustosRelatorio, MatrizRelatorio, PremissasRelatorio, ProvedorRelatorio, ResultadoSimulacao } from "./SimulacaoAdiada";
-import { LICENCA_A_CONFIRMAR, precoPorArea } from "@/components/catalogo/imovel/formato";
+import { AVISO_RECORTE, LICENCA_A_CONFIRMAR, precoPorArea } from "@/components/catalogo/imovel/formato";
 
 const TOM: Record<TagDetalhe["severidade"], string> = { grave: s.grave, atencao: s.aten, positivo: s.pos, info: s.info };
 
@@ -302,7 +302,7 @@ function LinhaRecorte({ l, area }: { l: LinhaRegiaoRel; area: number | null }) {
 }
 
 /**
- * Tabela da região. Leilões: sempre os quatro recortes (rua, bairro, cidade e estado), o que não tem média com o
+ * Tabela da região. Leilões: sempre os cinco recortes (rua, até 1 km, bairro, cidade e estado), o que não tem média com o
  * motivo; ITBI: só os recortes que a prefeitura cobre.
  */
 function TabelaRegiao({ recortes, linhas, itbi, area }: { recortes?: RecorteRel[]; linhas?: LinhaRegiaoRel[]; itbi: boolean; area: number | null }) {
@@ -374,7 +374,7 @@ function notaItbi(pagina: PaginaImovel, temTabela: boolean): string | null {
 function Regiao({ pagina }: { pagina: PaginaImovel }) {
   const i = pagina.imovel;
   const exemplo = ehExemploRel(i);
-  const r = regiaoRel(i, pagina.vizinhanca.referencias);
+  const r = regiaoRel(i, pagina.vizinhanca.referencias, pagina.vizinhanca.amostrasLeiloes ?? null);
   const temLeiloes = r.leiloes.length > 0;
   const nota = notaItbi(pagina, r.itbi.length > 0);
   return (
@@ -382,7 +382,7 @@ function Regiao({ pagina }: { pagina: PaginaImovel }) {
       numero="05"
       titulo="Preço do m² na região"
       id="regiao"
-      descricao="Média de R$ por m² dos imóveis do mesmo tipo na rua, no bairro, na cidade e no estado, comparada com a avaliação e o lance mínimo deste imóvel."
+      descricao="Média de R$ por m² dos imóveis do mesmo tipo na rua, num raio de 1 km, no bairro, na cidade e no estado, comparada com a avaliação e o lance mínimo deste imóvel."
     >
       {r.frase ? (
         <p className={s.fraseRegiao}>
@@ -397,10 +397,24 @@ function Regiao({ pagina }: { pagina: PaginaImovel }) {
         <p className={s.p}>
           {exemplo
             ? "Exemplo fictício: a demonstração tem poucos imóveis, então não há referência de preço da região."
-            : `Ainda não há imóveis do mesmo tipo suficientes em leilão na base para comparar (pelo menos ${MINIMO_RECORTE.rua} na rua, ${MINIMO_RECORTE.bairro} no bairro ou na cidade, ou ${MINIMO_RECORTE.uf} no estado).`}
+            : `Ainda não há imóveis do mesmo tipo suficientes em leilão na base para comparar (pelo menos ${MINIMO_RECORTE.rua} na rua, ${MINIMO_RECORTE.perto} a até 1 km, no bairro ou na cidade, ou ${MINIMO_RECORTE.uf} no estado).`}
         </p>
       )}
       {r.fraseLeiloes && <p className={s.p}>{r.fraseLeiloes}</p>}
+      {/* o aviso da rodada 6: em destaque quando as frases comparam só com a cidade ou o estado (no exemplo fictício,
+          sem o motivo: "na base" seria a demonstração) */}
+      {r.fraco ? (
+        <p className={s.alertaLocal}>
+          <strong className={s.forte}>{AVISO_RECORTE.titulo}</strong> {AVISO_RECORTE.fraco}
+          {r.motivoFraco && !exemplo ? ` ${r.motivoFraco}` : ""}
+        </p>
+      ) : (
+        r.frase && (
+          <p className={s.pequeno}>
+            {AVISO_RECORTE.titulo} {AVISO_RECORTE.fraco.replace(": use com cuidado", "")}
+          </p>
+        )
+      )}
       {/* a tabela da referência da frase vem primeiro */}
       {r.fontePrincipal === "itbi" && <TabelaRegiao linhas={r.itbi} itbi area={i.area} />}
       {temLeiloes && <TabelaRegiao recortes={r.recortes} itbi={false} area={i.area} />}
@@ -408,8 +422,10 @@ function Regiao({ pagina }: { pagina: PaginaImovel }) {
       {(temLeiloes || r.itbi.length > 0) && (
         <p className={s.pequeno}>
           Níveis: muito abaixo (30% ou mais abaixo da média), abaixo (10% a 29%), na média (menos de 10% de diferença), acima e muito acima. Para ter média, o
-          recorte precisa de pelo menos {MINIMO_RECORTE.rua} imóveis do mesmo tipo na rua, {MINIMO_RECORTE.bairro} no bairro e na cidade e {MINIMO_RECORTE.uf}{" "}
-          no estado. A avaliação é a que a fonte publica para o leilão; o lance é o mínimo de hoje: os dois podem estar longe do preço de venda de verdade.
+          recorte precisa de pelo menos {MINIMO_RECORTE.rua} imóveis do mesmo tipo na rua, {MINIMO_RECORTE.perto} a até 1 km, {MINIMO_RECORTE.bairro} no bairro e
+          na cidade e {MINIMO_RECORTE.uf} no estado; o raio de 1 km só vale quando o endereço deste imóvel e o de cada comparado foram achados no número ou na
+          rua (o ponto achado pela rua pode errar algumas centenas de metros). A avaliação é a que a fonte publica para o leilão; o lance é o mínimo de
+          hoje: os dois podem estar longe do preço de venda de verdade.
         </p>
       )}
       {nota && <p className={s.pequeno}>{nota}</p>}

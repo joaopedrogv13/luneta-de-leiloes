@@ -2,9 +2,11 @@
  * Textos e contas da página do imóvel (funções puras, iguais no servidor e no navegador).
  * Imports relativos, sem "@/": o teste roda em Node puro.
  */
-import { fonteReferencia as fonteDaReferencia } from "../../../lib/catalogo/referencia";
-import { area, moeda, normalizar, numero, PRACA_ROTULO, UF_NOME } from "../../../lib/catalogo/rotulos";
+import { ESCOPOS_M2, fonteReferencia as fonteDaReferencia, mediaReferencia, MINIMO_ITBI, MINIMO_LEILOES_REFERENCIA } from "../../../lib/catalogo/referencia";
+import { area, moeda, moedaCurta, normalizar, numero, PRACA_ROTULO, TIPO_ROTULO, UF_NOME } from "../../../lib/catalogo/rotulos";
 import type {
+  AmostrasRegiao,
+  EscopoM2,
   ImovelResumo,
   LinkImovel,
   LocalizacaoImovel,
@@ -139,8 +141,12 @@ const CIDADE_COM_ARTIGO = new Set(["Rio de Janeiro", "Recife"]);
 /** Tipos de logradouro no masculino ("no Largo do Machado", "no Beco..."); o resto é feminino ("na Rua", "na Avenida"). */
 const LOGRADOURO_MASCULINO = new Set(["largo", "beco", "caminho", "parque", "viaduto", "acesso", "anel", "conjunto", "loteamento", "trecho", "ramal", "corredor", "contorno"]);
 
-/** Onde fica o recorte, já com a preposição: "na Rua X, Uberlândia/MG", "no bairro Centro, Uberlândia/MG", "na cidade de Uberlândia/MG", "no estado de Minas Gerais". */
+/**
+ * Onde fica o recorte, já com a preposição: "na Rua X, Uberlândia/MG", "num raio de 1 km", "no bairro Centro,
+ * Uberlândia/MG", "na cidade de Uberlândia/MG", "no estado de Minas Gerais".
+ */
 export function ondeRecorte(r: Pick<ReferenciaM2, "escopo" | "nome">): string {
+  if (r.escopo === "perto") return "num raio de 1 km";
   if (r.escopo === "uf") return `no estado ${deEstado(r.nome)}`;
   if (r.escopo === "cidade") {
     const [cidade = r.nome] = r.nome.split("/");
@@ -153,8 +159,15 @@ export function ondeRecorte(r: Pick<ReferenciaM2, "escopo" | "nome">): string {
   return `no bairro ${r.nome}`;
 }
 
-/** Nome curto do recorte para títulos: "Centro, Uberlândia/MG", "Uberlândia/MG", "Minas Gerais". */
+/**
+ * O lugar do recorte "perto": o rótulo já diz "Até 1 km" ("Até 1 km · deste imóvel"; no celular e no PDF, uma linha
+ * embaixo da outra). Curto de propósito: "em volta deste imóvel" saía cortado na tabela do celular.
+ */
+export const LUGAR_PERTO = "deste imóvel";
+
+/** Nome curto do recorte para títulos: "Centro, Uberlândia/MG", "deste imóvel", "Uberlândia/MG", "Minas Gerais". */
 export function nomeRecorte(r: Pick<ReferenciaM2, "escopo" | "nome">) {
+  if (r.escopo === "perto") return LUGAR_PERTO;
   return r.escopo === "uf" ? (UF_NOME[r.nome] ?? r.nome) : r.nome;
 }
 
@@ -165,8 +178,9 @@ export function logradouro(endereco: string | null): string | null {
   return t.length >= 4 && t.length <= 80 && /\p{L}{3}/u.test(t) && !/^\d/.test(t) ? t : null;
 }
 
-/** Só o lugar, sem a cidade que já está no contexto: "Rua X", "Centro", "Uberlândia/MG", "Minas Gerais". */
+/** Só o lugar, sem a cidade que já está no contexto: "Rua X", "deste imóvel", "Centro", "Uberlândia/MG", "Minas Gerais". */
 export function lugarDoRecorte(r: Pick<ReferenciaM2, "escopo" | "nome">) {
+  if (r.escopo === "perto") return LUGAR_PERTO;
   if (r.escopo === "rua" || r.escopo === "bairro") {
     const k = r.nome.lastIndexOf(", ");
     return k > 0 ? r.nome.slice(0, k) : r.nome;
@@ -174,7 +188,7 @@ export function lugarDoRecorte(r: Pick<ReferenciaM2, "escopo" | "nome">) {
   return nomeRecorte(r);
 }
 
-export const ROTULO_ESCOPO: Record<ReferenciaM2["escopo"], string> = { rua: "Rua", bairro: "Bairro", cidade: "Cidade", uf: "Estado" };
+export const ROTULO_ESCOPO: Record<EscopoM2, string> = { rua: "Rua", perto: "Até 1 km", bairro: "Bairro", cidade: "Cidade", uf: "Estado" };
 
 /**
  * "Por m², o lance deste imóvel é menor que o de 78% dos apartamentos em leilão no bairro …". Nas pontas (0% e
@@ -241,8 +255,9 @@ export interface AlvoComparacao {
   nome: string;
 }
 
-const ESCOPO_NA_FRASE: Record<ReferenciaM2["escopo"], string> = { rua: "da rua", bairro: "do bairro", cidade: "da cidade", uf: "do estado" };
-const ESCOPO_NO: Record<ReferenciaM2["escopo"], string> = { rua: "na rua", bairro: "no bairro", cidade: "na cidade", uf: "no estado" };
+/** "a média da rua", "a média num raio de 1 km", "a média do bairro"... */
+export const ESCOPO_NA_FRASE: Record<EscopoM2, string> = { rua: "da rua", perto: "num raio de 1 km", bairro: "do bairro", cidade: "da cidade", uf: "do estado" };
+const ESCOPO_NO: Record<EscopoM2, string> = { rua: "na rua", perto: "num raio de 1 km", bairro: "no bairro", cidade: "na cidade", uf: "no estado" };
 
 /**
  * O nome do número do ITBI, pelo que ele é na cidade (ReferenciaM2.valorItbi): só São Paulo e o Rio publicam o preço
@@ -297,37 +312,164 @@ export function descricaoReferencia(r: Pick<ReferenciaM2, "escopo" | "nome" | "f
     : `avaliação média de ${n} ${TIPO_NA_FRASE[r.tipo]} em leilão ${ondeRecorte(r)}`;
 }
 
-export const ESCOPOS: readonly ReferenciaM2["escopo"][] = ["rua", "bairro", "cidade", "uf"];
+/** Os recortes, do mais local ao mais amplo: rua, até 1 km, bairro, cidade e estado. */
+export const ESCOPOS = ESCOPOS_M2;
 /** Amostra mínima de cada recorte de leilões (src/lib/catalogo/vizinhanca.ts). */
-const MINIMO_LEILOES: Record<ReferenciaM2["escopo"], number> = { rua: 3, bairro: 5, cidade: 5, uf: 3 };
-/** O conjunto de cada recorte contém o do recorte (mais local) da chave? A rua pode atravessar bairros: o bairro não contém a rua. */
-const CONTEM: Record<ReferenciaM2["escopo"], readonly ReferenciaM2["escopo"][]> = { rua: [], bairro: [], cidade: ["rua", "bairro"], uf: ["rua", "bairro", "cidade"] };
+export const MINIMO_LEILOES: Record<EscopoM2, number> = { rua: 3, perto: 5, bairro: 5, cidade: 5, uf: 3 };
+/**
+ * O conjunto de cada recorte contém o do recorte (mais local) da chave? A rua pode atravessar bairros e o raio de 1 km
+ * também: o bairro não contém a rua nem o raio. O raio fica dentro da cidade (só imóveis da mesma cidade entram).
+ */
+const CONTEM: Record<EscopoM2, readonly EscopoM2[]> = {
+  rua: [],
+  perto: [],
+  bairro: [],
+  cidade: ["rua", "perto", "bairro"],
+  uf: ["rua", "perto", "bairro", "cidade"],
+};
 
 export interface LinhaRegiao {
-  escopo: ReferenciaM2["escopo"];
+  escopo: EscopoM2;
   ref: ReferenciaM2 | null;
   /** sem referência própria porque os imóveis são os mesmos do recorte anterior (ex.: todas as casas da cidade estão no bairro) */
-  igualA: ReferenciaM2["escopo"] | null;
+  igualA: EscopoM2 | null;
+  /** imóveis do mesmo tipo no recorte, com ou sem o mínimo (Vizinhanca.amostrasLeiloes); null sem o dado ou quando não se aplica */
+  amostra: number | null;
 }
 
 /**
- * As linhas da tabela de leilões: sempre rua, bairro, cidade e estado. O servidor não repete um recorte com a
- * mesma amostra do anterior; quando dá para ter certeza de que foi isso (a cidade contém o bairro, e o bairro já
- * tinha amostra suficiente para a cidade), a linha diz "os mesmos do bairro" em vez de "sem dados suficientes".
+ * As linhas da tabela de leilões: sempre rua, até 1 km, bairro, cidade e estado. O servidor não repete um recorte com
+ * a mesma amostra do anterior. Com as contagens de cada recorte (`amostras`), a regra é exata: amostra suficiente e
+ * sem referência = os mesmos imóveis do recorte anterior. Sem elas (dados antigos), só quando dá para ter certeza (a
+ * cidade contém o bairro, e o bairro já tinha amostra suficiente para a cidade).
  */
-export function linhasLeiloes(refs: readonly ReferenciaM2[]): LinhaRegiao[] {
+export function linhasLeiloes(refs: readonly ReferenciaM2[], amostras?: AmostrasRegiao | null): LinhaRegiao[] {
   const leiloes = refs.filter((r) => fonteDaReferencia(r) === "leiloes");
   let anterior: ReferenciaM2 | null = null;
   return ESCOPOS.map((escopo) => {
     const ref = leiloes.find((r) => r.escopo === escopo) ?? null;
+    const amostra = ref ? ref.amostra : (amostras?.[escopo] ?? null);
     if (ref) {
       anterior = ref;
-      return { escopo, ref, igualA: null };
+      return { escopo, ref, igualA: null, amostra };
     }
     const a = anterior as ReferenciaM2 | null;
-    const igual = a !== null && CONTEM[escopo].includes(a.escopo) && a.amostra >= MINIMO_LEILOES[escopo];
-    return { escopo, ref: null, igualA: igual ? a.escopo : null };
+    const igual = a !== null && (amostras ? (amostra ?? 0) >= MINIMO_LEILOES[escopo] : CONTEM[escopo].includes(a.escopo) && a.amostra >= MINIMO_LEILOES[escopo]);
+    return { escopo, ref: null, igualA: igual ? a.escopo : null, amostra };
   });
+}
+
+/** "apartamento", "casa", "imóvel comercial"... (singular, para "só 1 casa"). */
+const TIPO_SINGULAR: Record<TipoImovel, string> = {
+  apartamento: "apartamento",
+  casa: "casa",
+  terreno: "terreno",
+  comercial: "imóvel comercial",
+  rural: "imóvel rural",
+  outro: "imóvel do mesmo tipo",
+};
+
+/** "12 casas", "1 apartamento" (a contagem de um recorte). */
+export function contagemTipo(n: number, tipo: TipoImovel): string {
+  return `${numero(n)} ${n === 1 ? TIPO_SINGULAR[tipo] : TIPO_NA_FRASE[tipo]}`;
+}
+
+/**
+ * Por que um recorte dos leilões fica sem média, com a contagem quando há: "nenhuma outra casa", "só 2 casas (mínimo
+ * 5)". `amostra` null = sem o dado (resposta antiga): "sem dados suficientes". O "(mínimo 5)" leva espaço que não
+ * quebra: na tabela do celular, o "5)" caía sozinho na linha de baixo.
+ */
+export function faltaAmostra(amostra: number | null, minimo: number, tipo: TipoImovel): string {
+  if (amostra === null) return "sem dados suficientes";
+  if (amostra === 0) return TIPO_FEMININO.has(tipo) ? `nenhuma outra ${TIPO_SINGULAR[tipo]}` : `nenhum outro ${TIPO_SINGULAR[tipo]}`;
+  return `só ${contagemTipo(amostra, tipo)} (mínimo ${numero(minimo)})`;
+}
+
+/** Os recortes de cidade e estado (comparação fraca), e o que a tela diz deles (rodada 6, decisão 4). */
+export const AVISO_RECORTE = {
+  titulo: "O ideal é comparar com a mesma rua ou o mesmo bairro.",
+  fraco: "Só cidade ou estado é uma comparação fraca: use com cuidado.",
+} as const;
+
+/** "a", "a e b", "a, b e c" */
+const juntar = (itens: readonly string[]) => (itens.length <= 1 ? (itens[0] ?? "") : `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`);
+
+/**
+ * Por que a frase não compara com a rua, o raio de 1 km nem o bairro (o aviso em destaque, quando ela compara com a
+ * cidade ou o estado): "Na base há só 2 casas em leilão no bairro Centro e nenhuma a até 1 km; o mínimo é 5." A rua
+ * entra quando tem média na tabela mas é pouca para a frase (3 ou 4 imóveis): "Na base há só 4 apartamentos em leilão
+ * na mesma rua, 2 no bairro Centro e nenhum a até 1 km; o mínimo é 5." Com compras do ITBI na rua ou no bairro abaixo do
+ * mínimo da frase (`refs`), mais uma: "Na prefeitura (ITBI), só 8 compras registradas no bairro; o mínimo é 10." null
+ * sem as contagens (resposta antiga).
+ */
+export function motivoSemLocal(
+  i: Pick<ImovelResumo, "bairro" | "tipo">,
+  amostras: AmostrasRegiao | null | undefined,
+  refs: readonly ReferenciaM2[] = [],
+): string | null {
+  if (!amostras) return null;
+  const g = concorda(i.tipo);
+  const semBairro = !i.bairro || amostras.bairro === undefined;
+  const nRua = amostras.rua ?? 0;
+  const recortes: { n: number; onde: string }[] = [
+    ...(nRua >= MINIMO_LEILOES.rua && nRua < MINIMO_LEILOES_REFERENCIA ? [{ n: nRua, onde: "na mesma rua" }] : []),
+    ...(semBairro ? [] : [{ n: amostras.bairro!, onde: `no bairro ${i.bairro}` }]),
+    ...(amostras.perto === undefined ? [] : [{ n: amostras.perto, onde: "a até 1 km" }]),
+  ];
+  const partes: string[] = semBairro ? ["A fonte não informa o bairro deste imóvel."] : [];
+  const [primeiro, ...resto] = recortes;
+  if (primeiro) {
+    const minimo = `; o mínimo é ${numero(MINIMO_LEILOES_REFERENCIA)}.`;
+    if (primeiro.n === 0) {
+      // nenhum no primeiro (o bairro, ou o raio sem bairro): depois dele, no máximo o raio
+      const r = resto[0];
+      const cauda = !r ? "" : r.n === 0 ? ` nem ${r.onde}` : `, e só ${numero(r.n)} ${r.onde}`;
+      partes.push(`Na base não há ${g.outros} ${TIPO_NA_FRASE[i.tipo]} em leilão ${primeiro.onde}${cauda}${minimo}`);
+    } else {
+      const cauda = resto.map((r) => `${r.n === 0 ? g.nenhum : numero(r.n)} ${r.onde}`);
+      partes.push(`Na base há só ${juntar([`${contagemTipo(primeiro.n, i.tipo)} em leilão ${primeiro.onde}`, ...cauda])}${minimo}`);
+    }
+  }
+  // o ITBI da rua ou do bairro com poucas compras aparece na tabela, mas não vale para a frase
+  const poucas = refs.filter(
+    (r) => fonteDaReferencia(r) === "itbi" && (r.escopo === "rua" || r.escopo === "bairro") && (mediaReferencia(r) ?? 0) > 0 && r.amostra < MINIMO_ITBI[r.escopo],
+  );
+  if (poucas.length) {
+    const itens = poucas.map((r, k) => `${numero(r.amostra)}${k === 0 ? (r.amostra === 1 ? " compra registrada" : " compras registradas") : ""} ${r.escopo === "rua" ? "na rua" : "no bairro"}`);
+    partes.push(`Na prefeitura (ITBI), só ${juntar(itens)}; o mínimo é ${numero(MINIMO_ITBI[poucas[0]!.escopo])}.`);
+  }
+  return partes.length ? partes.join(" ") : null;
+}
+
+// ---------------------------------------------------------------------------
+// Buscas nos portais: o resumo dos critérios
+// ---------------------------------------------------------------------------
+
+/**
+ * Âncora da caixa dos portais (o aviso da região leva até ela: "Ver anúncios nos portais ↓"). Fica aqui, e não no
+ * componente: constante exportada de um arquivo "use client" vira referência de cliente no servidor.
+ */
+export const ID_PORTAIS = "anuncios-portais";
+
+/** A folga da área e do preço no resumo dos critérios da busca (± 20%). */
+export const FOLGA_CRITERIOS = 0.2;
+
+/** Arredonda a área para um número redondo (de 5 em 5 m², de 1 em 1 abaixo de 30 m²). */
+const areaRedonda = (m2: number) => (m2 < 30 ? Math.round(m2) : Math.round(m2 / 5) * 5);
+
+/**
+ * O resumo dos critérios da busca nos portais (rodada 6, 5b): tipo, quartos (casa e apartamento), área (± 20%) e faixa
+ * de preço (avaliação ± 20%). A busca do Google leva o tipo, os quartos e o lugar; a área e o preço são o guia para
+ * filtrar no portal. Sem o dado, o critério não aparece; área de 10 ha ou mais fica de fora (gleba: o preço varia demais).
+ */
+export function criteriosBusca(i: Pick<ImovelResumo, "tipo" | "quartos" | "area" | "avaliacao">): string[] {
+  const tipo = i.tipo === "outro" ? "Imóvel" : TIPO_ROTULO[i.tipo];
+  const quartos = (i.tipo === "apartamento" || i.tipo === "casa") && i.quartos !== null && i.quartos > 0 ? `${numero(i.quartos)} ${i.quartos === 1 ? "quarto" : "quartos"}` : null;
+  const a = i.area !== null && i.area > 0 && i.area < AREA_HECTARE ? i.area : null;
+  const faixaArea = a !== null ? `${numero(areaRedonda(a * (1 - FOLGA_CRITERIOS)))} a ${numero(areaRedonda(a * (1 + FOLGA_CRITERIOS)))} m²` : null;
+  const v = i.avaliacao !== null && i.avaliacao > 0 ? i.avaliacao : null;
+  const faixaPreco = v !== null ? `${moedaCurta(v * (1 - FOLGA_CRITERIOS))} a ${moedaCurta(v * (1 + FOLGA_CRITERIOS))}` : null;
+  return [tipo, quartos, faixaArea, faixaPreco].filter((x): x is string => x !== null);
 }
 
 /** As referências de ITBI (rua, bairro, cidade), na ordem do mais local ao mais amplo. */

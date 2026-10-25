@@ -407,6 +407,20 @@
   margin-top: 0.6em;
   color: var(--texto);
 }
+/* rodada 6: "Lance máximo R$ X + custos R$ Y = R$ Z investidos", logo abaixo do número */
+.decomposicao {
+  margin-top: 0.6em;
+  padding-top: 0.55em;
+  border-top: 0.5pt solid var(--linha);
+  font-size: 0.95em;
+  color: var(--texto);
+}
+.decomposicao small {
+  display: block;
+  margin-top: 0.15em;
+  font-size: 0.86em;
+  color: var(--suave);
+}
 .folga {
   display: flex;
   gap: 0.5em;

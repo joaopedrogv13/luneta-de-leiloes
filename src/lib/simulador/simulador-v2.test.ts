@@ -517,14 +517,20 @@ test("visão da tabela: o padrão novo vale para quem nunca escolheu; a escolha 
 });
 
 test("venda direta (preço fixo): a conta usa o preço pedido, a margem de segurança e a tabela abre no lucro", () => {
-  // São Gonçalo é venda direta: "lance máximo no detalhe" não existe (o preço não sobe)
-  const sg = simulacaoCompleta(saoGoncalo, estado({ lanceDetalhe: "teto", celula: { cenario: "base", meses: 12 } }));
+  // São Gonçalo é venda direta: a conta abre no preço pedido
+  const sg = simulacaoCompleta(saoGoncalo, estado({ celula: { cenario: "base", meses: 12 } }));
   assert.equal(sg.semDisputa, true);
   assert.equal(sg.visao, "lucro");
   assert.equal(sg.detalhe!.qualLance, "minimo");
   assert.equal(sg.detalhe!.sim.lance, saoGoncalo.lance);
   assert.equal(sg.detalhe!.conta.find((l) => l.id === "lance")!.rotulo, "Preço");
   assert.equal(sg.detalhe!.etapas.find((e) => e.chave === "lance")!.rotulo, "Preço");
+  // rodada 6 (decisão 1): o lance máximo também vale na venda direta, inclusive na conta do Detalhe
+  const noTeto = simulacaoCompleta(saoGoncalo, estado({ lanceDetalhe: "teto", celula: { cenario: "base", meses: 12 } }));
+  assert.ok(noTeto.teto! > saoGoncalo.lance);
+  assert.equal(noTeto.detalhe!.qualLance, "teto");
+  assert.equal(noTeto.detalhe!.sim.lance, noTeto.teto);
+  assert.equal(noTeto.detalhe!.conta.find((l) => l.id === "lance")!.rotulo, "Preço");
   // a margem: o maior custo imprevisto (de uma vez) que ainda deixa 20% ao ano, pelo preço pedido
   const m = sg.margem!;
   assert.ok(m > 0);

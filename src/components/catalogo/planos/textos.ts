@@ -45,7 +45,7 @@ export const CONVITE: Record<Recurso, TextoConvite> = {
   },
   regiao: {
     titulo: "O preço da região é da",
-    texto: "Compare a avaliação com a média da rua, do bairro e da cidade e, em 5 capitais, com o valor das compras registradas na prefeitura (ITBI). Com buscas prontas nos portais de anúncios.",
+    texto: "Compare a avaliação com a média da rua, dos imóveis a até 1 km, do bairro e da cidade e, em 5 capitais, com o valor das compras registradas na prefeitura (ITBI). Com buscas prontas nos portais de anúncios.",
   },
   portais: {
     titulo: "As buscas nos portais são da",

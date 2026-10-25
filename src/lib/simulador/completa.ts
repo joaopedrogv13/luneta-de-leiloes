@@ -36,8 +36,9 @@ export interface ResultadoCompleto {
   /** o estado já conferido (cenário personalizado só se definido, prazo dentro da faixa) */
   estado: EstadoSimulador;
   /**
-   * venda direta: preço fixo, sem disputa. A resposta deixa de ser o lance máximo e passa a ser o lucro pelo preço
-   * pedido, com a margem de segurança (`margem`); a matriz abre no lucro.
+   * venda direta: preço fixo, sem disputa. Desde a rodada 6 (decisão 1), a resposta também é o lance máximo (o maior
+   * preço que ainda bate a meta), comparado com o preço pedido; o lucro pelo preço pedido e a margem de segurança
+   * (`margem`) seguem como informação secundária. A matriz abre no lucro.
    */
   semDisputa: boolean;
   /**
@@ -55,8 +56,13 @@ export interface ResultadoCompleto {
   colunaExtra: number | null;
   /** null: falta o valor de venda */
   tabela: CelulaMatriz[][] | null;
-  /** lance máximo para a meta no cenário e prazo escolhidos (null: nenhum lance atinge, ou falta a venda) */
+  /**
+   * lance máximo para a meta no cenário e prazo escolhidos (null: nenhum lance atinge, ou falta a venda), com todos os
+   * custos e ajustes da conta linha a linha (na venda direta, o maior preço a pagar)
+   */
   teto: number | null;
+  /** a simulação com o lance máximo (`teto`), no cenário e prazo escolhidos: a decomposição "lance + custos" do cartão */
+  comTeto: Simulacao | null;
   /** simulação com o lance mínimo atual, no cenário e prazo escolhidos */
   comLanceMinimo: Simulacao | null;
   /**
@@ -109,18 +115,18 @@ export function completarModelo(modelo: Modelo, estadoBruto: EstadoSimulador): R
   const tabela = matriz(modelo, meta, meuLance, colunas, linhas, fixo ? entrada.lance : null);
   const cel = tabela?.[linhas.indexOf(celula.cenario)]?.[colunas.indexOf(celula.meses)] ?? null;
   const teto = cel ? cel.teto : null;
+  const comTeto = teto !== null ? simular(modelo, teto, celula.cenario, celula.meses) : null;
   const comLanceMinimo = simular(modelo, entrada.lance, celula.cenario, celula.meses);
   const semDividas = modelo.dividasApontadas.length > 0 && modelo.ajustes.dividas === undefined;
 
   let detalhe: Detalhamento | null = null;
   if (cel) {
-    // na venda direta não há "lance máximo" para usar na conta: vale o preço (o pedido, ou o que a pessoa digitou)
-    const base: LanceDetalhe = !fixo && estado.lanceDetalhe === "teto" && teto !== null ? "teto" : "meu";
-    const lance = base === "teto" ? teto! : meuLance;
-    const sim = base === "teto" ? simular(modelo, lance, celula.cenario, celula.meses)! : cel.comMeuLance;
+    // o lance máximo também vale na venda direta (rodada 6): o maior preço a pagar para bater a meta
+    const base: LanceDetalhe = estado.lanceDetalhe === "teto" && teto !== null ? "teto" : "meu";
+    const sim = base === "teto" ? comTeto! : cel.comMeuLance;
     const { conta, retiradas } = linhasDaConta(modelo, sim);
     const qualLance =
-      Math.round(sim.lance) === Math.round(entrada.lance) ? "minimo" : !fixo && teto !== null && Math.round(sim.lance) === Math.round(teto) ? "teto" : "meu";
+      Math.round(sim.lance) === Math.round(entrada.lance) ? "minimo" : teto !== null && Math.round(sim.lance) === Math.round(teto) ? "teto" : "meu";
     detalhe = { base, qualLance, sim, conta, retiradas, etapas: cascata(sim, modelo.perfil.rotuloReforma, fixo ? "Preço" : "Lance") };
   }
 
@@ -137,6 +143,7 @@ export function completarModelo(modelo: Modelo, estadoBruto: EstadoSimulador): R
     colunaExtra: p.prazos.includes(celula.meses) ? null : celula.meses,
     tabela,
     teto,
+    comTeto,
     comLanceMinimo,
     margem: cel?.margem ?? null,
     meuLance,

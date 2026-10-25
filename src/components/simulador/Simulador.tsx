@@ -1,13 +1,14 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMidia } from "@/components/catalogo/app/hooks";
 import { descricaoReferencia, mediaDe, TIPO_NA_FRASE } from "@/components/catalogo/imovel/formato";
 import { Popover } from "@/components/catalogo/ui/Popover";
 import { MODALIDADE_ROTULO, TIPO_ROTULO } from "@/lib/catalogo/rotulos";
 import type { Plano, ReferenciaM2 } from "@/lib/catalogo/tipos";
 import { completarModelo } from "@/lib/simulador/completa";
+import { lanceDaContaPeloLink, type LanceDetalhe } from "@/lib/simulador/estado";
 import { area, moeda, porArea } from "@/lib/simulador/formato";
 import { LIMITES, montarModelo, type Modelo } from "@/lib/simulador/premissas";
 import { palavrasPreco } from "@/lib/simulador/textos";
@@ -16,6 +17,7 @@ import { AbasSimulador, idAba, useAbaSimulador } from "./AbasSimulador";
 import { CartaoResposta } from "./CartaoResposta";
 import { ComoUsar } from "./ComoUsar";
 import { Aviso, CampoPedido, FOCO_RESULTADO, IconeAtencao, IconeDocumento, IconeInfo } from "./controles";
+import { ID_CONTA } from "./Decomposicao";
 import { Detalhe, ID_DETALHE } from "./Detalhe";
 import { EditorCusto, type AlvoEditor } from "./Editores";
 import { useEstadoSimulador } from "./estado";
@@ -45,6 +47,11 @@ export const AVISO_SIMULADOR =
  * relatório em PDF. Celular e tablet (até lg): a tabela, a conta e o gráfico ficam em abas (AbasSimulador; a
  * aberta fica salva), e no celular as perguntas do cartão abrem numa folha: o simulador cabia em ~6,5 telas. Tudo vem de `simulacaoCompleta` (src/lib/simulador/completa.ts), a mesma conta do PDF.
  * Os ajustes ficam no navegador, por imóvel (formato em src/lib/simulador/estado.ts).
+ *
+ * A conta linha a linha vem sempre fechada (rodada 6, decisão 3) e o estado aberto não é guardado: abre pelo botão
+ * dela ou pelos links "Editar custos ↓" do cartão e do "Meu lance" (`abrirConta`), que também trocam para a aba
+ * Conta (celular e tablet), rolam até ela e põem o foco no título dela. Cada link abre a conta com o lance da conta
+ * ao lado dele (o lance máximo no cartão, o seu lance no "Meu lance"): os custos lidos são os da conta aberta.
  */
 export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorioHref }: SimuladorProps) {
   const [estado, atualizar] = useEstadoSimulador(imovel.id);
@@ -54,6 +61,9 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
   const [editor, setEditor] = useState<{ alvo: AlvoEditor; quem: HTMLElement | null } | null>(null);
   const [comoUsar, setComoUsar] = useState(false);
   const [aba, setAba] = useAbaSimulador();
+  // a conta linha a linha começa fechada a cada visita; `irParaConta` conta os pedidos de "Editar custos ↓"
+  const [contaAberta, setContaAberta] = useState(false);
+  const [irParaConta, setIrParaConta] = useState(0);
   // no computador as três partes ficam abertas: sem os papéis de aba
   const computador = useMidia("(min-width: 1024px)", false);
   const caminho = usePathname();
@@ -70,6 +80,23 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
       return { ...e, ajustes, celula };
     });
   const abrir = (alvo: AlvoEditor, quem: HTMLElement | null) => setEditor({ alvo, quem });
+  // a conta abre com o lance da conta ao lado do link ("teto" no cartão, "meu" no "Meu lance"): os mesmos custos
+  const abrirConta = (lance: LanceDetalhe) => {
+    if (lanceDaContaPeloLink(estado, lance, r.teto !== null) !== estado) atualizar((e) => lanceDaContaPeloLink(e, lance, r.teto !== null));
+    setContaAberta(true);
+    if (!computador && aba !== "conta") setAba("conta");
+    setIrParaConta((n) => n + 1);
+  };
+  // depois de abrir (e de trocar de aba), rola até o título da conta e põe o foco nele; a rolagem respeita as barras
+  // fixas da página (scroll-padding-top, RolagemSegura) e o movimento reduzido
+  useEffect(() => {
+    if (irParaConta === 0) return;
+    const alvo = document.getElementById(ID_CONTA);
+    if (!alvo) return;
+    const suave = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    alvo.scrollIntoView({ block: "start", behavior: suave ? "smooth" : "auto" });
+    alvo.focus({ preventScroll: true });
+  }, [irParaConta]);
 
   return (
     <section aria-labelledby="sim-titulo" className="flex w-full min-w-0 flex-col gap-4 text-luar sm:gap-5">
@@ -103,6 +130,7 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
             aoMudarCelula={(celula) => atualizar((e) => ({ ...e, celula }))}
             aoDefinirPersonalizado={(v) => ajustar((a) => ({ ...a, vendaPersonalizada: v }))}
             aoInformarDividas={(n) => ajustar((a) => ({ ...a, dividas: n }))}
+            aoAbrirConta={() => abrirConta("teto")}
           />
           <AvisoFixo />
           <Conferir modelo={modelo} ajustar={ajustar} aoEditarDesocupacao={(quem) => abrir({ editor: "desocupacao" }, quem)} />
@@ -122,6 +150,7 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
               aoAjustar={ajustar}
               aoComoUsar={() => setComoUsar(true)}
               aoEditarVenda={() => abrir({ editor: "venda" }, document.activeElement as HTMLElement | null)}
+              aoAbrirConta={() => abrirConta("meu")}
             />
           </div>
           <div
@@ -130,7 +159,7 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
             aria-labelledby={computador ? undefined : idAba(aba === "tabela" ? "conta" : aba)}
             className={`scroll-mt-28 ${aba === "tabela" ? "max-lg:hidden" : ""}`}
           >
-            <Detalhe r={r} aoEditar={abrir} atualizar={atualizar} aba={aba} />
+            <Detalhe r={r} aoEditar={abrir} atualizar={atualizar} aba={aba} contaAberta={contaAberta} aoAlternarConta={() => setContaAberta((v) => !v)} />
           </div>
         </>
       ) : (
@@ -144,8 +173,8 @@ export function Simulador({ imovel, referencias, plano, aoPedirLuneta, relatorio
         <div className="min-w-0">
           <p className="font-display text-[17px] leading-tight font-bold">Terminou a simulação?</p>
           <p className="mt-1 text-[13.5px] leading-relaxed text-nevoa max-md:hidden">
-            Exporte um relatório em PDF com tudo: a meta, {fixo ? "o lucro pelo preço pedido e a margem de segurança" : "o lance máximo"}, a tabela de
-            cenários, a conta linha a linha e as premissas. Seus ajustes ficam guardados neste navegador, só para este imóvel.
+            Exporte um relatório em PDF com tudo: a meta, o lance máximo{fixo ? ", o lucro pelo preço pedido e a margem de segurança" : ""}, a tabela
+            de cenários, a conta linha a linha e as premissas. Seus ajustes ficam guardados neste navegador, só para este imóvel.
           </p>
           <p className="mt-1 text-sm leading-relaxed text-nevoa md:hidden">
             Relatório em PDF com a meta, a tabela, a conta e as premissas. Seus ajustes ficam neste navegador.
@@ -332,7 +361,7 @@ function FaltaVenda({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajus
   return (
     <div className="rounded-3xl border border-latao/45 bg-tinta p-5 sm:p-7">
       <p id={FOCO_RESULTADO} tabIndex={-1} className="text-[13px] font-semibold tracking-[0.12em] text-nevoa uppercase">
-        {palavrasPreco(e).fixo ? "Comprando pelo preço pedido" : "Seu lance máximo"}
+        Seu lance máximo
       </p>
       <p className="mt-2 font-display text-[28px] leading-tight font-bold tracking-[-0.02em] sm:text-[34px]">Falta o valor de venda</p>
       <p className="mt-2 text-[14px] leading-relaxed text-nevoa">
@@ -384,7 +413,7 @@ function FaltaVenda({ modelo, ajustar }: { modelo: Modelo; ajustar: (m: (a: Ajus
       </div>
       <Aviso tom="info" className="mt-5">
         {palavrasPreco(e).fixo
-          ? `Preço pedido: ${moeda(e.lance)}. Assim que houver um valor de venda, aparecem o lucro, a margem de segurança e a tabela de cenários.`
+          ? `Preço pedido: ${moeda(e.lance)}. Assim que houver um valor de venda, aparecem o seu lance máximo, o lucro pelo preço pedido e a tabela de cenários.`
           : `Lance mínimo atual: ${moeda(e.lance)}. Assim que houver um valor de venda, aparecem o seu lance máximo e a tabela de cenários.`}
       </Aviso>
     </div>

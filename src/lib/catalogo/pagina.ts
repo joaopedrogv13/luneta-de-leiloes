@@ -20,9 +20,9 @@ function contagemPorCidade(itens: readonly ImovelResumo[]): Map<string, number> 
 
 /**
  * Página do imóvel (detalhe, preço do m² na região, parecidos, buscas externas, cobertura de preços e nota de
- * localização), ou null se o id não existe. Referências: primeiro as da base (rua, bairro, cidade, UF; fonte
- * "leiloes"), depois as do ITBI da cidade (rua, bairro, cidade; fonte "itbi"). Nos exemplos, a cobertura sai sem a
- * contagem da base.
+ * localização), ou null se o id não existe. Referências: primeiro as da base (rua, até 1 km, bairro, cidade, UF; fonte
+ * "leiloes", com quantos imóveis cada recorte tem em `amostrasLeiloes`), depois as do ITBI da cidade (rua, bairro,
+ * cidade; fonte "itbi"). Nos exemplos, a cobertura sai sem a contagem da base.
  *
  * Plano (planos.ts): no Lente, sem tags, selo, explicação do selo, nota de localização (`localizacao: null`, e ela nem
  * é lida), preço da região (`referencias: []`, e o ITBI nem é calculado) e buscas nos portais (`buscasExternas: []`).

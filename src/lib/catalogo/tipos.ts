@@ -433,8 +433,8 @@ export interface FaixaM2 {
 
 /**
  * Referência de R$/m² entre imóveis do mesmo tipo em leilão/venda na base (não é preço de mercado:
- * é a avaliação e o lance de outros imóveis da base). Usa o menor recorte com amostra suficiente:
- * bairro (n ≥ 5), senão cidade (n ≥ 5), senão UF.
+ * é a avaliação e o lance de outros imóveis da base). Um por recorte com amostra suficiente: rua (n ≥ 3), até 1 km
+ * (n ≥ 5), bairro (n ≥ 5), cidade (n ≥ 5) e UF (n ≥ 3).
  */
 /**
  * O que o valor do ITBI de uma cidade é (base/fontes/itbi/README.md): o preço declarado na compra (São Paulo, Rio), a
@@ -443,9 +443,23 @@ export interface FaixaM2 {
  */
 export type ValorItbi = "declarado" | "base_calculo" | "avaliacao_prefeitura";
 
+/**
+ * Recorte da comparação de R$/m², do mais perto ao mais longe: a mesma rua; "perto" (rodada 6) = os imóveis da base a
+ * até 1 km, quando a posição deste e a de cada um é a do número ou a da rua (src/lib/catalogo/vizinhanca.ts); o
+ * bairro; a cidade; o estado.
+ */
+export type EscopoM2 = "rua" | "perto" | "bairro" | "cidade" | "uf";
+
+/**
+ * Quantos imóveis comparáveis (mesmo tipo, com área) a base tem em cada recorte, mesmo abaixo da amostra mínima
+ * (a tela diz "só 2 casas no bairro (mínimo 5)"). Ausente o recorte que não se aplica: sem rua conhecida, sem
+ * bairro, ou "perto" com a posição deste imóvel aproximada.
+ */
+export type AmostrasRegiao = Partial<Record<EscopoM2, number>>;
+
 export interface ReferenciaM2 {
-  /** recorte, do mais perto ao mais longe */
-  escopo: "rua" | "bairro" | "cidade" | "uf";
+  /** recorte, do mais perto ao mais longe (rua, perto, bairro, cidade, UF) */
+  escopo: EscopoM2;
   /**
    * De onde vêm os números: "leiloes" = avaliação e lance de outros imóveis em leilão na base; "itbi" =
    * transações reais registradas na prefeitura (ITBI pago), últimos 12 meses.
@@ -457,7 +471,7 @@ export interface ReferenciaM2 {
   valorItbi?: ValorItbi;
   /** média do recorte (sem os 10% mais baixos e os 10% mais altos), R$/m²: avaliação (leilões) ou preço pago (ITBI) */
   media?: number | null;
-  /** "Centro, Uberlândia/MG", "Uberlândia/MG", "MG" */
+  /** "Rua Goiás, Uberlândia/MG", "Até 1 km, Uberlândia/MG", "Centro, Uberlândia/MG", "Uberlândia/MG", "MG" */
   nome: string;
   tipo: TipoImovel;
   amostra: number;
@@ -471,6 +485,11 @@ export interface ReferenciaM2 {
 
 export interface Vizinhanca {
   referencias: ReferenciaM2[];
+  /**
+   * Imóveis em leilão na base em cada recorte (com ou sem o mínimo), para a tela dizer quantos entraram em cada nível.
+   * Ausente em dados antigos e no plano Lente (o preço da região é da Luneta).
+   */
+  amostrasLeiloes?: AmostrasRegiao;
   /** até 6 imóveis parecidos (mesmo tipo, mesma cidade, área parecida), do mais parecido ao menos */
   parecidos: ImovelResumo[];
   /**

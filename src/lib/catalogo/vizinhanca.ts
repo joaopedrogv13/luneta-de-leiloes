@@ -3,13 +3,21 @@
  * PURO (sem fs, sem rede).
  *
  * - Referências de R$/m² (fonte "leiloes"): imóveis do MESMO TIPO na base (outros leilões e vendas, não anúncios
- *   de mercado), sem o próprio imóvel. Quatro recortes, do mais perto ao mais longe: RUA (mesma cidade e mesma
- *   rua normalizada, n ≥ 3), BAIRRO (n ≥ 5), CIDADE (n ≥ 5) e ESTADO (n ≥ 3); só entram os recortes com amostra
- *   suficiente, e um recorte com os mesmos imóveis do anterior não se repete (bairro que é a cidade inteira). Cada
- *   um traz a média de avaliação/m² sem os 10% de cada ponta (`media`), mediana e quartis de avaliação/m² e de
- *   lance/m², o imóvel e o percentil do lance. A rua sai do endereço (src/lib/catalogo/lugar.ts) e a lista dos
- *   imóveis da mesma rua vem pronta de quem chama (`indiceDeRuas`, montado uma vez no carregamento por
- *   src/lib/catalogo/dados.ts). As referências de preço pago (ITBI) vêm de src/lib/catalogo/itbi.ts.
+ *   de mercado), sem o próprio imóvel. Cinco recortes, do mais perto ao mais longe: RUA (mesma cidade e mesma
+ *   rua normalizada, n ≥ 3), PERTO (até 1 km, n ≥ 5; rodada 6), BAIRRO (n ≥ 5), CIDADE (n ≥ 5) e ESTADO (n ≥ 3);
+ *   só entram os recortes com amostra suficiente, e um recorte com os mesmos imóveis do anterior não se repete
+ *   (bairro que é a cidade inteira). Cada um traz a média de avaliação/m² sem os 10% de cada ponta (`media`),
+ *   mediana e quartis de avaliação/m² e de lance/m², o imóvel e o percentil do lance. A rua sai do endereço
+ *   (src/lib/catalogo/lugar.ts) e a lista dos imóveis da mesma rua vem pronta de quem chama (`indiceDeRuas`, montado
+ *   uma vez no carregamento por src/lib/catalogo/dados.ts). As referências de preço pago (ITBI) vêm de
+ *   src/lib/catalogo/itbi.ts.
+ * - PERTO (raio de 1 km): pelas coordenadas do instantâneo, só quando a posição dos DOIS imóveis é a do número
+ *   ("exata") ou a da rua ("rua"); posição no bairro ou no centro da cidade erra por quilômetros e não entra. Só a
+ *   mesma cidade (o recorte fica dentro da cidade, como a rua e o bairro). Índice em grade de ~1 km por cidade e
+ *   tipo, montado uma vez por lista e guardado (`gradePerto`): cada página consulta 9 células, não a base inteira.
+ * - `amostrasLeiloes`: quantos imóveis comparáveis cada recorte tem, mesmo abaixo do mínimo (a tela diz "só 2 casas
+ *   no bairro (mínimo 5)" em vez de "sem dados"). Ausente o recorte que não se aplica (sem rua, sem bairro,
+ *   posição aproximada).
  * - Parecidos: mesmo tipo e mesma cidade, com área ±35% e quartos ±1 (quando os dois têm o dado; fora
  *   dessas faixas não entra); a mesma rua e o mesmo bairro primeiro, depois os com foto, depois os mais próximos
  *   em área, quartos e lance; praça já vencida não entra. Podem ser menos de 6, ou nenhum.
@@ -18,12 +26,16 @@
  */
 import { chaveBairro, nomeDaRua, ruaDoEndereco, ruaGenerica } from "./lugar";
 import { normalizar, quartosTexto } from "./texto";
-import type { FaixaM2, ImovelResumo, LinkImovel, ReferenciaM2, TipoImovel, Vizinhanca } from "./tipos";
+import type { AmostrasRegiao, EscopoM2, FaixaM2, ImovelResumo, LinkImovel, PrecisaoGeo, ReferenciaM2, TipoImovel, Vizinhanca } from "./tipos";
 
 export const AMOSTRA_MINIMA_RUA = 3;
 export const AMOSTRA_MINIMA_LOCAL = 5;
 export const AMOSTRA_MINIMA_UF = 3;
+/** Recorte "perto": a mesma amostra mínima do bairro. */
+export const AMOSTRA_MINIMA_PERTO = AMOSTRA_MINIMA_LOCAL;
 export const MAXIMO_PARECIDOS = 6;
+/** Raio do recorte "perto", em metros. */
+export const RAIO_PERTO_M = 1000;
 
 /** Rua do imóvel: a chave normalizada (para casar) e o nome como a fonte escreve (para mostrar). */
 export interface RuaDoImovel {
@@ -110,8 +122,122 @@ function mesmosImoveis(a: readonly ImovelResumo[], b: readonly ImovelResumo[]): 
   return b.every((i) => ids.has(i.id));
 }
 
-/** Referências de R$/m² para o imóvel (rua, bairro, cidade, UF), do recorte mais local ao mais amplo. */
-export function referenciasM2(imovel: ImovelResumo, itens: readonly ImovelResumo[], contexto: ContextoVizinhanca = {}): ReferenciaM2[] {
+// ---------------------------------------------------------------------------
+// Perto (raio de 1 km): índice em grade por cidade e tipo
+// ---------------------------------------------------------------------------
+
+/** Posições que valem para o raio: a do número e a da rua (bairro e cidade erram por quilômetros). */
+const PRECISOES_PERTO: ReadonlySet<PrecisaoGeo> = new Set(["exata", "rua"]);
+
+/** A posição do imóvel serve para o recorte "perto" (no número ou na rua, com coordenadas)? */
+export function posicaoParaRaio(i: Pick<ImovelResumo, "lat" | "lon" | "precisaoGeo">): boolean {
+  return i.precisaoGeo !== null && PRECISOES_PERTO.has(i.precisaoGeo) && Number.isFinite(i.lat) && Number.isFinite(i.lon) && i.lat !== null && i.lon !== null;
+}
+
+const RAIO_TERRA_M = 6_371_008.8;
+const RAD = Math.PI / 180;
+
+/** Distância em metros entre dois pontos (haversine). */
+export function distanciaM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const dLat = (lat2 - lat1) * RAD;
+  const dLon = (lon2 - lon1) * RAD;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * RAD) * Math.cos(lat2 * RAD) * Math.sin(dLon / 2) ** 2;
+  return 2 * RAIO_TERRA_M * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/** Metros por grau de latitude. */
+const M_POR_GRAU = RAIO_TERRA_M * RAD;
+/**
+ * Lado da célula (m): um pouco maior que o raio, para as 9 células em volta cobrirem o círculo mesmo com a projeção da
+ * cidade (o cosseno da latitude média) um pouco diferente da do ponto, em cidades grandes.
+ */
+const CELULA_M = RAIO_PERTO_M * 1.1;
+
+interface GrupoGrade {
+  /** cosseno da latitude média do grupo (a projeção plana da cidade) */
+  cos: number;
+  celulas: Map<string, ImovelResumo[]>;
+}
+
+const celula = (lat: number, lon: number, cos: number): [number, number] => [Math.floor((lat * M_POR_GRAU) / CELULA_M), Math.floor((lon * M_POR_GRAU * cos) / CELULA_M)];
+const chaveGrupo = (i: Pick<ImovelResumo, "uf" | "cidade" | "tipo">) => `${i.uf}|${chaveCidade(i.cidade)}|${i.tipo}`;
+
+/** As grades já montadas, por lista (a lista do conjunto é a mesma a cada página: monta uma vez). */
+const grades = new WeakMap<readonly ImovelResumo[], Map<string, GrupoGrade>>();
+
+/**
+ * Índice em grade dos imóveis com posição para o raio, por UF, cidade e tipo (células de ~1,1 km). Montado uma vez por
+ * lista e guardado (21 mil imóveis: alguns ms); `imoveisPerto` consulta só as 9 células em volta.
+ */
+export function gradePerto(itens: readonly ImovelResumo[]): Map<string, GrupoGrade> {
+  const pronta = grades.get(itens);
+  if (pronta) return pronta;
+  const porGrupo = new Map<string, ImovelResumo[]>();
+  for (const i of itens) {
+    if (!posicaoParaRaio(i)) continue;
+    const k = chaveGrupo(i);
+    const g = porGrupo.get(k);
+    if (g) g.push(i);
+    else porGrupo.set(k, [i]);
+  }
+  const grade = new Map<string, GrupoGrade>();
+  for (const [k, lista] of porGrupo) {
+    const cos = Math.cos((lista.reduce((s, i) => s + i.lat!, 0) / lista.length) * RAD);
+    const celulas = new Map<string, ImovelResumo[]>();
+    for (const i of lista) {
+      const [y, x] = celula(i.lat!, i.lon!, cos);
+      const c = `${y}|${x}`;
+      const l = celulas.get(c);
+      if (l) l.push(i);
+      else celulas.set(c, [i]);
+    }
+    grade.set(k, { cos, celulas });
+  }
+  grades.set(itens, grade);
+  return grade;
+}
+
+/**
+ * Os imóveis do mesmo tipo e da mesma cidade a até 1 km deste (sem ele), com posição no número ou na rua dos dois
+ * lados; null quando a posição DESTE imóvel não serve para o raio (o recorte não se aplica).
+ */
+export function imoveisPerto(imovel: ImovelResumo, itens: readonly ImovelResumo[], raioM: number = RAIO_PERTO_M): ImovelResumo[] | null {
+  if (!posicaoParaRaio(imovel)) return null;
+  const g = gradePerto(itens).get(chaveGrupo(imovel));
+  if (!g) return [];
+  const [y, x] = celula(imovel.lat!, imovel.lon!, g.cos);
+  const alcanceY = Math.ceil(raioM / CELULA_M);
+  // a leste e a oeste, a célula mede CELULA_M × cos(latitude deste) / cos(latitude média do grupo): quase sempre ~1,1 km,
+  // mas um ponto do grupo geocodificado longe (outra latitude) muda a média; aí a conta pede mais colunas, e nenhum
+  // vizinho a até 1 km fica de fora (revisão da rodada 6)
+  const ladoX = (CELULA_M * Math.cos(imovel.lat! * RAD)) / g.cos;
+  const alcanceX = Math.ceil(raioM / ladoX);
+  const saida: ImovelResumo[] = [];
+  for (let dy = -alcanceY; dy <= alcanceY; dy++) {
+    for (let dx = -alcanceX; dx <= alcanceX; dx++) {
+      for (const i of g.celulas.get(`${y + dy}|${x + dx}`) ?? []) {
+        if (i.id !== imovel.id && distanciaM(imovel.lat!, imovel.lon!, i.lat!, i.lon!) <= raioM) saida.push(i);
+      }
+    }
+  }
+  return saida;
+}
+
+// ---------------------------------------------------------------------------
+// Recortes
+// ---------------------------------------------------------------------------
+
+interface Recorte {
+  escopo: EscopoM2;
+  nome: string;
+  lista: ImovelResumo[];
+  minimo: number;
+  /** o recorte se aplica a este imóvel? (sem rua conhecida, sem bairro ou com posição aproximada, não) */
+  aplica: boolean;
+}
+
+/** Os cinco recortes dos leilões (rua, perto, bairro, cidade, UF), com as listas de imóveis comparáveis. */
+function recortesLeiloes(imovel: ImovelResumo, itens: readonly ImovelResumo[], contexto: ContextoVizinhanca): Recorte[] {
   const comparavel = (i: ImovelResumo) => i.tipo === imovel.tipo && i.uf === imovel.uf && i.id !== imovel.id && i.lanceM2 !== null;
   const doTipo = itens.filter(comparavel);
   const daCidade = igualA(chaveCidade(imovel.cidade), chaveCidade);
@@ -120,18 +246,42 @@ export function referenciasM2(imovel: ImovelResumo, itens: readonly ImovelResumo
   const noBairro = imovel.bairro ? naCidade.filter((i) => doBairro(i.bairro)) : [];
   const rua = contexto.rua ?? null;
   const naRua = rua ? (contexto.mesmaRua ?? []).filter((i) => comparavel(i) && daCidade(i.cidade)) : [];
-  const recortes: { escopo: ReferenciaM2["escopo"]; nome: string; lista: ImovelResumo[]; minimo: number }[] = [
-    { escopo: "rua", nome: `${rua?.nome}, ${imovel.cidade}/${imovel.uf}`, lista: naRua, minimo: AMOSTRA_MINIMA_RUA },
-    { escopo: "bairro", nome: `${imovel.bairro}, ${imovel.cidade}/${imovel.uf}`, lista: noBairro, minimo: AMOSTRA_MINIMA_LOCAL },
-    { escopo: "cidade", nome: `${imovel.cidade}/${imovel.uf}`, lista: naCidade, minimo: AMOSTRA_MINIMA_LOCAL },
-    { escopo: "uf", nome: imovel.uf, lista: doTipo, minimo: AMOSTRA_MINIMA_UF },
+  const perto = imoveisPerto(imovel, itens);
+  const lugar = `${imovel.cidade}/${imovel.uf}`;
+  return [
+    { escopo: "rua", nome: `${rua?.nome}, ${lugar}`, lista: naRua, minimo: AMOSTRA_MINIMA_RUA, aplica: rua !== null },
+    { escopo: "perto", nome: `Até 1 km, ${lugar}`, lista: (perto ?? []).filter(comparavel), minimo: AMOSTRA_MINIMA_PERTO, aplica: perto !== null },
+    { escopo: "bairro", nome: `${imovel.bairro}, ${lugar}`, lista: noBairro, minimo: AMOSTRA_MINIMA_LOCAL, aplica: !!imovel.bairro },
+    { escopo: "cidade", nome: lugar, lista: naCidade, minimo: AMOSTRA_MINIMA_LOCAL, aplica: true },
+    { escopo: "uf", nome: imovel.uf, lista: doTipo, minimo: AMOSTRA_MINIMA_UF, aplica: true },
   ];
+}
+
+/** Quantos imóveis comparáveis cada recorte que se aplica tem (com ou sem o mínimo). */
+function amostrasDe(recortes: readonly Recorte[]): AmostrasRegiao {
+  const saida: AmostrasRegiao = {};
+  for (const r of recortes) if (r.aplica) saida[r.escopo] = r.lista.length;
+  return saida;
+}
+
+/** Quantos imóveis comparáveis da base cada recorte tem (rua, perto, bairro, cidade, UF), mesmo abaixo do mínimo. */
+export function amostrasLeiloes(imovel: ImovelResumo, itens: readonly ImovelResumo[], contexto: ContextoVizinhanca = {}): AmostrasRegiao {
+  return amostrasDe(recortesLeiloes(imovel, itens, contexto));
+}
+
+/** Referências de R$/m² para o imóvel (rua, perto, bairro, cidade, UF), do recorte mais local ao mais amplo. */
+export function referenciasM2(imovel: ImovelResumo, itens: readonly ImovelResumo[], contexto: ContextoVizinhanca = {}): ReferenciaM2[] {
+  return referenciasDosRecortes(imovel, recortesLeiloes(imovel, itens, contexto));
+}
+
+function referenciasDosRecortes(imovel: ImovelResumo, recortes: readonly Recorte[]): ReferenciaM2[] {
   const saida: ReferenciaM2[] = [];
   let anterior: ImovelResumo[] | null = null;
   for (const r of recortes) {
-    if (r.lista.length < r.minimo) continue;
-    // os mesmos imóveis do recorte anterior não acrescentam nada (bairro = cidade inteira; rua = bairro). A rua não
-    // está dentro do bairro (uma avenida passa por vários): por isso compara os imóveis, não só a quantidade.
+    if (!r.aplica || r.lista.length < r.minimo) continue;
+    // os mesmos imóveis do recorte anterior não acrescentam nada (bairro = cidade inteira; rua = bairro; perto = rua).
+    // A rua não está dentro do bairro (uma avenida passa por vários), nem o raio: por isso compara os imóveis, não só a
+    // quantidade.
     if (anterior && mesmosImoveis(anterior, r.lista)) continue;
     anterior = r.lista;
     const lances = r.lista.map((i) => i.lanceM2!);
@@ -255,8 +405,10 @@ export function buscasExternas(
 /** Tudo da vizinhança de uma vez. Os parecidos saem como estão na lista: o plano é aplicado por quem chama. */
 export function vizinhanca(imovel: ImovelResumo, itens: readonly ImovelResumo[], agora: Date = new Date(), contexto: ContextoVizinhanca = {}): Vizinhanca {
   const rua = contexto.rua ?? null;
+  const recortes = recortesLeiloes(imovel, itens, contexto);
   return {
-    referencias: referenciasM2(imovel, itens, contexto),
+    referencias: referenciasDosRecortes(imovel, recortes),
+    amostrasLeiloes: amostrasDe(recortes),
     parecidos: parecidos(imovel, itens, MAXIMO_PARECIDOS, agora, rua ? (contexto.mesmaRua ?? []) : []),
     buscasExternas: buscasExternas(imovel, rua),
   };

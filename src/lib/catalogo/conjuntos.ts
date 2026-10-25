@@ -25,7 +25,7 @@ import { eTagEstacao, tagDetalheEstacao, tagsDeEstacoes } from "./estacoes";
 import { contextoEstacoes, dadosLocalizacao, estacoesDe, montarLocalizacao, notaLocalDe } from "./localizacao";
 import type { Conjunto, ImovelDetalhe, ImovelResumo, LocalizacaoImovel, SobreConjunto } from "./tipos";
 import { escolherVitrine, type EscolhidoVitrine, type OpcoesVitrine } from "./vitrine";
-import { indiceDeRuas, type ContextoVizinhanca, type RuaDoImovel } from "./vizinhanca";
+import { gradePerto, indiceDeRuas, type ContextoVizinhanca, type RuaDoImovel } from "./vizinhanca";
 
 export interface DadosConjunto {
   conjunto: Conjunto;
@@ -85,6 +85,9 @@ export async function carregarPrevia(pasta: string): Promise<DadosConjunto> {
   const indice = criarIndice(lista.itens, { textoExtra: (_, k) => enderecos[k] });
   const posicao = new Map(lista.itens.map((i, k) => [i.id, k]));
   const { ruas, contexto } = indiceDeRuas(lista.itens, enderecos);
+  // a grade do raio de 1 km (rodada 6) sai junto, no carregamento (~20 ms), e fica guardada para esta lista: a primeira
+  // página do imóvel não paga a montagem
+  gradePerto(lista.itens);
   const desvios = desviosDe(loc, lista.itens);
   const partes = new Map<string, Promise<Map<string, DetalheParcial>>>();
   const parte = (p: string) => {

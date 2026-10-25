@@ -1,7 +1,221 @@
 # Luneta de Leilões · onde estamos e pendências
 
-Este é o arquivo central do projeto: **onde estamos, que dados temos, o que falta e o próximo passo**. Atualizado a cada
-entrega (última atualização: 24/10/2026, revisão final da rodada 5; em 18/10/2026, rodada 4: nota de localização de 0 a 100 com dados, servidor e **tela pronta**
+Este é o arquivo central do projeto. **O painel logo abaixo é o que vale hoje (25/10/2026):** onde estamos, o roteiro
+até o lançamento, como ter mais e melhores dados, o que falta para abrir a prévia no site e as decisões que esperam
+você. Depois dele vem o **histórico** das rodadas, com o detalhe de cada entrega (o que já foi resolvido está marcado
+[x] ou riscado). Atualizado a cada entrega.
+
+- **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
+  https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
+  (desde a rodada 5: vitrine com os 10 melhores imóveis reais da base e os 6 exemplos fictícios à parte; ver "Rodada 5 ·
+  demonstração (frente V)") e prévia com dados reais em `/previa` (sem link, noindex).
+- **Base de dados:** pasta `base/` (SQLite do Node, sem dependências). Detalhes em `base/README.md`, fontes em
+  `base/FONTES.md`, caminho até o site em `base/FASE1-SITE.md`, coleta no seu PC em `base/COLETA-NO-PC.md`.
+- **Análise de negócio, conversão e jurídico:** https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7
+
+## Painel do dono (25/10/2026)
+
+Como ler: **Quem** diz quem faz: **dono** (você), **especialista** (o advogado parceiro) ou **código** (eu). O
+**esforço** é uma estimativa de trabalho, não um prazo. Os custos em dinheiro são aproximados: conferir na página do
+fornecedor antes de contratar.
+
+### 1. Onde estamos (25/10/2026)
+
+- **No ar** (luneta-de-leiloes.vercel.app, fora do Google): a landing, a demonstração em `/assinante` e a rodada 6
+  (simulador "Seu lance máximo" com lance + custos, conta fechada até editar, região com raio de 1 km e cartões dos
+  portais), publicada em 25/10/2026.
+- **Catálogo real** em `/previa` (sem link): ~21,2 mil imóveis da Caixa (lista de 08/10/2026) e 10 da Leilões Judiciais.
+- Busca, filtros, mapa com ruas, página do imóvel e relatório em PDF, com a trava Lente × Luneta feita no servidor.
+- **Para decidir:** simulador de lance, preço do m² (leilões e ~203 mil compras do ITBI em 5 capitais), nota de
+  localização (17,7 mil imóveis) e metrô, trem e VLT a até 1 km.
+- **`/assinante`:** vitrine com os 10 melhores imóveis reais e os 6 exemplos fictícios.
+- **Ainda não existe:** atualização automática (imóvel vendido continua aparecendo), login, pagamento e o alerta de praça.
+- Também falta: formulário que envia, leitura do edital (ocupação e dívidas) e os selos (desligados até os critérios).
+- **Fora do código:** revisão do especialista, privacidade e termos, CNPJ, preço e as licenças do ITBI (SP, Rio, POA).
+
+### 2. Roteiro até o lançamento
+
+Em ordem de prioridade. Os bloqueadores são o mínimo para cobrar de alguém; antes disso dá para abrir em fases (seção 4).
+
+#### Bloqueadores do lançamento
+
+| # | O quê | Por quê e o que envolve | Quem · esforço |
+| --- | --- | --- | --- |
+| B1 | **Atualização automática da base** | A base é uma foto de 08/10: imóvel vendido continua aparecendo, e a landing promete "atualizada todos os dias". Coleta diária (a lista da Caixa primeiro, depois as outras fontes), saída dos vendidos e retirados, histórico de praça e aviso quando a coleta falhar. Primeiro passo, grátis: testar a lista da Caixa no GitHub Actions (nunca rodou; as fotos da Caixa abriram de lá, as fichas não). Onde rodar e quanto custa: seção 3. | **Código:** 3 a 5 dias (agenda e publicação) + 1 a 2 semanas (banco de dados, junto com o login). **Dono:** escolher onde roda (1 h). **Custo:** de zero a ~R$ 120/mês |
+| B2 | **Login e pagamento** | Contas com e-mail confirmado, o plano vindo da sessão (a trava dos planos já está pronta para isso) e a exclusão da conta; assinatura mensal com os 7 dias para cancelar grátis e nota fiscal. Junto: fechar a `/previa` e tirar do cache público os pontos do mapa da Luneta (hoje o plano vai na URL). | **Código:** ~1 semana (login) + 1 a 2 semanas (pagamento). **Dono:** escolher o provedor de pagamento e abrir a conta (pede o CNPJ). **Custo:** a taxa por cobrança do provedor |
+| B3 | **Back-end dos favoritos e do alerta de praça** | A landing promete o e-mail quando a praça muda. Favoritos no servidor, comparação a cada coleta, fila de e-mails com consentimento e descadastro. Depende de B1 (praça e data dos leilões: só as fichas da Caixa trazem; hoje a base não sabe a praça de 4.569 dos 4.571 leilões) e de B2. Passo a passo em "Back-end: favoritos e alerta de mudança de praça". | **Código:** 1 a 2 semanas. **Dono:** escolher o provedor de e-mail. **Custo:** baixo no começo (a confirmar) |
+| B4 | **Revisão jurídica das tags, do glossário e dos textos** | As 26 tags e as explicações, o glossário (os (i) da página do imóvel), o FAQ, o texto do "Na Mira", os critérios dos selos (hoje desligados), o aviso do simulador, as fotos ilustrativas e a linha da OAB. É o que o assinante lê como fato. | **Especialista:** ~3 a 5 dias de trabalho (estimativa). **Código:** 2 a 3 dias para aplicar |
+| B5 | **Política de privacidade e termos de uso** | Sem elas, o formulário, o cadastro e o alerta por e-mail não podem coletar dados. Cobrir: contas, e-mails (consentimento e descadastro), o mapa (o OpenFreeMap recebe o IP de quem vê), documentos enviados à IA fora do Brasil, medição de visitas, fotos de terceiros e o cancelamento em 7 dias. | **Especialista:** 1 a 2 dias. **Dono:** revisar (1 h). **Código:** 2 h (páginas e links do rodapé e do formulário) |
+| B6 | **Razão social e CNPJ** | Rodapé, Google, política de privacidade (quem responde pelos dados), conta de pagamento e nota fiscal. | **Dono**, com o contador: dias a semanas. **Código:** 10 min |
+| B7 | **Preço** | Lente `R$ [49]`, Luneta `R$ [129]`, Telescópio `R$ [499]`; Lente paga ou grátis; oferta de fundador. Com o preço definido, a oferta volta aos dados para o Google. | **Dono:** decisão. **Código:** 30 min |
+| B8 | **Licenças do ITBI** | O preço pago em SP, Rio e Porto Alegre aparece na Luneta com "licença a confirmar". Confirmar com as prefeituras (e-mail ou Lei de Acesso: resposta em até 20 dias, mais 10) ou esconder essas três cidades. Com as licenças, o total de compras aparece na landing. | **Dono:** 1 h (pedidos). **Especialista:** ler as licenças. **Código:** 10 min |
+
+#### Importantes antes de abrir
+
+| # | O quê | Quem · esforço |
+| --- | --- | --- |
+| I1 | Rodada 6 publicada em 25/10/2026. Falta conferir no site publicado a compressão do mapa (o `curl` do worker, anotado na rodada 5; daqui o proxy não deixa): abrir o site e ver se o mapa carrega rápido | **Dono** 5 min |
+| I2 | **Rodar a coleta no seu PC** (`node base/coleta-pc.mjs`; guia em `base/COLETA-NO-PC.md`): fichas da Caixa (praça, data, matrícula, CEP) e ITBI de BH. É o pré-requisito do alerta de praça e nunca rodou | **Dono:** uma noite com o PC ligado (~15 h). **Código:** 1 dia para aplicar |
+| I3 | Domínio `lunetadeleiloes.com.br` (registro.br) e a marca no INPI | **Dono:** 1 h + taxas |
+| I4 | Plano pago da Vercel (o plano grátis não permite uso comercial) | **Dono:** 10 min; ~US$ 20/mês |
+| I5 | Formulário de contato que envia de verdade (servidor, anti-robô, consentimento) para o e-mail ou o CRM que você escolher | **Dono:** escolher. **Código:** 1 a 2 dias, depois de B5 |
+| I6 | Trocar os 21 placeholders `[X]` (hero, faixa dos leiloeiros, dados de deságio, FAQ, rodapé, preços) e as 2 notas internas do formulário até o `npm run check:publicacao` passar. O script também conta ~28 classes de estilo como placeholder: ajustar o script | **Dono:** os rótulos e os números (decisão 9). **Código:** 1 dia |
+| I7 | Conferências à mão: um celular de verdade (iPhone e Android: mapa, folhas, "Voltar à apresentação", rolagem até a conta), o PDF da matrícula e a foto da capa do relatório no seu navegador, as placas de carro nas 3 fotos ilustrativas | **Dono:** 1 a 2 h, com um roteiro. **Código:** corrige o que aparecer |
+| I8 | Plano B do mapa: se o OpenFreeMap sair do ar, as ruas do Brasil num arquivo nosso | **Código:** 1 dia |
+| I9 | Medição de visitas sem cookies (Vercel Web Analytics ou Plausible) | **Dono** aprova; **código** 1 h |
+
+#### Depois do lançamento
+
+| # | O quê | Quem · esforço |
+| --- | --- | --- |
+| D1 | Leitura do edital e da matrícula com IA: as tags de ocupação, dívidas e ações, com o trecho de onde veio cada uma (seção 3) | **Código:** 1 a 2 semanas. **Especialista:** a amostra de 100. **Custo:** ~US$ 10 a 40/mês |
+| D2 | Mais fontes e mais qualidade dos dados, na ordem da seção 3 | **Código**, contínuo; **dono** nos contatos de parceria |
+| D3 | Mais preço pago na região: o ITBI geocodificado (raio de 1 km também no preço pago), 24 meses em vez de 12, BH e a Lei de Acesso nas capitais sem ITBI aberto (ver "Rodada 6 · região") | **Código:** ~3 dias. **Dono:** os pedidos (1 h cada) |
+| D4 | Telescópio de verdade (base em planilha, vários usuários); hoje ele é uma conversa | **Código:** 1 a 2 semanas |
+| D5 | Casos reais na landing (Exemplos, hero, Praças), com as tags revisadas | **Código:** 1 dia. **Especialista:** revisar |
+| D6 | Nota de localização 1.1: áreas de risco do SGB, as estações com as mesmas regras da tag de metrô e o recálculo a cada coleta | **Código:** 3 a 5 dias |
+| D7 | Ajustes técnicos anotados: a lista que pula com janela estreita, filtros mais leves no celular, roteiro automático da ida e volta da demonstração no Actions | **Código:** 2 a 4 dias |
+
+### 3. Dados de leilões: como ter mais e melhores
+
+Hoje só a Caixa está de fato no banco (~21,2 mil imóveis, a lista de 08/10/2026). As outras fontes têm o código pronto
+e esperam rede, autorização ou a sua coleta. Em ordem de retorno (o que mais melhora o site para cada hora de trabalho):
+
+| # | Fonte | O que ganha | O que pede | Quem · esforço · custo |
+| --- | --- | --- | --- | --- |
+| 1 | **Caixa, todo dia** (a lista oficial) | Os 21 mil sempre em dia: entram os novos, saem os vendidos e retirados, o preço muda | Um lugar que a Caixa deixe baixar a lista todo dia (abaixo) e ler os termos de uso da Caixa | **Código:** 3 a 5 dias. **Dono:** escolher o lugar. **Custo:** de zero a ~R$ 120/mês |
+| 2 | **Fichas da Caixa** (a página de cada imóvel) | Praça e data do 1º e do 2º leilão (hoje a base não sabe a praça de 4.569 dos 4.571 leilões), matrícula, comarca, CEP, FGTS, regras de condomínio e IPTU, link do edital. Destrava o alerta de praça, o CEP no mapa e a leitura do edital | Internet no Brasil (o anti-robô barra o Actions). Pronto para rodar no seu PC: ~15 h na primeira vez, depois minutos por dia (só os novos e os alterados) | **Dono:** uma noite. **Código:** 1 dia para aplicar. **Custo:** zero |
+| 3 | **Leilões Judiciais** (API pública) | Lotes judiciais e extrajudiciais de vários leiloeiros, com fotos, edital, matrícula e laudo (o volume real é desconhecido: cada busca devolve 10) | Ler os termos e mandar o pedido de autorização (rascunho pronto em `base/contatos/leiloesjudiciais-email.md`); depois a varredura das 27 UFs no Actions e a medição. O inventário completo (V-Lance) só com autorização | **Dono:** 1 h. **Código:** 2 a 3 dias. **Custo:** zero |
+| 4 | **Radar de editais** (PNCP, DJEN, DOU/INLABS, Querido Diário), no Actions | Leilões judiciais e de prefeituras que os portais grandes não juntam: texto oficial e o site do leilão, sem foto. Estimativa de 1 mil a 6,5 mil editais por mês antes de tirar os repetidos; quantos são "só nossos" ainda não se sabe | Conta grátis no INLABS (DOU), e-mail à OKBR sobre o uso comercial do Querido Diário, agendar no Actions, 2 semanas de medição (regra: com 2 mil por mês e 15% de novos, vira fonte) e IA barata para filtrar | **Dono:** 30 min. **Código:** 8 a 16 h (medição) + 40 a 80 h (produção). **Custo:** US$ 1 a 20/mês de IA |
+| 5 | **Bancos e leiloeiros grandes** (Itaú, Bradesco, Santander, BB, C6, Zuk, Mega, Superbid...) | Volume, fotos e o lance atual. O leilão dos bancos não passa por diário oficial: só no site do leiloeiro. Estoque fora da Caixa estimado em 6 a 20 mil imóveis | **Raspagem educada** (termos e robots.txt de cada site, 2 s entre páginas, nunca contornar o anti-robô), começando pelas plataformas que atendem muitos leiloeiros de uma vez (V-Lance, SOLEON, Leilão PRO, Superbid); ou **parceria** (Resale para Santander, BTG e BB; Suporte Leilões, com ~107 leiloeiros; Superbid). A lista do LeilãoMap diz por onde começar | **Dono:** a lista do LeilãoMap e os contatos de parceria. **Código:** 1 a 2 dias por conector; 160 a 520 h para os ~30 maiores, em etapas. **Manutenção:** 5 a 120 h por mês (estimativa de 14/10) |
+
+**Onde rodar a Caixa todo dia** (decisão 3):
+- **GitHub Actions:** grátis. A lista nunca foi testada de lá (o `base-coleta.yml` nunca rodou); as fotos da Caixa abriram
+  de lá (234 de 242), as fichas não. É o primeiro teste a fazer.
+- **Seu PC:** 10 a 40 min por dia com o Agendador de Tarefas do Windows, com o PC ligado no horário. O código acrescenta
+  a lista à coleta que já existe (1 dia).
+- **Servidor pequeno no Brasil (VPS):** no Brasil a faixa vai de ~R$ 25 a R$ 150 por mês, a maioria entre R$ 30 e
+  R$ 120 (guia de preços de 2026, horadecodar.com.br; conferir que o servidor fica no Brasil). Atenção: o anti-robô da
+  Caixa pode barrar também o IP de um datacenter brasileiro. Testar um mês antes de contratar por um ano.
+
+**Qualidade dos dados:**
+
+| Frente | O que resolve | O que pede | Quem · esforço · custo |
+| --- | --- | --- | --- |
+| **Leitura do edital e da matrícula com IA** | As tags de ocupação, dívidas, ações e matrícula, com o trecho de onde veio cada uma (hoje nenhuma tag vem do edital). Liga a frase da landing que hoje fica desligada | As fichas e os editais baixados (fonte 2), uma amostra de 100 imóveis classificada às cegas pelo especialista para escolher o modelo (meta: 95% de acerto nas tags graves) e a política de privacidade cobrindo o envio dos documentos | **Código:** 1 a 2 semanas. **Custo** (em lote, preços de 06/10): Haiku 5.5 ~US$ 12 a 25 nos 21 mil (uma vez) e ~US$ 10 a 40/mês; Sonnet 5.5 ~US$ 230 a 500 e ~US$ 100 a 700/mês; Opus 5.5 ~US$ 460 a 1.000 e ~US$ 200 a 1.400/mês (ver "Ler cada leilão com IA") |
+| **Revisão humana** | As tags "em revisão" (2.039 imóveis hoje) e as graves no começo passam por uma pessoa antes de virar fato | Uma tela de revisão e quem revisa (especialista ou assistente), com o ritmo | **Código:** 3 a 5 dias. **Dono:** decidir quem |
+| **Deduplicação** | O mesmo imóvel no banco, no leiloeiro e na Caixa vira um só | As regras já existem (`base/dedup`: matrícula e cartório, ou o endereço); precisam da matrícula das fichas e de um ajuste a cada fonte nova | **Código:** 1 a 2 dias por fonte |
+| **CEP e geocode** | Mais imóveis com o ponto no número (hoje 49% no número e 15% na rua): mais nota de localização, raio de 1 km e metrô | O CEP das fichas (fonte 2), o geocode a cada lista nova (90 s) e uma amostra conferida à mão no Street View | **Código:** 1 dia + automatizar. **Dono:** a conferência (1 h) |
+| **Histórico de praça** | Saber que um imóvel foi para a 2ª praça, mudou de data, baixou o lance ou foi vendido: é a base do alerta | Gravar praça, data, lance mínimo e status a cada coleta, sem apagar o anterior (o histórico de preço já existe; o de praça, não) | **Código:** 2 a 3 dias, a partir da primeira coleta automática |
+
+### 4. O que falta para abrir a prévia no site original
+
+Hoje o site original mostra a vitrine (os 10 melhores reais) na `/assinante`. **Para trocar pela base inteira, com
+login**, precisa estar pronto:
+1. a atualização diária rodando há ~2 semanas sem falha, com os vendidos saindo (B1);
+2. o login (a parte das contas de B2);
+3. a política de privacidade e os termos publicados, com o aceite no cadastro (B5);
+4. quem responde pelos dados: razão social e CNPJ (B6);
+5. a `/previa` fechada e os pontos do mapa fora do cache público (senão a Luneta sai de graça);
+6. o glossário revisado, porque aparece no Lente (B4). As tags, os selos, o simulador e o ITBI são da Luneta: só
+   bloqueiam quando ela for vendida;
+7. os textos honestos: "atualizada todos os dias" só com o item 1, e os números do hero reais (I6);
+8. um teste num celular de verdade (I7).
+
+**O que dá para fazer antes, em fases** (decisão 1):
+
+| Fase | O que o visitante vê | O que precisa | Quem · esforço |
+| --- | --- | --- | --- |
+| **1 · Vitrine maior** (dá para fazer já) | `/assinante` com 30 a 50 dos melhores imóveis reais, de todos os estados, com o filtro por estado; a Luneta continua em demonstração | A lista da Caixa atualizada pelo menos 1 vez por semana (Actions ou seu PC), a data da lista à vista em cada imóvel e as fotos novas olhadas no Actions | **Código:** 1 a 2 dias. **Dono:** aprovar o tamanho |
+| **2 · Catálogo completo grátis no Lente, com cadastro** | Todos os imóveis, os filtros do Lente, o mapa e a página do imóvel, depois de um cadastro com e-mail; a Luneta segue em demonstração, com lista de espera | Os itens 1 a 8 acima; a decisão de deixar o Lente grátis (decisão 2) | **Código:** 2 a 3 semanas. **Dono e especialista** em paralelo (privacidade, glossário, CNPJ) |
+| **3 · Pagamento** (Luneta e Telescópio) | A Luneta inteira para quem assina, com 7 dias para cancelar grátis | Os bloqueadores que faltarem: pagamento (B2), alerta (B3), revisão jurídica (B4), CNPJ (B6), preço (B7) e licenças do ITBI (B8) | **Código:** 3 a 4 semanas. **Dono e especialista** |
+
+### 5. Decisões que esperam o dono
+
+Uma lista só, juntando as decisões espalhadas pelas rodadas (os detalhes ficam no histórico). Onde há recomendação, ela
+vem entre parênteses.
+
+**Lançamento e negócio**
+1. [ ] **Abrir em fases** (seção 4): vitrine maior agora, catálogo grátis no Lente com cadastro, pagamento depois?
+   (recomendo; substitui o "lançar em duas fases" de 12/10)
+2. [ ] **Preços:** Lente, Luneta e Telescópio; Lente paga ou grátis; oferta de fundador.
+3. [ ] **Onde roda a atualização diária:** Actions, seu PC ou um servidor no Brasil (seção 3). (Recomendo testar o
+   Actions primeiro.)
+4. [ ] **Fornecedores:** pagamento, e-mail do alerta, destino do formulário (e-mail ou CRM) e medição de visitas sem
+   cookies (Vercel Web Analytics ou Plausible).
+5. [ ] **Parcerias de dados:** autorizar os contatos com a Resale, a Suporte Leilões e a Superbid; pedir cotação do
+   DataZAP quando houver assinantes.
+6. [ ] **Orçamento da leitura com IA:** Haiku (~US$ 10 a 40/mês) ou Sonnet (~US$ 100 a 700/mês), depois do teste com a
+   amostra do especialista.
+7. [ ] **OpenFreeMap:** doação ao projeto ou plano pago de reserva para as ruas do mapa.
+
+**Landing e demonstração**
+8. [ ] **"Atualizada todos os dias"** (hero, "Por dentro", FAQ): tirar até a atualização diária existir, ou manter (a
+   landing está fora do Google).
+9. [ ] **Rótulos dos números do site:** "imóveis ativos" (exato: 57% é venda direta, não leilão) ou "leilões ativos";
+   "deságio mediano" ou "médio"; "[X] leiloeiros monitorados" (hoje são 2 fontes) e os 6 nomes da faixa rolante.
+10. [ ] **Título novo** com "imóveis" e "risco" e uma **página mais curta** (Exemplos e Filtros dentro do "Por dentro").
+11. [ ] **Selos na landing:** ela vende Alvo, Na Mira e Promissor, e no produto eles estão desligados até os critérios.
+    Esconder na landing até lá?
+12. [ ] **Link "Ferramentas" no menu:** manter ou tirar.
+13. [ ] **Animação "Por dentro" no Lente:** manter as tags borradas (metáfora) ou trocar pelo cadeado (mais fiel).
+14. [ ] **Selo "Cancele grátis em até 7 dias":** a linha simples no celular está boa? Pôr também sob "Assinar Luneta" do
+    "Decida com números"?
+15. [ ] **"Ajuste o foco" com foto nas linhas?** (recomendo deixar sem: são 150 imóveis inventados)
+16. [ ] **Foto no exemplo "Sala comercial, Centro, Rio"** (três riscos graves): fica sem foto (recomendo) ou volta com o
+    ok do especialista.
+17. [ ] **Risco aceito nas fotos ilustrativas:** a URL leva o número do imóvel real, e por ele se chega ao endereço.
+    Aceitar, ou guardar as 5 fotos no nosso site (direito de imagem: ver com o especialista).
+18. [ ] **Vista padrão do catálogo:** lista (hoje) ou abrir no mapa em algum caso.
+19. [ ] **Recurso que nem a Luneta teria para o imóvel** (nota sem endereço, região sem amostra): no Lente, a mesma frase
+    neutra da Luneta em vez do convite?
+
+**Jurídico (você e o especialista)**
+20. [ ] **O especialista é advogado?** Se for, a linha da OAB fica; se não, sai.
+21. [ ] **Fotos das fontes:** mostrar direto da Caixa e dos leiloeiros (como hoje), só com autorização, ou não mostrar; e
+    as fotos ilustrativas nos exemplos.
+22. [ ] **Critérios dos selos e limiares de deságio** (alto a partir de 40%, baixo abaixo de 20%) e quem revisa as tags
+    "em revisão".
+23. [ ] **ITBI de SP, Rio e POA até a licença chegar:** mostrar com "licença a confirmar" (hoje, só na Luneta) ou
+    esconder.
+24. [ ] **Licença do OpenStreetMap na nota:** confirmar que a nota é "obra produzida" (só atribuição na tela).
+
+**Simulador**
+25. [ ] **Meta padrão** (hoje 20% ao ano: só ~1 em 10 apartamentos e casas atinge com o lance mínimo): (a) 15% ao ano,
+    (b) "render mais que a aplicação", ou (c) abrir pelo retorno com o lance mínimo e a meta como pergunta.
+26. [ ] **Venda direta:** "Pague no máximo" (hoje) ou "Dê no máximo", como no leilão.
+27. [ ] **"Lance + custos = investidos":** sem a corretagem e o IR (hoje, para bater com o "Dinheiro investido") ou com
+    eles.
+28. [ ] **"Editar custos ↓"** abre a conta no lance máximo (hoje: os mesmos números do cartão) ou no lance mínimo.
+29. [ ] **Venda direta:** o texto da margem de segurança e se o preço pode ser trocado "para comparar" (hoje pode, com
+    aviso).
+
+**Região e nota de localização**
+30. [ ] **Limites do selo da região** (muito abaixo até −30%; abaixo de −10% a −29%; na média de −9% a +9%; acima de +10%
+    a +29%; muito acima a partir de +30%).
+31. [ ] **Amostra mínima do ITBI** (rua e bairro 10 compras, cidade 30).
+32. [ ] **ITBI só da cidade × leilões do bairro ou do raio:** qual vai na frase (hoje, o preço pago primeiro).
+33. [ ] **Pesos da nota** (25/20/20/25/5/5) e a cidade pequena (terços na própria cidade, hoje, ou a região imediata).
+34. [ ] **Bairro muito grande** que fica "cidade" (~1,1 mil imóveis): mostrar como "bairro aproximado" no mapa, sem nota?
+35. [ ] **Rua longe do bairro informado** (398 imóveis, 29 com "Centro"): a nota aproximada do bairro (hoje) ou sem nota.
+36. [ ] **Pontos de ônibus do OpenStreetMap:** a regra dos 10% só no território habitado (hoje) ou mais flexível (mais
+    cidades).
+37. [ ] **Regras da tag de metrô** (escolhas minhas): o monotrilho de SP conta como metrô; o bonde de Santa Teresa e os
+    trens de longa distância não contam; vale com o endereço na rua; a Trensurb aparece como metrô.
+
+**Tarefas suas que não são decisão** (estão no roteiro): rodar a coleta no PC (I2), mandar a lista do LeilãoMap, o
+pedido à Leilões Judiciais, a conta no INLABS, os e-mails à OKBR (Querido Diário) e à Fipe (FipeZAP), os pedidos de
+licença do ITBI e de Lei de Acesso nas capitais sem ITBI aberto, o domínio e a marca (I3) e as conferências à mão (I7).
+
+## Histórico: o registro das rodadas
+
+Daqui para baixo, o registro de cada entrega com o detalhe técnico e, no fim, as seções de referência (checagem de
+publicação, placeholders, conteúdo fictício, decisões de implementação). O que já foi resolvido está marcado [x] ou
+riscado; o que continua aberto foi levado ao painel do topo.
+
+**Linha do tempo** (o resumo que ficava no topo até 25/10/2026): atualizado a cada entrega (última atualização:
+25/10/2026, rodada 6 com o simulador e a região integrados; em 18/10/2026, rodada 4: nota de localização de 0 a 100 com
+dados, servidor e **tela pronta**
 (página do imóvel, filtro, ordem, selo, PDF e a página pública `/metodologia/localizacao`); landing com as novidades do
 plano Luneta ("Decida com números", "Nota de localização", tabela de planos em grupos, FAQ novo); responsividade da
 prévia no celular, tablet e celular deitado; coleta no PC do dono pronta; **a trava dos planos pronta**: no Lente, cada
@@ -18,17 +232,22 @@ conta limpa), a tag e o filtro de metrô e o mapa de verdade; ver "Rodada 5 · i
 rodada 5 (24/10/2026):** 40 achados de três revisores (pedido, técnica e conteúdo): 35 corrigidos, 1 fora do código
 (`npm install` no main) e 4 pendentes (fotos no "Ajuste o foco", que é decisão sua; um celular de verdade; a compressão
 na Vercel; o que já era assim no main); o Next foi para a 16.4.3 (a 16.4.0 tinha falhas de segurança graves); ver
-"Rodada 5 · revisão final".
+"Rodada 5 · revisão final". **Rodada 6 · simulador (25/10/2026):** "Seu lance máximo" também na venda direta, com
+"lance + custos = investidos" e "Editar custos ↓" nos dois cartões; régua do "Meu lance" com o mínimo e o máximo e a
+linha "Considerado com despesas"; avaliação e região sempre à vista no "% de venda sobre"; a conta linha a linha sempre
+fechada ao carregar; ver "Rodada 6 · simulador". Na revisão adversarial, o "Editar custos ↓" passou a abrir a conta
+com os mesmos números do cartão (antes, abria no lance mínimo) e o máximo nunca sai da régua; ver "Rodada 6 ·
+simulador: revisão adversarial". **Rodada 6 · região (25/10/2026):** o recorte "Até 1 km" entre a rua e o bairro
+(3.164 imóveis ganham uma comparação mais perto que o bairro), quantos imóveis entraram em cada nível, o aviso "o ideal
+é comparar com a mesma rua ou o mesmo bairro" (em destaque quando a frase compara só com a cidade ou o estado) e os
+cartões dos portais com marca de cor, selo do nível e critérios da busca; ver "Rodada 6 · região". **Simulador e região
+integrados (25/10/2026)** num branch só: a "Referência da região" do simulador usa os mesmos nomes de nível da seção
+da região ("mesma rua", "até 1 km", "bairro", "cidade", "estado").
 
-- **Site:** landing em Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + GSAP 3, publicada em
-  https://luneta-de-leiloes.vercel.app (fora do Google até o lançamento). Área do assinante de demonstração em `/assinante`
-  (desde a rodada 5: vitrine com os 10 melhores imóveis reais da base e os 6 exemplos fictícios à parte; ver "Rodada 5 ·
-  demonstração (frente V)") e prévia com dados reais em `/previa` (sem link, noindex).
-- **Base de dados:** pasta `base/` (SQLite do Node, sem dependências). Detalhes em `base/README.md`, fontes em
-  `base/FONTES.md`, caminho até o site em `base/FASE1-SITE.md`.
-- **Análise de negócio, conversão e jurídico:** https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7
+### Painel antigo (24/10/2026, revisão final da rodada 5)
 
-## Painel (atualizado em 24/10/2026, revisão final da rodada 5)
+> **Substituído pelo "Painel do dono (25/10/2026)" no topo.** Fica como registro: o que já foi resolvido está marcado
+> [x] ou riscado; o que continua aberto foi levado ao roteiro e às decisões do topo.
 
 ### Que dados temos hoje
 
@@ -112,10 +331,11 @@ a busca, os filtros, a ordem e a paginação no servidor; "Estado: Minas Gerais"
 
 ### Próximos passos (em ordem)
 
-0. **Rodada 5 para o main** (você aprova; eu faço): o branch da revisão final junta as duas faixas da rodada 5 com as
-   correções. Ao levar para o main, rodar `npm install` no checkout principal (o `node_modules` de lá não tem o
-   `maplibre-gl`; os próximos worktrees com `cp -al` não compilam sem ele) e conferir no site publicado o worker do mapa
-   comprimido (`curl -sI -H 'Accept-Encoding: br' .../mapa/maplibre-gl-worker.mjs?v=6.15.0`).
+> Substituído pelo "Roteiro até o lançamento" do topo (25/10/2026).
+
+0. ~~**Rodada 5 para o main**~~ **Feito (24/10/2026):** a rodada 5 está no main (`68bcb36`), e o `node_modules` do
+   checkout principal já tem o `maplibre-gl`. Falta só conferir no site publicado o worker do mapa comprimido
+   (`curl -sI -H 'Accept-Encoding: br' .../mapa/maplibre-gl-worker.mjs?v=6.15.0`; roteiro do topo, I1).
 0. **Alerta de praça** (rodada 5, decisão sua): a landing promete o e-mail quando a praça de um favorito muda. Para
    cumprir, faltam os **dados de praça** (a base não sabe a praça nem a data de 4.569 dos 4.571 leilões: só as fichas da
    Caixa, a coleta no PC do dono, trazem isso) e a **coleta diária automatizada**; depois, o back-end (login, favoritos no
@@ -369,7 +589,8 @@ o extrajudicial dos bancos. Ordem proposta:
 - **Preço do m² na base por RUA, BAIRRO, CIDADE e ESTADO:** a mesma rua (n ≥ 3, mesma cidade; 8.883 imóveis têm),
   bairro (n ≥ 5), cidade (n ≥ 5) e UF, com média sem as pontas, mediana e quartis. Buscas nos portais por nível (mesma
   rua, mesmo bairro, cidade). Revisão: "Rua Três", "Rua Nova", "Rua Principal" (repetem em cada loteamento) só juntam
-  imóveis do mesmo bairro; endereço que começa por lote, chácara ou quadra de Brasília não vira rua.
+  imóveis do mesmo bairro; endereço que começa por lote, chácara ou quadra de Brasília não vira rua. **Rodada 6:** o
+  recorte **"Até 1 km"** entre a rua e o bairro (8.173 imóveis têm; ver "Rodada 6 · região").
 - **Matrícula da Caixa ("não informada" com matrícula no site):** a ficha só abre de rede no Brasil (o GitHub Actions
   recebeu o desafio anti-robô nas 5 fichas de teste; não contornamos). A página mostra "na página da Caixa" com o link.
   Caminho pronto: baixar as fichas de uma rede no Brasil (`base/fontes/caixa/baixar-fichas.ts`) e aplicar com
@@ -402,8 +623,10 @@ Pendências da página:
   Lente, a chamada fica no lugar e o código do simulador nem é baixado (ver "Rodada 4 · a trava dos planos").
 - [x] Legenda do mapa pequeno: agora segue a precisão de verdade ("pela rua" nos imóveis da Leilões Judiciais, "centro
   da cidade" na Caixa).
-- [ ] Fotos da Caixa: não carregam deste ambiente (rede bloqueada); a página mostra o desenho no lugar. Conferir no navegador
+- [x] Fotos da Caixa: não carregam deste ambiente (rede bloqueada); a página mostra o desenho no lugar. Conferir no navegador
   (celular e computador). Se todas as fotos falharem, a galeria vira um desenho só, sem setas nem tela cheia.
+  **Conferido na rodada 5** pelo Actions (execução 40098702645): as fotos abriram na página do imóvel em 360 a 1440 px.
+  Falta só um celular de verdade (roteiro do topo, I7).
 - [x] Simulador, matriz "Cenários e prazos": o nome que o leitor de tela ouve em cada célula agora começa pelo número que
   aparece (WCAG 2.5.3, comando de voz).
 - [ ] **Decisão sua: a meta padrão do simulador.** Com 20% ao ano, 12 meses e cenário base, só ~1 em cada 10 apartamentos e
@@ -618,8 +841,10 @@ Pendências do relatório:
 - [ ] Técnico: a régua "muito abaixo… muito acima" do relatório (`compararRel`) repete a da página (`compararComMedia`), e
   as linhas "sem média" repetem os motivos de `linhasLeiloes`; dá para usar uma só. O mesmo para o recorte do simulador
   (`entradaDoImovel` no relatório e o objeto montado em `PaginaImovel.tsx`).
-- [ ] Antes de integrar com a frente de dados, a linha "Rua" do relatório sai sempre "menos de 3 imóveis…": este branch
+- [x] Antes de integrar com a frente de dados, a linha "Rua" do relatório sai sempre "menos de 3 imóveis…": este branch
   ainda não calcula a referência por rua. Com a frente de dados junta, a linha passa a ter a média de verdade.
+  **Feito** na integração da rodada 3: a linha "Rua" tem a média com 3 ou mais imóveis (e, desde a rodada 6, há a linha
+  "Até 1 km").
 - [x] O botão "Exportar PDF" leva o `?plano=lente` no próprio link (botão do meio, "abrir em nova aba" e "copiar link"
   também), 17/10/2026.
 
@@ -743,8 +968,9 @@ Sim, mas em duas etapas, e a primeira é a precisão do ponto:
      os componentes ("acesso 82 · serviços 75 · preço 40 · risco de alagamento: atenção").
    Custo: só engenharia (≈ 30–50 h) e processamento; todas as fontes são abertas. Cuidados: a nota não pode virar
    promessa ("não é garantia"), dados de crime por bairro são irregulares e sujeitos a viés, e cada fonte pede atribuição.
-- [ ] **Decisão sua:** fazer o ranking (e se entra na Luneta ou no Telescópio). Ordem sugerida: geocodificação → acesso e
-  serviços (OSM) → renda (IBGE) → preço (ITBI) → riscos.
+- [x] ~~**Decisão sua:** fazer o ranking (e se entra na Luneta ou no Telescópio). Ordem sugerida: geocodificação →
+  acesso e serviços (OSM) → renda (IBGE) → preço (ITBI) → riscos.~~ **Feito na rodada 4** (a nota de localização, na
+  Luneta; ver abaixo).
 
 ### Ranking de localização (rodada 4): o que já está pronto
 
@@ -946,8 +1172,10 @@ Pendências da revisão:
 Pendências da C:
 - [x] **Frente D:** trocar `ChamadaNotaLuneta` pela chamada única do Lente (`RecursoLuneta`); no Lente, o filtro e a ordem
   da nota aparecem com o cadeado; a landing tem o link para `/metodologia/localizacao` (D2).
-- [ ] **Decisão sua:** o mapa mini da página mostra o estado com o ponto, sem as ruas. Com o ponto no número, um mapa de
-  ruas mostraria o quarteirão: tiles do OSM com atribuição ou outro provedor, e o limite de uso entra na conta.
+- [x] ~~**Decisão sua:** o mapa mini da página mostra o estado com o ponto, sem as ruas. Com o ponto no número, um mapa
+  de ruas mostraria o quarteirão: tiles do OSM com atribuição ou outro provedor, e o limite de uso entra na conta.~~
+  **Resolvido na rodada 5:** a página do imóvel tem o mapa de verdade, com ruas (MapLibre e OpenFreeMap; ver "Rodada 5 ·
+  mapa de verdade").
 - [ ] **Técnico:** os números da conferência com o ITBI na página do método estão em `src/lib/catalogo/metodologia.ts`
   (`VALIDACAO_ITBI`), copiados de `medicao-nota.md`. Se o `nota.py` mudar a validação, atualizar ali, ou gravar a
   validação no `localizacao.json.gz`. Os outros números da página vêm do arquivo, lidos no build.
@@ -1030,8 +1258,9 @@ Prints em `scratchpad/prints/r4-D2/`.
 - [ ] **Link "Ferramentas" no menu:** manter (hoje a partir de 1280 px no computador, sempre no celular) ou tirar.
 
 **Falta (técnico):**
-- [ ] Depois da integração com a frente C: conferir o link "Como a nota é calculada" (seção e rodapé; até lá dá 404) e
-  que a página do imóvel da demonstração (`ex-alvo-sp`) mostra a mesma nota 91 da miniatura.
+- [x] Depois da integração com a frente C: conferir o link "Como a nota é calculada" (seção e rodapé; até lá dá 404) e
+  que a página do imóvel da demonstração (`ex-alvo-sp`) mostra a mesma nota 91 da miniatura. **Feito:** a página
+  `/metodologia/localizacao` existe, e o `site.test.ts` confere que a miniatura usa a nota do exemplo.
 - [ ] A miniatura da nota copia o visual do cartão da frente C, sem importar `src/components/catalogo/**`. Se o cartão
   mudar, alinhar.
 - [ ] O aviso do simulador tem duas cópias: `src/content/avisos.ts` e `src/components/simulador/Simulador.tsx`. O teste
@@ -1513,10 +1742,11 @@ ao total da lista), sem rolagem lateral e sem erro no console. **axe** (WCAG 2.2
 violações (quadro inicial, com metrô, pop-up e folha).
 
 **Pendências desta frente**:
-- **Metrô**: o botão "Metrô perto" da demonstração vale o filtro "Metrô a até 1 km" que a frente do metrô (decisão
+- **Feito na revisão final da rodada 5** (`metro: "metroPerto"` em `busca.ts` e o filtro em `FILTROS_PROMETIDOS`):
+  ~~**Metrô**: o botão "Metrô perto" da demonstração vale o filtro "Metrô a até 1 km" que a frente do metrô (decisão
   (11)) põe nos filtros avançados do produto. Quando ele entrar, pôr o filtro em `FILTROS_PROMETIDOS` (`planos.ts`) e
   trocar `metro: null` em `FILTRO_DO_CATALOGO` (`src/lib/demo-foco/busca.ts`) pela chave do catálogo; se ele não entrar,
-  tirar o botão da demonstração (`RAPIDOS_LUNETA` em `foco/FocoDemo.tsx` e o "Metrô perto" de `foco/Moldura.tsx`).
+  tirar o botão da demonstração (`RAPIDOS_LUNETA` em `foco/FocoDemo.tsx` e o "Metrô perto" de `foco/Moldura.tsx`).~~
 - Os R$/m² das cidades em `dados.ts` são referências fictícias arredondadas: não usar como dado.
 - O mapinha é por estado, não por cidade (com 150 imóveis, cidades vizinhas como São Paulo e Campinas se encostariam);
   o mapa de verdade (MapLibre, com ruas e zoom) é o da prévia e da área do assinante.
@@ -1765,8 +1995,8 @@ Lente), a visão padrão em `simulador-v2.test.ts` e as regras do `estacoes.py` 
   algumas cidades pequenas, por isso não fiz agora.
 - A página pública "Como a nota é calculada" (`/metodologia/localizacao`) ainda não fala da tag de metrô. Dá para pôr
   um parágrafo quando o dono aprovar as regras acima.
-- O Next avisou no `next build` que a versão 16.4.0 tem uma vulnerabilidade conhecida e recomendou atualizar. Não
-  mexi: fica para uma frente própria.
+- ~~O Next avisou no `next build` que a versão 16.4.0 tem uma vulnerabilidade conhecida e recomendou atualizar. Não
+  mexi: fica para uma frente própria.~~ **Resolvido** na revisão final da rodada 5 (Next 16.4.3).
 
 ### Rodada 5 · mapa de verdade (23/10/2026)
 
@@ -1982,8 +2212,9 @@ metrô S) e o mapa de verdade com a revisão adversarial (`e47c8d8`). Nada foi p
 - Prints em `scratchpad/prints/r5-int/`.
 
 **Falta:**
-- [ ] Prints do branch integrado no Actions (roteiros `mapa` e `fotos-site`, num branch `acoes-*`). Neste contêiner os
-  ladrilhos e as fotos da Caixa não abrem.
+- [x] Prints do branch integrado no Actions (roteiros `mapa` e `fotos-site`, num branch `acoes-*`). Neste contêiner os
+  ladrilhos e as fotos da Caixa não abrem. **Feito:** o mapa na revisão final (execução 40114607892, 41 de 41); as fotos
+  na frente V (40098702645), que a integração não mudou.
 - [x] ~~O botão "Metrô perto" do "Ajuste o foco" ainda tem `metro: null`~~ Feito na revisão final: `metroPerto`.
 - [x] ~~Avaliar o `next upgrade`~~ Feito na revisão final: Next 16.4.3 (ver "Rodada 5 · revisão final").
 
@@ -2135,7 +2366,282 @@ bairros, não em cima; com a folha cheia, um "Ver mapa" só.
   CSS, desenhar o painel mais leve e fixar a posição inicial da folha antes da pintura.
 - [ ] **Smoke da ida e volta no Actions**: os scripts desta revisão (`scratchpad/r5f/teclado.mjs`, `alerta.mjs`,
   `mapa-voltar.mjs`) podem virar um roteiro do `scripts/prints/actions.mjs`.
-- [ ] Ao levar ao main: `npm install` no checkout principal e o `curl` do worker na Vercel (próximos passos, item 0).
+- [ ] ~~Ao levar ao main: `npm install` no checkout principal~~ (feito: a rodada 5 está no main, com o `maplibre-gl`) e
+  o `curl` do worker na Vercel (roteiro do topo, I1).
+
+### Rodada 6 · simulador (frente S): "Seu lance máximo" também na venda direta, lance + custos, régua com mínimo e máximo e a conta sempre fechada (25/10/2026)
+
+Pedidos do dono: (1) "No 'comprando pelo preço pedido' deve ser chamado: lance máximo. [...] Esse valor deve considerar
+as despesas que editamos no 'a conta linha a linha'. Deixe claro qual é o valor máximo do lance + custos e mostre que o
+custo é editável abaixo."; (2) no "Cenários e prazos", o mínimo e o máximo na régua, o valor considerado com despesas e,
+no "% de venda sobre", sempre a avaliação e a da região por m²; (3) "a conta linha a linha" sempre oculta, abrindo só
+pelo botão de editar. "São apenas ajustes finos": nada foi redesenhado e nenhuma função saiu.
+
+**(1) O cartão vira "Seu lance máximo" também na venda direta.**
+- **Número grande:** "Pague no máximo R$ 129.024" (no leilão continua "Dê no máximo"): o maior valor a pagar para
+  ainda bater a meta, no cenário e no prazo escolhidos.
+- **Usa todos os custos e ajustes da conta (conferido no código e testado):** `lanceMaximo` (`src/lib/simulador/calculo.ts`)
+  faz a busca com `simular` sobre `modelo.premissas`, que já trazem cada ajuste da pessoa (custos em % ou em reais,
+  linhas tiradas, custos criados, meses de cada custo, financiamento). O teste novo `src/lib/simulador/lance-maximo.test.ts`
+  edita 15 custos um a um (ITBI em % e em reais, registro, reserva, reforma, condomínio, IPTU, contas, desocupação,
+  dívidas, corretagem, IR e os três tipos de custo criado), tira uma linha, muda cenário, prazo e meta, no leilão e na
+  venda direta: o número muda sempre, e no lance máximo a meta fecha (R$ 1 a mais já não fecha). No navegador, um
+  custo criado de R$ 20.000 baixa o lance máximo nos quatro imóveis testados (São Gonçalo R$ 129.024 → R$ 107.999; SFI
+  R$ 202.686 → R$ 182.933; Leilões Judiciais R$ 1.094.791 → R$ 1.075.038; exemplo R$ 362.178 → R$ 342.425).
+- **Logo abaixo, nos dois cartões (leilão e venda direta):** "R$ 129.024 lance máximo + R$ 60.352 custos = R$ 189.376
+  investidos" e o link **"Editar custos ↓"**, que abre a conta, rola até ela e põe o foco nela.
+  - Os custos são os da conta fora da venda: compra (comissão, ITBI, registro, reserva), desocupação e dívidas,
+    reforma, os meses até vender, os custos criados e, a prazo, os juros. A corretagem e o IR saem do dinheiro da venda
+    (entram no lucro e no lance máximo, mas não no "investidos"). À vista, o total é igual ao "Dinheiro investido" da
+    conta; a prazo, o rótulo vira "no total" (o saldo é quitado com a venda). Função pura `lanceMaisCustos`.
+- **Comparação com o preço pedido:** "O preço pedido (R$ 25.100) está R$ 103.924 abaixo do seu máximo: atinge a sua
+  meta" (acima, com o alerta e "não atinge").
+- **O que existia continua, como informação secundária:** lucro pelo preço pedido, margem de segurança, veredito da
+  meta e dinheiro necessário. A régua do cartão passa a aparecer também na venda direta ("Preço pedido" e "Seu máximo").
+- **Tabela:** na venda direta, a outra visão passa a ser "Lance máximo para a meta" (antes, "Margem para imprevistos"),
+  com "sobra/faltam" em relação ao preço pedido; a margem de cada célula fica na leitura logo abaixo da tabela, no leitor
+  de tela e no PDF.
+- **Detalhe e pop-ups:** "Seu máximo" no "Preço usado na conta" e no pop-up "Preço e pagamento"; o rodapé de todo pop-up
+  de custo mostra "Seu lance máximo: antes → depois" (na venda direta, também a margem).
+- **PDF:** "Lance máximo para a sua meta" com "Lance máximo + custos = investidos" e a nota de onde vêm os custos; na
+  venda direta, o preço pedido comparado, o lucro pelo preço pedido e a margem; a tabela do lance máximo traz a margem
+  em cada célula (substitui a tabela da margem, sem perder informação).
+- **"Como usar"** acompanha (as duas visões na venda direta, a régua, o "lance + custos", "Ver e editar a conta").
+
+**(2) Cenários e prazos.**
+- **Régua do "Meu lance":** dois traços finos no trilho, o **mínimo** (lance mínimo ou preço pedido, claro) e o
+  **máximo** (o seu lance máximo da célula escolhida, latão), com rótulos curtos embaixo ("mínimo R$ 150 mil",
+  "máximo R$ 167 mil"). Os rótulos nunca se sobrepõem nem saem da faixa (`arrumarRotulos` em
+  `src/components/simulador/marcas.ts`, com teste; medidos depois de desenhar, sem salto de layout). Conferido no
+  navegador de 360 a 1440 px nos quatro imóveis. Para o leitor de tela, o máximo está na ajuda do campo.
+- **"Considerado com despesas · base, 12 meses":** "R$ 210.000 seu lance + R$ 61.701 custos = R$ 271.701 investidos" e
+  o link "custos editáveis na conta abaixo ↓" (abre, rola e foca a conta). Mesmo desenho da conta do cartão.
+- **"Os % de venda são sobre":** embaixo do seletor, sempre à vista, seja qual for a base (avaliação, região ou o
+  valor informado): **"Avaliação da fonte R$ 350.000 · R$ 6.436/m²"** e **"Referência da região R$ 6.514/m² · cidade ·
+  leilões"** (nível rua, perto, bairro, cidade ou estado; fonte ITBI ou leilões). Sem a área, "R$/m²: área não
+  informada"; sem referência, "sem referência para este tipo de imóvel". Função pura `comparacaoVenda` (textos.ts).
+
+**(3) A conta linha a linha vem sempre fechada.**
+- Fechada: uma linha de resumo ("R$ 922.510 lance mínimo + R$ 268.911 custos = R$ 1.191.421 investidos" e o lucro) e o
+  botão **"Ver e editar a conta"**; com ajustes salvos, "conta ajustada"; com linhas tiradas, quais estão fora.
+- Aberta: tudo como antes (lápis, "Adicionar custo", "Fora da conta" com "Religar", "Restaurar tudo" com "Desfazer"); o
+  botão vira "Fechar a conta". Um só botão, de mostrar e esconder (`aria-expanded`, `aria-controls`): o "Editar a conta"
+  da rodada 5, que só ligava os lápis numa conta sempre à vista, foi absorvido por ele.
+- Os links "Editar custos ↓" e "custos editáveis na conta abaixo ↓" abrem a conta, trocam para a aba Conta no celular e
+  no tablet, rolam até o título (respeitando as barras fixas e o movimento reduzido) e põem o foco nele.
+- O estado aberto **não é guardado**: recarregar a página traz a conta fechada. O PDF continua com a conta inteira.
+
+**Testes e conferências (25/10/2026):**
+- Unidade: `lance-maximo.test.ts` (o lance máximo com cada custo editado, a decomposição à vista e a prazo, a venda
+  direta), `marcas.test.ts` (rótulos sem sobreposição em faixas de 240 a 330 px), `rodada6.test.ts` (cartão, tabela,
+  "Meu lance", "% de venda sobre" e conta fechada renderizados como o servidor entrega) e `editar-conta.test.ts`
+  (o botão novo); `simulador-v2.test.ts` atualizado (lance máximo no Detalhe da venda direta).
+- `tsc`, `eslint src`, `test:site` (todos passando) e `next build`.
+- Navegador (`next start` na porta 3361, Playwright): São Gonçalo (venda direta, `caixa-1444419640129`), um leilão SFI
+  (`caixa-1555533966293`, São Paulo), Leilões Judiciais (`lj-222141`) e o exemplo `/assinante/imovel/ex-alvo-sp#simulador`,
+  em 360, 390, 768, 1024 e 1440 px, nos dois temas: sem rolagem para o lado, conta fechada ao carregar e depois de
+  recarregar, os dois links abrindo, rolando e focando a conta (com a aba Conta no celular), rótulos da régua sem
+  sobreposição. PDF de São Gonçalo e do SFI (com um custo criado): resultado, tabela com a margem e a conta inteira.
+  Prints em `scratchpad/prints/r6-S/`.
+
+**Falta (decisões suas):**
+- [ ] **"Pague no máximo"** na venda direta (no leilão, "Dê no máximo"): se preferir o mesmo verbo nos dois, é uma
+  palavra.
+- [ ] **O que entra em "custos"** na conta "lance + custos = investidos": hoje sem a corretagem e o IR, que saem do
+  dinheiro da venda (assim o total bate com o "Dinheiro investido"). Se quiser "custos totais" com eles, é uma linha.
+
+**Falta (técnico):**
+- [x] Ao juntar com a frente da região (rodada 6): os rótulos de nível do simulador ficam num lugar só
+  (`nivelReferencia` em `src/lib/simulador/textos.ts`, já com "perto, até 1 km", e um nível desconhecido aparece como
+  vem, sem quebrar o tipo); conferir o seletor da base (`opcoesDaBase`, em `Matriz.tsx`), que a frente da região também
+  mexe. **Feito na integração** (ver "Rodada 6 · integração").
+- [ ] Celular de verdade: a rolagem suave até a conta com a barra de endereço que some e aparece.
+
+### Rodada 6 · simulador: revisão adversarial (25/10/2026)
+
+Um revisor tentou quebrar a frente S comparando com o pedido (itens 1 a 3): contas, clareza, régua, conta fechada e
+textos. As contas estavam certas: o lance máximo usa mesmo cada custo editado. A revisão conferiu também os jeitos de
+editar que o teste da frente não cobria: comissão e corretagem em reais, reserva em reais, ITBI sobre a avaliação, % de
+venda do cenário, IR isento, meses de IPTU e contas, juros, entrada e prazo do financiamento. Em todos, o número muda,
+a meta fecha no máximo e R$ 1 a mais já não fecha. A decomposição soma certo, à vista e a prazo. Os achados, todos
+corrigidos com teste:
+
+- **(alto) "Editar custos ↓" abria uma conta com outros números.** O cartão dizia "R$ 129.024 lance máximo + R$ 60.352
+  custos = R$ 189.376 investidos"; o link abria a conta no preço pedido ("R$ 25.100 + R$ 52.038 = R$ 77.138"). Quem
+  clica para ver os custos lê outros valores e conclui que o máximo não usa a conta. O mesmo acontecia nos quatro
+  imóveis, e no "Meu lance" com outro lance digitado.
+  - Agora cada link abre a conta no lance da conta ao lado dele: no lance máximo pelo cartão, no seu lance pelo "Meu
+    lance". A escolha aparece no "Lance usado na conta" do Detalhe e se desfaz ali.
+  - No navegador, os três números do cartão e os da conta aberta são iguais nos quatro imóveis, em 390 e 1440 px.
+  - Função `lanceDaContaPeloLink` (`src/lib/simulador/estado.ts`). O teste confere a igualdade em três imóveis e
+    quatro estados.
+- **(médio) O máximo saía da escala da régua.** Num cenário personalizado acima do otimista (venda direta a 250%), o
+  máximo (R$ 388.175) passava do fim da régua (R$ 276.000) e a marca ficava presa na ponta.
+  - A régua agora vai até o maior entre 1,6 × o mínimo, a maior venda e o máximo com 10% de folga.
+  - Função `fimDaRegua` (`marcas.ts`), com teste.
+- **(baixo) "Desfazer" voltava sozinho.** Depois de "Restaurar tudo", fechar e reabrir a conta trazia de volta o
+  "Desfazer", e o comentário do código dizia o contrário. Agora fechar a conta encerra o "Desfazer".
+- **(baixo, poluição visual) O "Meu lance" repetia o mínimo.** A régua já mostra "mínimo R$ 210 mil" e logo abaixo vinha
+  "Lance mínimo atual: R$ 210.000". A frase agora fica só para o leitor de tela.
+- **(baixo) Nomes do lance.** O "Considerado com despesas" chama o lance de "lance mínimo" (ou "preço pedido") enquanto
+  for ele, como o resumo da conta fechada. Antes dizia "seu lance" para o mesmo número.
+- **(baixo, textos)**
+  - PDF: a nota da decomposição dizia que os custos eram "os da conta linha a linha (seção 03)". A seção 03 pode estar em
+    outro lance, então agora diz que são "os itens da conta [...] calculados sobre o lance máximo".
+  - "Como usar": o exemplo do lance máximo diz "investidos" à vista, como o cartão (antes, "no total").
+  - "Mais seguro o negócio" virou "mais folga a conta tem para o que der errado" (sem promessa).
+
+O que a revisão conferiu e não precisou mudar:
+- máximo abaixo do mínimo (rótulos na ordem certa, sem sobreposição);
+- meta impossível (só a marca do mínimo, o leitor de tela ouve "nenhum lance atinge");
+- meta de lucro zero;
+- teclado: o link leva o foco ao título da conta, Tab vai a "Fechar a conta", e fechar deixa o foco no botão;
+- o axe (WCAG 2.2 AA) na seção do simulador, com a conta fechada e aberta: sem violações;
+- celular partindo da aba Gráfico;
+- texto "não é recomendação" à vista.
+
+**Testes:** `lance-maximo.test.ts` (6 custos e 4 barateamentos a mais, financiamento, os links), `marcas.test.ts`
+(`fimDaRegua`) e `rodada6.test.ts` (nomes do lance, ajuda do campo, régua com o máximo dentro). Navegador em
+`next start` na porta 3371, nos 4 imóveis, de 360 a 1440 px e nos dois temas. Prints em `scratchpad/prints/r6-S-rev/`.
+
+**Falta (decisões suas), além das duas da frente S:**
+- [ ] Se preferir que "Editar custos ↓" **não** mude o lance da conta (ela ficaria no lance mínimo, com outros números
+  que os do cartão), é uma linha (`abrirConta` em `Simulador.tsx`).
+
+### Rodada 6 · região (frente R): raio de 1 km, o aviso de rua e bairro e os cartões dos portais (25/10/2026)
+
+Pedido do dono (pontos 4 e 5): avisar que o ideal é comparar por rua e bairro; mais imóveis na conta do m²; "veja
+anúncios" mais interativo. Ajustes finos: nada foi tirado da seção.
+
+**O que mudou na página do imóvel (e no PDF)**
+- **O aviso (decisão 4):** "O ideal é comparar com a mesma rua ou o mesmo bairro. Só cidade ou estado é uma comparação
+  fraca: use com cuidado."
+  - Em **destaque** (caixa na cor de atenção) quando as frases da seção comparam só com a cidade ou o estado: a
+    referência principal e, quando ela é o ITBI, a segunda linha (a média dos leilões). Diz o porquê ("Na base há só 1
+    casa em leilão no bairro Tribobo e 1 a até 1 km; o mínimo é 5"; com 3 ou 4 na rua, "só 4 apartamentos em leilão na
+    mesma rua, …"; com poucas compras do ITBI no bairro, "Na prefeitura (ITBI), só 8 compras registradas no bairro; o
+    mínimo é 10") e leva aos anúncios ("Ver anúncios nos portais ↓"). No exemplo fictício, sem o porquê. Na base real:
+    **6.792 imóveis** com o aviso em destaque (revisão abaixo).
+  - **Discreto** (uma linha com o ícone de informação) nos outros casos.
+  - O PDF repete as duas formas (a caixa com a borda de atenção, ou a linha pequena).
+- **Raio de 1 km (decisão 5):** o nível **"Até 1 km"** entre a rua e o bairro (ordem: rua → até 1 km → bairro → cidade
+  → estado), na tabela, no gráfico, na frase ("está 8% abaixo da média num raio de 1 km") e no PDF.
+  - Só imóveis do mesmo tipo e da mesma cidade, com a posição no número ou na rua **dos dois lados** (as coordenadas do
+    instantâneo); posição no bairro ou no centro da cidade erra por quilômetros e não entra.
+  - Amostra mínima igual à do bairro (5), média sem os 10% de cada ponta, como os outros recortes.
+  - O raio com os mesmos imóveis da rua não se repete ("os mesmos imóveis da rua").
+- **Quantos imóveis entraram em cada nível:** "Até 1 km · deste imóvel: 12 casas", "5 casas"; abaixo do mínimo, "só 2 casas (mínimo
+  5)" ou "nenhuma outra casa" (antes era "sem dados suficientes"); "posição deste imóvel aproximada" quando o raio não se
+  aplica. A descrição da seção agora diz que **os anúncios dos portais não entram na conta** (resposta à pergunta 5: a
+  conta usa só os imóveis em leilão da base e o ITBI; o anúncio é preço pedido, não pago).
+- **Cartões dos portais (5b):** cada portal virou um cartão com a marca de cor (sigla desenhada no site, sem logotipo
+  baixado e sem foto), o nome, o selo do nível ("Mesma rua", "Mesmo bairro", "Na cidade"), hover e foco visíveis, área de
+  toque de 56 px e nova aba. Em cima, o resumo dos critérios (tipo, quartos, área ± 20% e faixa de preço ± 20% da
+  avaliação). Embaixo, discreto: "As fotos e o preço pedido ficam no portal: a Luneta só monta a busca e não copia
+  anúncios." O seletor Rua | Bairro | Cidade continua. **Mini mapa: não entrou** (seria um segundo mapa WebGL na mesma
+  página, que já tem o da localização: pesaria para pouco ganho).
+- **No Lente** a região continua travada; as contagens por nível (`amostrasLeiloes`) também não saem do servidor
+  (teste em `pagina.test.ts`).
+
+**Números do raio na base real** (instantâneo de 08/10/2026, 21.230 imóveis; `scratchpad/r6r-medir.ts`)
+- **13.692 imóveis (64%)** têm a posição no número (10.481) ou na rua (3.211): só esses entram no raio.
+- **8.173 ganham a referência "Até 1 km"** (n ≥ 5); amostra mediana de 39 imóveis (metade entre 16 e 86).
+- **3.164 passam a ter uma referência mais próxima que o bairro** (não tinham a rua com 3 ou mais): 2.637 antes ficavam
+  no bairro e **527 saem da comparação só por cidade**. Por tipo: 1.686 casas, 1.466 apartamentos, 6 terrenos, 6
+  comerciais. Por estado: GO 1.228, RJ 822, SP 154, PE 154, RN 152, PB 133, PI 133, SE 118, RS 73, BA 55 e outros.
+- O recorte mais local de cada imóvel, antes → depois: rua 8.883 → 8.883; **até 1 km 0 → 3.164**; bairro 5.077 →
+  2.440; cidade 4.879 → 4.352; estado 2.341 → 2.341; nenhum 50 → 50. **Comparação fraca (só cidade ou estado): 7.220 →
+  6.693 imóveis.**
+- A frase principal e o simulador (a mesma referência) passam a usar o raio em **3.470 imóveis** (o ITBI com compras
+  suficientes continua na frente).
+- 4.609 imóveis com posição precisa têm menos de 5 vizinhos do mesmo tipo a até 1 km (2.137 nenhum): a tela diz quantos.
+- Desempenho: a grade (células de ~1,1 km por cidade e tipo) é montada uma vez no carregamento, em ~21 ms, e guardada; cada
+  consulta leva ~0,03 ms; a página do imóvel continua em ~4 ms no servidor.
+
+**Técnico (contrato)**
+- `ReferenciaM2.escopo` ganhou `"perto"` (tipo `EscopoM2` em `tipos.ts`); `Vizinhanca.amostrasLeiloes` (opcional) traz as
+  contagens. Ordem, mínimos e o "melhor recorte" ficam em `src/lib/catalogo/referencia.ts` (`ESCOPOS_M2`, `MINIMO_ITBI`,
+  `melhorRecorte`, `recorteFraco`, `NIVEL_CURTO`); o raio e a grade, em `vizinhanca.ts` (`imoveisPerto`, `gradePerto`).
+- **Para quem integrar a rodada 6:** todo mapa por recorte (`Record<…escopo, …>`) precisa da chave `perto`; o `tsc` acusa.
+  Mexi numa linha de `src/components/simulador/Matriz.tsx` (o rótulo "até 1 km" na base "Região" dos % de venda), trecho
+  que a frente do simulador também muda.
+
+**Revisão adversarial da frente R (25/10/2026): o que foi achado e corrigido**
+- **Média: o aviso ficava discreto com a frase comparando com a cidade (353 imóveis da base real).** O "melhor recorte"
+  contava qualquer recorte com média, inclusive os que só aparecem na tabela e não valem para a frase: 330 imóveis com 3
+  ou 4 na mesma rua (a frase pede 5; ex.: um apartamento em Campo Grande/MS, "3% abaixo da média da cidade") e 23 com
+  menos de 10 compras do ITBI na rua ou no bairro (ex.: um imóvel comercial na Praça da Bandeira, Rio, com 8). Agora o
+  aviso segue o recorte das frases (`melhorRecorte` em `referencia.ts`), e o motivo conta a rua e o ITBI com poucas
+  compras. Destaque: 6.439 → **6.792** imóveis. A decisão de Brás de Pina (ITBI na cidade e o raio na segunda linha:
+  discreto) continua.
+- **Baixa: tabela do celular.** Em 360–390 px, "em volta deste imóvel" saía cortado ("em volta dest…") e "6 casas a até
+  1 km" quebrava em três linhas. Agora a linha diz "Até 1 km · deste imóvel" e "6 casas"; e o "(mínimo 5)" não deixa mais
+  o "5)" sozinho na linha de baixo.
+- **Baixa: a grade do raio supunha a mesma latitude em toda a cidade.** Um imóvel do grupo geocodificado longe (outra
+  latitude) mudava o cosseno médio e a grade podia perder um vizinho a 990 m. Hoje a base real não tem esse caso (a grade
+  confere com a conta ponto a ponto nos 13.692 imóveis, zero diferenças), mas a consulta agora calcula as colunas pela
+  latitude do próprio imóvel (teste que falhava com a conta antiga).
+- **Baixa: contraste das siglas.** Zap (4,1:1), Viva Real (4,1:1) e Imovelweb (3,7:1) com a sigla branca ficaram um tom
+  mais escuros (4,8 a 4,9:1).
+- **Textos:** "dos dois lados" (ambíguo) virou "o endereço deste imóvel e o de cada comparado"; a nota avisa que o ponto
+  achado pela rua pode errar algumas centenas de metros (o desvio da base vai até 500 m na rua e 150 m no número); o
+  texto do plano Luneta (janela de convite) cita o raio; no exemplo fictício, o aviso sai sem "Na base há…".
+- **Conferido sem achado:** nenhum imóvel com posição no bairro, no CEP ou na cidade entra no raio (13.692 consultas na
+  base real); nenhum de outro tipo ou de outra cidade; o próprio imóvel nunca entra; a posição do instantâneo é a mesma
+  do geocode (0 diferenças acima de 50 m); distâncias em metros (haversine); a grade sai no carregamento; o Lente não
+  recebe nada da região (HTML, RSC e /relatorio); os cartões abrem em nova aba com `noopener noreferrer`, têm 56 px e
+  foco visível; sem rolagem lateral em 360–1440 nos dois temas; o link do aviso para os portais funciona.
+- Para quem integrar: `melhorRecorte` mudou de sentido (o recorte das frases, não o mais local com média);
+  `LUGAR_PERTO` agora é "deste imóvel"; `motivoSemLocal` aceita as referências como terceiro argumento.
+
+**Decisão sua (região)**
+- [ ] **ITBI só da cidade × leilões do bairro ou do raio:** quando a prefeitura tem compras suficientes só no nível da
+  cidade (ex.: uma casa em Brás de Pina, Rio), a frase usa o preço pago na cidade e os leilões a até 1 km vão para a
+  segunda linha; o aviso fica discreto, porque existe um recorte local. Alternativa: nesse caso, a frase usar o recorte
+  local dos leilões. Mantive a regra da rodada 3 (preço pago primeiro).
+
+**Próximos passos para ter mais imóveis comparados** (do maior ganho por esforço ao menor)
+1. **Geocodificar o ITBI pelo CNEFE / geocodebr** e comparar por raio também o preço pago. O ITBI de SP, POA, Recife e
+   Fortaleza traz rua e número (o Rio, trechos de rua); o geocodebr (pacote R do Ipea, licença MIT) usa o CNEFE do IBGE,
+   o mesmo cadastro do geocode da base. Rodar no Actions a cada coleta e publicar só agregados por célula (~250 m) e tipo,
+   nunca o endereço da transação. Ganho: os imóveis com posição precisa nessas cidades (Rio 2.205, SP 390, POA 175,
+   Fortaleza 80, Recife 25) passam a ter o preço pago a até 1 km. Custo: zero (Actions); ~2 dias de trabalho.
+2. **ITBI de 24 meses** (hoje 12): dobra a amostra da rua e do bairro. Corrigir o preço antigo pela variação do período
+   (IVG-R do Banco Central, nacional, ou o FipeZAP da cidade se autorizado). Custo: zero; é o período da coleta.
+3. **BH pelo PC do dono:** `node base/coleta-pc.mjs --etapas bh` (o portal da PBH recusa o Actions); 37 imóveis da base.
+4. **LAI nas capitais sem ITBI aberto:** Salvador (278 imóveis na base), Goiânia (126), Campinas (55), Niterói (47),
+   Brasília (42), Curitiba (22) e Florianópolis (4): 574 imóveis. Pedido pela Lei de Acesso (resposta em 20 dias,
+   prorrogáveis por 10), com o mesmo formato do ITBI aberto (data, rua, número, bairro, tipo, área, valor).
+5. **FipeZAP com autorização da Fipe:** preço anunciado por m² em ~56 cidades, mensal; serve de tendência e de ajuste do
+   ITBI antigo, não de comparação por rua. Custo: depende da Fipe (pedir; até lá, só o link do informe).
+6. **Licença ou parceria de dados de portal:** o **DataZAP** (Grupo OLX: Zap, Viva Real e OLX) vende avaliação
+   automática e dados por região a bancos (está na "Gestão de Garantias" da B3: mais de 300 cidades para apartamentos e
+   56 para casas). **Sem preço público** (pesquisa de 25/10/2026): é contrato sob consulta, como os da Loft e do
+   QuintoAndar. Vale pedir cotação quando houver assinantes; com a licença, dá para mostrar anúncios e fotos no site.
+7. **Por que não raspamos os portais:** os termos de uso do Zap, do Viva Real, da OLX e do QuintoAndar proíbem robôs; a
+   base de anúncios é protegida (Lei de Direitos Autorais, art. 7º, XIII, e concorrência desleal); os anúncios trazem
+   dados de pessoas (corretor, telefone: LGPD); há bloqueio anti-robô; e o anúncio é preço pedido, repetido entre
+   portais, não preço pago. O caminho legal e sem custo é o link de busca que já fazemos (e a licença do item 6).
+
+### Rodada 6 · integração: simulador + região num branch só (25/10/2026)
+
+As duas frentes (simulador, com a revisão adversarial, e região, com a revisão adversarial) juntas, sem tirar nada de
+nenhuma.
+- **Conflitos:** só este arquivo (as duas seções ficaram, uma depois da outra) e uma linha de
+  `src/components/simulador/Matriz.tsx` (o nome do nível da referência na base "Região" dos % de venda). Ficou o
+  `nivelReferencia` do simulador, que agora parte do `NIVEL_CURTO` da região (`src/lib/catalogo/referencia.ts`): o
+  simulador diz **"até 1 km"** como a seção da região (antes, "perto, até 1 km") e mantém "mesma rua".
+- **Checagens:** `tsc`, `eslint`, `test:site` (386 testes), `base:testar` (487) e `next build` passando.
+- **Navegador** (`next start` na porta 3363, `caixa-1444419640129`, venda direta em São Gonçalo/RJ; 360, 390, 768,
+  1024 e 1440 px, nos dois temas): o cartão "Seu lance máximo" com "lance + custos = investidos" e o preço pedido
+  comparado; a conta fechada e o "Editar custos ↓" abrindo, rolando e focando; a régua com "preço pedido" e "máximo"; o
+  "% de venda sobre" com a avaliação (R$ 251.000 · R$ 2.682/m²) e a região (R$ 3.024/m² · cidade · leilões, o mesmo
+  número da seção); a região com o aviso em destaque ("só 1 casa em leilão no bairro Tribobo e 1 a até 1 km") e os
+  cartões dos portais; sem rolagem para o lado e sem erro no console. Num imóvel com a referência no raio
+  (`caixa-0000010289442`, Praia Grande/SP): "R$ 5.943/m² · até 1 km · leilões" no simulador.
+- **PDF** (claro e escuro, com e sem um custo a mais): 7 páginas; o resultado com "lance máximo + custos = investidos",
+  o custo ajustado na conta e, na seção 05, o aviso em caixa e a linha "Até 1 km · deste imóvel". Prints e PDFs em
+  `scratchpad/prints/r6-int/`.
 
 ### Ler cada leilão com IA: é viável?
 
@@ -2204,6 +2710,8 @@ aparece na página como **placeholder visível** (borda tracejada em latão). Pa
 pelo valor real no arquivo de conteúdo.
 
 ## Pendências em aberto (12/10/2026)
+
+> Histórico. O que continua aberto daqui está no painel do topo (roteiro e decisões); o que foi resolvido está marcado.
 
 **Decisões suas** (detalhes e recomendação na análise: https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7)
 - [ ] Lançar em duas fases (reservas e e-mails sem cobrar; venda só com base real, login e pagamento)?
@@ -2278,10 +2786,11 @@ pelo valor real no arquivo de conteúdo.
   "só nossos".
 - [ ] Querido Diário: quando o trecho não trouxer o site do leiloeiro, ler o texto completo do diário (`txt_url`, já vem na
   resposta da API).
-- [ ] Integração da rodada 3 (dados × tela da região): quando a cidade tem ITBI mas o imóvel fica sem a referência por
+- [x] Integração da rodada 3 (dados × tela da região): quando a cidade tem ITBI mas o imóvel fica sem a referência por
   causa da área (apartamentos e imóveis comerciais de SP e Fortaleza), a tela deve mostrar `cobertura.semComparacao`, e
   não "a prefeitura não registra compras suficientes". As referências de ITBI repetem o `escopo` das da base (rua,
-  bairro, cidade): a `key` de lista na tela precisa levar a `fonte`.
+  bairro, cidade): a `key` de lista na tela precisa levar a `fonte`. **Feito:** a página e o relatório leem
+  `cobertura.semComparacao`, e as linhas do ITBI ficam num grupo próprio da tabela (as chaves não se repetem).
 - [ ] ITBI: rua de nome próprio repetido em bairros diferentes da mesma cidade (duas "Rua São José" em SP) soma as duas;
   levar o bairro de cada rua no `agregar.py` e casar rua + bairro quando a rua aparecer em bairros distantes. BH (403
   fora do Brasil: pronto para rodar no PC do dono, `node base/coleta-pc.mjs --etapas bh`) e as licenças de SP, Rio e POA continuam
