@@ -81,13 +81,14 @@ export function normalizarMatricula(matricula: string): string | null {
 
 /**
  * Identifica o cartório pelo número do ofício ("6º Cartório de Registro de Imóveis",
- * "Ofício: 01", "2º RI") ou "u" quando o texto não traz número (cartório único da comarca).
+ * "Ofício: 01", "2º RI", "6º Oficial de Registro de Imóveis", como os de São Paulo se chamam)
+ * ou "u" quando o texto não traz número (cartório único da comarca).
  */
 export function normalizarCartorio(cartorio: string | null | undefined): string {
   if (!cartorio) return "u";
   const texto = normalizarTexto(cartorio);
-  const numero = /(\d{1,2})\s*(?:º|o|ª|a)?\s*(?:oficio|cartorio|ri\b|cri\b|registro|serventia|circunscricao|zona)/.exec(texto)
-    ?? /(?:oficio|cartorio|registro|cri|ri)\D{0,30}?(\d{1,2})(?!\d)/.exec(texto)
+  const numero = /(\d{1,2})\s*(?:º|o|ª|a)?\s*(?:oficio|oficial|cartorio|ri\b|cri\b|registro|serventia|circunscricao|zona)/.exec(texto)
+    ?? /(?:oficio|oficial|cartorio|registro|cri|ri)\D{0,30}?(\d{1,2})(?!\d)/.exec(texto)
     ?? /^\s*(\d{1,2})\s*$/.exec(texto);
   return numero?.[1] ? String(Number(numero[1])) : "u";
 }

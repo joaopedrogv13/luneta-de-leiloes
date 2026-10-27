@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://luneta-de-leiloes.vercel.app/contratos/leiloeiros/v1/relatorio-leiloeiros.schema.json",
+  "title": "Relatório por leiloeiro (para o site da Luneta, versão 1)",
+  "description": "Quantos imóveis temos de cada leiloeiro, a qualidade dos dados e a saúde do coletor. Gerado por base/leiloeiros/relatorio.ts a partir da base (origem base) ou de um JSONL (origem jsonl). Percentuais são inteiros de 0 a 100 sobre os ativos, ou null sem ativos.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formato", "versao", "gerado_em", "origem", "criterio", "totais", "leiloeiros", "outras_fontes"],
+  "properties": {
+    "formato": { "const": "luneta-relatorio-leiloeiros" },
+    "versao": { "const": 1 },
+    "gerado_em": { "type": "string", "format": "date-time" },
+    "origem": { "enum": ["base", "jsonl"], "description": "base = banco da Luneta (o que o site mostra); jsonl = um arquivo dos coletores, antes de importar." },
+    "criterio": { "type": "string", "description": "O que conta como ativo, em uma frase." },
+    "totais": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["leiloeiros", "leiloeiros_com_ativos", "ativos", "leiloes_ativos", "ativos_todas_as_fontes", "por_saude"],
+      "properties": {
+        "leiloeiros": { "type": "integer", "minimum": 0, "description": "Leiloeiros com coletor (fontes ll_*)." },
+        "leiloeiros_com_ativos": { "type": "integer", "minimum": 0, "description": "Os que têm ao menos 1 imóvel ativo: é o número para \"[X] leiloeiros monitorados\"." },
+        "ativos": { "type": "integer", "minimum": 0, "description": "Imóveis ativos somando os leiloeiros." },
+        "leiloes_ativos": { "type": "integer", "minimum": 0, "description": "Leilões (eventos) com ao menos um imóvel ativo, somando os leiloeiros que informam o leilao_id." },
+        "ativos_todas_as_fontes": { "type": "integer", "minimum": 0, "description": "Leiloeiros + outras fontes (Caixa, Leilões Judiciais...)." },
+        "por_saude": { "$ref": "#/$defs/contagem" }
+      }
+    },
+    "leiloeiros": {
+      "type": "array",
+      "description": "Um por leiloeiro, do que tem mais ativos para o que tem menos.",
+      "items": { "$ref": "#/$defs/leiloeiro" }
+    },
+    "outras_fontes": {
+      "type": "array",
+      "description": "Fontes que não são coletor de leiloeiro (Caixa, agregadores). Num agregador, os leiloeiros citados nos lotes.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fonte_id", "nome", "ativos", "leiloeiros_citados", "principais_leiloeiros"],
+        "properties": {
+          "fonte_id": { "type": "string" },
+          "nome": { "type": "string" },
+          "ativos": { "type": "integer", "minimum": 0 },
+          "leiloeiros_citados": { "type": "integer", "minimum": 0, "description": "Nomes de leiloeiro distintos nos ativos (0 quando a fonte não informa)." },
+          "principais_leiloeiros": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["nome", "ativos"],
+              "properties": { "nome": { "type": "string" }, "ativos": { "type": "integer", "minimum": 1 } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "contagem": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "pct": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+    "data": { "type": ["string", "null"], "format": "date-time" },
+    "leiloeiro": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slug", "nome", "site", "plataforma", "fonte_id", "prefixo_id_site", "ativos", "leiloes_ativos", "situacao", "por_uf", "por_tipo", "por_modalidade", "por_natureza", "qualidade", "repetidos_caixa", "coleta"],
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "nome": { "type": "string", "minLength": 1 },
+        "site": { "type": ["string", "null"] },
+        "plataforma": { "type": ["string", "null"], "description": "A mais frequente nos lotes." },
+        "fonte_id": { "type": "string", "pattern": "^ll_[a-z0-9_]+$" },
+        "prefixo_id_site": { "type": "string", "pattern": "^ll-[a-z0-9-]+$" },
+        "ativos": { "type": "integer", "minimum": 0, "description": "Imóveis no site: situação ativa, com lance e sem praça vencida há mais de 1 dia." },
+        "leiloes_ativos": { "type": ["integer", "null"], "minimum": 0, "description": "Leilões (eventos, pelo leilao_id) com ao menos um imóvel ativo; null quando o coletor não informa o leilao_id." },
+        "situacao": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ativos_na_fonte", "encerrados", "removidos", "praca_vencida", "sem_lance"],
+          "properties": {
+            "ativos_na_fonte": { "type": "integer", "minimum": 0, "description": "Situação ativa na fonte (inclui os que não aparecem por praça vencida ou sem lance)." },
+            "encerrados": { "type": "integer", "minimum": 0, "description": "Vendidos, encerrados, suspensos e cancelados." },
+            "removidos": { "type": ["integer", "null"], "minimum": 0, "description": "Sumiram de uma carga completa (só na origem base)." },
+            "praca_vencida": { "type": "integer", "minimum": 0, "description": "Ativos na fonte com a praça vencida há mais de 1 dia: o coletor não está atualizando a situação." },
+            "sem_lance": { "type": "integer", "minimum": 0, "description": "Ativos na fonte sem lance mínimo: não aparecem no site." }
+          }
+        },
+        "por_uf": { "type": "object", "propertyNames": { "pattern": "^[A-Z]{2}$" }, "additionalProperties": { "type": "integer", "minimum": 1 } },
+        "por_tipo": { "type": "object", "propertyNames": { "enum": ["apartamento", "casa", "terreno", "comercial", "rural", "vaga", "outro"] }, "additionalProperties": { "type": "integer", "minimum": 1 } },
+        "por_modalidade": { "type": "object", "propertyNames": { "enum": ["leilao", "venda_direta", "venda_online", "licitacao_aberta", "outro"] }, "additionalProperties": { "type": "integer", "minimum": 1 } },
+        "por_natureza": { "type": "object", "propertyNames": { "enum": ["judicial", "extrajudicial", "nao_informada"] }, "additionalProperties": { "type": "integer", "minimum": 1 } },
+        "qualidade": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["com_foto_pct", "com_edital_pct", "com_avaliacao_pct", "com_area_pct", "com_endereco_completo_pct", "com_praca_datada_pct"],
+          "properties": {
+            "com_foto_pct": { "$ref": "#/$defs/pct" },
+            "com_edital_pct": { "$ref": "#/$defs/pct" },
+            "com_avaliacao_pct": { "$ref": "#/$defs/pct" },
+            "com_area_pct": { "$ref": "#/$defs/pct", "description": "Com alguma área (privativa, total ou terreno)." },
+            "com_endereco_completo_pct": { "$ref": "#/$defs/pct", "description": "Com logradouro e número (ou unidade): dá para achar o imóvel e deduplicar pelo endereço." },
+            "com_praca_datada_pct": { "$ref": "#/$defs/pct", "description": "Com a data da praça em vigor." }
+          }
+        },
+        "repetidos_caixa": { "type": ["integer", "null"], "minimum": 0, "description": "Ativos que são o mesmo imóvel de um ativo da Caixa (matrícula ou endereço); null na origem jsonl." },
+        "coleta": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ultima_em", "ultima_valida_em", "gerado_na_fonte_em", "completa", "saude", "frequencia", "dias_sem_coleta_valida", "erro"],
+          "properties": {
+            "ultima_em": { "$ref": "#/$defs/data", "description": "Última importação (na base) ou fim da coleta (no jsonl)." },
+            "ultima_valida_em": { "$ref": "#/$defs/data", "description": "Última importação gravada (sucesso ou parcial)." },
+            "gerado_na_fonte_em": { "$ref": "#/$defs/data", "description": "Quando o coletor leu o site, na última importação gravada." },
+            "completa": { "type": ["boolean", "null"], "description": "A última carga gravada tirou do site o que sumiu." },
+            "saude": { "enum": ["ok", "parcial", "quebrado", "bloqueado", "desconhecida"] },
+            "frequencia": { "enum": ["diaria", "semanal", "quinzenal", "mensal", "manual", "irregular", "desconhecida"], "description": "Declarada pelo coletor ou, sem declaração, medida pelos intervalos das importações." },
+            "dias_sem_coleta_valida": { "type": ["integer", "null"], "minimum": 0 },
+            "erro": { "type": ["string", "null"] }
+          }
+        }
+      }
+    }
+  }
+}

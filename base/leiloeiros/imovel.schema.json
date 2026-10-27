@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://luneta-de-leiloes.vercel.app/contratos/leiloeiros/v1/imovel.schema.json",
+  "title": "Lote de imóvel de um leiloeiro (linha do JSONL da Luneta, versão 1)",
+  "description": "Uma linha do arquivo JSONL (UTF-8) que os coletores dos leiloeiros entregam à Luneta. null = a fonte não informa; nunca chute. Documentação campo a campo: base/leiloeiros/CONTRATO.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["registro", "versao_contrato", "id", "leiloeiro", "url", "situacao", "tipo", "titulo", "endereco", "pracas", "modalidade", "documentos", "fotos", "controle"],
+  "properties": {
+    "registro": { "const": "imovel", "description": "Tipo da linha." },
+    "versao_contrato": { "const": 1, "description": "Versão deste contrato." },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+$",
+      "maxLength": 71,
+      "description": "<slug-do-leiloeiro>:<id-do-lote>. O id do lote é estável (não muda entre coletas) e só tem letras minúsculas e dígitos (tire barras, hífens e espaços: 2026/001-A → 2026001a). → base: fonte ll_<slug>, imovel.id_na_fonte = id do lote; site: ll-<slug>-<lote>."
+    },
+    "leiloeiro": { "$ref": "#/$defs/leiloeiro" },
+    "plataforma": { "$ref": "#/$defs/texto80", "description": "Plataforma do site quando ela atende vários leiloeiros (ex.: \"Leilão PRO\", \"SOLEON\", \"V-Lance\", \"Superbid\"); null se o site é próprio. → extras.plataforma." },
+    "comitente": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["nome", "tipo"],
+      "description": "Quem vende: banco, vara/tribunal, órgão público ou empresa. NUNCA pessoa física (mande null). → imovel.comitente, extras.comitente_tipo.",
+      "properties": {
+        "nome": { "type": "string", "minLength": 2, "maxLength": 200, "description": "Ex.: \"Banco Bradesco S.A.\", \"TJSP – 2ª Vara Cível de Campinas\"." },
+        "tipo": { "enum": ["banco", "judicial", "orgao_publico", "empresa", "outro"] }
+      }
+    },
+    "url": { "type": "string", "format": "uri", "maxLength": 1000, "description": "Página pública do lote (é para onde o site leva o usuário). → imovel.url." },
+    "leilao_id": { "$ref": "#/$defs/texto80", "description": "Id do leilão (evento) que contém o lote, na fonte. → extras.leilao_id." },
+    "leilao_titulo": { "$ref": "#/$defs/texto500", "description": "Título do leilão (evento), como a fonte escreve. → textos[origem=titulo_leilao] (as tags de praça e de cota-parte leem)." },
+    "lote_numero": { "$ref": "#/$defs/texto80", "description": "Número do lote no leilão (\"3\", \"003\"). → extras.lote_numero." },
+    "situacao": {
+      "enum": ["ativo", "suspenso", "encerrado", "vendido", "cancelado"],
+      "description": "ativo = aceita lance ou proposta agora (ou em praça futura). Os outros tiram o lote do site. → imovel.status (ativo → ativo; o resto → encerrado), extras.situacao."
+    },
+    "situacao_fonte": { "$ref": "#/$defs/texto80", "description": "Rótulo original da situação (\"Arrematado\", \"Em loteamento\", \"Adiado\"). → extras.status_fonte." },
+    "tipo": { "enum": ["apartamento", "casa", "terreno", "comercial", "rural", "vaga", "outro"], "description": "Tipo normalizado. → imovel.tipo (no site, vaga vira outro)." },
+    "tipo_fonte": { "$ref": "#/$defs/texto80", "description": "Tipo como a fonte escreve (\"Apartamento Duplex\", \"Galpão\"). → extras.tipo_fonte." },
+    "titulo": { "type": "string", "minLength": 3, "maxLength": 300, "description": "Título do lote. → imovel.titulo (o núcleo tira HTML e mascara dados pessoais)." },
+    "descricao": { "$ref": "#/$defs/texto20000", "description": "Descrição completa do lote, em texto bruto (sem HTML de layout). É o que as regras de tag leem. → imovel.descricao." },
+    "observacoes": { "$ref": "#/$defs/texto20000", "description": "Observações, avisos e condições específicas do lote que não estão na descrição. → textos[origem=observacoes]." },
+    "endereco": { "$ref": "#/$defs/endereco" },
+    "lat": { "type": ["number", "null"], "minimum": -34, "maximum": 6, "description": "Latitude, só se a fonte publicar (nunca geocodifique no coletor). → imovel.lat." },
+    "lon": { "type": ["number", "null"], "minimum": -74, "maximum": -28, "description": "Longitude, só se a fonte publicar. → imovel.lon." },
+    "precisao_geo": { "enum": ["exata", "rua", "cep", "bairro", "cidade", null], "description": "Obrigatória quando há lat/lon. → imovel.precisao_geo." },
+    "area_privativa": { "$ref": "#/$defs/area", "description": "Área privativa (útil) em m². → imovel.area_privativa." },
+    "area_total": { "$ref": "#/$defs/area", "description": "Área total (construída) em m². → imovel.area_total." },
+    "area_terreno": { "$ref": "#/$defs/area", "description": "Área do terreno em m² (hectare × 10.000). → imovel.area_terreno." },
+    "quartos": { "type": ["integer", "null"], "minimum": 0, "maximum": 500, "description": "Dormitórios (suíte conta). → imovel.quartos." },
+    "vagas": { "type": ["integer", "null"], "minimum": 0, "maximum": 5000, "description": "Vagas de garagem. → imovel.vagas." },
+    "avaliacao": { "$ref": "#/$defs/dinheiro", "description": "Valor de avaliação, em reais. null se a fonte não publica (nunca use o lance da 1ª praça como avaliação sem a fonte dizer). → imovel.valor_avaliacao." },
+    "lance_minimo": { "$ref": "#/$defs/dinheiro", "description": "Lance mínimo vigente agora (o da praça em vigor) ou o preço da venda direta. Se null, a Luneta usa o valor_minimo da praça atual. Sem lance, o lote não aparece no site. → imovel.preco." },
+    "lance_atual": { "$ref": "#/$defs/dinheiro", "description": "Maior lance já dado, se a fonte mostra. → extras.lance_atual." },
+    "incremento": { "$ref": "#/$defs/dinheiro", "description": "Incremento mínimo entre lances. → extras.incremento." },
+    "comissao_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Comissão do leiloeiro em % sobre o lance (5 = 5%). → extras.comissao_pct e a frase que a tag \"Custos extras altos\" lê." },
+    "pracas": {
+      "type": "array",
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/praca" },
+      "description": "Praças (leilões) do lote, em ordem. Venda direta ou praça única: uma praça com numero 0. Lista vazia se a fonte não informa. → tabela praca."
+    },
+    "praca_atual": { "type": ["integer", "null"], "minimum": 0, "maximum": 3, "description": "Número da praça em vigor (precisa estar em pracas). null = a Luneta deduz pela situação e pelas datas das praças. → imovel.praca_atual." },
+    "modalidade": { "enum": ["leilao", "venda_direta", "venda_online", "licitacao_aberta", "outro"], "description": "leilao = com praças; venda_direta = preço fixo, vence a primeira proposta; venda_online = disputa com prazo, sem praças; licitacao_aberta = concorrência com data. → imovel.modalidade." },
+    "modalidade_fonte": { "$ref": "#/$defs/texto80", "description": "Rótulo original (\"Leilão Extrajudicial - Lei 9.514/97\", \"Venda Direta\"). Aparece no site. → imovel.modalidade_fonte." },
+    "natureza": { "enum": ["judicial", "extrajudicial", null], "description": "judicial = ordem de juiz (processo); extrajudicial = banco/credor fiduciário, empresa, órgão. → imovel.judicial." },
+    "processo": {
+      "type": ["string", "null"],
+      "pattern": "^\\d{7}-\\d{2}\\.\\d{4}\\.\\d\\.\\d{2}\\.\\d{4}$",
+      "description": "Só o número do processo no padrão CNJ (NNNNNNN-DD.AAAA.J.TR.OOOO), sem nomes das partes. É público e não é mascarado. → imovel.numero_processo."
+    },
+    "pagamento": { "$ref": "#/$defs/pagamento" },
+    "ocupacao": { "$ref": "#/$defs/ocupacao" },
+    "debitos": { "$ref": "#/$defs/debitos" },
+    "documentos": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/documento" },
+      "description": "Links dos documentos do lote (não baixe). → tabela documento (processo vira tipo outro)."
+    },
+    "fotos": {
+      "type": "array",
+      "maxItems": 60,
+      "items": { "$ref": "#/$defs/foto" },
+      "description": "URLs das fotos na fonte, a capa primeiro (não baixe nem re-hospede). → tabela foto (origem ficha)."
+    },
+    "registro_imovel": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Registro do imóvel. Matrícula e cartório alimentam a deduplicação com a Caixa e com outros leiloeiros.",
+      "properties": {
+        "matricula": { "type": ["string", "null"], "maxLength": 120, "description": "Número da matrícula como a fonte escreve (\"123.456\"). Várias: separe por vírgula. → imovel.matricula." },
+        "cartorio": { "type": ["string", "null"], "maxLength": 200, "description": "Cartório com o número do ofício (\"6º Oficial de Registro de Imóveis de São Paulo\"). → imovel.cartorio." },
+        "inscricao_municipal": { "type": ["string", "null"], "maxLength": 80, "description": "Inscrição imobiliária (IPTU). → extras.inscricao_imobiliaria." }
+      }
+    },
+    "extras": {
+      "type": ["object", "null"],
+      "maxProperties": 30,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+      "additionalProperties": { "type": ["string", "number", "boolean", "null"], "maxLength": 500 },
+      "description": "Campos simples da fonte sem lugar neste contrato (texto, número, boolean ou null; nada que mude a cada coleta, como visitas). → imovel.extras com o prefixo x_."
+    },
+    "controle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coletado_em", "versao_coletor"],
+      "properties": {
+        "coletado_em": { "type": "string", "format": "date-time", "description": "Quando este lote foi lido na fonte, ISO 8601 com fuso (\"2026-10-26T22:05:00-03:00\")." },
+        "versao_coletor": { "type": "string", "minLength": 1, "maxLength": 40, "description": "Versão do coletor que gerou a linha (\"alfa-1.3.0\")." },
+        "hash": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "Recomendado: SHA-256 (hex minúsculo) do conteúdo do lote sem o bloco controle, para o coletor saber o que mudou." }
+      }
+    }
+  },
+  "$defs": {
+    "texto80": { "type": ["string", "null"], "maxLength": 80 },
+    "texto500": { "type": ["string", "null"], "maxLength": 500 },
+    "texto20000": { "type": ["string", "null"], "maxLength": 20000 },
+    "dinheiro": { "type": ["number", "null"], "minimum": 0, "maximum": 1000000000000, "description": "Reais, número com ponto decimal (1234567.89), nunca texto (\"R$ 1.234.567,89\")." },
+    "area": { "type": ["number", "null"], "minimum": 0, "maximum": 1000000000, "description": "Metros quadrados." },
+    "leiloeiro": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slug", "nome", "site"],
+      "description": "O leiloeiro oficial (profissional público). Igual em todas as linhas dele. → fonte (uma por leiloeiro), imovel.leiloeiro, extras.site_leiloeiro.",
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "minLength": 2, "maxLength": 30, "description": "Identificador estável, minúsculas e hífens (\"alfa-leiloes\"). Nunca muda: é parte do id no site." },
+        "nome": { "type": "string", "minLength": 2, "maxLength": 120, "description": "Nome público do leiloeiro ou da casa de leilões, como aparece no site (é o nome que a Luneta mostra)." },
+        "site": { "type": "string", "format": "uri", "maxLength": 300, "description": "Página inicial do leiloeiro." },
+        "matricula_junta": { "type": ["string", "null"], "maxLength": 80, "description": "Matrícula na Junta Comercial, se o site informa (\"JUCESP nº 1.234\"). → extras.leiloeiro_junta." }
+      }
+    },
+    "endereco": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cidade", "uf"],
+      "description": "Endereço por campos, e o texto original. Sem nome de dono, ocupante ou parte. → imovel.endereco (logradouro, número e complemento juntos; sem logradouro, o texto), bairro, cidade, uf, cep.",
+      "properties": {
+        "texto": { "type": ["string", "null"], "maxLength": 500, "description": "Endereço como a fonte escreve, inteiro." },
+        "logradouro": { "type": ["string", "null"], "maxLength": 200, "description": "\"Rua das Flores\", \"Av. Brasil\"." },
+        "numero": { "type": ["string", "null"], "maxLength": 20, "description": "\"100\", \"100-A\"; null para sem número (não escreva \"s/n\")." },
+        "complemento": { "type": ["string", "null"], "maxLength": 120, "description": "\"Apto 31, Bloco B\", \"Lote 5, Quadra 3\"." },
+        "bairro": { "type": ["string", "null"], "maxLength": 120 },
+        "cidade": { "type": "string", "minLength": 2, "maxLength": 120, "description": "Nome do município como o IBGE escreve, de preferência com acento (\"São José dos Campos\")." },
+        "uf": { "enum": ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"], "description": "Sigla da UF." },
+        "cep": { "type": ["string", "null"], "pattern": "^\\d{5}-?\\d{3}$", "description": "8 dígitos, com ou sem hífen; null se a fonte não informa (CEP malformado derruba o lote)." }
+      }
+    },
+    "praca": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numero", "data", "valor_minimo"],
+      "properties": {
+        "numero": { "type": "integer", "minimum": 0, "maximum": 3, "description": "0 = praça única ou venda direta; 1 e 2 = 1ª e 2ª praça; 3 = 3ª (raro)." },
+        "data": { "type": ["string", "null"], "format": "date-time", "description": "Data e hora de início (ou de encerramento da disputa), ISO 8601 com fuso: \"2026-11-10T14:00:00-03:00\"." },
+        "valor_minimo": { "$ref": "#/$defs/dinheiro", "description": "Lance mínimo desta praça, em reais." },
+        "situacao": { "enum": ["futura", "aberta", "deserta", "arrematada", "encerrada", "suspensa", "cancelada", null], "description": "Situação desta praça na fonte (deserta = sem lances; a 2ª entra em vigor). → extras.praca_N_situacao." }
+      }
+    },
+    "pagamento": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Condições de pagamento. Cada campo null quando a fonte não diz.",
+      "properties": {
+        "a_vista": { "type": ["boolean", "null"], "description": "Aceita pagamento à vista. → extras.aceita_a_vista." },
+        "parcelamento": { "type": ["boolean", "null"], "description": "Parcelamento do lance pelo leiloeiro ou pelo juízo (art. 895 do CPC). Não é financiamento. → imovel.aceita_parcelamento." },
+        "parcelas_max": { "type": ["integer", "null"], "minimum": 1, "maximum": 600, "description": "Número máximo de parcelas. → extras.nu_parcelas (o site monta a frase de pagamento)." },
+        "entrada_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Entrada mínima em % (25 = 25%). → extras.vl_percentualentrada." },
+        "indice_correcao": { "type": ["string", "null"], "maxLength": 40, "description": "Índice das parcelas (\"IPCA\", \"INPC\"). → extras.indice_correcao." },
+        "financiamento": { "type": ["boolean", "null"], "description": "Aceita financiamento bancário. → imovel.aceita_financiamento (tag \"Aceita financiamento\")." },
+        "fgts": { "type": ["boolean", "null"], "description": "Aceita FGTS. → imovel.aceita_fgts." },
+        "texto": { "type": ["string", "null"], "maxLength": 5000, "description": "Condições como a fonte escreve. → textos[origem=pagamento]." }
+      }
+    },
+    "ocupacao": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["situacao", "origem"],
+      "description": "Ocupação declarada. origem campo = a fonte tem um campo próprio (\"Situação: Ocupado\"); texto = achada na descrição (mande o trecho em texto).",
+      "properties": {
+        "situacao": { "enum": ["ocupado", "desocupado", null] },
+        "origem": { "enum": ["campo", "texto", null] },
+        "texto": { "type": ["string", "null"], "maxLength": 2000, "description": "Trecho da fonte sobre a ocupação, SEM nome de ocupante. → textos[origem=ocupacao]." }
+      }
+    },
+    "debito": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["valor", "responsavel"],
+      "properties": {
+        "valor": { "$ref": "#/$defs/dinheiro", "description": "Valor declarado da dívida, em reais (null se a fonte não diz o valor)." },
+        "responsavel": { "enum": ["arrematante", "pago_com_o_lance", "vendedor", null], "description": "Quem paga: o arrematante; o dinheiro do lance (sub-rogação no preço, CTN art. 130, CPC art. 908); ou o vendedor." }
+      }
+    },
+    "debitos": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Dívidas DECLARADAS pela fonte (não as possíveis). → extras.debito_* e uma frase para as tags de dívida.",
+      "properties": {
+        "iptu": { "$ref": "#/$defs/debito" },
+        "condominio": { "$ref": "#/$defs/debito" },
+        "texto": { "type": ["string", "null"], "maxLength": 5000, "description": "Trecho da fonte sobre dívidas e quem paga. → textos[origem=debitos]." }
+      }
+    },
+    "documento": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tipo", "url"],
+      "properties": {
+        "tipo": { "enum": ["edital", "matricula", "laudo", "avaliacao", "processo", "outro"] },
+        "titulo": { "type": ["string", "null"], "maxLength": 200, "description": "Rótulo do link na fonte, sem nomes de partes." },
+        "url": { "type": "string", "format": "uri", "maxLength": 1000 }
+      }
+    },
+    "foto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "url": { "type": "string", "format": "uri", "maxLength": 1000 },
+        "ordem": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000, "description": "0 = capa." }
+      }
+    }
+  }
+}

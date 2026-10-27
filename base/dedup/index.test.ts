@@ -32,6 +32,10 @@ test("matrícula e cartório", () => {
   assert.equal(normalizarCartorio("6º Cartório de Registro de Imóveis de São Paulo"), "6");
   assert.equal(normalizarCartorio("Ofício: 01"), "1");
   assert.equal(normalizarCartorio("2º RI"), "2");
+  // São Paulo: "Oficial de Registro de Imóveis" (o nome usado pelos leiloeiros e pelos editais)
+  assert.equal(normalizarCartorio("6º Oficial de Registro de Imóveis de São Paulo"), "6");
+  assert.equal(normalizarCartorio("Oficial de Registro de Imóveis da 2ª Circunscrição"), "2");
+  assert.equal(normalizarCartorio("Oficial de Registro de Imóveis de Indaiatuba"), "u");
   assert.equal(normalizarCartorio("Cartório de Registro de Imóveis de Lagoa Santa"), "u");
   assert.equal(normalizarCartorio(null), "u");
 });

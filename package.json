@@ -16,6 +16,8 @@
     "base:fichas": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/fontes/caixa/aplicar-fichas.ts",
     "base:geocode": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/fontes/localizacao/aplicar.ts",
     "base:testar": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"base/**/*.test.ts\"",
+    "leiloeiros:validar": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/leiloeiros/validar.ts",
+    "leiloeiros:relatorio": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/leiloeiros/relatorio.ts",
     "coleta:pc": "node base/coleta-pc.mjs",
     "coleta:pc:fichas": "node base/coleta-pc.mjs --etapas fichas",
     "coleta:pc:bh": "node base/coleta-pc.mjs --etapas bh",

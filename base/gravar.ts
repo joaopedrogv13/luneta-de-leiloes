@@ -502,18 +502,26 @@ export function gravarImoveis(
     const vistos = new Set<string>([...porId.keys(), ...(opcoes.idsProtegidos ?? [])]);
     const candidatos = db
       .prepare(
-        `SELECT id, id_na_fonte, preco, valor_avaliacao, modalidade, praca_atual, gerado_na_fonte_em
+        `SELECT id, id_na_fonte, preco, valor_avaliacao, modalidade, praca_atual, gerado_na_fonte_em, data_praca
          FROM imovel WHERE fonte_id = ? AND status = 'ativo'${filtroUf}`,
       )
       .all(...parametrosEscopo)
       .filter((linha) => !vistos.has(String(linha.id_na_fonte)))
       .filter((linha) => !loteMaisAntigo(geradoEm, lerTexto(linha.gerado_na_fonte_em)));
+    // A trava conta só o que sumiu sem explicação: o lote cuja praça já passou (há mais de 1 dia) sumir
+    // é o esperado (o leilão aconteceu; num leiloeiro, um evento inteiro sai do site de uma vez) e ele
+    // já não aparece no site. Sem isso, o dia seguinte a um leilão grande travaria a remoção de vez.
+    const limiteVencida = agora.getTime() - 24 * 3600 * 1000;
+    const inesperados = candidatos.filter((linha) => {
+      const t = lerTexto(linha.data_praca) ? instanteDe(String(linha.data_praca)) : null;
+      return t === null || t >= limiteVencida;
+    });
     const limite = opcoes.maxFracaoRemocao ?? 0.5;
-    const fracao = ativosAntes > 0 ? candidatos.length / ativosAntes : 0;
-    if (candidatos.length >= 10 && fracao > limite) {
+    const fracao = ativosAntes > 0 ? inesperados.length / ativosAntes : 0;
+    if (inesperados.length >= 10 && fracao > limite) {
       resultado.remocao = "bloqueada";
       resultado.avisos.push(
-        `Remoção bloqueada: ${candidatos.length} de ${ativosAntes} ativos (${Math.round(fracao * 100)}%) sumiram, acima do limite de ${Math.round(limite * 100)}%. Confira a fonte; nada foi marcado como removido.`,
+        `Remoção bloqueada: ${inesperados.length} de ${ativosAntes} ativos (${Math.round(fracao * 100)}%) sumiram antes da data da praça, acima do limite de ${Math.round(limite * 100)}%. Confira a fonte; nada foi marcado como removido.`,
       );
       return;
     }

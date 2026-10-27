@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://luneta-de-leiloes.vercel.app/contratos/leiloeiros/v1/coleta.schema.json",
+  "title": "Coleta de um leiloeiro (linha do JSONL da Luneta, versão 1)",
+  "description": "Uma linha por leiloeiro em cada carga, de preferência antes dos lotes dele. Diz quando a coleta terminou, se a carga é completa e a saúde do coletor. Sem ela, nenhum lote do leiloeiro sai do site por ter sumido da carga. Documentação: base/leiloeiros/CONTRATO.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["registro", "versao_contrato", "leiloeiro", "coletado_em", "versao_coletor", "completa", "total_enviados", "saude"],
+  "properties": {
+    "registro": { "const": "coleta" },
+    "versao_contrato": { "const": 1 },
+    "leiloeiro": { "$ref": "#/$defs/leiloeiro" },
+    "plataforma": { "type": ["string", "null"], "maxLength": 80, "description": "Plataforma do site (\"Leilão PRO\", \"SOLEON\"...), ou null se o site é próprio." },
+    "metodo": { "enum": ["html", "json_interno", "api_documentada", "arquivo_oficial", null], "description": "Como o coletor lê o site. → fonte.acesso (html, endpoint_interno, api_documentada, arquivo_oficial)." },
+    "iniciado_em": { "type": ["string", "null"], "format": "date-time" },
+    "coletado_em": { "type": "string", "format": "date-time", "description": "Fim da coleta, ISO 8601 com fuso. → coleta.gerado_na_fonte_em; uma carga mais antiga que a última gravada é recusada." },
+    "versao_coletor": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "completa": { "type": "boolean", "description": "true = a carga traz TODOS os lotes de imóveis ativos do leiloeiro. Só assim o que sumiu sai do site (vira removido). Em dúvida, false." },
+    "total_na_fonte": { "type": ["integer", "null"], "minimum": 0, "description": "Quantos lotes de imóveis o site do leiloeiro diz ter (contador da página), para conferência." },
+    "total_enviados": { "type": "integer", "minimum": 0, "description": "Quantas linhas de imóvel deste leiloeiro vão nesta carga." },
+    "saude": { "enum": ["ok", "parcial", "quebrado", "bloqueado"], "description": "ok = leu tudo; parcial = leu uma parte (paginação falhou, tempo esgotado); quebrado = o site mudou e o coletor não acha os lotes; bloqueado = robots, 403/429 ou desafio anti-robô (o coletor parou, como deve)." },
+    "erro": { "type": ["string", "null"], "maxLength": 500, "description": "Mensagem curta do problema, sem segredos (token, senha, cookie)." },
+    "frequencia": { "enum": ["diaria", "semanal", "quinzenal", "mensal", "manual", null], "description": "Agenda do coletor deste leiloeiro." },
+    "extrai": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["fotos", "documentos", "ocupacao"],
+      "description": "O que o coletor sabe extrair deste site. fotos=false evita a tag \"Sem fotos\" falsa. Sem este bloco, a Luneta deduz pelos lotes da carga.",
+      "properties": {
+        "fotos": { "type": "boolean" },
+        "documentos": { "type": "boolean" },
+        "ocupacao": { "type": "boolean", "description": "O site tem campo próprio de ocupação." }
+      }
+    },
+    "robots": { "enum": ["permite", "proibe", "sem_robots", "nao_verificado", null], "description": "O robots.txt do site permite ler as páginas de lote?" },
+    "termos": { "enum": ["permitem", "proibem", "silenciosos", "nao_lidos", null], "description": "Os termos de uso do site permitem coleta automatizada?" }
+  },
+  "$defs": {
+    "leiloeiro": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slug", "nome", "site"],
+      "description": "O leiloeiro oficial (profissional público). Igual em todas as linhas dele. → fonte (uma por leiloeiro), imovel.leiloeiro, extras.site_leiloeiro.",
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "minLength": 2, "maxLength": 30, "description": "Identificador estável, minúsculas e hífens (\"alfa-leiloes\"). Nunca muda: é parte do id no site." },
+        "nome": { "type": "string", "minLength": 2, "maxLength": 120, "description": "Nome público do leiloeiro ou da casa de leilões, como aparece no site (é o nome que a Luneta mostra)." },
+        "site": { "type": "string", "format": "uri", "maxLength": 300, "description": "Página inicial do leiloeiro." },
+        "matricula_junta": { "type": ["string", "null"], "maxLength": 80, "description": "Matrícula na Junta Comercial, se o site informa (\"JUCESP nº 1.234\"). → extras.leiloeiro_junta." }
+      }
+    }
+  }
+}

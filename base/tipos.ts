@@ -360,4 +360,12 @@ export interface Conector<Bruto = unknown> {
   readonly maxFracaoRemocao?: number;
   coletar(opcoes: OpcoesColeta): AsyncIterable<Bruto>;
   normalizar(bruto: Bruto): RegistroNormalizado | null;
+  /**
+   * Conector que se desdobra em várias fontes, como `leiloeiros_arquivo` (uma fonte `ll_<slug>` por
+   * leiloeiro do arquivo). A CLI chama `desdobrar` e roda uma coleta por conector devolvido, cada uma
+   * com o próprio log, a própria remoção e a própria data de geração; o conector de origem não é
+   * coletado. Só lê a entrada (sem banco) e lança erro se ela não serve. `agora` é o relógio da coleta
+   * (para recusar data de coleta no futuro).
+   */
+  desdobrar?(opcoes: Pick<OpcoesColeta, "arquivo" | "log" | "sinal"> & { agora?: Date }): Promise<Conector[]>;
 }

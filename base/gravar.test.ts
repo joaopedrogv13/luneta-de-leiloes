@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Banco } from "./db.ts";
+import type { ImovelNormalizado } from "./tipos.ts";
 import { calcularDesconto, derivarPracaAtual, garantirFonte, gravarEditais, gravarImoveis, prepararImovel } from "./gravar.ts";
 import { carregarImoveis } from "./consultas.ts";
 import { bancoEmMemoria, conectorFalso, imovelExemplo, lote } from "./testes/apoio.ts";
@@ -166,6 +167,25 @@ test("trava de remoção: lista truncada não derruba a base", () => {
   assert.equal(Number(db.prepare("SELECT count(*) AS n FROM imovel WHERE status = 'ativo'").get()?.n), 40);
   const liberada = gravarImoveis(db, "falso", lote(40).slice(0, 10), { agora: T3, completa: true, maxFracaoRemocao: 0.8 });
   assert.equal(liberada.removidos, 30, "o conector pode subir o limite");
+});
+
+test("trava de remoção: o que sumiu depois da praça (leilão que já aconteceu) não conta para a trava", () => {
+  // 30 lotes de um leilão em 13/10 e 10 de um leilão em 10/11. No dia 15/10 o leiloeiro tira do site o leilão
+  // que aconteceu: 75% sumiram, mas todos com a praça vencida; a remoção segue.
+  const db = novoBanco();
+  const passado = (i: ImovelNormalizado) => ({ ...i, pracas: [{ numero: 0 as const, data: "2026-10-13T13:00:00.000Z", valor_minimo: 200000 }], praca_atual: 0 as const, modalidade: "leilao" as const });
+  const lotes = lote(40).map((i, k) => (k < 30 ? passado(i) : i));
+  gravarImoveis(db, "falso", lotes, { agora: T1, completa: true });
+  const depois = new Date("2026-10-15T12:00:00Z");
+  const r = gravarImoveis(db, "falso", lotes.slice(30), { agora: depois, completa: true });
+  assert.equal(r.remocao, "feita");
+  assert.equal(r.removidos, 30);
+  // e o que some antes da praça continua travando: 20 dos 40 restantes de outra fonte, com praça futura
+  garantirFonte(db, conectorFalso({ id: "outra", registros: () => [] }), T1);
+  gravarImoveis(db, "outra", lote(40), { agora: T1, completa: true });
+  const travada = gravarImoveis(db, "outra", lote(40).slice(0, 15), { agora: depois, completa: true });
+  assert.equal(travada.remocao, "bloqueada");
+  assert.match(travada.avisos.join(" "), /25 de 40 ativos \(63%\) sumiram antes da data da praça/);
 });
 
 test("geração mais antiga na fonte nunca sobrescreve, reativa nem remove dado mais novo", () => {

@@ -28,6 +28,7 @@ import { geocodificar } from "./geo/geocodificar.ts";
 import { posicaoNoMapa } from "./geo/mapa.ts";
 import { tabelaPadrao } from "./geo/municipios.ts";
 import { chaveNome } from "./geo/nomes.ts";
+import { PREFIXO_FONTE as PREFIXO_FONTE_LEILOEIRO } from "./leiloeiros/contrato.ts";
 import { consolidarTags, type LinhaRisco } from "./riscos/motor.ts";
 import { CATEGORIAS, definicaoTag, TAGS, type Severidade } from "./riscos/tags.ts";
 import type { Confianca, ImovelGravado, Modalidade, ValorRisco } from "./tipos.ts";
@@ -410,9 +411,15 @@ const TIPOS_SITE: ReadonlySet<string> = new Set<TipoSite>(["apartamento", "casa"
 const ORDEM_SEVERIDADE: Readonly<Record<Severidade, number>> = { grave: 0, atencao: 1, positivo: 2, info: 3 };
 const ORDEM_TAG: ReadonlyMap<string, number> = new Map(TAGS.map((t, i) => [t.slug, i]));
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"] as const;
-/** Nome do portal no cartão do site ("Caso real · Caixa"). O leiloeiro de cada lote fica no banco. */
+/**
+ * Nome do portal no cartão do site ("Caso real · Caixa"). O leiloeiro de cada lote fica no banco. As fontes
+ * dos leiloeiros (ll_<slug>, base/leiloeiros) não entram aqui: o nome delas já é o do leiloeiro (fonte.nome).
+ */
 const PORTAL: Readonly<Record<string, string>> = { caixa_csv: "Caixa", leiloesjudiciais_api: "Leilões Judiciais" };
-/** Prefixo do id no site: curto e estável. */
+/**
+ * Prefixo do id no site: curto e estável. Sem entrada, é o id da fonte com "_" trocado por "-": nos
+ * leiloeiros, "ll-<slug>" (o id fica "ll-<slug>-<lote>"; ver base/leiloeiros/contrato.ts).
+ */
 const PREFIXO_ID: Readonly<Record<string, string>> = { caixa_csv: "caixa", leiloesjudiciais_api: "lj" };
 
 export const POR_QUE_SEM_SELO =
@@ -1005,16 +1012,19 @@ function leiloeiroParaSite(nome: string | null): string | null {
 function linksDoCatalogo(i: ImovelExportado, extras: Readonly<Record<string, unknown>>): LinkImovel[] {
   const links: LinkImovel[] = [];
   const portal = PORTAL[i.fonte] ?? i.fonte_nome;
+  // Fonte de um leiloeiro (base/leiloeiros): o nome é o do leiloeiro, e o anúncio é um lote no site dele.
+  const doLeiloeiro = i.fonte.startsWith(PREFIXO_FONTE_LEILOEIRO);
   const anuncio = https(i.url);
   if (anuncio) {
-    const lote = i.fonte === "leiloesjudiciais_api";
+    const lote = i.fonte === "leiloesjudiciais_api" || doLeiloeiro;
     links.push({
       tipo: "anuncio",
-      rotulo: `Ver ${lote ? "lote" : "anúncio"} na ${portal}`,
+      rotulo: doLeiloeiro ? "Ver lote no site do leiloeiro" : `Ver ${lote ? "lote" : "anúncio"} na ${portal}`,
       url: anuncio,
-      descricao: `Página do ${lote ? "lote" : "imóvel"} no site da ${portal}`,
+      descricao: doLeiloeiro ? `Página do lote no site de ${portal}` : `Página do ${lote ? "lote" : "imóvel"} no site da ${portal}`,
     });
   }
+  const publicadoPor = doLeiloeiro ? "no site do leiloeiro" : `pela ${portal}`;
   for (const d of i.documentos) {
     const url = https(d.url);
     if (!url) continue;
@@ -1023,7 +1033,7 @@ function linksDoCatalogo(i: ImovelExportado, extras: Readonly<Record<string, unk
       tipo,
       rotulo: d.titulo ? tituloLegivel(d.titulo) : (ROTULO_DOCUMENTO[d.tipo] ?? "Documento"),
       url,
-      descricao: /\.pdf(?:$|[?#])/i.test(url) ? `PDF publicado pela ${portal}` : `Documento publicado pela ${portal}`,
+      descricao: /\.pdf(?:$|[?#])/i.test(url) ? `PDF publicado ${publicadoPor}` : `Documento publicado ${publicadoPor}`,
     });
   }
   const site = https(typeof extras.site_leiloeiro === "string" ? extras.site_leiloeiro : null);

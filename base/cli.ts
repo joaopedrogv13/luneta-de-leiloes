@@ -29,7 +29,8 @@ Uso: node --experimental-strip-types base/cli.ts <comando> [opções]
 Comandos:
   migrar                              cria ou atualiza o banco (idempotente)
   coletar <fonte> [opções]            coleta uma fonte e grava (transacional); <fonte> é o id
-                                      ou o apelido (caixa, leiloesjudiciais)
+                                      ou o apelido (caixa, leiloesjudiciais, leiloeiros); leiloeiros
+                                      lê o JSONL dos coletores (--arquivo) e grava uma fonte por leiloeiro
       --uf <UF>                       só uma UF (marca removidos só nela)
       --arquivo <caminho>             lê arquivo local em vez da rede (sinônimo: --fixture)
       --limite <N>                    para depois de N registros (não marca removidos)
@@ -135,18 +136,34 @@ export async function principal(argv: readonly string[], deps: DependenciasCli =
       const db = abrirBanco(caminhoBanco);
       try {
         const arquivo = v.arquivo ?? v.fixture;
-        const resumo = await executarColeta(db, conector, {
-          uf: uf ?? undefined,
-          arquivo: arquivo ? resolve(arquivo) : undefined,
-          limite,
-          detalhes: Boolean(v.detalhes),
-          http: deps.http,
-          agora: deps.agora,
-          sinal: controle.signal,
-          log: (m) => erro(m),
-        });
-        saida(formatarResumo(resumo));
-        return resumo.status === "sucesso" || resumo.status === "parcial" ? 0 : 1;
+        const caminho = arquivo ? resolve(arquivo) : undefined;
+        // Conector que se desdobra (leiloeiros: uma fonte por leiloeiro do arquivo): uma coleta por parte.
+        let alvos: readonly Conector[] = [conector];
+        if (conector.desdobrar) {
+          try {
+            alvos = await conector.desdobrar({ arquivo: caminho, log: (m) => erro(m), sinal: controle.signal, agora: deps.agora });
+          } catch (e) {
+            erro(`Coleta ${conector.id} falhou: ${(e as Error).message}`);
+            return 1;
+          }
+        }
+        let falhou = false;
+        for (const alvo of alvos) {
+          const resumo = await executarColeta(db, alvo, {
+            uf: uf ?? undefined,
+            arquivo: caminho,
+            limite,
+            detalhes: Boolean(v.detalhes),
+            http: deps.http,
+            agora: deps.agora,
+            sinal: controle.signal,
+            log: (m) => erro(m),
+          });
+          saida(formatarResumo(resumo));
+          if (resumo.status !== "sucesso" && resumo.status !== "parcial") falhou = true;
+          if (controle.signal.aborted) break;
+        }
+        return falhou ? 1 : 0;
       } finally {
         process.off("SIGINT", cancelar);
         db.close();

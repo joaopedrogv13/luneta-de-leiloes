@@ -1,6 +1,6 @@
 # Luneta de Leilões · onde estamos e pendências
 
-Este é o arquivo central do projeto. **O painel logo abaixo é o que vale hoje (25/10/2026):** onde estamos, o roteiro
+Este é o arquivo central do projeto. **O painel logo abaixo é o que vale hoje (27/10/2026):** onde estamos, o roteiro
 até o lançamento, como ter mais e melhores dados, o que falta para abrir a prévia no site e as decisões que esperam
 você. Depois dele vem o **histórico** das rodadas, com o detalhe de cada entrega (o que já foi resolvido está marcado
 [x] ou riscado). Atualizado a cada entrega.
@@ -13,18 +13,24 @@ você. Depois dele vem o **histórico** das rodadas, com o detalhe de cada entre
   `base/FONTES.md`, caminho até o site em `base/FASE1-SITE.md`, coleta no seu PC em `base/COLETA-NO-PC.md`.
 - **Análise de negócio, conversão e jurídico:** https://claude.ai/artifact/RnPsHqp5eHTY9Fggiwbpd7
 
-## Painel do dono (25/10/2026)
+## Painel do dono (27/10/2026)
 
 Como ler: **Quem** diz quem faz: **dono** (você), **especialista** (o advogado parceiro) ou **código** (eu). O
 **esforço** é uma estimativa de trabalho, não um prazo. Os custos em dinheiro são aproximados: conferir na página do
 fornecedor antes de contratar.
 
-### 1. Onde estamos (25/10/2026)
+### 1. Onde estamos (27/10/2026)
 
 - **No ar** (luneta-de-leiloes.vercel.app, fora do Google): a landing, a demonstração em `/assinante` e a rodada 6
   (simulador "Seu lance máximo" com lance + custos, conta fechada até editar, região com raio de 1 km e cartões dos
   portais), publicada em 25/10/2026.
 - **Catálogo real** em `/previa` (sem link): ~21,2 mil imóveis da Caixa (lista de 08/10/2026) e 10 da Leilões Judiciais.
+- **Leiloeiros (27/10/2026): o lado da Luneta está pronto** para os seus Apps Scripts (`base/leiloeiros/`): o formato
+  de troca (JSONL), o validador, a importação com uma fonte por leiloeiro (o nome dele aparece no site) e o relatório
+  "quantos imóveis e leilões por leiloeiro" para o site. O **prompt para auditar e refazer os scripts** em outro chat
+  está em `base/leiloeiros/PROMPT-AUDITORIA.md` (~22,5 mil caracteres para colar), com os anexos à parte em
+  `base/leiloeiros/ANEXOS-PROMPT.md` (salvar como `C:\Users\jpedr\Downloads\ANEXOS-LUNETA.md`). Revisado em 27/10:
+  ver "Leiloeiros: revisão adversarial" no histórico. Ainda nenhum leiloeiro real importado.
 - Busca, filtros, mapa com ruas, página do imóvel e relatório em PDF, com a trava Lente × Luneta feita no servidor.
 - **Para decidir:** simulador de lance, preço do m² (leilões e ~203 mil compras do ITBI em 5 capitais), nota de
   localização (17,7 mil imóveis) e metrô, trem e VLT a até 1 km.
@@ -63,6 +69,7 @@ Em ordem de prioridade. Os bloqueadores são o mínimo para cobrar de alguém; a
 | I7 | Conferências à mão: um celular de verdade (iPhone e Android: mapa, folhas, "Voltar à apresentação", rolagem até a conta), o PDF da matrícula e a foto da capa do relatório no seu navegador, as placas de carro nas 3 fotos ilustrativas | **Dono:** 1 a 2 h, com um roteiro. **Código:** corrige o que aparecer |
 | I8 | Plano B do mapa: se o OpenFreeMap sair do ar, as ruas do Brasil num arquivo nosso | **Código:** 1 dia |
 | I9 | Medição de visitas sem cookies (Vercel Web Analytics ou Plausible) | **Dono** aprova; **código** 1 h |
+| I10 | **Apps Scripts do dono (leiloeiros):** rodar o prompt `base/leiloeiros/PROMPT-AUDITORIA.md` (com os anexos de `ANEXOS-PROMPT.md`) num chat com acesso a `C:\Users\jpedr\Downloads\zip` (inventário, volume por leiloeiro, relatório do código, A/B/C, código refeito, amostra no formato da Luneta, matriz de tags, plano de atualização); depois validar e importar a amostra aqui. Passo a passo na seção 3, "Próximos passos: Apps Scripts do dono" | **Dono:** 1 a 3 h de chat + decidir A/B/C. **Código:** 1 a 2 dias (importação diária e números do site) |
 
 #### Depois do lançamento
 
@@ -87,7 +94,25 @@ e esperam rede, autorização ou a sua coleta. Em ordem de retorno (o que mais m
 | 2 | **Fichas da Caixa** (a página de cada imóvel) | Praça e data do 1º e do 2º leilão (hoje a base não sabe a praça de 4.569 dos 4.571 leilões), matrícula, comarca, CEP, FGTS, regras de condomínio e IPTU, link do edital. Destrava o alerta de praça, o CEP no mapa e a leitura do edital | Internet no Brasil (o anti-robô barra o Actions). Pronto para rodar no seu PC: ~15 h na primeira vez, depois minutos por dia (só os novos e os alterados) | **Dono:** uma noite. **Código:** 1 dia para aplicar. **Custo:** zero |
 | 3 | **Leilões Judiciais** (API pública) | Lotes judiciais e extrajudiciais de vários leiloeiros, com fotos, edital, matrícula e laudo (o volume real é desconhecido: cada busca devolve 10) | Ler os termos e mandar o pedido de autorização (rascunho pronto em `base/contatos/leiloesjudiciais-email.md`); depois a varredura das 27 UFs no Actions e a medição. O inventário completo (V-Lance) só com autorização | **Dono:** 1 h. **Código:** 2 a 3 dias. **Custo:** zero |
 | 4 | **Radar de editais** (PNCP, DJEN, DOU/INLABS, Querido Diário), no Actions | Leilões judiciais e de prefeituras que os portais grandes não juntam: texto oficial e o site do leilão, sem foto. Estimativa de 1 mil a 6,5 mil editais por mês antes de tirar os repetidos; quantos são "só nossos" ainda não se sabe | Conta grátis no INLABS (DOU), e-mail à OKBR sobre o uso comercial do Querido Diário, agendar no Actions, 2 semanas de medição (regra: com 2 mil por mês e 15% de novos, vira fonte) e IA barata para filtrar | **Dono:** 30 min. **Código:** 8 a 16 h (medição) + 40 a 80 h (produção). **Custo:** US$ 1 a 20/mês de IA |
-| 5 | **Bancos e leiloeiros grandes** (Itaú, Bradesco, Santander, BB, C6, Zuk, Mega, Superbid...) | Volume, fotos e o lance atual. O leilão dos bancos não passa por diário oficial: só no site do leiloeiro. Estoque fora da Caixa estimado em 6 a 20 mil imóveis | **Raspagem educada** (termos e robots.txt de cada site, 2 s entre páginas, nunca contornar o anti-robô), começando pelas plataformas que atendem muitos leiloeiros de uma vez (V-Lance, SOLEON, Leilão PRO, Superbid); ou **parceria** (Resale para Santander, BTG e BB; Suporte Leilões, com ~107 leiloeiros; Superbid). A lista do LeilãoMap diz por onde começar | **Dono:** a lista do LeilãoMap e os contatos de parceria. **Código:** 1 a 2 dias por conector; 160 a 520 h para os ~30 maiores, em etapas. **Manutenção:** 5 a 120 h por mês (estimativa de 14/10) |
+| 5 | **Bancos e leiloeiros grandes** (Itaú, Bradesco, Santander, BB, C6, Zuk, Mega, Superbid...) | Volume, fotos e o lance atual. O leilão dos bancos não passa por diário oficial: só no site do leiloeiro. Estoque fora da Caixa estimado em 6 a 20 mil imóveis | **Primeiro: os seus Apps Scripts**, que já coletam vários leiloeiros. O lado da Luneta está pronto em `base/leiloeiros/` (formato de troca, validador, importação com uma fonte por leiloeiro, relatório por leiloeiro); falta rodar o prompt `base/leiloeiros/PROMPT-AUDITORIA.md` (abaixo). Depois, **raspagem educada** (termos e robots.txt de cada site, 2 s entre páginas, nunca contornar o anti-robô), começando pelas plataformas que atendem muitos leiloeiros de uma vez (V-Lance, SOLEON, Leilão PRO, Superbid); ou **parceria** (Resale para Santander, BTG e BB; Suporte Leilões, com ~107 leiloeiros; Superbid). A lista do LeilãoMap diz por onde começar | **Dono:** o prompt dos Apps Scripts (1 a 3 h de chat), a lista do LeilãoMap e os contatos de parceria. **Código:** 1 a 2 dias por conector; 160 a 520 h para os ~30 maiores, em etapas. **Manutenção:** 5 a 120 h por mês (estimativa de 14/10) |
+
+**Próximos passos: Apps Scripts do dono** (os leiloeiros que você já coleta; detalhes em `base/leiloeiros/README.md`):
+1. **Rodar o prompt** `base/leiloeiros/PROMPT-AUDITORIA.md` num chat que enxergue os arquivos do seu PC (Claude Code
+   ou Cowork), com acesso a `C:\Users\jpedr\Downloads\zip` e, se possível, ao clone deste repositório. Antes, salve
+   `base/leiloeiros/ANEXOS-PROMPT.md` como `C:\Users\jpedr\Downloads\ANEXOS-LUNETA.md` (ou anexe na conversa). Ele
+   para três vezes para pedir o seu OK (antes de instalar programa, antes de abrir páginas na internet e antes de
+   reescrever o código), pode pedir que você rode uma função no Apps Script e entrega, em `saida-luneta\`:
+   o relatório do código, o volume real por leiloeiro (imóveis e leilões), quem tem a maioria dos imóveis e quem não
+   vale a pena (A diária, B semanal, C parar), o código refeito, a amostra no formato da Luneta, a matriz de tags, o
+   plano de atualização e um `ESTADO.md` para continuar numa segunda sessão.
+2. **Decidir a lista A/B/C**, onde os coletores rodam (Apps Script, Node aqui no repositório ou misto) e como o arquivo
+   chega (Drive ou branch `coletas-dados`): decisão 38.
+3. **Validar e importar a amostra** aqui: `node --experimental-strip-types base/leiloeiros/validar.ts --arquivo
+   amostra-luneta.jsonl` e `npm run base:coletar -- leiloeiros --arquivo amostra-luneta.jsonl` num banco de teste;
+   olhar na `/previa`.
+4. **Coletores A rodando todo dia** e uma semana de acompanhamento (log e e-mail de alerta do próprio coletor).
+5. **Código:** importação diária junto com a Caixa (B1), `leiloeiros:relatorio -- --site` depois do exportar, os números
+   do hero e do FAQ ("[X] leiloeiros monitorados") a partir do relatório e a página "Fontes e leiloeiros".
 
 **Onde rodar a Caixa todo dia** (decisão 3):
 - **GitHub Actions:** grátis. A lista nunca foi testada de lá (o `base-coleta.yml` nunca rodou); as fotos da Caixa abriram
@@ -153,7 +178,8 @@ vem entre parênteses.
 8. [ ] **"Atualizada todos os dias"** (hero, "Por dentro", FAQ): tirar até a atualização diária existir, ou manter (a
    landing está fora do Google).
 9. [ ] **Rótulos dos números do site:** "imóveis ativos" (exato: 57% é venda direta, não leilão) ou "leilões ativos";
-   "deságio mediano" ou "médio"; "[X] leiloeiros monitorados" (hoje são 2 fontes) e os 6 nomes da faixa rolante.
+   "deságio mediano" ou "médio"; "[X] leiloeiros monitorados" (hoje são 2 fontes) e os 6 nomes da faixa rolante. Com os
+   leiloeiros importados, o número e os nomes saem de `relatorio-leiloeiros.json` (`totais.leiloeiros_com_ativos`).
 10. [ ] **Título novo** com "imóveis" e "risco" e uma **página mais curta** (Exemplos e Filtros dentro do "Por dentro").
 11. [ ] **Selos na landing:** ela vende Alvo, Na Mira e Promissor, e no produto eles estão desligados até os critérios.
     Esconder na landing até lá?
@@ -203,7 +229,15 @@ vem entre parênteses.
 37. [ ] **Regras da tag de metrô** (escolhas minhas): o monotrilho de SP conta como metrô; o bonde de Santa Teresa e os
     trens de longa distância não contam; vale com o endereço na rua; a Trensurb aparece como metrô.
 
-**Tarefas suas que não são decisão** (estão no roteiro): rodar a coleta no PC (I2), mandar a lista do LeilãoMap, o
+**Dados dos leiloeiros**
+38. [ ] **Depois do relatório dos Apps Scripts** (I10): a lista A (diária), B (semanal) e C (parar ou só com parceria);
+    onde os coletores rodam (continuar no Apps Script, portar para Node aqui no repositório, ou misto); e como o arquivo
+    chega à Luneta (pasta do Drive, sem segredo, ou o branch `coletas-dados`, com um token restrito). (O relatório traz
+    a recomendação; a minha, por enquanto: Drive para começar e o branch quando a importação diária estiver de pé.)
+39. [ ] **Sites que proíbem coleta ou com termos não lidos** (o relatório lista): manter, pedir autorização por escrito
+    ou parar.
+
+**Tarefas suas que não são decisão** (estão no roteiro): rodar o prompt dos Apps Scripts dos leiloeiros (I10), rodar a coleta no PC (I2), mandar a lista do LeilãoMap, o
 pedido à Leilões Judiciais, a conta no INLABS, os e-mails à OKBR (Querido Diário) e à Fipe (FipeZAP), os pedidos de
 licença do ITBI e de Lei de Acesso nas capitais sem ITBI aberto, o domínio e a marca (I3) e as conferências à mão (I7).
 
@@ -214,7 +248,8 @@ publicação, placeholders, conteúdo fictício, decisões de implementação). 
 riscado; o que continua aberto foi levado ao painel do topo.
 
 **Linha do tempo** (o resumo que ficava no topo até 25/10/2026): atualizado a cada entrega (última atualização:
-25/10/2026, rodada 6 com o simulador e a região integrados; em 18/10/2026, rodada 4: nota de localização de 0 a 100 com
+27/10/2026, leiloeiros: o lado da Luneta para os Apps Scripts do dono e o prompt da auditoria, ver "Leiloeiros: o lado
+da Luneta e o prompt dos Apps Scripts"; em 25/10/2026, rodada 6 com o simulador e a região integrados; em 18/10/2026, rodada 4: nota de localização de 0 a 100 com
 dados, servidor e **tela pronta**
 (página do imóvel, filtro, ordem, selo, PDF e a página pública `/metodologia/localizacao`); landing com as novidades do
 plano Luneta ("Decida com números", "Nota de localização", tabela de planos em grupos, FAQ novo); responsividade da
@@ -244,9 +279,129 @@ cartões dos portais com marca de cor, selo do nível e critérios da busca; ver
 integrados (25/10/2026)** num branch só: a "Referência da região" do simulador usa os mesmos nomes de nível da seção
 da região ("mesma rua", "até 1 km", "bairro", "cidade", "estado").
 
+### Leiloeiros: o lado da Luneta e o prompt dos Apps Scripts (27/10/2026)
+
+**O pedido:** os Apps Scripts de leilão em `C:\Users\jpedr\Downloads\zip` (no PC do dono) vão ser, junto com a Caixa,
+o alicerce do site. Daqui não dá para abrir essa pasta; por isso a entrega tem duas partes: **o lado da Luneta pronto**
+para receber os dados e **um prompt** para outro chat, no PC do dono, fazer a auditoria e a reforma dos scripts.
+
+**O que ficou pronto** (`base/leiloeiros/` e `base/fontes/leiloeiros/`; guia em `base/leiloeiros/README.md`):
+- [x] **Contrato de troca** (`CONTRATO.md` + `imovel.schema.json` e `coleta.schema.json`, JSON Schema 2020-12): JSONL em
+  UTF-8 com uma linha de coleta por leiloeiro (fim da coleta, carga completa ou não, saúde ok/parcial/quebrado/bloqueado,
+  frequência, o que o coletor extrai, robots e termos) e uma linha por imóvel (id `<slug>:<lote>`, leiloeiro, plataforma,
+  comitente, situação, endereço por campos e o texto, áreas, avaliação, praças com data/hora e situação, lance atual,
+  incremento, comissão, natureza e processo CNJ, pagamento, ocupação declarada, dívidas declaradas e quem paga,
+  documentos e fotos só como link, matrícula, cartório e inscrição, controle com hash). Cada campo diz tipo, se é
+  obrigatório, como normalizar e para onde vai na base; a LGPD está explícita.
+- [x] **Validador** (`npm run leiloeiros:validar -- --arquivo saida.jsonl`): esquema (validador próprio pequeno: o Ajv do
+  `node_modules` é o 6, do ESLint, e não lê o 2020-12), coerência (praças em ordem, mínimo da 2ª ≤ 1ª, praça atual que
+  existe, lat/lon com precisão, UF, cidade × IBGE com sugestão, ids repetidos, URLs, ativo com praça vencida, sem lance,
+  judicial sem processo), LGPD (CPF/RG em qualquer campo, papel de pessoa no endereço, cartório e comitente, nome depois
+  de papel na descrição) e um resumo por leiloeiro com a previsão da importação.
+- [x] **Importação** `npm run base:coletar -- leiloeiros --arquivo saida.jsonl` (conector `leiloeiros_arquivo`): uma fonte
+  `ll_<slug>` por leiloeiro (o nome dele vai ao cartão e ao filtro do site), id no site `ll-<slug>-<lote>` (sem colisão:
+  o lote não tem hífen); o que sumiu de uma carga completa vira `removido` (como na Caixa, com a trava de 50%), vendido,
+  encerrado, suspenso e cancelado viram `encerrado`; carga mais velha é recusada; coletor bloqueado sem lotes fica com a
+  coleta em erro e os lotes publicados continuam. Dívidas declaradas e comissão viram frases para as regras de tag que
+  já existem; parcelamento vai para a frase de pagamento do site; "Ver lote no site do leiloeiro" e "Site do leiloeiro"
+  na página do imóvel. O `Conector` ganhou `desdobrar` (opcional) e a CLI roda uma coleta por leiloeiro.
+- [x] **Relatório por leiloeiro** (`npm run leiloeiros:relatorio [-- --site]`, formato em
+  `relatorio-leiloeiros.schema.json`): ativos no site, situação (ativos na fonte, encerrados, removidos, praça vencida,
+  sem lance), por UF, tipo, modalidade e natureza, qualidade (% foto, edital, avaliação, área, endereço com número,
+  praça com data), repetidos da Caixa, saúde e frequência do coletor; totais com `leiloeiros_com_ativos` (o
+  "[X] leiloeiros monitorados"); as outras fontes com os leiloeiros citados nos lotes da Leilões Judiciais. Também roda
+  sobre um JSONL antes de importar. O site ainda não lê o arquivo.
+- [x] **Prompt** `base/leiloeiros/PROMPT-AUDITORIA.md`, autossuficiente (contrato, 26 tags, conferência sem o validador e
+  plataformas conhecidas nos anexos): inventário com zips dentro de zips, volume real, relatório do código, Pareto e
+  A/B/C, reforma (biblioteca comum, um coletor por plataforma, 6 minutos com continuação, incremental por hash com carga
+  completa, histórico de praça no coletor, log, e-mail de alerta, testes com HTML salvo), onde roda, como entrega,
+  matriz de tags, plano de atualização e guia para o dono; paradas para o OK do dono e as regras (anti-robô, robots,
+  termos, LGPD, nada inventado, segredos). Os próximos passos depois do prompt estão no topo do arquivo e no painel
+  (seção 3).
+- [x] **Fixture** de 12 lotes fictícios de 3 leiloeiros e 27 testes novos (contrato, esquemas, validador, normalização,
+  importação ponta a ponta, remoção, carga velha, bloqueio, tags, deduplicação com a Caixa, exportação, relatório, e os
+  exemplos e campos do prompt e do contrato conferidos contra os esquemas).
+- [x] **Deduplicação:** "6º Oficial de Registro de Imóveis" (o nome dos cartórios de São Paulo, que os leiloeiros usam)
+  virava cartório "u" e nunca casava com a ficha da Caixa ("6º Ofício"); agora vira 6 (`base/dedup/index.ts`).
+
+**O que fica pendente (técnico):**
+- [ ] **Histórico de praça na base:** não há lugar (a tabela `praca` guarda o estado atual; o `preco_historico` não guarda
+  a data nem o mínimo de cada praça). A situação de cada praça vai em `extras.praca_N_situacao`; o prompt pede que o
+  coletor guarde o histórico do lado dele. É o item 3 de "Back-end: favoritos e alerta de mudança de praça".
+- [ ] **O site lendo `relatorio-leiloeiros.json`:** página "Fontes e leiloeiros" e os números do hero e do FAQ.
+- [ ] **Filtro de fonte com dezenas de leiloeiros:** cada leiloeiro vira uma opção do filtro e uma linha em "Sobre os
+  dados"; agrupar ou buscar por nome quando passar de ~10.
+- [ ] **Repetidos entre fontes no catálogo:** o mesmo imóvel na Caixa e no leiloeiro aparece duas vezes (o relatório já
+  conta quantos são).
+- [ ] **Importação diária** dos leiloeiros (workflow e coleta no PC), depois da decisão 38.
+- [ ] `campoSemPessoa` descarta endereço com "Sr." no nome da rua ("Rua Sr. Bom Jesus"): prefere perder o campo a
+  publicar um nome; medir quando houver dado real.
+
+**Checagens:** `npm run base:testar` (514 testes), `tsc -p base`, `eslint base` e `npm run test:site` passando.
+
+### Leiloeiros: revisão adversarial do prompt, do validador e da importação (27/10/2026)
+
+**O prompt** (lido como o outro chat, no Windows, sem o repositório):
+- [x] **Tamanho:** o trecho a colar tinha ~39,8 mil caracteres. Os anexos (contrato, tags, conferência, plataformas)
+  foram para `base/leiloeiros/ANEXOS-PROMPT.md`, que o dono salva como `C:\Users\jpedr\Downloads\ANEXOS-LUNETA.md`;
+  o prompt ficou com ~22,5 mil e manda parar se os anexos não estiverem lá. Um teste garante o limite de 25 mil.
+- [x] **Passos impossíveis:** o Apps Script não roda no PC. Agora o prompt diz isso, pede parsers como funções puras
+  (testáveis no Node do PC com páginas salvas) e dá dois caminhos para a amostra: Node no PC ou o dono roda
+  `gerarAmostra()` no Apps Script e baixa do Drive; sem nenhum, "amostra não gerada" e por quê. Reconhece o `.json`
+  que o Drive gera ao baixar um projeto, lista as planilhas que o código abre e não vieram no zip, e o PowerShell de
+  extração aceita a origem como arquivo sem a extensão `.zip`.
+- [x] **O pedido do dono, frase a frase:** "quantos leilões por leiloeiro" agora é medido de fato (leilões = eventos,
+  pelo `leilao_id`) e vai ao relatório; "repetidos com a Caixa" não dava para medir fora da base: o prompt conta os
+  lotes com comitente Caixa à parte e diz que o número real vem do `repetidos_caixa` depois da importação; "qualidade
+  razoável" do critério A ganhou números; scripts só de veículos ficam "fora"; sessão longa ganhou o `ESTADO.md`.
+- [x] **Ambiguidades do contrato:** quais chaves são obrigatórias dentro dos objetos (agora: mande sempre todas, com
+  null), os limites de tamanho (texto maior derrubava o lote; agora a lista está no Anexo A.1 e um teste confere cada
+  número contra o esquema), a fórmula do `hash`, "um leiloeiro, uma carga, um arquivo" e os valores de cada enum (um
+  teste confere que o Anexo A lista todos).
+- [x] **Entregáveis verificáveis:** colunas do `inventario.csv` definidas (UTF-8 com BOM e `;`, para o Excel), a
+  saída da validação em `validacao.txt`, os testes do código em `codigo\`.
+- [x] **LGPD e termos:** páginas salvas para teste com nomes e CPF mascarados, nada de área logada nem do login do
+  dono, não fingir ser navegador, colunas de pessoas nas planilhas antigas não vão para os entregáveis (e o dono é
+  aconselhado a apagá-las). Três paradas para o OK: instalar programa, abrir páginas na internet e reescrever o código.
+
+**O validador e a importação** (casos estranhos e maliciosos rodados um a um):
+- [x] JSON quebrado, CPF e RG no texto, data sem fuso, `-03` sem minutos, data brasileira, "R$ 1.234,56" em texto, UF
+  minúscula, praças fora de ordem, id repetido, lote com barra, rótulo longo, URL relativa, `javascript:` e
+  `localhost`, campo inventado, processo com as partes, cartório com "proprietário", lat sem precisão: todos dão erro
+  (o lote não entra). Nome depois de "Executado:" e e-mail na descrição: aviso (o núcleo mascara).
+- [x] **Previsão errada:** com uma linha ilegível no arquivo, o validador dizia "o que sumiu sai do site", mas a
+  importação desliga a remoção de todos. Corrigido: a previsão diz que a remoção fica desligada.
+- [x] **Cidade com grafia antiga ou em maiúsculas** ("Moji das Cruzes", "Embu", "SÃO PAULO") passava calada e ia ao
+  site como veio (o filtro de cidade se dividiria). Agora a importação grava o nome do IBGE e o validador avisa a
+  grafia antiga. Distrito fica como veio.
+- [x] **Trava de remoção depois de um leilão grande:** no dia seguinte a um leilão, o leiloeiro tira o evento inteiro
+  do site; com mais de 50% sumindo, a trava bloqueava a remoção para sempre (e vendido ficaria "ativo"). Agora o que
+  some depois da data da praça não conta para a trava (já não aparece no site); o que some antes continua travando.
+  Vale para todas as fontes (`base/gravar.ts`).
+- [x] **Desempenho:** 50 mil linhas levavam 63 s no validador (lista copiada a cada lote e máscara de nomes refeita
+  para textos repetidos). Agora 23 s com textos todos diferentes (18 s com repetidos); a importação de 50 mil lotes
+  de 5 leiloeiros leva ~98 s e cabe em 1 GB de memória.
+- [x] **Só o leiloeiro da carga muda:** teste novo com uma carga só da Beta (vendido vira encerrado, o que sumiu sai)
+  e um leiloeiro novo (vira fonte nova); Alfa e Gama, fora do arquivo, ficam iguais. O mesmo apartamento em dois
+  leiloeiros tem a mesma chave de deduplicação.
+- [x] **Comitente pessoa física:** "Fulano de Tal" com tipo `outro` ia ao site sem máscara (o comitente não passa pela
+  máscara de nomes). Agora, tipo `outro` sem palavra de empresa, banco, vara ou órgão (S.A., Ltda, Banco, Vara,
+  Prefeitura, Condomínio, Cooperativa...) fica fora na importação, com aviso no validador.
+- [x] **Relatório:** os números da fixture conferidos à mão (ativos, UF, tipo, modalidade, natureza, qualidade,
+  encerrados) batem. Ganhou `leiloes_ativos` por leiloeiro e no total.
+
+**O que fica pendente:**
+- [ ] Telefone no texto não é detectado (o do leiloeiro é público e aparece em quase toda descrição); a regra fica no
+  prompt e no Anexo C.
+- [ ] Comitente pessoa física com tipo `banco`, `judicial`, `orgao_publico` ou `empresa` declarado errado passa (o tipo
+  é confiado ao coletor); o prompt e o contrato proíbem na origem.
+
+**Checagens:** `npm run base:testar` (524 testes, 10 novos), `tsc -p base`, `eslint base` e `npm run test:site`
+passando.
+
 ### Painel antigo (24/10/2026, revisão final da rodada 5)
 
-> **Substituído pelo "Painel do dono (25/10/2026)" no topo.** Fica como registro: o que já foi resolvido está marcado
+> **Substituído pelo "Painel do dono" no topo (25/10/2026).** Fica como registro: o que já foi resolvido está marcado
 > [x] ou riscado; o que continua aberto foi levado ao roteiro e às decisões do topo.
 
 ### Que dados temos hoje

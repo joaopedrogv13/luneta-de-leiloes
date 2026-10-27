@@ -6,7 +6,7 @@
  * em ordem alfabética de id, para evitar conflito entre quem mexe aqui em paralelo.
  *
  * Fontes previstas (catálogo de fontes, §2, com as correções da crítica):
- * - vitrine: caixa_csv, leiloesjudiciais_api
+ * - vitrine: caixa_csv, leiloesjudiciais_api, leiloeiros_arquivo (desdobra-se em ll_<slug>, um por leiloeiro)
  * - radar de editais: pncp, djen, dou_inlabs, querido_diario
  * - condicional (só com autorização): suporteleiloes_api, datajud
  */
@@ -14,6 +14,7 @@ import type { Conector } from "../tipos.ts";
 
 // Vitrine (imóveis)
 import { caixaCsv } from "./caixa/index.ts";                              // Caixa: Lista de Imóveis (CSV oficial)
+import { leiloeirosArquivo } from "./leiloeiros/index.ts";               // JSONL dos coletores dos leiloeiros (base/leiloeiros), uma fonte ll_<slug> por leiloeiro
 import { leiloesJudiciais } from "./leiloesjudiciais/index.ts";        // Leilões Judiciais (API/MCP pública), id leiloesjudiciais_api
 
 // Radar de editais (base/fontes/radar/README.md)
@@ -26,6 +27,7 @@ export const CONECTORES: readonly Conector[] = [
   caixaCsv,
   djen,
   douInlabs,
+  leiloeirosArquivo,
   leiloesJudiciais,
   pncp,
   queridoDiario,
@@ -37,6 +39,7 @@ export const CONECTORES: readonly Conector[] = [
  */
 export const APELIDOS: Readonly<Record<string, string>> = {
   caixa: "caixa_csv",
+  leiloeiros: "leiloeiros_arquivo",
   leiloesjudiciais: "leiloesjudiciais_api",
 };
 

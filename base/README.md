@@ -14,6 +14,7 @@ Catálogo de fontes da opção 1 (dados estruturados), com as correções da cr�
 |---|---|---|---|---|---|---|
 | `caixa_csv` (`caixa`) | Caixa: Lista de Imóveis (CSV oficial) | vitrine, lista completa | arquivo oficial | 21.226 imóveis em 08/10/2026, 27 UFs; preço, avaliação, modalidade, financiamento; capa pelo padrão `F{id13}21.jpg`; ficha opcional (`--detalhes`) | `--arquivo lista.csv` (CP1252 ou UTF-8) | `fontes/caixa/README.md` |
 | `leiloesjudiciais_api` (`leiloesjudiciais`) | Leilões Judiciais & Extrajudiciais (API MCP pública) | vitrine, busca parcial | API documentada | lotes judiciais e extrajudiciais de vários leiloeiros; praças, fotos (S3), anexos (edital, matrícula, laudo), coordenada do Street View | `--fixture` (JSON da fixture ou respostas JSON-RPC) | `fontes/leiloesjudiciais/README.md` |
+| `leiloeiros_arquivo` (`leiloeiros`) → `ll_<slug>` | JSONL dos coletores dos leiloeiros (hoje os Apps Scripts do dono) | vitrine, uma fonte por leiloeiro; lista completa quando a linha de coleta diz | o do coletor (`html`, `endpoint_interno`...) | lotes no formato de `leiloeiros/CONTRATO.md`: praças com situação, fotos, documentos, ocupação, dívidas declaradas, pagamento, matrícula e cartório | `--arquivo saida.jsonl` (só arquivo local) | `leiloeiros/README.md` |
 | `pncp` | PNCP (modalidades 1 e 13) | radar | API documentada | editais de leilão de órgãos públicos; arquivos do edital com `--detalhes` | `--fixture` | `fontes/radar/README.md` |
 | `djen` | DJEN / Comunica PJe (`meio=E`) | radar | API documentada | editais judiciais | `--fixture` | idem |
 | `querido_diario` | Querido Diário (OKBR) | radar | API documentada, de terceiro | diários municipais | `--fixture` | idem |
@@ -31,10 +32,13 @@ npm run base:coletar -- caixa                              # Caixa, lista geral 
 npm run base:coletar -- caixa --arquivo lista.csv          # Caixa a partir de arquivo local (sem rede)
 npm run base:coletar -- leiloesjudiciais --uf SP           # Leilões Judiciais (rede); sem --uf varre 27 UFs
 npm run base:coletar -- leiloesjudiciais --fixture base/fontes/leiloesjudiciais/fixtures/busca-apartamento-sp.json
+npm run leiloeiros:validar -- --arquivo saida.jsonl        # confere o JSONL dos coletores dos leiloeiros (contrato em leiloeiros/CONTRATO.md)
+npm run base:coletar -- leiloeiros --arquivo saida.jsonl   # importa: uma fonte ll_<slug> por leiloeiro
 npm run base:riscos                                        # regras das 26 tags
 npm run base:status                                        # contagens, fotos, geo, tags e última coleta
 npm run base:exportar                                      # JSON completo em base/dados/exportacao/imoveis.json
 npm run base:exportar -- --site                            # instantâneo do site em base/saida/ (amostra, estatísticas e catálogo em site/)
+npm run leiloeiros:relatorio -- --site                     # quantos imóveis por leiloeiro, qualidade e saúde do coletor: base/saida/site/relatorio-leiloeiros.json
 npm run base:fichas -- --arquivo fichas.json               # aplica fichas da Caixa lidas em outro lugar (ver abaixo)
 npm run base:geocode -- --arquivo base/saida/localizacao/geocode.json   # ponto pelo endereço (base/fontes/localizacao)
 ```
@@ -238,6 +242,9 @@ Fontes por endpoint interno ou HTML, em ordem de retorno (catálogo §5 com as c
 3. **Superbid offer-query:** Superbid, Sold e dezenas de leiloeiros do catálogo FENALEI, com ocupação e anexos. Há relatos conflitantes de Cloudflare.
 4. **Suporte Leilões (com parceria), SOLEON, Leilão PRO, Sua Plataforma de Leilão, Leiloar, Bom Valor, Degrau:** plataformas white-label, um conector cobre muitos domínios.
 5. **Leiloeiros grandes:** Portal Zuk, Frazão (`sitemap-lotes.xml`), Mega Leilões, Sodré Santoro, Leiloeiro Público.
+   **Os Apps Scripts do dono** já coletam vários leiloeiros: o lado da Luneta está pronto em `leiloeiros/` (contrato
+   JSONL, validador, importação `coletar leiloeiros`, relatório por leiloeiro) e a auditoria e reforma dos scripts têm
+   um prompt pronto em `leiloeiros/PROMPT-AUDITORIA.md` (anexos em `leiloeiros/ANEXOS-PROMPT.md`).
 6. **Bancos:** Santander Imóveis (REST do WordPress), Resale (só com parceria), Seu Imóvel BB, Itaú, BRB, Banrisul; deduplicar contra os leiloeiros (`dedup/`).
 7. **Enriquecimento:** SPU/SIAPA (terreno de marinha, aforamento: "Só direitos", "Custos extras"), IPTU cadastral de São Paulo e Fortaleza ("Área divergente", "Construção irregular"), DOE-SP (leilões estaduais), BCB SGS 21340 (IVG-R, tendência de preço).
 
@@ -263,7 +270,10 @@ base/
   fontes/index.ts     registro de conectores (um import por conector) e apelidos da CLI
   fontes/caixa/       conector da Caixa (CSV, ficha, fotos, cache)
   fontes/leiloesjudiciais/  conector da Leilões Judiciais (MCP)
+  fontes/leiloeiros/  conector leiloeiros_arquivo: JSONL dos coletores → uma fonte ll_<slug> por leiloeiro
   fontes/radar/       PNCP, DJEN, Querido Diário e DOU/INLABS
+  leiloeiros/         contrato JSONL dos coletores (CONTRATO.md, JSON Schema), validador, relatório por leiloeiro
+                      e o prompt da auditoria dos Apps Scripts (PROMPT-AUDITORIA.md + ANEXOS-PROMPT.md)
   saida/              instantâneo versionado para o site (exportar --site)
   riscos/tags.ts      as 26 tags (slug estável, rótulo/categoria/severidade iguais ao site)
   riscos/motor.ts     interface de regra, avaliação, gravação e consolidação das tags
@@ -315,6 +325,9 @@ export const minhaFonte: Conector<LinhaBruta> = {
 - Endereço: o texto como a fonte escreve (`dedup/endereco.ts` separa logradouro, número e unidades, com ou sem "nº"); bairro em `bairro` quando a fonte o separa. Cidade e bairro escritos no fim do texto ("..., Vila Prudente, São Paulo/SP") são reconhecidos e não viram unidade.
 - Utilitários prontos: `lerNumeroBR`, `lerDataBR`/`lerDataHoraBR`, `semHtml`, `capitalizarNome`, `normalizarUf`, `inferirTipoImovel`, `classificarModalidade`, `lerCsv`, `decodificar` (CP1252 correto; o `TextDecoder("windows-1252")` do Node 22 erra os bytes 0x80–0x9F).
 - Teste com `validarImovel` e com o conector rodando sobre uma fixture pequena (dados pessoais mascarados), sem rede.
+- Um arquivo com várias fontes (como o JSONL dos leiloeiros): implemente `desdobrar(op)`, que lê a entrada e devolve um
+  conector por fonte; a CLI roda uma coleta para cada um (log, remoção e data de geração próprios). Ver
+  `fontes/leiloeiros/index.ts`.
 
 ## O que o núcleo garante
 
