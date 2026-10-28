@@ -109,7 +109,7 @@ fora desta lista é recusado (use `extras`).
 | `debitos` | objeto ou null | `iptu` e `condominio`: `{"valor": ..., "responsavel": ...}`, com `valor` (número ou null) e `responsavel` (`arrematante`, `pago_com_o_lance` = sub-roga-se no preço, `vendedor` ou null), só para dívida que a fonte **declara que existe**; `texto` (o trecho sobre dívidas) |
 | `documentos` | lista (até 50) | `tipo` (`edital`, `matricula`, `laudo`, `avaliacao`, `processo`, `outro`), `titulo` (sem nome de parte), `url`. Só o link |
 | `fotos` | lista (até 60) | `url`, `ordem` (0 = capa). Só o link |
-| `registro_imovel` | objeto ou null | `matricula` (como a fonte escreve), `cartorio` (**com o número do ofício**: "6º Oficial de Registro de Imóveis de São Paulo"), `inscricao_municipal` |
+| `registro_imovel` | objeto ou null | `matricula` (como a fonte escreve), `cartorio` (**com o número do ofício**: "6º Oficial de Registro de Imóveis de São Paulo"), `inscricao_municipal`, `numero_caixa` (imóvel da Caixa: o número com 13 dígitos, "0000010119245") |
 | `extras` | objeto ou null | até 30 chaves `a-z0-9_` (começando por letra) com texto (até 500), número, boolean ou null; nada que mude a cada coleta (visitas) |
 | `controle` | objeto | `coletado_em` (data e hora com fuso), `versao_coletor`, `hash` (ou null) |
 

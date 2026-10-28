@@ -1,10 +1,15 @@
 # Leiloeiros: o lado da Luneta que recebe os coletores
 
-Os coletores dos leiloeiros (hoje os Apps Scripts do dono, na pasta `C:\Users\jpedr\Downloads\zip` do PC dele)
-entregam um **JSONL** num formato fixo; aqui ficam o contrato, o validador, a importação na base e o relatório por
-leiloeiro que o site vai mostrar. A auditoria e a reforma dos scripts acontecem em outro chat, no PC do dono, com o
-prompt pronto em [`PROMPT-AUDITORIA.md`](PROMPT-AUDITORIA.md) e os anexos dele em
-[`ANEXOS-PROMPT.md`](ANEXOS-PROMPT.md).
+Os coletores dos leiloeiros entregam um **JSONL** num formato fixo; aqui ficam o contrato, o validador, a importação
+na base e o relatório por leiloeiro que o site vai mostrar.
+
+**O coletor do dono é o PBCV** ("Coletor de Leilões PBCV", em Python, num repositório privado): 670 domínios, ~35 mil
+imóveis ativos no `leiloes.db`. O exportador em [`pbcv/`](pbcv/README.md) lê esse banco (só leitura) e grava o JSONL
+deste contrato: **21.719 imóveis de 483 leiloeiros** na base de 01/10/2026, com 0 erros no validador. O guia para o
+dono (exportar no PC, mandar pelo branch `coletas-dados` ou como anexo, a regra de "à venda de verdade" e os números)
+está em [`pbcv/README.md`](pbcv/README.md). O [`PROMPT-AUDITORIA.md`](PROMPT-AUDITORIA.md) e os
+[`ANEXOS-PROMPT.md`](ANEXOS-PROMPT.md) foram escritos quando se pensava que os coletores eram Apps Scripts: ficam como
+histórico e como referência do formato para um coletor novo.
 
 | Arquivo | Para quê |
 | --- | --- |
@@ -19,6 +24,7 @@ prompt pronto em [`PROMPT-AUDITORIA.md`](PROMPT-AUDITORIA.md) e os anexos dele e
 | [`PROMPT-AUDITORIA.md`](PROMPT-AUDITORIA.md) | o prompt para o outro chat (até 25 mil caracteres, conferido por teste) e os próximos passos depois dele |
 | [`ANEXOS-PROMPT.md`](ANEXOS-PROMPT.md) | os anexos do prompt (formato de dados, 26 tags, conferência sem o validador, plataformas); o dono salva como `ANEXOS-LUNETA.md`. Os testes conferem campos, enums, limites, exemplos e tags contra os esquemas |
 | `../fontes/leiloeiros/` | o conector `leiloeiros_arquivo` (apelido `leiloeiros`) e a fixture de 12 lotes de 3 leiloeiros fictícios |
+| [`pbcv/`](pbcv/README.md) | o exportador do PBCV (Python, só a biblioteca padrão): `exportar.py`, a regra de imóvel, a máscara da Luneta traduzida e os testes (`python3 base/leiloeiros/pbcv/testar.py`; o lado TypeScript dos casos compartilhados roda no `npm run base:testar`) |
 
 ## Como usar
 
@@ -66,6 +72,11 @@ Teste rápido com a fixture: `npm run base:coletar -- leiloeiros --arquivo base/
   leiloeiro também estão na Caixa; o catálogo do site ainda não junta os repetidos (pendência antiga).
 - **LGPD:** o validador recusa CPF/RG em qualquer campo e papel de pessoa no endereço, no cartório e no comitente; a
   importação corta esses campos com `campoSemPessoa` (a regra da Leilões Judiciais) e descarta extras com dado pessoal.
+- **Número do imóvel na Caixa (`registro_imovel.numero_caixa`, campo novo e opcional da versão 1).** A Caixa da Luneta
+  quase nunca tem matrícula (1 em 21 mil) e o leiloeiro escreve o endereço do jeito dele: a chave de endereço acha só
+  ~61% dos repetidos. O número da Caixa (13 dígitos, achado em 1.171 lotes do PBCV, 846 deles de um ativo da Caixa) vai
+  para `extras.numero_caixa`, e o relatório conta o lote como `repetidos_caixa` quando o número é de um ativo da Caixa.
+  O catálogo do site ainda não junta os repetidos (item 6 abaixo); quando juntar, deve usar o mesmo número.
 - **Histórico de praça: a base ainda não tem lugar.** A tabela `praca` guarda só o estado atual, e o `preco_historico`
   acompanha preço, avaliação, modalidade, praça atual e status, mas não a data nem o mínimo de cada praça. A situação de
   cada praça vai em `extras.praca_N_situacao` (entra no hash, então a mudança aparece como "atualizado"). O histórico
@@ -74,11 +85,13 @@ Teste rápido com a fixture: `npm run base:coletar -- leiloeiros --arquivo base/
 
 ## Próximos passos do lado da Luneta
 
-1. **Rodar o prompt** (`PROMPT-AUDITORIA.md`) no PC do dono e validar aqui a `amostra-luneta.jsonl` que voltar.
-2. **Importar a amostra num banco de teste** e conferir na `/previa`: nome do leiloeiro no cartão, fotos, praça, tags,
-   links "Ver lote no site do leiloeiro" e "Site do leiloeiro".
-3. **Importação diária:** acrescentar `coletar leiloeiros` ao workflow e à coleta no PC (depois da Caixa), lendo o JSONL
-   do Drive ou do branch `coletas-dados`, e o `leiloeiros:relatorio -- --site` depois do exportar.
+1. **Coleta e exportação do PBCV toda semana** no PC do dono (`pbcv/README.md`): a base de 01/10 já tem 73% das
+   praças vencidas, e só ~5 mil dos 21,7 mil imóveis apareceriam no site hoje.
+2. **Importar o arquivo do PBCV num banco de teste** e conferir na `/previa`: nome do leiloeiro no cartão, fotos, praça,
+   tags, links "Ver lote no site do leiloeiro" e "Site do leiloeiro".
+3. **Importação automática:** acrescentar `coletar leiloeiros` ao workflow, lendo `pc/leiloeiros/pbcv-luneta.jsonl.gz`
+   do branch `coletas-dados` (onde o `node base/coleta-pc.mjs --so-publicar` o põe), e o `leiloeiros:relatorio -- --site`
+   depois do exportar.
 4. **Página "Fontes e leiloeiros"** e os números do hero e do FAQ a partir de `relatorio-leiloeiros.json`
    (`totais.leiloeiros_com_ativos`, `totais.leiloes_ativos`, `totais.ativos_todas_as_fontes`). O site ainda não lê
    esse arquivo.

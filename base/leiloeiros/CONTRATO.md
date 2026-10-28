@@ -194,6 +194,7 @@ valor mínimo da 2ª **menor ou igual** ao da 1ª; `praca_atual` existente.
 | `registro_imovel.matricula` | texto ou null | não | número como a fonte escreve (`"123.456"`); várias: separadas por vírgula | `imovel.matricula` (deduplicação com a Caixa) |
 | `registro_imovel.cartorio` | texto ou null | não | **com o número do ofício**: `"6º Oficial de Registro de Imóveis de São Paulo"`, `"2º Cartório de Registro de Imóveis de Campinas"` | `imovel.cartorio` (deduplicação) |
 | `registro_imovel.inscricao_municipal` | texto ou null | não | inscrição do IPTU | `extras.inscricao_imobiliaria` |
+| `registro_imovel.numero_caixa` | 13 dígitos ou null | não | número do imóvel na Caixa, com os zeros à esquerda (`"0000010119245"`), quando o leiloeiro vende um imóvel da Caixa e o número aparece no lote (`hdnimovel=` na URL, título, descrição) | `extras.numero_caixa`: o relatório conta o lote como "também na Caixa" quando o número é de um ativo da Caixa, mesmo sem matrícula nem endereço que batam |
 
 ### 4.8 Extras e controle
 

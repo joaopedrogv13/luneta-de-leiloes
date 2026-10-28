@@ -22,7 +22,8 @@
  *
  * Tudo fica em `coletas-pc/` (ignorada pelo git): `fichas/<id13>.html` (o HTML da Caixa, que NÃO é publicado),
  * `fichas/fichas.json` (os campos lidos, com a máscara LGPD do parser: é o que vai ao GitHub), `fichas/resumo.json`,
- * `itbi/itbi-belo-horizonte.json` (agregados por cidade, bairro e rua, sem dado pessoal), `log.txt` e `.em-uso` (a
+ * `itbi/itbi-belo-horizonte.json` (agregados por cidade, bairro e rua, sem dado pessoal), `leiloeiros/*.jsonl` (o arquivo
+ * dos leiloeiros que o exportador do PBCV grava: base/leiloeiros/pbcv/README.md), `log.txt` e `.em-uso` (a
  * trava que impede duas coletas ao mesmo tempo na mesma pasta, o que dobraria o ritmo de acesso à Caixa).
  * O envio usa um clone raso numa pasta temporária: o branch e os arquivos do dono não mudam.
  *
@@ -81,6 +82,8 @@ export const INSTALAR_PYTHON_MODULOS = "pip install pandas numpy requests openpy
 export const COMANDO = "node base/coleta-pc.mjs";
 /** Pasta onde as fichas consolidadas ficam no branch: sempre a mesma (o fichas.json é cumulativo; o histórico guarda as antigas). */
 export const DESTINO_FICHAS = "pc/fichas";
+/** Pasta do JSONL dos leiloeiros (exportador do PBCV) no branch: sempre o mesmo arquivo, comprimido (~70 MB viram ~8 MB). */
+export const DESTINO_LEILOEIROS = "pc/leiloeiros";
 export const TRAVA = ".em-uso";
 /** A trava vale enquanto o processo dela existe e bate o ponto (a cada 30 s) há menos que isto. */
 export const TRAVA_VIVA_MS = 2 * 60 * 1000;
@@ -451,7 +454,8 @@ export function dataLocal(d: Date = new Date()): string {
 /**
  * O que vai ao branch: `pc/fichas/fichas.json` (ou `.json.gz` acima de 40 MB) e `pc/fichas/resumo.json`, sempre no
  * mesmo lugar (o fichas.json junta todas as fichas da pasta; uma cópia por dia faria o clone de cada envio crescer
- * dezenas de MB por dia); `itbi/*.json` e o log de BH em `itbi/`, como o Actions publica. Nunca os HTML das fichas.
+ * dezenas de MB por dia); `itbi/*.json` e o log de BH em `itbi/`, como o Actions publica; os JSONL dos leiloeiros
+ * (`leiloeiros/*.jsonl`, sempre .gz) e o resumo deles em `pc/leiloeiros/`. Nunca os HTML das fichas.
  */
 export function arquivosParaPublicar(pasta: string, limite: number = LIMITE_JSON_PUBLICADO): ArquivoParaPublicar[] {
   const lista: ArquivoParaPublicar[] = [];
@@ -471,6 +475,15 @@ export function arquivosParaPublicar(pasta: string, limite: number = LIMITE_JSON
   if (existsSync(itbi)) {
     for (const nome of readdirSync(itbi).sort()) {
       if (/\.json$/i.test(nome) || nome === "log-belo-horizonte.txt") lista.push({ origem: join(itbi, nome), destino: `itbi/${nome}` });
+    }
+  }
+  const leiloeiros = join(pasta, "leiloeiros");
+  if (existsSync(leiloeiros)) {
+    for (const nome of readdirSync(leiloeiros).sort()) {
+      const origem = join(leiloeiros, nome);
+      if (/\.jsonl$/i.test(nome)) {
+        lista.push({ origem, destino: `${DESTINO_LEILOEIROS}/${nome}.gz`, comprimir: true, remover: `${DESTINO_LEILOEIROS}/${nome}` });
+      } else if (/\.json$/i.test(nome)) lista.push({ origem, destino: `${DESTINO_LEILOEIROS}/${nome}` });
     }
   }
   return lista;
@@ -495,6 +508,33 @@ export function motivoJsonInvalido(caminho: string, ehFichas = false): string | 
     if (typeof v.lidas_em !== "string" || typeof v.fichas !== "object" || v.fichas === null) return "sem os campos lidas_em e fichas";
   }
   return null;
+}
+
+/**
+ * Por que este JSONL não pode ir ao branch (vazio, cortado no meio de uma linha, linha que não é um objeto JSON), ou
+ * null. Igual ao motivoJsonInvalido: um arquivo quebrado publicado tomaria o lugar do bom.
+ */
+export function motivoJsonlInvalido(caminho: string): string | null {
+  let texto: string;
+  try {
+    texto = readFileSync(caminho, "utf8");
+  } catch (e) {
+    return `não li o arquivo (${(e as Error).message.slice(0, 100)})`;
+  }
+  const linhas = texto.split("\n");
+  let validas = 0;
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = linhas[i]!.trim();
+    if (!linha) continue;
+    try {
+      const valor: unknown = JSON.parse(linha);
+      if (typeof valor !== "object" || valor === null || Array.isArray(valor)) return `a linha ${i + 1} não é um objeto JSON`;
+    } catch {
+      return `a linha ${i + 1} não é um JSON inteiro (arquivo cortado?)`;
+    }
+    validas++;
+  }
+  return validas === 0 ? "arquivo vazio" : null;
 }
 
 export type ProblemaPush = "credencial" | "rede" | "outro";
@@ -601,8 +641,9 @@ export async function publicar(op: OpcoesPublicar): Promise<ResultadoPublicacao>
   const esperar = op.esperar ?? esperarPadrao;
   const recusados: { destino: string; motivo: string }[] = [];
   const arquivos = arquivosParaPublicar(op.pasta, op.limiteJson).filter((a) => {
-    if (!/\.json$/i.test(a.origem)) return true;
-    const motivo = motivoJsonInvalido(a.origem, a.destino.startsWith(`${DESTINO_FICHAS}/fichas.json`));
+    const jsonl = /\.jsonl$/i.test(a.origem);
+    if (!jsonl && !/\.json$/i.test(a.origem)) return true;
+    const motivo = jsonl ? motivoJsonlInvalido(a.origem) : motivoJsonInvalido(a.origem, a.destino.startsWith(`${DESTINO_FICHAS}/fichas.json`));
     if (!motivo) return true;
     recusados.push({ destino: a.destino, motivo });
     op.log(`Não envio ${a.destino}: ${motivo}. O que já está no branch fica como estava.`);
@@ -1114,7 +1155,8 @@ export async function principal(argv: readonly string[], env: NodeJS.ProcessEnv 
     publicacao = await publicar({ raiz, pasta, data, remoto, extras, log: (t) => registro.linha(t) });
     if (publicacao.ok) {
       writeFileSync(marca, String(tamanho));
-      registro.linha(`Envio: ${publicacao.mensagem}${publicacao.enviados.length ? `; pastas ${DESTINO_FICHAS}/, pc/${data}/ e itbi/ do branch ${BRANCH}` : ""}.`);
+      const pastas = [...new Set(publicacao.enviados.map((d) => d.slice(0, d.lastIndexOf("/") + 1)))].join(", ");
+      registro.linha(`Envio: ${publicacao.mensagem}${publicacao.enviados.length ? `; pastas ${pastas} do branch ${BRANCH}` : ""}.`);
     } else {
       registro.linha(`${LINHA}\n${publicacao.mensagem}\n${LINHA}`);
     }

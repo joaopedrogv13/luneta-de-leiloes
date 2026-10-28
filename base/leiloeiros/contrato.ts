@@ -146,6 +146,8 @@ export interface RegistroImovelLinha {
   matricula?: string | null;
   cartorio?: string | null;
   inscricao_municipal?: string | null;
+  /** Número do imóvel na Caixa (13 dígitos, com zeros à esquerda): acha o mesmo imóvel na Caixa. */
+  numero_caixa?: string | null;
 }
 
 export interface ControleLinha {

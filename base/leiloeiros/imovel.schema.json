@@ -92,7 +92,8 @@
       "properties": {
         "matricula": { "type": ["string", "null"], "maxLength": 120, "description": "Número da matrícula como a fonte escreve (\"123.456\"). Várias: separe por vírgula. → imovel.matricula." },
         "cartorio": { "type": ["string", "null"], "maxLength": 200, "description": "Cartório com o número do ofício (\"6º Oficial de Registro de Imóveis de São Paulo\"). → imovel.cartorio." },
-        "inscricao_municipal": { "type": ["string", "null"], "maxLength": 80, "description": "Inscrição imobiliária (IPTU). → extras.inscricao_imobiliaria." }
+        "inscricao_municipal": { "type": ["string", "null"], "maxLength": 80, "description": "Inscrição imobiliária (IPTU). → extras.inscricao_imobiliaria." },
+        "numero_caixa": { "type": ["string", "null"], "pattern": "^[0-9]{13}$", "description": "Número do imóvel na Caixa, com 13 dígitos e os zeros à esquerda (\"0000010119245\"), quando o leiloeiro vende um imóvel da Caixa e o número aparece no lote (URL hdnimovel=, título ou descrição). É a chave que acha o mesmo imóvel na Caixa. → extras.numero_caixa." }
       }
     },
     "extras": {

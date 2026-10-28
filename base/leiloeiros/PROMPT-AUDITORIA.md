@@ -1,5 +1,9 @@
 # Prompt para o outro chat: auditoria e reforma dos Apps Scripts dos leiloeiros
 
+> **Histórico (28/10/2026):** este prompt foi escrito antes de vermos os arquivos. O projeto do dono não é de Apps Scripts:
+> é o coletor PBCV, em Python, e a auditoria foi feita aqui mesmo. O resultado está em `pbcv/RELATORIO-PBCV.md`.
+> Este prompt não precisa mais ser usado.
+
 São dois arquivos: este (o **como usar**, os **próximos passos** e o **prompt**, entre as linhas `COPIE DAQUI` e
 `ATÉ AQUI`) e o [`ANEXOS-PROMPT.md`](ANEXOS-PROMPT.md), com o formato de dados da Luneta, as 26 tags, a conferência
 sem o validador e as plataformas conhecidas. Os anexos ficam num arquivo à parte porque o prompt com eles passava de

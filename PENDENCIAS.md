@@ -25,12 +25,12 @@ fornecedor antes de contratar.
   (simulador "Seu lance máximo" com lance + custos, conta fechada até editar, região com raio de 1 km e cartões dos
   portais), publicada em 25/10/2026.
 - **Catálogo real** em `/previa` (sem link): ~21,2 mil imóveis da Caixa (lista de 08/10/2026) e 10 da Leilões Judiciais.
-- **Leiloeiros (27/10/2026): o lado da Luneta está pronto** para os seus Apps Scripts (`base/leiloeiros/`): o formato
-  de troca (JSONL), o validador, a importação com uma fonte por leiloeiro (o nome dele aparece no site) e o relatório
-  "quantos imóveis e leilões por leiloeiro" para o site. O **prompt para auditar e refazer os scripts** em outro chat
-  está em `base/leiloeiros/PROMPT-AUDITORIA.md` (~22,5 mil caracteres para colar), com os anexos à parte em
-  `base/leiloeiros/ANEXOS-PROMPT.md` (salvar como `C:\Users\jpedr\Downloads\ANEXOS-LUNETA.md`). Revisado em 27/10:
-  ver "Leiloeiros: revisão adversarial" no histórico. Ainda nenhum leiloeiro real importado.
+- **Leiloeiros (28/10/2026): o seu coletor (PBCV) foi auditado e já exporta para a Luneta.** Não eram Apps Scripts,
+  e sim um coletor em Python com 823 sites, 188 plataformas e 161 mil lotes (repositório privado `luneta-base`). Na
+  base de 01/10 há ~24 mil imóveis à venda de verdade, de 531 leiloeiros; com cidade e UF, 21.719 de 483. Mas só ~5 mil
+  ainda têm praça por vir: **falta uma coleta nova e frequente**. O relatório completo para o dono está em
+  `base/leiloeiros/pbcv/RELATORIO-PBCV.md` (auditoria, ranking A/B/C, tags, LGPD, plano diário); o exportador está em
+  `base/leiloeiros/pbcv/` (README para o dono). Ainda nenhum leiloeiro importado na base de verdade.
 - Busca, filtros, mapa com ruas, página do imóvel e relatório em PDF, com a trava Lente × Luneta feita no servidor.
 - **Para decidir:** simulador de lance, preço do m² (leilões e ~203 mil compras do ITBI em 5 capitais), nota de
   localização (17,7 mil imóveis) e metrô, trem e VLT a até 1 km.
@@ -69,7 +69,7 @@ Em ordem de prioridade. Os bloqueadores são o mínimo para cobrar de alguém; a
 | I7 | Conferências à mão: um celular de verdade (iPhone e Android: mapa, folhas, "Voltar à apresentação", rolagem até a conta), o PDF da matrícula e a foto da capa do relatório no seu navegador, as placas de carro nas 3 fotos ilustrativas | **Dono:** 1 a 2 h, com um roteiro. **Código:** corrige o que aparecer |
 | I8 | Plano B do mapa: se o OpenFreeMap sair do ar, as ruas do Brasil num arquivo nosso | **Código:** 1 dia |
 | I9 | Medição de visitas sem cookies (Vercel Web Analytics ou Plausible) | **Dono** aprova; **código** 1 h |
-| I10 | **Apps Scripts do dono (leiloeiros):** rodar o prompt `base/leiloeiros/PROMPT-AUDITORIA.md` (com os anexos de `ANEXOS-PROMPT.md`) num chat com acesso a `C:\Users\jpedr\Downloads\zip` (inventário, volume por leiloeiro, relatório do código, A/B/C, código refeito, amostra no formato da Luneta, matriz de tags, plano de atualização); depois validar e importar a amostra aqui. Passo a passo na seção 3, "Próximos passos: Apps Scripts do dono" | **Dono:** 1 a 3 h de chat + decidir A/B/C. **Código:** 1 a 2 dias (importação diária e números do site) |
+| I10 | **Leiloeiros do PBCV:** auditoria feita (28/10, `base/leiloeiros/pbcv/RELATORIO-PBCV.md`) e exportador pronto. Falta: revogar as duas chaves, uma coleta nova exportada pelo seu PC e a importação aqui (passo a passo na seção 3, "Próximos passos: o coletor PBCV do dono") | **Dono:** 1 h (chaves e coleta). **Código:** 1 a 2 dias (importação, mapa, nota e números do site) |
 
 #### Depois do lançamento
 
@@ -94,25 +94,18 @@ e esperam rede, autorização ou a sua coleta. Em ordem de retorno (o que mais m
 | 2 | **Fichas da Caixa** (a página de cada imóvel) | Praça e data do 1º e do 2º leilão (hoje a base não sabe a praça de 4.569 dos 4.571 leilões), matrícula, comarca, CEP, FGTS, regras de condomínio e IPTU, link do edital. Destrava o alerta de praça, o CEP no mapa e a leitura do edital | Internet no Brasil (o anti-robô barra o Actions). Pronto para rodar no seu PC: ~15 h na primeira vez, depois minutos por dia (só os novos e os alterados) | **Dono:** uma noite. **Código:** 1 dia para aplicar. **Custo:** zero |
 | 3 | **Leilões Judiciais** (API pública) | Lotes judiciais e extrajudiciais de vários leiloeiros, com fotos, edital, matrícula e laudo (o volume real é desconhecido: cada busca devolve 10) | Ler os termos e mandar o pedido de autorização (rascunho pronto em `base/contatos/leiloesjudiciais-email.md`); depois a varredura das 27 UFs no Actions e a medição. O inventário completo (V-Lance) só com autorização | **Dono:** 1 h. **Código:** 2 a 3 dias. **Custo:** zero |
 | 4 | **Radar de editais** (PNCP, DJEN, DOU/INLABS, Querido Diário), no Actions | Leilões judiciais e de prefeituras que os portais grandes não juntam: texto oficial e o site do leilão, sem foto. Estimativa de 1 mil a 6,5 mil editais por mês antes de tirar os repetidos; quantos são "só nossos" ainda não se sabe | Conta grátis no INLABS (DOU), e-mail à OKBR sobre o uso comercial do Querido Diário, agendar no Actions, 2 semanas de medição (regra: com 2 mil por mês e 15% de novos, vira fonte) e IA barata para filtrar | **Dono:** 30 min. **Código:** 8 a 16 h (medição) + 40 a 80 h (produção). **Custo:** US$ 1 a 20/mês de IA |
-| 5 | **Bancos e leiloeiros grandes** (Itaú, Bradesco, Santander, BB, C6, Zuk, Mega, Superbid...) | Volume, fotos e o lance atual. O leilão dos bancos não passa por diário oficial: só no site do leiloeiro. Estoque fora da Caixa estimado em 6 a 20 mil imóveis | **Primeiro: os seus Apps Scripts**, que já coletam vários leiloeiros. O lado da Luneta está pronto em `base/leiloeiros/` (formato de troca, validador, importação com uma fonte por leiloeiro, relatório por leiloeiro); falta rodar o prompt `base/leiloeiros/PROMPT-AUDITORIA.md` (abaixo). Depois, **raspagem educada** (termos e robots.txt de cada site, 2 s entre páginas, nunca contornar o anti-robô), começando pelas plataformas que atendem muitos leiloeiros de uma vez (V-Lance, SOLEON, Leilão PRO, Superbid); ou **parceria** (Resale para Santander, BTG e BB; Suporte Leilões, com ~107 leiloeiros; Superbid). A lista do LeilãoMap diz por onde começar | **Dono:** o prompt dos Apps Scripts (1 a 3 h de chat), a lista do LeilãoMap e os contatos de parceria. **Código:** 1 a 2 dias por conector; 160 a 520 h para os ~30 maiores, em etapas. **Manutenção:** 5 a 120 h por mês (estimativa de 14/10) |
+| 5 | **Bancos e leiloeiros grandes** (Itaú, Bradesco, Santander, BB, C6, Zuk, Mega, Superbid...) | Volume, fotos e o lance atual. O leilão dos bancos não passa por diário oficial: só no site do leiloeiro. Estoque fora da Caixa estimado em 6 a 20 mil imóveis | **Primeiro: o seu coletor PBCV** (823 sites, ~24 mil imóveis à venda na base de 01/10), já auditado e com exportador para a Luneta (`base/leiloeiros/pbcv/RELATORIO-PBCV.md`); falta uma coleta nova e a importação (abaixo). Depois, **raspagem educada** (termos e robots.txt de cada site, 2 s entre páginas, nunca contornar o anti-robô), começando pelas plataformas que atendem muitos leiloeiros de uma vez (V-Lance, SOLEON, Leilão PRO, Superbid); ou **parceria** (Resale para Santander, BTG e BB; Suporte Leilões, com ~107 leiloeiros; Superbid). A lista do LeilãoMap diz por onde começar | **Dono:** a coleta nova do PBCV, a lista do LeilãoMap e os contatos de parceria. **Código:** 1 a 2 dias por conector; 160 a 520 h para os ~30 maiores, em etapas. **Manutenção:** 5 a 120 h por mês (estimativa de 14/10) |
 
-**Próximos passos: Apps Scripts do dono** (os leiloeiros que você já coleta; detalhes em `base/leiloeiros/README.md`):
-1. **Rodar o prompt** `base/leiloeiros/PROMPT-AUDITORIA.md` num chat que enxergue os arquivos do seu PC (Claude Code
-   ou Cowork), com acesso a `C:\Users\jpedr\Downloads\zip` e, se possível, ao clone deste repositório. Antes, salve
-   `base/leiloeiros/ANEXOS-PROMPT.md` como `C:\Users\jpedr\Downloads\ANEXOS-LUNETA.md` (ou anexe na conversa). Ele
-   para três vezes para pedir o seu OK (antes de instalar programa, antes de abrir páginas na internet e antes de
-   reescrever o código), pode pedir que você rode uma função no Apps Script e entrega, em `saida-luneta\`:
-   o relatório do código, o volume real por leiloeiro (imóveis e leilões), quem tem a maioria dos imóveis e quem não
-   vale a pena (A diária, B semanal, C parar), o código refeito, a amostra no formato da Luneta, a matriz de tags, o
-   plano de atualização e um `ESTADO.md` para continuar numa segunda sessão.
-2. **Decidir a lista A/B/C**, onde os coletores rodam (Apps Script, Node aqui no repositório ou misto) e como o arquivo
-   chega (Drive ou branch `coletas-dados`): decisão 38.
-3. **Validar e importar a amostra** aqui: `node --experimental-strip-types base/leiloeiros/validar.ts --arquivo
-   amostra-luneta.jsonl` e `npm run base:coletar -- leiloeiros --arquivo amostra-luneta.jsonl` num banco de teste;
-   olhar na `/previa`.
-4. **Coletores A rodando todo dia** e uma semana de acompanhamento (log e e-mail de alerta do próprio coletor).
-5. **Código:** importação diária junto com a Caixa (B1), `leiloeiros:relatorio -- --site` depois do exportar, os números
-   do hero e do FAQ ("[X] leiloeiros monitorados") a partir do relatório e a página "Fontes e leiloeiros".
+**Próximos passos: o coletor PBCV do dono** (relatório em `base/leiloeiros/pbcv/RELATORIO-PBCV.md`, seção 7):
+1. **Dono:** revogar as duas chaves que estão no repositório `luneta-base` (conta de serviço do Google e Groq).
+2. **Dono:** rodar uma coleta nova no PC e exportar:
+   `python base/leiloeiros/pbcv/exportar.py --banco C:\caminho\leiloes.db` e depois `node base/coleta-pc.mjs --so-publicar`.
+3. **Código:** importar do `coletas-dados`, geocodificar (CNEFE), calcular a nota, `leiloeiros:relatorio -- --site`,
+   trocar o "[X] leiloeiros monitorados" e criar a página "Fontes e leiloeiros".
+4. **Coleta diária por faixas** (A todo dia, B toda semana, C todo mês), incremental, com alerta de falha: no
+   coletor do dono (preciso de permissão de escrita no `luneta-base`) e o vigia do lado da Luneta.
+5. **Consertar os 11 leiloeiros grandes com dado ruim ou bloqueados** (lista em `relatorios/RANKING.md`) e limpar os
+   zumbis e os suspensos antigos no PBCV.
 
 **Onde rodar a Caixa todo dia** (decisão 3):
 - **GitHub Actions:** grátis. A lista nunca foi testada de lá (o `base-coleta.yml` nunca rodou); as fotos da Caixa abriram
@@ -230,14 +223,14 @@ vem entre parênteses.
     trens de longa distância não contam; vale com o endereço na rua; a Trensurb aparece como metrô.
 
 **Dados dos leiloeiros**
-38. [ ] **Depois do relatório dos Apps Scripts** (I10): a lista A (diária), B (semanal) e C (parar ou só com parceria);
-    onde os coletores rodam (continuar no Apps Script, portar para Node aqui no repositório, ou misto); e como o arquivo
-    chega à Luneta (pasta do Drive, sem segredo, ou o branch `coletas-dados`, com um token restrito). (O relatório traz
-    a recomendação; a minha, por enquanto: Drive para começar e o branch quando a importação diária estiver de pé.)
+38. [ ] **Leiloeiros do PBCV** (relatório de 28/10): aprovar a lista A (34 leiloeiros, 53% dos imóveis, diária), B (90,
+    semanal) e C (o resto, mensal); onde a coleta diária roda (recomendo o seu PC agora, com um teste de uma semana no
+    GitHub Actions); se vale contatar a Superbid e a LeilõesBR para liberar o robô identificado; e se me dá escrita no
+    `luneta-base` para a coleta incremental e o alerta de falha.
 39. [ ] **Sites que proíbem coleta ou com termos não lidos** (o relatório lista): manter, pedir autorização por escrito
     ou parar.
 
-**Tarefas suas que não são decisão** (estão no roteiro): rodar o prompt dos Apps Scripts dos leiloeiros (I10), rodar a coleta no PC (I2), mandar a lista do LeilãoMap, o
+**Tarefas suas que não são decisão** (estão no roteiro): revogar as chaves e rodar uma coleta nova do PBCV (I10), rodar a coleta no PC (I2), mandar a lista do LeilãoMap, o
 pedido à Leilões Judiciais, a conta no INLABS, os e-mails à OKBR (Querido Diário) e à Fipe (FipeZAP), os pedidos de
 licença do ITBI e de Lei de Acesso nas capitais sem ITBI aberto, o domínio e a marca (I3) e as conferências à mão (I7).
 

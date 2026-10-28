@@ -208,6 +208,8 @@ export function normalizarLinha(bruto: unknown): ImovelNormalizado {
       debito_condominio_valor: l.debitos?.condominio?.valor ?? null,
       debito_condominio_responsavel: l.debitos?.condominio?.responsavel ?? null,
       inscricao_imobiliaria: semDocumento(l.registro_imovel?.inscricao_municipal),
+      // o mesmo imóvel na Caixa (id_na_fonte da caixa_csv): o relatório conta como repetido
+      numero_caixa: l.registro_imovel?.numero_caixa ?? null,
       ...situacoesPraca,
     }),
   };

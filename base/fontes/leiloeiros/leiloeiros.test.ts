@@ -142,6 +142,60 @@ test("LGPD na importação: lote com CPF é recusado; endereço e comitente com 
   assert.deepEqual([normalizarLinha(m).extras?.x_codigo_interno, normalizarLinha(m).extras?.x_visitas], ["A-77", 10]);
 });
 
+test("número do imóvel na Caixa: vai para extras.numero_caixa; fora do padrão de 13 dígitos, o lote é recusado", () => {
+  const l = linhas().find((x) => x.id === "gama-leiloes:771")!;
+  l.registro_imovel = { matricula: null, cartorio: null, inscricao_municipal: null, numero_caixa: "0000010119245" };
+  assert.equal(normalizarLinha(l).extras?.numero_caixa, "0000010119245");
+  l.registro_imovel = { matricula: null, cartorio: null, inscricao_municipal: null, numero_caixa: "10119245" };
+  assert.throws(() => normalizarLinha(l), /registro_imovel\.numero_caixa: fora do padrão/);
+  assert.equal(normalizado("gama-leiloes:771").extras?.numero_caixa, undefined, "sem o número, nada nos extras");
+});
+
+test("relatório: o número do imóvel na Caixa conta como repetido, mesmo com endereço diferente e sem matrícula", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "luneta-leiloeiros-caixa-"));
+  const banco = join(dir, "luneta.db");
+  try {
+    assert.equal((await rodar(["migrar", "--banco", banco])).codigo, 0);
+    const db0 = abrirBanco(banco);
+    try {
+      garantirFonte(db0, conectorFalso({ id: "caixa_csv", registros: () => [] }), AGORA);
+      gravarImoveis(db0, "caixa_csv", [
+        imovelExemplo({
+          id_na_fonte: "0000010119245",
+          url: "https://exemplo.test/caixa/10119245",
+          uf: "PR",
+          cidade: "Curitiba",
+          endereco: "RUA FICTICIA DA CAIXA, N. 900, Apto 12",
+          pracas: [{ numero: 0, data: null, valor_minimo: 200000 }],
+          praca_atual: 0,
+          modalidade: "venda_direta",
+        }),
+      ], { agora: AGORA });
+    } finally {
+      db0.close();
+    }
+    // A Gama (fixture) com o número no 771; o 772 fica sem número e com outro endereço
+    const gama = linhas()
+      .filter((l) => String(l.id ?? (l.leiloeiro as Record<string, unknown>).slug).startsWith("gama-leiloes"))
+      .map((l) => (l.id === "gama-leiloes:771" ? { ...l, registro_imovel: { matricula: null, cartorio: null, inscricao_municipal: null, numero_caixa: "0000010119245" } } : l));
+    const arquivo = join(dir, "gama.jsonl");
+    writeFileSync(arquivo, jsonl(gama));
+    const c = await rodar(["coletar", "leiloeiros", "--banco", banco, "--arquivo", arquivo]);
+    assert.equal(c.codigo, 0, c.erro + c.saida);
+    const db = abrirBanco(banco);
+    try {
+      const r = relatorioDaBase(db, { agora: AGORA });
+      const linha = r.leiloeiros.find((l) => l.slug === "gama-leiloes")!;
+      assert.equal(linha.ativos, 2);
+      assert.equal(linha.repetidos_caixa, 1, "o 771 pelo número; o 772 não");
+    } finally {
+      db.close();
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("agrupa por leiloeiro: uma fonte ll_<slug> com o nome, o site, as capacidades e a lista completa da linha de coleta", () => {
   const { grupos, ilegiveis } = agruparPorLeiloeiro(TEXTO);
   assert.equal(ilegiveis, 0);

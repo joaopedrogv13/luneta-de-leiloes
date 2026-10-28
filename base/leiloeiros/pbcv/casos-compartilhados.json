@@ -1,0 +1,845 @@
+{
+ "sobre": "Casos compartilhados entre a máscara da Luneta em TypeScript (base/util/lgpd.ts, campoSemPessoa de base/fontes/leiloesjudiciais/normalizar.ts, inferirTipoImovel de base/util/classificar.ts) e a tradução em Python do exportador do PBCV (base/leiloeiros/pbcv/regras_luneta.py). A saída é a do TypeScript (a fonte da verdade): pbcv.test.ts confere o TypeScript e testar.py confere o Python. Se o TypeScript mudar de propósito, refaça as saídas com `node --experimental-strip-types base/leiloeiros/pbcv/gerar-casos.ts` e acerte o Python até o testar.py passar. Nomes e documentos são fictícios.",
+ "casos": [
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Executado: JOÃO DA SILVA, brasileiro",
+   "saida": "Executado: [NOME], brasileiro"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Exequente: Maria de Souza Pereira e José Antunes",
+   "saida": "Exequente: [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "FICAM INTIMADOS OS EXECUTADOS JOÃO DA SILVA E MARIA SOUZA, BEM COMO O CREDOR",
+   "saida": "FICAM INTIMADOS OS EXECUTADOS [NOME], BEM COMO O CREDOR"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "devedor fiduciante JOSÉ CARLOS PEREIRA, inscrito",
+   "saida": "devedor fiduciante [NOME], inscrito"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Depositário: o Sr. Antônio Carlos de Oliveira Filho.",
+   "saida": "Depositário: o Sr. [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "movida por CAIXA ECONÔMICA FEDERAL em face de ROBERTO CARLOS MENDES",
+   "saida": "movida por [NOME] em face de [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Proprietário(s): PEDRO ÁLVARES CABRAL; Cônjuge: Maria",
+   "saida": "Proprietário(s): [NOME]; Cônjuge: [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Arrematante: Carlos Alberto Nunes",
+   "saida": "Arrematante: [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Licitante - ANA PAULA COSTA",
+   "saida": "Licitante - [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "EXECUTADO(A)(S): EXEMPLO MARMORARIA LTDA - ME; FULANO GOMES DE TAL; BELTRANA GOMES DE TAL",
+   "saida": "EXECUTADO(A)(S): [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "EXECUTADO(A)(S): XYZ TRANSPORTE DE VALORES, SEGURANCA E VIGILANCIA LTDA.; CICLANO PAES DE SOUZA; ANA LUNARDI",
+   "saida": "EXECUTADO(A)(S): [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "de titularidade da executada FULANA DE TAL; Av. 08 - Rua A denomina-se Rua Dr. Nuno de Assis",
+   "saida": "de titularidade da executada [NOME]; Av. 08 - Rua A denomina-se Rua Dr. Nuno de Assis"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "vendido a Fulano de Tal Souza, brasileiro, casado, comerciante",
+   "saida": "vendido a [NOME], brasileiro, casado, comerciante"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Conforme diligência do Sr. Oficial Fulano Beltrano em 17/04/2018",
+   "saida": "Conforme diligência do Sr. [NOME] em 17/04/2018"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Imóvel ocupado por JOÃO DA SILVA SAURO e família.",
+   "saida": "Imóvel ocupado por [NOME] e família."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "O bem encontra-se na posse de MARIA PEREIRA LIMA.",
+   "saida": "O bem encontra-se na posse de [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Imóvel locado para JOSÉ CARLOS NUNES, sem contrato.",
+   "saida": "Imóvel locado para [NOME], sem contrato."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Segundo o oficial, reside no imóvel Maria Pereira Lima.",
+   "saida": "Segundo o oficial, reside no imóvel [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Moradora: Ana Paula Costa",
+   "saida": "Moradora: [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "bem em poder de FULANO BELTRANO DE TAL",
+   "saida": "bem em poder de [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Ocupada por terceiros. Imóvel locado a terceiros.",
+   "saida": "Ocupada por terceiros. Imóvel locado a terceiros."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Lote 01: terreno urbano, arrematado por João Carlos Pereira pelo valor de R$ 50.000,00.",
+   "saida": "Lote 01: terreno urbano, arrematado por [NOME] pelo valor de R$ 50.000,00."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Lote 02: casa, arrematada por Maria Aparecida Souza.",
+   "saida": "Lote 02: casa, arrematada por [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "o imóvel foi arrematado em leilão por Carlos Eduardo Mendes, pelo valor",
+   "saida": "o imóvel foi arrematado em leilão por [NOME], pelo valor"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "arrematado pelo Sr. Ricardo Alves Moreira",
+   "saida": "arrematado pelo Sr. [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Leilão nº 4/2026, lote 7 da quadra 2, adjudicado a Pedro Henrique Alves.",
+   "saida": "Leilão nº 4/2026, lote 7 da quadra 2, adjudicado a [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "bem adjudicado à exequente ANA PAULA COSTA",
+   "saida": "bem adjudicado à exequente [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "imóvel adquirido por Fulano Beltrano de Tal em 2010",
+   "saida": "imóvel adquirido por [NOME] em 2010"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Lote 02: casa, sendo vencedor JOSÉ ANTÔNIO FERREIRA, com lance de R$ 80.000,00.",
+   "saida": "Lote 02: casa, sendo vencedor [NOME], com lance de R$ 80.000,00."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "declarada vencedora Maria de Souza Pereira",
+   "saida": "declarada vencedora [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "entregue ao arrematante JOÃO DA SILVA",
+   "saida": "entregue ao arrematante [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "a executada, Maria Silva Ramos, e sua irmã, Ana Silva Ramos.",
+   "saida": "a executada, [NOME], e sua irmã, [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "1) Ocupação Atual: Maria Aparecida Santos, irmã do executado;",
+   "saida": "1) Ocupação Atual: [NOME], irmã do executado;"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Residem no imóvel João Pereira Lima e esposa",
+   "saida": "Residem no imóvel [NOME] e esposa"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "servindo de moradia para Francisco das Chagas Oliveira e filhos",
+   "saida": "servindo de moradia para [NOME] e filhos"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "José Carlos de Souza e família ocupam o imóvel desde 2010.",
+   "saida": "[NOME] e família ocupam o imóvel desde 2010."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "ocupado por Roberto Carlos Mendes, ex-mutuário, de responsabilidade de Roberto Carlos Mendes.",
+   "saida": "ocupado por [NOME], ex-mutuário, de responsabilidade de [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "nos autos movidos por Antônio Ferreira Gomes contra Luiz Carlos Prado",
+   "saida": "nos autos movidos por [NOME] contra [NOME]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "e sua irmã, Ana Silva Ramos. Residem no imóvel há vinte anos",
+   "saida": "e sua irmã, [NOME]. Residem no imóvel há vinte anos"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "VALOR DA AVALIAÇÃO: R$ 1.700.000,00",
+   "saida": "VALOR DA AVALIAÇÃO: R$ 1.700.000,00"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Proc. 1000818-76.2020.5.02.0090 - 90ª VT São Paulo/SP",
+   "saida": "Proc. 1000818-76.2020.5.02.0090 - 90ª VT São Paulo/SP"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Nº CONTRIBUINTE: 044.110.0039-3",
+   "saida": "Nº CONTRIBUINTE: 044.110.0039-3"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "N° do imóvel 1444420699441",
+   "saida": "N° do imóvel 1444420699441"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "CEP: 69980-000",
+   "saida": "CEP: 69980-000"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "área de 1.700.000.00 m²",
+   "saida": "área de 1.700.000.00 m²"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "R.09 - Usufruto vitalício em favor de FULANA SOARES, CPF 123.456.789-09; AV.10 - INDISPONIBILIDADE DE BENS",
+   "saida": "R.09 - Usufruto vitalício em favor de [NOME], CPF [CPF]; AV.10 - INDISPONIBILIDADE DE BENS"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "R.09 - Usufruto vitalício em favor de [NOME], CPF [CPF]; AV.10 - INDISPONIBILIDADE DE BENS",
+   "saida": "R.09 - Usufruto vitalício em favor de [NOME], CPF [CPF]; AV.10 - INDISPONIBILIDADE DE BENS"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "R11. - Usufruto em favor de BELTRANO BATISTA, CPF 123.456.789-09 e FULANA FURLAN BATISTA, CPF 123.456.789-09",
+   "saida": "R11. - Usufruto em favor de [NOME], CPF [CPF] e [NOME], CPF [CPF]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "R11. - Usufruto em favor de [NOME], CPF [CPF] e [NOME], CPF [CPF]",
+   "saida": "R11. - Usufruto em favor de [NOME], CPF [CPF] e [NOME], CPF [CPF]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Será considerado vencedor o licitante que oferecer o maior lance.",
+   "saida": "Será considerado vencedor o licitante que oferecer o maior lance."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "O bem será arrematado por quem oferecer o maior lance, ou arrematado pelo valor mínimo.",
+   "saida": "O bem será arrematado por quem oferecer o maior lance, ou arrematado pelo valor mínimo."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "O VENCEDOR DO LEILÃO DEVERÁ PAGAR À VISTA. O ARREMATANTE DEVERÁ ASSINAR O AUTO.",
+   "saida": "O VENCEDOR DO LEILÃO DEVERÁ PAGAR À VISTA. O ARREMATANTE DEVERÁ ASSINAR O AUTO."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "adjudicado ao exequente pelo valor da avaliação",
+   "saida": "adjudicado ao exequente pelo valor da avaliação"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Processo 1000818-76.2020.5.02.0090 - [NOME] x [NOME].",
+   "saida": "Processo 1000818-76.2020.5.02.0090 - [NOME] x [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "O ARREMATANTE DEVERÁ PAGAR AS DESPESAS. O EXECUTADO DEVERÁ DESOCUPAR",
+   "saida": "O ARREMATANTE DEVERÁ PAGAR AS DESPESAS. O EXECUTADO DEVERÁ DESOCUPAR"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "o arrematante Fica responsável pelas despesas",
+   "saida": "o arrematante Fica responsável pelas despesas"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Rua Frei Antônio de Guadalupe, nº 67, apto 21, Vila Prudente.",
+   "saida": "Rua Frei Antônio de Guadalupe, nº 67, apto 21, Vila Prudente."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Local dos bens: Rua Dr. Arnaldo, 455, Cerqueira César, São Paulo/SP",
+   "saida": "Local dos bens: Rua Dr. Arnaldo, 455, Cerqueira César, São Paulo/SP"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Há outras penhoras. Há indisponibilidade. Imóvel ocupado pelo executado.",
+   "saida": "Há outras penhoras. Há indisponibilidade. Imóvel ocupado pelo executado."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Condomínio: Sob responsabilidade do comprador, até o limite de 10% em relação ao valor de avaliação.",
+   "saida": "Condomínio: Sob responsabilidade do comprador, até o limite de 10% em relação ao valor de avaliação."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Ocupação: Desocupado.",
+   "saida": "Ocupação: Desocupado."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Ocupação Atual: O próprio executado",
+   "saida": "Ocupação Atual: O próprio executado"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "OCUPAÇÃO ATUAL: O PRÓPRIO EXECUTADO",
+   "saida": "OCUPAÇÃO ATUAL: O PRÓPRIO EXECUTADO"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Ocupação: Terceiros",
+   "saida": "Ocupação: Terceiros"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Situação de ocupação: Ocupado por invasores",
+   "saida": "Situação de ocupação: Ocupado por invasores"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "O executado, intimado, informou que o imóvel está ocupado por inquilino.",
+   "saida": "O executado, intimado, informou que o imóvel está ocupado por inquilino."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "SALDO REMANESCENTE SERÁ DE RESPONSABILIDADE DO(S) ARREMATANTE(S), CONFORME DETERMINADO",
+   "saida": "SALDO REMANESCENTE SERÁ DE RESPONSABILIDADE DO(S) ARREMATANTE(S), CONFORME DETERMINADO"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Condomínio: Sob responsabilidade do comprador, até o limite de 10%",
+   "saida": "Condomínio: Sob responsabilidade do comprador, até o limite de 10%"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Depositário: o Sr. [NOME].",
+   "saida": "Depositário: o Sr. [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "o imóvel está ocupado; [NOME] informou que mora lá.",
+   "saida": "o imóvel está ocupado; [NOME] informou que mora lá."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Rua Antonio Castelucci, 100, ocupado por [NOME].",
+   "saida": "Rua Antonio Castelucci, 100, ocupado por [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "EXECUTADO: FULANO FICTÍCIO DE TAL - ME, CNPJ 12.345.678/0001-95; EXEQUENTE: BANCO FICTÍCIO S.A.",
+   "saida": "EXECUTADO: [NOME], CNPJ [CNPJ]; EXEQUENTE: [NOME]."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Processo nº 0001234-56.2024.8.26.0100 - Ação de Execução - BANCO FICTÍCIO S.A. x BELTRANA FICTÍCIA DE SOUZA",
+   "saida": "Processo nº 0001234-56.2024.8.26.0100 - Ação de Execução - BANCO FICTÍCIO S.A. x BELTRANA FICTÍCIA DE SOUZA"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "O imóvel está ocupado pela executada Ciclana Fictícia Ramos e seus filhos.",
+   "saida": "O imóvel está ocupado pela executada [NOME] e seus filhos."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Ocupação: Desocupado. Débitos de IPTU por conta do arrematante.",
+   "saida": "Ocupação: Desocupado. Débitos de IPTU por conta do arrematante."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Depositário(a): Sra. Fulana Fictícia, RG 12.345.678-9 SSP/SP, CPF 12345678909, e-mail fulana@exemplo.com.br",
+   "saida": "Depositário(a): Sra. [NOME], RG [RG], CPF [CPF], e-mail [E-MAIL]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Lance do IP 10.0.0.256 e do IP 172.16.254.1",
+   "saida": "Lance do IP 10.0.0.256 e do IP [IP]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Contribuinte 044.110.0039-3; CEP 01310-100; matrícula 147.300 do 6º CRI",
+   "saida": "Contribuinte 044.110.0039-3; CEP 01310-100; matrícula 147.300 do 6º CRI"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Leiloeiro Oficial HELMUT FICTBERG, JUCESP nº 999",
+   "saida": "[NOME]RG, JUCESP nº 999"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Imóvel de propriedade de JOANA FICTÍCIA CASADO, brasileira, casada",
+   "saida": "Imóvel de propriedade de [NOME] CASADO, brasileira, casada"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Rua Dr. Fictício Arnaldo, 455, apto 21, Vila Fictícia, São Paulo/SP",
+   "saida": "Rua Dr. Fictício Arnaldo, 455, apto 21, Vila Fictícia, São Paulo/SP"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Executado:\tFULANO FICTÍCIO DE TAL",
+   "saida": "Executado:\t[NOME] FICTÍCIO DE TAL"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Arrematante – 𝐅𝐔𝐋𝐀𝐍𝐎 𝐃𝐄 𝐓𝐀𝐋 e Executado: Ana Ficticia Lima 😀",
+   "saida": "Arrematante – [NOME] e Executado: [NOME] 😀"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "CPF 😀 123.456.789-09 e CPF: 98765432100",
+   "saida": "CPF 😀 [CPF] e CPF: [CPF]"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "VENDEDOR: Construtora Fictícia Ltda.; COMPRADOR: a definir",
+   "saida": "VENDEDOR: [NOME].; COMPRADOR: a definir"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "Residem no imóvel Pedro Fictício Alves e família.",
+   "saida": "Residem no imóvel [NOME] e família."
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "terreno de 10 x 20 m, lote 7 da quadra 2",
+   "saida": "terreno de 10 x 20 m, lote 7 da quadra 2"
+  },
+  {
+   "funcao": "mascararDadosPessoais",
+   "entrada": "FULANA FICTÍCIA DE TAL x CONDOMÍNIO EDIFÍCIO FICTÍCIO",
+   "saida": "[NOME] x [NOME]"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Executado: JOÃO DA SILVA, brasileiro",
+   "saida": "Executado: JOÃO DA SILVA, brasileiro"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Exequente: Maria de Souza Pereira e José Antunes",
+   "saida": "Exequente: Maria de Souza Pereira e José Antunes"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "FICAM INTIMADOS OS EXECUTADOS JOÃO DA SILVA E MARIA SOUZA, BEM COMO O CREDOR",
+   "saida": "FICAM INTIMADOS OS EXECUTADOS JOÃO DA SILVA E MARIA SOUZA, BEM COMO O CREDOR"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "devedor fiduciante JOSÉ CARLOS PEREIRA, inscrito",
+   "saida": "devedor fiduciante JOSÉ CARLOS PEREIRA, inscrito"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Depositário: o Sr. Antônio Carlos de Oliveira Filho.",
+   "saida": "Depositário: o Sr. Antônio Carlos de Oliveira Filho."
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "movida por CAIXA ECONÔMICA FEDERAL em face de ROBERTO CARLOS MENDES",
+   "saida": "movida por CAIXA ECONÔMICA FEDERAL em face de ROBERTO CARLOS MENDES"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Proprietário(s): PEDRO ÁLVARES CABRAL; Cônjuge: Maria",
+   "saida": "Proprietário(s): PEDRO ÁLVARES CABRAL; Cônjuge: Maria"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Arrematante: Carlos Alberto Nunes",
+   "saida": "Arrematante: Carlos Alberto Nunes"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Licitante - ANA PAULA COSTA",
+   "saida": "Licitante - ANA PAULA COSTA"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "EXECUTADO(A)(S): EXEMPLO MARMORARIA LTDA - ME; FULANO GOMES DE TAL; BELTRANA GOMES DE TAL",
+   "saida": "EXECUTADO(A)(S): EXEMPLO MARMORARIA LTDA - ME; FULANO GOMES DE TAL; BELTRANA GOMES DE TAL"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "EXECUTADO(A)(S): XYZ TRANSPORTE DE VALORES, SEGURANCA E VIGILANCIA LTDA.; CICLANO PAES DE SOUZA; ANA LUNARDI",
+   "saida": "EXECUTADO(A)(S): XYZ TRANSPORTE DE VALORES, SEGURANCA E VIGILANCIA LTDA.; CICLANO PAES DE SOUZA; ANA LUNARDI"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "de titularidade da executada FULANA DE TAL; Av. 08 - Rua A denomina-se Rua Dr. Nuno de Assis",
+   "saida": "de titularidade da executada FULANA DE TAL; Av. 08 - Rua A denomina-se Rua Dr. Nuno de Assis"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "EXECUTADO: FULANO FICTÍCIO DE TAL - ME, CNPJ 12.345.678/0001-95; EXEQUENTE: BANCO FICTÍCIO S.A.",
+   "saida": "EXECUTADO: FULANO FICTÍCIO DE TAL - ME, CNPJ [CNPJ]; EXEQUENTE: BANCO FICTÍCIO S.A."
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Processo nº 0001234-56.2024.8.26.0100 - Ação de Execução - BANCO FICTÍCIO S.A. x BELTRANA FICTÍCIA DE SOUZA",
+   "saida": "Processo nº 0001234-56.2024.8.26.0100 - Ação de Execução - BANCO FICTÍCIO S.A. x BELTRANA FICTÍCIA DE SOUZA"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "O imóvel está ocupado pela executada Ciclana Fictícia Ramos e seus filhos.",
+   "saida": "O imóvel está ocupado pela executada Ciclana Fictícia Ramos e seus filhos."
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Ocupação: Desocupado. Débitos de IPTU por conta do arrematante.",
+   "saida": "Ocupação: Desocupado. Débitos de IPTU por conta do arrematante."
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Depositário(a): Sra. Fulana Fictícia, RG 12.345.678-9 SSP/SP, CPF 12345678909, e-mail fulana@exemplo.com.br",
+   "saida": "Depositário(a): Sra. Fulana Fictícia, RG [RG], CPF [CPF], e-mail [E-MAIL]"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Lance do IP 10.0.0.256 e do IP 172.16.254.1",
+   "saida": "Lance do IP 10.0.0.256 e do IP [IP]"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Contribuinte 044.110.0039-3; CEP 01310-100; matrícula 147.300 do 6º CRI",
+   "saida": "Contribuinte 044.110.0039-3; CEP 01310-100; matrícula 147.300 do 6º CRI"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Leiloeiro Oficial HELMUT FICTBERG, JUCESP nº 999",
+   "saida": "Leiloeiro Oficial HELMUT FICTBERG, JUCESP nº 999"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Imóvel de propriedade de JOANA FICTÍCIA CASADO, brasileira, casada",
+   "saida": "Imóvel de propriedade de JOANA FICTÍCIA CASADO, brasileira, casada"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Rua Dr. Fictício Arnaldo, 455, apto 21, Vila Fictícia, São Paulo/SP",
+   "saida": "Rua Dr. Fictício Arnaldo, 455, apto 21, Vila Fictícia, São Paulo/SP"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Executado:\tFULANO FICTÍCIO DE TAL",
+   "saida": "Executado:\tFULANO FICTÍCIO DE TAL"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Arrematante – 𝐅𝐔𝐋𝐀𝐍𝐎 𝐃𝐄 𝐓𝐀𝐋 e Executado: Ana Ficticia Lima 😀",
+   "saida": "Arrematante – 𝐅𝐔𝐋𝐀𝐍𝐎 𝐃𝐄 𝐓𝐀𝐋 e Executado: Ana Ficticia Lima 😀"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "CPF 😀 123.456.789-09 e CPF: 98765432100",
+   "saida": "CPF 😀 [CPF] e CPF: [CPF]"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "VENDEDOR: Construtora Fictícia Ltda.; COMPRADOR: a definir",
+   "saida": "VENDEDOR: Construtora Fictícia Ltda.; COMPRADOR: a definir"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "Residem no imóvel Pedro Fictício Alves e família.",
+   "saida": "Residem no imóvel Pedro Fictício Alves e família."
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "terreno de 10 x 20 m, lote 7 da quadra 2",
+   "saida": "terreno de 10 x 20 m, lote 7 da quadra 2"
+  },
+  {
+   "funcao": "mascararDocumentos",
+   "entrada": "FULANA FICTÍCIA DE TAL x CONDOMÍNIO EDIFÍCIO FICTÍCIO",
+   "saida": "FULANA FICTÍCIA DE TAL x CONDOMÍNIO EDIFÍCIO FICTÍCIO"
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "EXECUTADO: FULANO FICTÍCIO DE TAL - ME, CNPJ 12.345.678/0001-95; EXEQUENTE: BANCO FICTÍCIO S.A.",
+   "saida": "EXECUTADO: [NOME], CNPJ 12.345.678/0001-95; EXEQUENTE: [NOME]."
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "Processo nº 0001234-56.2024.8.26.0100 - Ação de Execução - BANCO FICTÍCIO S.A. x BELTRANA FICTÍCIA DE SOUZA",
+   "saida": "Processo nº 0001234-56.2024.8.26.0100 - Ação de Execução - BANCO FICTÍCIO S.A. x BELTRANA FICTÍCIA DE SOUZA"
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "O imóvel está ocupado pela executada Ciclana Fictícia Ramos e seus filhos.",
+   "saida": "O imóvel está ocupado pela executada [NOME] e seus filhos."
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "Ocupação: Desocupado. Débitos de IPTU por conta do arrematante.",
+   "saida": "Ocupação: Desocupado. Débitos de IPTU por conta do arrematante."
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "Depositário(a): Sra. Fulana Fictícia, RG 12.345.678-9 SSP/SP, CPF 12345678909, e-mail fulana@exemplo.com.br",
+   "saida": "Depositário(a): Sra. [NOME], RG 12.345.678-9 SSP/SP, CPF 12345678909, e-mail fulana@exemplo.com.br"
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "Lance do IP 10.0.0.256 e do IP 172.16.254.1",
+   "saida": "Lance do IP 10.0.0.256 e do IP 172.16.254.1"
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "Contribuinte 044.110.0039-3; CEP 01310-100; matrícula 147.300 do 6º CRI",
+   "saida": "Contribuinte 044.110.0039-3; CEP 01310-100; matrícula 147.300 do 6º CRI"
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "Leiloeiro Oficial HELMUT FICTBERG, JUCESP nº 999",
+   "saida": "[NOME]RG, JUCESP nº 999"
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "Executado: JOÃO DA SILVA, brasileiro",
+   "saida": "Executado: [NOME], brasileiro"
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "Exequente: Maria de Souza Pereira e José Antunes",
+   "saida": "Exequente: [NOME]"
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "FICAM INTIMADOS OS EXECUTADOS JOÃO DA SILVA E MARIA SOUZA, BEM COMO O CREDOR",
+   "saida": "FICAM INTIMADOS OS EXECUTADOS [NOME], BEM COMO O CREDOR"
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "devedor fiduciante JOSÉ CARLOS PEREIRA, inscrito",
+   "saida": "devedor fiduciante [NOME], inscrito"
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "Depositário: o Sr. Antônio Carlos de Oliveira Filho.",
+   "saida": "Depositário: o Sr. [NOME]."
+  },
+  {
+   "funcao": "mascararNomes",
+   "entrada": "movida por CAIXA ECONÔMICA FEDERAL em face de ROBERTO CARLOS MENDES",
+   "saida": "movida por [NOME] em face de [NOME]"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Rua das Flores, 100, apto 21",
+   "saida": "Rua das Flores, 100, apto 21"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Rua X, 10 - proprietário Fulano Fictício de Tal",
+   "saida": "Rua X, 10"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Avenida Fictícia, 500, ocupado por Beltrano Fictício",
+   "saida": "Avenida Fictícia, 500"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Banco Fictício S.A., credor fiduciário",
+   "saida": "Banco Fictício S.A"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "TJSP – 2ª Vara Cível de Campinas",
+   "saida": "TJSP – 2ª Vara Cível de Campinas"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Espólio de Fulano Fictício",
+   "saida": null
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Rua Ana Fictícia Costa, 12",
+   "saida": "Rua Ana Fictícia Costa, 12"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "FULANO FICTICIO x BELTRANO FICTICIO",
+   "saida": "FULANO FICTICIO"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Jardim Fictício II",
+   "saida": "Jardim Fictício II"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "CPF 123.456.789-09",
+   "saida": null
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "𝒜",
+   "saida": "𝒜"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Ed. 𝐀𝐁𝐂, sala 3",
+   "saida": "Ed. 𝐀𝐁𝐂, sala 3"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": ".",
+   "saida": null
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "",
+   "saida": null
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Rua Dr. Fictício Arnaldo, 455, apto 21, Vila Fictícia, São Paulo/SP",
+   "saida": "Rua Dr. Fictício Arnaldo, 455, apto 21, Vila Fictícia, São Paulo/SP"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Executado:\tFULANO FICTÍCIO DE TAL",
+   "saida": null
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Arrematante – 𝐅𝐔𝐋𝐀𝐍𝐎 𝐃𝐄 𝐓𝐀𝐋 e Executado: Ana Ficticia Lima 😀",
+   "saida": null
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "CPF 😀 123.456.789-09 e CPF: 98765432100",
+   "saida": null
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "VENDEDOR: Construtora Fictícia Ltda.; COMPRADOR: a definir",
+   "saida": null
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "Residem no imóvel Pedro Fictício Alves e família.",
+   "saida": null
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "terreno de 10 x 20 m, lote 7 da quadra 2",
+   "saida": "terreno de 10 x 20 m, lote 7 da quadra 2"
+  },
+  {
+   "funcao": "campoSemPessoa",
+   "entrada": "FULANA FICTÍCIA DE TAL x CONDOMÍNIO EDIFÍCIO FICTÍCIO",
+   "saida": "FULANA FICTÍCIA DE TAL"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Apartamento, 72m², Vila Fictícia, Campinas/SP",
+   "saida": "apartamento"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Casa com garagem",
+   "saida": "casa"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Sobrado 3 dormitórios",
+   "saida": "casa"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Gleba Urbana de 2 ha",
+   "saida": "terreno"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Gleba rural",
+   "saida": "rural"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Galpão industrial",
+   "saida": "comercial"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Vaga de garagem nº 12",
+   "saida": "vaga"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Sala comercial 40 m²",
+   "saida": "comercial"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Terreno, Lote 5, Quadra 3",
+   "saida": "terreno"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Fazenda Fictícia, 120 hectares",
+   "saida": "rural"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Outros",
+   "saida": "outro"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Box 13: localizado no subsolo",
+   "saida": "vaga"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Imóvel residencial. Casa térrea",
+   "saida": "casa"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "<b>Kitnet</b> &amp; garagem",
+   "saida": "apartamento"
+  },
+  {
+   "funcao": "inferirTipoImovel",
+   "entrada": "Chácara (2.000 m²)",
+   "saida": "rural"
+  }
+ ]
+}

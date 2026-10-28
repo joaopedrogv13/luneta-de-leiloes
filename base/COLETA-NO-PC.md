@@ -153,7 +153,9 @@ Se o envio falhar, o programa diz exatamente o que fazer; os dados continuam sal
 
 **O que vai para o GitHub:** só os dados lidos das fichas (`fichas.json`, com nomes e documentos de pessoas mascarados),
 o resumo, o ITBI de BH (só médias por cidade, bairro e rua) e o registro da execução, sem os caminhos de pastas do seu
-PC. Antes de enviar, o programa confere que cada arquivo está inteiro (um arquivo cortado por queda de energia não vai,
+PC. Se você exportou o seu coletor de leilões (o PBCV) para a pasta `coletas-pc/leiloeiros/`, vão também o arquivo dos
+leiloeiros (comprimido) e o resumo dele: o passo a passo está em
+[`base/leiloeiros/pbcv/README.md`](leiloeiros/pbcv/README.md). Antes de enviar, o programa confere que cada arquivo está inteiro (um arquivo cortado por queda de energia não vai,
 e o que já estava no GitHub fica). **O que fica só no seu PC:** as páginas da Caixa em HTML (`coletas-pc/fichas/*.html`).
 
 ## 8. Para eu acompanhar daqui (opcional)

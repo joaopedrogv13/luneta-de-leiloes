@@ -233,15 +233,20 @@ export function relatorioDaBase(db: Banco, opcoes: { agora?: Date } = {}): Relat
   const agora = opcoes.agora ?? new Date();
   const fontes = db.prepare("SELECT id, nome, url FROM fonte WHERE finalidade = 'vitrine' ORDER BY id").all();
 
-  // Ativos da Caixa por chave, para contar os repetidos.
+  // Ativos da Caixa por chave e pelo número do imóvel (o id_na_fonte de 13 dígitos), para contar os repetidos.
   const caixaPorDedup = new Set<string>();
   const caixaPorEndereco = new Map<string, ChavesImovel[]>();
-  for (const l of db.prepare("SELECT chave_dedup, chave_endereco FROM imovel WHERE fonte_id = 'caixa_csv' AND status = 'ativo'").all()) {
+  const caixaPorNumero = new Set<string>();
+  for (const l of db.prepare("SELECT id_na_fonte, chave_dedup, chave_endereco FROM imovel WHERE fonte_id = 'caixa_csv' AND status = 'ativo'").all()) {
     const chaves: ChavesImovel = { chave_dedup: lerTexto(l.chave_dedup), chave_endereco: lerTexto(l.chave_endereco) };
     if (chaves.chave_dedup) caixaPorDedup.add(chaves.chave_dedup);
     if (chaves.chave_endereco) caixaPorEndereco.set(chaves.chave_endereco, [...(caixaPorEndereco.get(chaves.chave_endereco) ?? []), chaves]);
+    caixaPorNumero.add(String(l.id_na_fonte));
   }
-  const naCaixa = (c: ChavesImovel): boolean =>
+  // O número do imóvel na Caixa que o coletor achou no lote (registro_imovel.numero_caixa → extras.numero_caixa) vale
+  // mais que o endereço: o leiloeiro escreve o endereço do jeito dele e quase nunca dá a matrícula.
+  const naCaixa = (c: ChavesImovel & { extras?: Readonly<Record<string, unknown>> | null }): boolean =>
+    (typeof c.extras?.numero_caixa === "string" && caixaPorNumero.has(c.extras.numero_caixa)) ||
     (c.chave_dedup !== null && caixaPorDedup.has(c.chave_dedup)) ||
     (c.chave_endereco !== null && (caixaPorEndereco.get(c.chave_endereco) ?? []).some((b) => mesmoImovel(c, b)));
 

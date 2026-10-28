@@ -27,6 +27,7 @@ import {
   mascararUrl,
   mensagemDoCommit,
   motivoJsonInvalido,
+  motivoJsonlInvalido,
   pegarTrava,
   PREFIXO_TEMPORARIA,
   publicar,
@@ -149,6 +150,23 @@ test("motivoJsonInvalido: arquivo cortado, vazio ou fichas.json sem os campos n�
   }
 });
 
+test("motivoJsonlInvalido: o JSONL dos leiloeiros cortado no meio de uma linha, vazio ou com linha que não é objeto não vai", () => {
+  const pasta = mkdtempSync(join(tmpdir(), "luneta-jsonl-"));
+  try {
+    const escrever = (nome: string, texto: string) => {
+      writeFileSync(join(pasta, nome), texto);
+      return join(pasta, nome);
+    };
+    assert.equal(motivoJsonlInvalido(escrever("ok.jsonl", '{"registro":"coleta"}\n\n{"registro":"imovel"}\n')), null);
+    assert.match(motivoJsonlInvalido(escrever("cortado.jsonl", '{"registro":"coleta"}\n{"registro":"imo'))!, /linha 2 não é um JSON inteiro/);
+    assert.match(motivoJsonlInvalido(escrever("lista.jsonl", "[1]\n"))!, /linha 1 não é um objeto JSON/);
+    assert.equal(motivoJsonlInvalido(escrever("vazio.jsonl", "\n\n")), "arquivo vazio");
+    assert.match(motivoJsonlInvalido(join(pasta, "nao-existe.jsonl"))!, /não li o arquivo/);
+  } finally {
+    rmSync(pasta, { recursive: true, force: true });
+  }
+});
+
 test("travaDeOutro e pegarTrava: uma coleta por vez; trava velha (PC desligou, número reaproveitado) não prende", async () => {
   const pasta = mkdtempSync(join(tmpdir(), "luneta-trava-"));
   // um processo vivo de verdade, que não é este
@@ -243,6 +261,16 @@ test("arquivosParaPublicar: fichas.json e resumo sempre em pc/fichas/ (cumulativ
     assert.equal(lista[0]!.remover, "pc/fichas/fichas.json.gz");
     const grande = arquivosParaPublicar(pasta, 10);
     assert.deepEqual([grande[0]!.destino, grande[0]!.comprimir, grande[0]!.remover], ["pc/fichas/fichas.json.gz", true, "pc/fichas/fichas.json"]);
+    // o JSONL dos leiloeiros (exportador do PBCV) vai sempre comprimido, com o resumo ao lado
+    mkdirSync(join(pasta, "leiloeiros"));
+    writeFileSync(join(pasta, "leiloeiros", "pbcv-luneta.jsonl"), '{"registro":"coleta"}\n');
+    writeFileSync(join(pasta, "leiloeiros", "pbcv-resumo.json"), "{}");
+    writeFileSync(join(pasta, "leiloeiros", "anotacoes.txt"), "x");
+    const comLeiloeiros = arquivosParaPublicar(pasta).filter((a) => a.destino.startsWith("pc/leiloeiros/"));
+    assert.deepEqual(comLeiloeiros.map((a) => [a.destino, a.comprimir ?? false, a.remover ?? null]), [
+      ["pc/leiloeiros/pbcv-luneta.jsonl.gz", true, "pc/leiloeiros/pbcv-luneta.jsonl"],
+      ["pc/leiloeiros/pbcv-resumo.json", false, null],
+    ]);
   } finally {
     rmSync(pasta, { recursive: true, force: true });
   }
@@ -370,6 +398,21 @@ test("publicar: clone raso numa pasta temporária, commit com a mensagem certa e
     assert.ok(nomes.includes("pc/fichas/fichas.json.gz") && !nomes.includes("pc/fichas/fichas.json"), nomes.join(", "));
     const gz = execFileSync("git", ["show", "coletas-dados:pc/fichas/fichas.json.gz"], { cwd: remoto });
     assert.equal(gunzipSync(gz).toString("utf8"), readFileSync(join(pasta, "fichas", "fichas.json"), "utf8"));
+
+    // o JSONL dos leiloeiros (exportador do PBCV) vai comprimido para pc/leiloeiros/; cortado, não vai
+    mkdirSync(join(pasta, "leiloeiros"));
+    const jsonl = '{"registro":"coleta","versao_contrato":1}\n{"registro":"imovel","versao_contrato":1}\n';
+    writeFileSync(join(pasta, "leiloeiros", "pbcv-luneta.jsonl"), jsonl);
+    writeFileSync(join(pasta, "leiloeiros", "pbcv-resumo.json"), '{"imoveis":1}');
+    const r5 = await publicar({ raiz, pasta, data: "2026-10-18", remoto, log: () => undefined, limiteJson: 10 });
+    assert.equal(r5.ok, true, r5.mensagem);
+    const leiloeiros = execFileSync("git", ["show", "coletas-dados:pc/leiloeiros/pbcv-luneta.jsonl.gz"], { cwd: remoto });
+    assert.equal(gunzipSync(leiloeiros).toString("utf8"), jsonl);
+    assert.equal(git(remoto, "show", "coletas-dados:pc/leiloeiros/pbcv-resumo.json"), '{"imoveis":1}');
+    writeFileSync(join(pasta, "leiloeiros", "pbcv-luneta.jsonl"), jsonl + '{"registro":"imo');
+    const r6 = await publicar({ raiz, pasta, data: "2026-10-18", remoto, log: () => undefined, limiteJson: 10 });
+    assert.deepEqual(r6.recusados.map((x) => x.destino), ["pc/leiloeiros/pbcv-luneta.jsonl.gz"]);
+    assert.equal(gunzipSync(execFileSync("git", ["show", "coletas-dados:pc/leiloeiros/pbcv-luneta.jsonl.gz"], { cwd: remoto })).toString("utf8"), jsonl, "o bom continua no branch");
   } finally {
     rmSync(raiz, { recursive: true, force: true });
   }

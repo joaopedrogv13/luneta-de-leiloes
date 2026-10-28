@@ -48,3 +48,6 @@ next-env.d.ts
 
 # coleta no PC do dono (npm run coleta:pc): HTML das fichas da Caixa, ITBI de BH e log (o envio vai ao branch coletas-dados)
 /coletas-pc/
+
+# caches do Python (exportador do PBCV em base/leiloeiros/pbcv)
+__pycache__/
