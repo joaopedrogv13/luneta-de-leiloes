@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh search code *)",
+      "Bash(gh search repos *)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx tsc --noEmit *)",
+      "Bash(npx tsc -p base/tsconfig.json --noEmit)",
+      "Bash(npx eslint .)",
+      "Bash(npx eslint base)",
+      "Bash(npx eslint src)",
+      "Bash(npm run base:testar)",
+      "Bash(npm run test:site)",
+      "Bash(npm run lint)",
+      "Bash(npm run check:publicacao)"
+    ]
+  }
+}
