@@ -16,6 +16,17 @@ leiloeiros ([`../CONTRATO.md`](../CONTRATO.md)), com uma linha de coleta por lei
 | `casos-compartilhados.json` | 168 casos com a saída do TypeScript; o `testar.py` confere o Python e o `pbcv.test.ts` (no `npm run base:testar`) confere o TypeScript |
 | `casos.ts`, `gerar-casos.ts`, `pbcv.test.ts` | o lado TypeScript dos casos compartilhados |
 
+## Pelo Claude Code no PC
+
+A coleta completa, a exportação e o envio, feitos pelo Claude Code, seguem o roteiro de
+[`PROMPT-ATUALIZAR.md`](PROMPT-ATUALIZAR.md). No Prompt de Comando (cmd), rode:
+
+```
+cd /d %USERPROFILE%
+curl -L -o PROMPT-ATUALIZAR.md https://raw.githubusercontent.com/joaopedrogv13/luneta-de-leiloes/main/base/leiloeiros/pbcv/PROMPT-ATUALIZAR.md
+claude --dangerously-skip-permissions "Leia o arquivo PROMPT-ATUALIZAR.md nesta pasta e execute tudo o que ele pede, do comeco ao fim."
+```
+
 ## Como exportar no seu PC (Windows)
 
 Precisa do que você já tem: o Python do PBCV, e o Node e o Git da coleta no PC, com o projeto `luneta-de-leiloes`
