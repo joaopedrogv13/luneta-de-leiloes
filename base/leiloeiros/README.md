@@ -89,9 +89,11 @@ Teste rápido com a fixture: `npm run base:coletar -- leiloeiros --arquivo base/
    praças vencidas, e só ~5 mil dos 21,7 mil imóveis apareceriam no site hoje.
 2. **Importar o arquivo do PBCV num banco de teste** e conferir na `/previa`: nome do leiloeiro no cartão, fotos, praça,
    tags, links "Ver lote no site do leiloeiro" e "Site do leiloeiro".
-3. **Importação automática:** acrescentar `coletar leiloeiros` ao workflow, lendo `pc/leiloeiros/pbcv-luneta.jsonl.gz`
-   do branch `coletas-dados` (onde o `node base/coleta-pc.mjs --so-publicar` o põe), e o `leiloeiros:relatorio -- --site`
-   depois do exportar.
+3. ~~**Importação automática**~~ (29/10/2026): `node base/atualizar-site.mjs`, no PC do dono, valida e importa
+   `coletas-pc/leiloeiros/pbcv-luneta.jsonl` (ou, sem ele, `pc/leiloeiros/pbcv-luneta.jsonl.gz` do `coletas-dados`) e
+   publica o `relatorio-leiloeiros.json` junto com o instantâneo (guia em [`../ATUALIZAR-SITE.md`](../ATUALIZAR-SITE.md)).
+   O vigia diário (`.github/workflows/vigia-dados.yml`) avisa se o arquivo passar de 36 h ou se o coletor gravar
+   `pc/leiloeiros/status.json` com erro (formato em [`CONTRATO.md`](CONTRATO.md), "Status do coletor").
 4. **Página "Fontes e leiloeiros"** e os números do hero e do FAQ a partir de `relatorio-leiloeiros.json`
    (`totais.leiloeiros_com_ativos`, `totais.leiloes_ativos`, `totais.ativos_todas_as_fontes`). O site ainda não lê
    esse arquivo.

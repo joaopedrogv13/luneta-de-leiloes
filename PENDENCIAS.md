@@ -35,7 +35,12 @@ fornecedor antes de contratar.
 - **Para decidir:** simulador de lance, preço do m² (leilões e ~203 mil compras do ITBI em 5 capitais), nota de
   localização (17,7 mil imóveis) e metrô, trem e VLT a até 1 km.
 - **`/assinante`:** vitrine com os 10 melhores imóveis reais e os 6 exemplos fictícios.
-- **Ainda não existe:** atualização automática (imóvel vendido continua aparecendo), login, pagamento e o alerta de praça.
+- **Atualização diária (29/10/2026): pronta, falta ligar no seu PC.** `node base/atualizar-site.mjs` (guia
+  `base/ATUALIZAR-SITE.md`) coleta a Caixa, importa os leiloeiros, refaz as tags, aplica a localização do Actions e
+  publica o site, com trava de segurança e cópia semanal do banco no `luneta-base`; o Actions faz o geocode e a nota aos
+  domingos e um vigia manda e-mail se o PC parar. Teste aqui com a base do PBCV de 01/10: 25.998 imóveis no site
+  (Caixa 21.226, leiloeiros 4.770 de 315 leiloeiros). Ver "Atualização diária no PC do dono (29/10/2026)".
+- **Ainda não existe:** login, pagamento e o alerta de praça.
 - Também falta: formulário que envia, leitura do edital (ocupação e dívidas) e os selos (desligados até os critérios).
 - **Fora do código:** revisão do especialista, privacidade e termos, CNPJ, preço e as licenças do ITBI (SP, Rio, POA).
 
@@ -47,7 +52,7 @@ Em ordem de prioridade. Os bloqueadores são o mínimo para cobrar de alguém; a
 
 | # | O quê | Por quê e o que envolve | Quem · esforço |
 | --- | --- | --- | --- |
-| B1 | **Atualização automática da base** | A base é uma foto de 08/10: imóvel vendido continua aparecendo, e a landing promete "atualizada todos os dias". Coleta diária (a lista da Caixa primeiro, depois as outras fontes), saída dos vendidos e retirados, histórico de praça e aviso quando a coleta falhar. Primeiro passo, grátis: testar a lista da Caixa no GitHub Actions (nunca rodou; as fotos da Caixa abriram de lá, as fichas não). Onde rodar e quanto custa: seção 3. | **Código:** 3 a 5 dias (agenda e publicação) + 1 a 2 semanas (banco de dados, junto com o login). **Dono:** escolher onde roda (1 h). **Custo:** de zero a ~R$ 120/mês |
+| B1 | **Atualização automática da base** (29/10: o comando diário, a trava, a cópia do banco e o vigia estão prontos; falta rodar no seu PC todo dia e o histórico de praça) | A base é uma foto de 08/10: imóvel vendido continua aparecendo, e a landing promete "atualizada todos os dias". Coleta diária (a lista da Caixa primeiro, depois as outras fontes), saída dos vendidos e retirados, histórico de praça e aviso quando a coleta falhar. Primeiro passo, grátis: testar a lista da Caixa no GitHub Actions (nunca rodou; as fotos da Caixa abriram de lá, as fichas não). Onde rodar e quanto custa: seção 3. | **Código:** 3 a 5 dias (agenda e publicação) + 1 a 2 semanas (banco de dados, junto com o login). **Dono:** escolher onde roda (1 h). **Custo:** de zero a ~R$ 120/mês |
 | B2 | **Login e pagamento** | Contas com e-mail confirmado, o plano vindo da sessão (a trava dos planos já está pronta para isso) e a exclusão da conta; assinatura mensal com os 7 dias para cancelar grátis e nota fiscal. Junto: fechar a `/previa` e tirar do cache público os pontos do mapa da Luneta (hoje o plano vai na URL). | **Código:** ~1 semana (login) + 1 a 2 semanas (pagamento). **Dono:** escolher o provedor de pagamento e abrir a conta (pede o CNPJ). **Custo:** a taxa por cobrança do provedor |
 | B3 | **Back-end dos favoritos e do alerta de praça** | A landing promete o e-mail quando a praça muda. Favoritos no servidor, comparação a cada coleta, fila de e-mails com consentimento e descadastro. Depende de B1 (praça e data dos leilões: só as fichas da Caixa trazem; hoje a base não sabe a praça de 4.569 dos 4.571 leilões) e de B2. Passo a passo em "Back-end: favoritos e alerta de mudança de praça". | **Código:** 1 a 2 semanas. **Dono:** escolher o provedor de e-mail. **Custo:** baixo no começo (a confirmar) |
 | B4 | **Revisão jurídica das tags, do glossário e dos textos** | As 26 tags e as explicações, o glossário (os (i) da página do imóvel), o FAQ, o texto do "Na Mira", os critérios dos selos (hoje desligados), o aviso do simulador, as fotos ilustrativas e a linha da OAB. É o que o assinante lê como fato. | **Especialista:** ~3 a 5 dias de trabalho (estimativa). **Código:** 2 a 3 dias para aplicar |
@@ -100,8 +105,9 @@ e esperam rede, autorização ou a sua coleta. Em ordem de retorno (o que mais m
 1. **Dono:** revogar as duas chaves que estão no repositório `luneta-base` (conta de serviço do Google e Groq).
 2. **Dono:** rodar uma coleta nova no PC e exportar:
    `python base/leiloeiros/pbcv/exportar.py --banco C:\caminho\leiloes.db` e depois `node base/coleta-pc.mjs --so-publicar`.
-3. **Código:** importar do `coletas-dados`, geocodificar (CNEFE), calcular a nota, `leiloeiros:relatorio -- --site`,
-   trocar o "[X] leiloeiros monitorados" e criar a página "Fontes e leiloeiros".
+3. ~~**Código:** importar do `coletas-dados`~~ (29/10: `node base/atualizar-site.mjs` importa e publica com o
+   `leiloeiros:relatorio -- --site`). Falta: geocodificar os leiloeiros (o geocode do Actions só aplica `caixa-` e
+   `lj-`), trocar o "[X] leiloeiros monitorados" e criar a página "Fontes e leiloeiros".
 4. **Coleta diária por faixas** (A todo dia, B toda semana, C todo mês), incremental, com alerta de falha: no
    coletor do dono (preciso de permissão de escrita no `luneta-base`) e o vigia do lado da Luneta.
 5. **Consertar os 11 leiloeiros grandes com dado ruim ou bloqueados** (lista em `relatorios/RANKING.md`) e limpar os
@@ -157,8 +163,9 @@ vem entre parênteses.
 1. [ ] **Abrir em fases** (seção 4): vitrine maior agora, catálogo grátis no Lente com cadastro, pagamento depois?
    (recomendo; substitui o "lançar em duas fases" de 12/10)
 2. [ ] **Preços:** Lente, Luneta e Telescópio; Lente paga ou grátis; oferta de fundador.
-3. [ ] **Onde roda a atualização diária:** Actions, seu PC ou um servidor no Brasil (seção 3). (Recomendo testar o
-   Actions primeiro.)
+3. [x] **Onde roda a atualização diária:** decidido em 29/10/2026: o seu PC faz a parte leve todo dia (Caixa,
+   leiloeiros, tags, publicação) e o Actions a pesada toda semana (geocode e nota); o banco mora no PC, com cópia semanal
+   no `luneta-base`. Falta agendar no Windows (`base/ATUALIZAR-SITE.md`).
 4. [ ] **Fornecedores:** pagamento, e-mail do alerta, destino do formulário (e-mail ou CRM) e medição de visitas sem
    cookies (Vercel Web Analytics ou Plausible).
 5. [ ] **Parcerias de dados:** autorizar os contatos com a Resale, a Suporte Leilões e a Superbid; pedir cotação do
@@ -235,6 +242,70 @@ pedido à Leilões Judiciais, a conta no INLABS, os e-mails à OKBR (Querido Di�
 licença do ITBI e de Lei de Acesso nas capitais sem ITBI aberto, o domínio e a marca (I3) e as conferências à mão (I7).
 
 ## Histórico: o registro das rodadas
+
+### Atualização diária no PC do dono (29/10/2026)
+
+**Decisão:** o PC do dono faz a parte leve todo dia, o GitHub Actions a pesada (geocode e nota) toda semana. O banco mora
+no PC (internet do Brasil, login do Git dos dois repositórios, custo zero, sem token no Actions), com cópia semanal no
+repositório privado `luneta-base`.
+
+**O que ficou pronto** (guia para leigo em `base/ATUALIZAR-SITE.md`):
+- [x] **`node base/atualizar-site.mjs`** (`npm run site:atualizar`; `.mjs` que confere o Node 22.13+, faz `git pull
+  --ff-only` no main e chama `base/atualizar-site.ts`; sem `npm install`). Etapas, cada uma com `--etapas`: **banco**
+  (restaura de `backup-luneta-db` do `luneta-base` se o `luneta.db` faltar, conferindo o sha256 do LEIA.md, e roda
+  `migrar`), **caixa** (falhou: segue e avisa), **leiloeiros** (o JSONL do PC ou, sem ele, o do `coletas-dados`;
+  validador antes, recusado não importa; o mesmo arquivo não é importado duas vezes), **fichas**, **riscos**,
+  **localizacao** (o geocode mais novo que o do banco e os `localizacao*.json.gz` mais novos que os do site),
+  **exportar** (instantâneo e relatório dos leiloeiros numa pasta de trabalho, `coletas-pc/atualizar-site/`), a
+  **trava** (queda acima de 30% ou fonte com mais de 1.000 imóveis zerada: não publica e sai com 6; `--forcar` passa),
+  **publicar** (commit só de `base/saida/site/` no main, "Dados: atualização de DD/MM/AAAA, N imóveis (Caixa X,
+  leiloeiros Y)", 3 tentativas com `pull --rebase`; confere que o commit não leva outro caminho) e **copia** (semanal ou
+  `--backup`: `VACUUM INTO` do banco e do cache, `.tar.gz` próprio sem depender do `tar`, em partes de 90 MB se
+  passar, commit órfão único com push forçado só de `backup-luneta-db`; falhou, só avisa). Log em
+  `coletas-pc/atualizar-site.log` (sem as pastas do PC), resultado em `coletas-pc/atualizar-site.json`.
+  `--sem-publicar` não envia nada ao GitHub e não mexe em `base/saida/site/`.
+- [x] **Vigia** (`.github/workflows/vigia-dados.yml` + `base/vigia-dados.ts`, `npm run dados:vigia`): todo dia às 15:00
+  UTC (12:00 de Brasília) e no botão; falha com mensagem clara se o último `pc/leiloeiros/pbcv-luneta.jsonl.gz` do
+  `coletas-dados` ou o último commit de `base/saida/site/` no main passarem de 36 h, ou se `pc/leiloeiros/status.json`
+  (opcional; formato no `base/leiloeiros/CONTRATO.md`, 7.1) trouxer `"ok": false`. `contents: read`, sem commit: não
+  dispara deploy na Vercel. Conferido ao vivo em 29/10: o JSONL chegou às 02:34 (o seu PC já enviou) e o site estava
+  com 113 h, então o vigia falharia hoje até a primeira publicação.
+- [x] **`base-localizacao.yml` agendado:** todo domingo às 06:00 de Brasília, etapas `geocode,nota` (o botão continua
+  igual).
+- [x] **Testes:** 13 novos em `base/atualizar-site.test.ts` (opções, trava, mensagem, escolha dos arquivos, cópia
+  semanal, `.tar.gz` contra o `tar` do sistema, publicação num repositório local com rebase, cópia e restauração por
+  branch órfão com sha256 adulterado, vigia com API falsa). `npm run base:testar`: 542 passando.
+- [x] **Teste de verdade aqui** (cópia do banco, JSONL do PBCV de 01/10, sem a Caixa, `--sem-publicar`): 485 coletas de
+  leiloeiros (483 sucesso, 2 com erro, como esperado), 21.719 imóveis novos no banco, riscos em 42.955 imóveis
+  (1.116.830 linhas); instantâneo com **25.998 imóveis** (Caixa 21.226, leiloeiros 4.770 de 315 leiloeiros, Leilões
+  Judiciais 2; antes 21.230); trava ok; nenhum geocode publicado ainda no `coletas-dados` e a nota do site já era a mais
+  nova. Cerca de 2,5 min para importar e 2,5 min para os riscos. A restauração do banco a partir do `luneta-base` também
+  rodou de verdade (17 s; o banco restaurado é idêntico ao daqui). O `base/saida/site/` do main não mudou.
+
+**O que ficou pendente (técnico):**
+- [ ] **4 testes vão quebrar na primeira publicação com leiloeiros** (medido com o instantâneo do teste no lugar):
+  `base/exportar.test.ts` "até 4 MB" (o catálogo foi a 5,4 MB: lista 1,4 MB e detalhes 3,7 MB; subir a meta ou enxugar
+  o detalhe), e em `npm run test:site` a nota (todo imóvel do instantâneo com linha: 4.770 sem nota, que o site mostra
+  como "ainda não calculada"), a vitrine (`caixa-0000010141386` deixou de passar no critério estrito: os 10 da vitrine
+  são fixos e os dados mudam) e o ITBI do Rio comercial (avaliação ÷ preço pago 1,63). São testes que leem os dados de
+  verdade e precisam aceitar dados que mudam todo dia. **Decisão do código antes de ligar a rotina.**
+- [ ] **Geocode dos leiloeiros:** `base/fontes/localizacao/aplicar.ts` só conhece `caixa-` e `lj-` (os `ll-` contam
+  como inválidos), e o parser de endereço foi feito para a Caixa.
+- [ ] **Uma semana de atraso na nota do imóvel novo:** a nota do domingo usa o instantâneo do main, com os pontos do
+  geocode da semana anterior. Encadear geocode → aplicar → nota no mesmo lugar resolveria.
+- [ ] **Cidades novas dos leiloeiros** fora de `base/saida/localizacao/cidades-base.csv` (recorte do OSM): rodar
+  `cidades.py` depois da primeira publicação.
+- [ ] O geocode do Actions usa o CEP das fichas de `coletas-dados/fichas/`, não as do PC (`pc/fichas/`).
+- [ ] O exportar continua gravando `amostra-site.json` e `estatisticas-uf.json` (a `/previa` antiga) só na pasta de
+  trabalho: no main, os dois ficam como estão.
+- [ ] Teste da etapa da Caixa e da publicação de verdade só no PC do dono (daqui a Caixa não abre, e o main não é
+  mexido); a primeira cópia semanal vai de verdade na primeira execução no PC.
+- [ ] O banco com os leiloeiros passa de ~190 MB para ~440 MB (a tabela de riscos dobra); a cópia comprimida deve ficar
+  em ~60 MB (abaixo do limite de 100 MB do GitHub; acima de 90 MB vai em partes).
+
+**Para o dono:** agendar `node base/atualizar-site.mjs` no Agendador de Tarefas (todo dia, depois da coleta do PBCV) e,
+na primeira vez, entrar no GitHub quando o Git pedir (os dois repositórios). Os e-mails do vigia vão para quem mudou o
+agendamento por último (ver "Notifications > Actions" no GitHub).
 
 Daqui para baixo, o registro de cada entrega com o detalhe técnico e, no fim, as seções de referência (checagem de
 publicação, placeholders, conteúdo fictício, decisões de implementação). O que já foi resolvido está marcado [x] ou
@@ -326,7 +397,8 @@ para receber os dados e **um prompt** para outro chat, no PC do dono, fazer a au
   dados"; agrupar ou buscar por nome quando passar de ~10.
 - [ ] **Repetidos entre fontes no catálogo:** o mesmo imóvel na Caixa e no leiloeiro aparece duas vezes (o relatório já
   conta quantos são).
-- [ ] **Importação diária** dos leiloeiros (workflow e coleta no PC), depois da decisão 38.
+- [x] **Importação diária** dos leiloeiros: no PC do dono, `node base/atualizar-site.mjs` (29/10/2026; ver
+  "Atualização diária no PC do dono").
 - [ ] `campoSemPessoa` descarta endereço com "Sr." no nome da rua ("Rua Sr. Bom Jesus"): prefere perder o campo a
   publicar um nome; medir quando houver dado real.
 

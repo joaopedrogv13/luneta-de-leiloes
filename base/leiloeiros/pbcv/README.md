@@ -73,7 +73,8 @@ cortado não vai, e o que já está no GitHub fica), comprime o JSONL (~70 MB vi
 Caixa e o ITBI de BH, se houver. O login no GitHub é o do guia (item 7 do `COLETA-NO-PC.md`). Vai sempre para o mesmo
 lugar: cada envio substitui o anterior (o histórico do branch guarda os antigos).
 
-Do lado da Luneta, a importação ainda é manual (a automática é o próximo passo, no README de `base/leiloeiros`):
+Do lado da Luneta, a importação é automática: `node base/atualizar-site.mjs` (no mesmo PC, depois do envio) valida,
+importa e publica no site ([`base/ATUALIZAR-SITE.md`](../../ATUALIZAR-SITE.md)). À mão, como antes:
 
 ```bash
 git fetch origin coletas-dados

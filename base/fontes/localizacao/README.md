@@ -253,7 +253,10 @@ V06006 (etapa `ibge`) está commitada em `base/saida/localizacao/ibge-renda.json
 - Memória: o DuckDB do geocodebr usa até 80% da RAM como cache (pico de 11 GB num contêiner de 15 GB);
   `LUNETA_DUCKDB_MEMORIA=4GB` limita o DuckDB (pico de 9 GB, 120 s). Disco: cerca de 2,4 GB de entradas.
 
-**No Actions:** `gh workflow run base-localizacao.yml --ref <branch> -f etapa=<etapas>`. O workflow roda `actions.sh` do
+**No Actions:** `gh workflow run base-localizacao.yml --ref <branch> -f etapa=<etapas>`. Desde 29/10/2026 o workflow
+também roda sozinho todo domingo às 06:00 de Brasília, com `geocode,nota` no main; o PC do dono aplica o geocode e copia
+os `localizacao*.json.gz` mais novos que os do site (`node base/atualizar-site.mjs`, etapa `localizacao`; guia em
+`base/ATUALIZAR-SITE.md`). O workflow roda `actions.sh` do
 ref escolhido e publica `base/fontes/localizacao/saida/` e o log no branch `coletas-dados`, pasta `localizacao/<run_id>/`
 (artefatos e logs do Actions não abrem do contêiner de desenvolvimento). Etapas:
 
@@ -266,7 +269,10 @@ ref escolhido e publica `base/fontes/localizacao/saida/` e o log no branch `cole
 | `tudo` | as quatro, nesta ordem (a atualização semanal) | tudo acima | cerca de 40 min |
 
 Para aplicar o resultado do Actions no repositório: copiar de `coletas-dados` o geocode.json (e rodar
-`npm run base:geocode` e o exportar) e os `localizacao*.json.gz` para `base/saida/site/`.
+`npm run base:geocode` e o exportar) e os `localizacao*.json.gz` para `base/saida/site/`. O `node base/atualizar-site.mjs`
+faz isso sozinho: aplica o geocode quando o `gerado_em` dele é mais novo que o maior `extras.geo.gerado_em` do banco e
+copia cada arquivo da nota só quando o `gerado_em` é mais novo que o do site (empate não copia: o do site pode ter
+colunas a mais com a mesma data, como as estações da rodada 5).
 
 ## O que cada arquivo faz
 

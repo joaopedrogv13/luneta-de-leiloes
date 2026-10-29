@@ -194,6 +194,9 @@ Se você quiser que eu acompanhe a coleta e rode os comandos por você:
   de BH e o GitHub.
 - **Qualquer outra coisa:** mande para o Claude a mensagem da tela e o arquivo `coletas-pc/log.txt`.
 
+**Depois da coleta, a atualização do site:** com o banco no seu PC, um segundo comando leva tudo ao site, todo dia:
+`node base/atualizar-site.mjs`. Guia: [`ATUALIZAR-SITE.md`](ATUALIZAR-SITE.md).
+
 Para quem programa: o comando é `base/coleta-pc.ts` (Node 22.6+, sem dependências), chamado por `base/coleta-pc.mjs`;
 `node base/coleta-pc.mjs --ajuda` lista as opções. Como aplicar o resultado na base: `base/fontes/caixa/README.md`
 ("Fichas que voltaram do PC") e `base/fontes/itbi/README.md` ("Belo Horizonte pelo PC do dono").

@@ -1,8 +1,10 @@
 # Ranking de localização (base/fontes/localizacao): as etapas que precisam de internet aberta (OSM da Geofabrik,
 # conferências no IBGE e no SGB) e, quando pedido, o pipeline inteiro.
 #
-# SÓ RODA QUANDO ACIONADO (workflow_dispatch: botão "Run workflow" ou
-# `gh workflow run base-localizacao.yml --ref <branch> -f etapa=osm`). O que roda está em
+# Roda quando acionado (workflow_dispatch: botão "Run workflow" ou
+# `gh workflow run base-localizacao.yml --ref <branch> -f etapa=osm`) e, toda semana (domingo, 06:00 de Brasília), com
+# as etapas geocode e nota no main: é a parte pesada da atualização do site (base/ATUALIZAR-SITE.md). O PC do dono
+# aplica o geocode e copia a nota no dia seguinte (node base/atualizar-site.mjs, etapa localizacao). O que roda está em
 # `base/fontes/localizacao/actions.sh` do ref escolhido (assim um branch de trabalho testa sem mexer neste arquivo).
 # Lê só dados abertos; não usa segredo nem faz commit no código. A saída (base/fontes/localizacao/saida/, sempre
 # pequena: o GitHub recusa arquivo acima de 100 MB) e o log são publicados no branch `coletas-dados`, pasta
@@ -10,6 +12,8 @@
 name: Base - Localização
 
 on:
+  schedule:
+    - cron: "0 9 * * 0"
   workflow_dispatch:
     inputs:
       etapa:
@@ -33,8 +37,8 @@ jobs:
       - name: Rodar base/fontes/localizacao/actions.sh
         continue-on-error: true
         env:
-          # o texto digitado no "Run workflow" entra por variável, nunca colado no script
-          ETAPA: ${{ inputs.etapa }}
+          # o texto digitado no "Run workflow" entra por variável, nunca colado no script; no agendamento, geocode e nota
+          ETAPA: ${{ inputs.etapa || 'geocode,nota' }}
         run: |
           set -o pipefail
           mkdir -p base/fontes/localizacao/saida
@@ -47,7 +51,7 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          ETAPA: ${{ inputs.etapa }}
+          ETAPA: ${{ inputs.etapa || 'geocode,nota' }}
         run: |
           set -e
           PASTA="$RUNNER_TEMP/publicar"

@@ -258,6 +258,27 @@ esse campo); e a coleta (última, última válida, data na fonte, completa, saú
 dão o número para "[X] leiloeiros monitorados" (`leiloeiros_com_ativos`). As outras fontes (Caixa, Leilões Judiciais)
 vêm à parte, com os leiloeiros citados nos lotes dos agregadores.
 
+## 7.1 Status do coletor (`status.json`, opcional)
+
+Um arquivo à parte, ao lado do JSONL: `coletas-pc/leiloeiros/status.json` no PC, que o
+`node base/coleta-pc.mjs --so-publicar` envia para `pc/leiloeiros/status.json` no branch `coletas-dados`. Serve para o
+coletor avisar que falhou mesmo quando não há JSONL novo para mandar. O vigia diário (`base/vigia-dados.ts`) lê o
+arquivo e falha (e o GitHub manda e-mail ao dono) quando `ok` é `false`.
+
+```json
+{"ok": false, "motivo": "leiloes.db travado: a coleta não começou", "quando": "2026-10-29T07:10:00-03:00"}
+```
+
+| Campo | Tipo | Obrigatório | O quê |
+| --- | --- | --- | --- |
+| `ok` | boolean | sim | `true` quando a última rodada do coletor terminou bem; `false` quando falhou |
+| `motivo` | string | quando `ok` é `false` | uma frase para o dono (vai no e-mail; até 300 caracteres; sem senha, token nem dado pessoal) |
+| `quando` | string (data ISO 8601) | não | quando o coletor gravou o status |
+
+Sem o arquivo, o vigia confere só a idade do JSONL e do instantâneo do site (36 h). Arquivo que não é JSON, ou sem o
+`ok` booleano, também faz o vigia falhar, com o motivo. Depois de uma rodada boa, o coletor grava `{"ok": true, ...}`: apagar
+o arquivo do PC não o tira do branch, e o `false` antigo continuaria lá.
+
 ## 8. Mudanças no contrato
 
 Versão 1. Campo novo opcional não muda a versão. Renomear, remover ou mudar o significado de um campo sobe

@@ -91,6 +91,16 @@ node --experimental-strip-types base/dedup/medir.ts --arquivo lista.csv # cobert
 `node` direto: no Windows o PowerShell bloqueia o `npm` e engole o "--", e com o npm o Ctrl+C derruba só o shell dele.
 Guia: [`COLETA-NO-PC.md`](COLETA-NO-PC.md).
 
+**Atualização diária do site no PC do dono** (o banco mora no PC; guia para leigo: [`ATUALIZAR-SITE.md`](ATUALIZAR-SITE.md)):
+`node base/atualizar-site.mjs` (ou `npm run site:atualizar`) restaura o banco da cópia se ele faltar, roda `migrar`,
+`coletar caixa`, valida e importa o JSONL dos leiloeiros (`coletas-pc/leiloeiros/pbcv-luneta.jsonl` ou o publicado no
+`coletas-dados`), aplica as fichas, `riscos`, o geocode e a nota mais novos do Actions, `exportar --site` e
+`leiloeiros:relatorio --site` numa pasta de trabalho; passa pela trava (queda acima de 30% ou fonte com mais de 1.000
+imóveis zerada: não publica, salvo `--forcar`) e faz commit **só** de `base/saida/site/` no main. Uma vez por semana (ou
+`--backup`), a cópia do banco vai como commit órfão ao branch `backup-luneta-db` do repositório privado `luneta-base`.
+Opções: `--etapas`, `--sem-publicar`, `--banco`, `--sem-atualizar`. O vigia (`.github/workflows/vigia-dados.yml`,
+`base/vigia-dados.ts`) falha todo dia ao meio-dia se o JSONL dos leiloeiros ou o instantâneo do main passarem de 36 h.
+
 Opções de `coletar`: `--uf`, `--arquivo` (ou `--fixture`), `--limite`, `--detalhes`. `<fonte>` aceita o id (`caixa_csv`) ou o apelido (`caixa`); `riscos --fonte` também. Em qualquer comando, `--banco <arquivo>` ou `LUNETA_DB` troca o banco; `LUNETA_USER_AGENT` troca o User-Agent. `base/dados/` é ignorada pelo git. As variáveis de cada conector estão no README dele.
 
 ## Medição com dados reais (13/10/2026)

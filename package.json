@@ -22,6 +22,8 @@
     "coleta:pc:fichas": "node base/coleta-pc.mjs --etapas fichas",
     "coleta:pc:bh": "node base/coleta-pc.mjs --etapas bh",
     "coleta:pc:publicar": "node base/coleta-pc.mjs --so-publicar",
+    "site:atualizar": "node base/atualizar-site.mjs",
+    "dados:vigia": "node --experimental-strip-types --disable-warning=ExperimentalWarning base/vigia-dados.ts",
     "test:site": "node --import jiti/register --test \"src/**/*.test.ts\""
   },
   "dependencies": {

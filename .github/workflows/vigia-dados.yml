@@ -1,0 +1,38 @@
+# Vigia dos dados (base/vigia-dados.ts; guia em base/ATUALIZAR-SITE.md).
+#
+# Todo dia, por volta das 12:00 de Brasília (15:00 UTC; o GitHub pode atrasar o horário agendado em alguns minutos),
+# confere se o PC do dono está mandando os dados: o último pc/leiloeiros/pbcv-luneta.jsonl.gz do branch coletas-dados
+# e o último commit de base/saida/site/ no main precisam ter menos de 36 h, e o pc/leiloeiros/status.json (opcional)
+# não pode trazer "ok": false. Se algo falhar, a execução fica vermelha e o GitHub manda e-mail (avisos de workflow
+# agendado que falha vão para quem criou o agendamento ou mudou a linha do cron por último).
+#
+# Só lê: permissions contents: read, sem segredo, sem commit (então não dispara deploy na Vercel).
+name: Vigia dos dados
+
+on:
+  schedule:
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vigia-dados
+  cancel-in-progress: true
+
+jobs:
+  vigiar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: base
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+      - name: Conferir a idade dos dados
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node --experimental-strip-types --disable-warning=ExperimentalWarning base/vigia-dados.ts --repo "${{ github.repository }}"
