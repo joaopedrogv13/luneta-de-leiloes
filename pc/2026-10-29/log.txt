@@ -1,0 +1,11 @@
+2026-10-29 02:34:13 ==============================================================================
+2026-10-29 02:34:13 Início · Node 26.13.0 · win32 · opções: --so-publicar
+2026-10-29 02:34:13 Luneta · coleta no PC (fichas da Caixa e ITBI de Belo Horizonte). Guia: base/COLETA-NO-PC.md
+2026-10-29 02:34:13 Conferindo o que é preciso:
+2026-10-29 02:34:13   ok     Node: 26.13.0 (precisa 22.6 ou mais novo)
+2026-10-29 02:34:13   ok     Git: 2.56.0.windows.3; envio para https://github.com/joaopedrogv13/luneta-de-leiloes.git
+2026-10-29 02:34:13 Vai fazer:
+2026-10-29 02:34:13   1. Enviar o resultado para o GitHub (branch coletas-dados; os HTML das fichas não vão).
+2026-10-29 02:34:13 Pode parar com Ctrl+C a qualquer momento: o que já foi baixado fica salvo. Não feche a janela antes de aparecer "pode fechar a janela".
+2026-10-29 02:34:13 ==============================================================================
+2026-10-29 02:34:13 Envio ao GitHub
