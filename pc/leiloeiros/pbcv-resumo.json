@@ -1,59 +1,70 @@
 {
   "arquivo": "pbcv-luneta.jsonl",
-  "segundos": 61.6,
-  "agora": "2026-10-29T02:32:27-03:00",
-  "fontes_com_imoveis_ativos_no_pbcv": 557,
-  "leiloeiros_no_arquivo": 507,
+  "segundos": 63.5,
+  "agora": "2026-10-29T14:49:21-03:00",
+  "fontes_com_imoveis_ativos_no_pbcv": 558,
+  "leiloeiros_no_arquivo": 506,
   "leiloeiros_com_imoveis": 499,
-  "imoveis_ativos_no_pbcv": 36245,
-  "imoveis_a_venda": 25116,
-  "imoveis": 22660,
-  "imoveis_a_venda_no_arquivo": 22497,
-  "suspensos_com_praca_futura": 205,
-  "suspensos_avisados": 163,
+  "imoveis_ativos_no_pbcv": 37058,
+  "imoveis_a_venda": 27304,
+  "imoveis": 24453,
+  "imoveis_a_venda_no_arquivo": 24303,
+  "suspensos_com_praca_futura": 193,
+  "suspensos_avisados": 150,
   "motivos": {
-    "entra:categoria": 576,
-    "entra:descricao": 90,
-    "entra:forte_titulo": 154,
-    "entra:tipo_coletor": 157,
-    "entra:titulo": 21635,
-    "entra:titulo_neg_fraco": 48,
-    "fora:nao_imovel": 62335,
-    "fora:nao_visto_na_ultima_coleta": 3339,
-    "fora:sem_cidade_uf": 2661,
-    "fora:situacao_desconhecida": 959,
-    "fora:situacao_encerrado": 715,
-    "fora:situacao_vendido": 11,
-    "fora:suspenso_sem_data_futura": 5900,
-    "fora:vetado_neg_titulo": 1604,
-    "fora:vetado_sem_sinal": 268,
+    "entra:categoria": 591,
+    "entra:descricao": 84,
+    "entra:forte_titulo": 158,
+    "entra:tipo_coletor": 165,
+    "entra:titulo": 23404,
+    "entra:titulo_neg_fraco": 51,
+    "fora:nao_imovel": 61586,
+    "fora:nao_visto_na_ultima_coleta": 1940,
+    "fora:sem_cidade_uf": 3044,
+    "fora:situacao_desconhecida": 965,
+    "fora:situacao_encerrado": 721,
+    "fora:situacao_vendido": 12,
+    "fora:suspenso_sem_data_futura": 5923,
+    "fora:vetado_neg_titulo": 1544,
+    "fora:vetado_sem_sinal": 282,
     "fora:vetado_teste": 13
   },
   "ajustes": {
-    "caractere_invalido_removido": 46,
-    "cidade_descartada": 414,
-    "cidade_ibge_geo": 15675,
+    "caractere_invalido_removido": 62,
+    "cidade_descartada": 420,
+    "cidade_ibge_geo": 14069,
     "cidade_ibge_lote": 3,
-    "cidade_ibge_nome": 6842,
-    "cidade_sem_ibge": 140,
-    "datas_fora_de_ordem": 271,
-    "minimo_maior_que_inicial": 114,
-    "numero_caixa": 3329,
-    "processo_da_descricao": 84,
-    "ultima_praca_no_encerramento": 2062
+    "cidade_ibge_nome": 10223,
+    "cidade_sem_ibge": 158,
+    "datas_fora_de_ordem": 276,
+    "minimo_maior_que_inicial": 104,
+    "numero_caixa": 3911,
+    "processo_da_descricao": 88,
+    "ultima_praca_no_encerramento": 2144
   },
-  "partes_mascaradas": 1136,
-  "lotes_com_partes_mascaradas": 456,
+  "partes_mascaradas": 1131,
+  "lotes_com_partes_mascaradas": 473,
   "saude": {
-    "ok": 335,
-    "parcial": 93,
-    "quebrado": 33,
-    "bloqueado": 46
+    "ok": 419,
+    "quebrado": 14,
+    "bloqueado": 46,
+    "parcial": 27
   },
-  "completas": 335,
+  "completas": 419,
   "slugs_repetidos": [],
   "ibge_carregado": true,
   "fontes": [
+    {
+      "fonte": "leiloesjudiciaismg.com.br",
+      "slug": "leiloesjudiciaismg",
+      "enviados": 2078,
+      "imoveis_ativos_pbcv": 2084,
+      "a_venda": 2084,
+      "a_venda_enviados": 2078,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
     {
       "fonte": "rjleiloes.com.br",
       "slug": "rjleiloes",
@@ -64,17 +75,6 @@
       "situacao_desconhecida": 4,
       "saude": "ok",
       "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "leiloesjudiciaismg.com.br",
-      "slug": "leiloesjudiciaismg",
-      "enviados": 995,
-      "imoveis_ativos_pbcv": 998,
-      "a_venda": 998,
-      "a_venda_enviados": 995,
-      "saude": "quebrado",
-      "completa": false,
       "linha_de_coleta": true
     },
     {
@@ -102,17 +102,6 @@
       "suspensos_avisados": 18,
       "situacao_desconhecida": 3,
       "suspenso_sem_data_futura": 1,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "kleiloes.com.br",
-      "slug": "kleiloes",
-      "enviados": 664,
-      "imoveis_ativos_pbcv": 676,
-      "a_venda": 676,
-      "a_venda_enviados": 664,
       "saude": "parcial",
       "completa": false,
       "linha_de_coleta": true
@@ -166,6 +155,18 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "mercado.bomvalor.com.br",
+      "slug": "mercado-bomvalor",
+      "enviados": 585,
+      "imoveis_ativos_pbcv": 599,
+      "a_venda": 597,
+      "a_venda_enviados": 585,
+      "situacao_encerrado": 2,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "leiloeiropublico.com.br",
       "slug": "leiloeiropublico",
       "enviados": 580,
@@ -180,9 +181,9 @@
       "fonte": "danielgarcialeiloes.com.br",
       "slug": "danielgarcialeiloes",
       "enviados": 572,
-      "imoveis_ativos_pbcv": 608,
+      "imoveis_ativos_pbcv": 609,
       "situacao_desconhecida": 33,
-      "suspensos_com_praca_futura": 5,
+      "suspensos_com_praca_futura": 6,
       "suspensos_avisados": 5,
       "a_venda": 570,
       "a_venda_enviados": 567,
@@ -191,39 +192,47 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "mercado.bomvalor.com.br",
-      "slug": "mercado-bomvalor",
-      "enviados": 560,
-      "imoveis_ativos_pbcv": 693,
-      "a_venda": 568,
-      "a_venda_enviados": 560,
-      "nao_visto_na_ultima_coleta": 124,
+      "fonte": "leiloei.com",
+      "slug": "leiloei-com",
+      "enviados": 566,
+      "imoveis_ativos_pbcv": 576,
+      "a_venda": 575,
+      "a_venda_enviados": 566,
       "situacao_encerrado": 1,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
-      "fonte": "leiloei.com",
-      "slug": "leiloei-com",
-      "enviados": 534,
-      "imoveis_ativos_pbcv": 628,
-      "a_venda": 539,
-      "a_venda_enviados": 534,
-      "nao_visto_na_ultima_coleta": 88,
-      "situacao_encerrado": 1,
-      "saude": "parcial",
-      "completa": false,
+      "fonte": "liderleiloes.com.br",
+      "slug": "liderleiloes",
+      "enviados": 563,
+      "imoveis_ativos_pbcv": 564,
+      "a_venda": 564,
+      "a_venda_enviados": 563,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
       "fonte": "luisleiloeiro.com.br",
       "slug": "luisleiloeiro",
-      "enviados": 492,
-      "imoveis_ativos_pbcv": 525,
-      "a_venda": 522,
-      "a_venda_enviados": 492,
+      "enviados": 493,
+      "imoveis_ativos_pbcv": 526,
+      "a_venda": 523,
+      "a_venda_enviados": 493,
       "situacao_encerrado": 3,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "granadoleiloes.com.br",
+      "slug": "granadoleiloes",
+      "enviados": 492,
+      "imoveis_ativos_pbcv": 493,
+      "a_venda": 493,
+      "a_venda_enviados": 492,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -251,6 +260,18 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "costanetoleiloeiro.com.br",
+      "slug": "costanetoleiloeiro",
+      "enviados": 380,
+      "imoveis_ativos_pbcv": 386,
+      "a_venda": 385,
+      "a_venda_enviados": 380,
+      "situacao_encerrado": 1,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "frazaoleiloes.com.br",
       "slug": "frazaoleiloes",
       "enviados": 369,
@@ -265,39 +286,26 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "costanetoleiloeiro.com.br",
-      "slug": "costanetoleiloeiro",
-      "enviados": 348,
-      "imoveis_ativos_pbcv": 773,
-      "nao_visto_na_ultima_coleta": 424,
-      "a_venda": 349,
-      "a_venda_enviados": 348,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "anabrasilleiloes.com.br",
       "slug": "anabrasilleiloes",
-      "enviados": 336,
-      "imoveis_ativos_pbcv": 760,
-      "nao_visto_na_ultima_coleta": 424,
-      "a_venda": 336,
-      "a_venda_enviados": 336,
-      "saude": "parcial",
-      "completa": false,
+      "enviados": 360,
+      "imoveis_ativos_pbcv": 366,
+      "a_venda": 364,
+      "a_venda_enviados": 360,
+      "situacao_encerrado": 2,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
       "fonte": "jrleiloes.com.br",
       "slug": "jrleiloes",
-      "enviados": 326,
+      "enviados": 325,
       "imoveis_ativos_pbcv": 335,
       "a_venda": 332,
       "a_venda_enviados": 325,
       "situacao_vendido": 2,
-      "suspensos_com_praca_futura": 1,
-      "suspensos_avisados": 1,
+      "suspenso_sem_data_futura": 1,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -316,11 +324,11 @@
     {
       "fonte": "destakleiloes.com.br",
       "slug": "destakleiloes",
-      "enviados": 299,
-      "imoveis_ativos_pbcv": 867,
+      "enviados": 300,
+      "imoveis_ativos_pbcv": 868,
       "suspenso_sem_data_futura": 496,
-      "a_venda": 346,
-      "a_venda_enviados": 278,
+      "a_venda": 347,
+      "a_venda_enviados": 279,
       "suspensos_com_praca_futura": 25,
       "suspensos_avisados": 21,
       "saude": "ok",
@@ -351,15 +359,37 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "fidalgoleiloes.com.br",
+      "slug": "fidalgoleiloes",
+      "enviados": 273,
+      "imoveis_ativos_pbcv": 1316,
+      "nao_visto_na_ultima_coleta": 1030,
+      "a_venda": 286,
+      "a_venda_enviados": 273,
+      "saude": "parcial",
+      "completa": false,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "hastapublica.com.br",
       "slug": "hastapublica",
       "enviados": 223,
-      "imoveis_ativos_pbcv": 339,
+      "imoveis_ativos_pbcv": 228,
       "a_venda": 228,
-      "nao_visto_na_ultima_coleta": 111,
       "a_venda_enviados": 223,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "lancenoleilao.com.br",
+      "slug": "lancenoleilao",
+      "enviados": 218,
+      "imoveis_ativos_pbcv": 224,
+      "a_venda": 224,
+      "a_venda_enviados": 218,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -387,23 +417,12 @@
     {
       "fonte": "leilaobrasil.com.br",
       "slug": "leilaobrasil",
-      "enviados": 214,
-      "imoveis_ativos_pbcv": 221,
-      "a_venda": 221,
-      "a_venda_enviados": 214,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "jeleiloes.com.br",
-      "slug": "jeleiloes",
-      "enviados": 200,
-      "imoveis_ativos_pbcv": 201,
-      "a_venda": 201,
-      "a_venda_enviados": 200,
-      "saude": "parcial",
-      "completa": false,
+      "enviados": 202,
+      "imoveis_ativos_pbcv": 209,
+      "a_venda": 209,
+      "a_venda_enviados": 202,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -413,6 +432,17 @@
       "imoveis_ativos_pbcv": 285,
       "a_venda": 285,
       "a_venda_enviados": 194,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "webleiloes.com.br",
+      "slug": "webleiloes",
+      "enviados": 183,
+      "imoveis_ativos_pbcv": 183,
+      "a_venda": 183,
+      "a_venda_enviados": 183,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -444,13 +474,13 @@
     {
       "fonte": "centralsuldeleiloes.com.br",
       "slug": "centralsuldeleiloes",
-      "enviados": 156,
+      "enviados": 155,
       "imoveis_ativos_pbcv": 171,
-      "suspensos_com_praca_futura": 12,
-      "suspensos_avisados": 9,
+      "suspensos_com_praca_futura": 11,
+      "suspensos_avisados": 8,
       "a_venda": 158,
       "a_venda_enviados": 147,
-      "suspenso_sem_data_futura": 1,
+      "suspenso_sem_data_futura": 2,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -471,14 +501,13 @@
       "fonte": "alvaroleiloes.com.br",
       "slug": "alvaroleiloes",
       "enviados": 140,
-      "imoveis_ativos_pbcv": 144,
-      "nao_visto_na_ultima_coleta": 1,
+      "imoveis_ativos_pbcv": 143,
       "a_venda": 131,
       "a_venda_enviados": 128,
       "suspensos_com_praca_futura": 12,
       "suspensos_avisados": 12,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -507,6 +536,20 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "satoleiloes.com.br",
+      "slug": "satoleiloes",
+      "enviados": 136,
+      "imoveis_ativos_pbcv": 149,
+      "situacao_desconhecida": 9,
+      "a_venda": 138,
+      "a_venda_enviados": 134,
+      "suspensos_com_praca_futura": 2,
+      "suspensos_avisados": 2,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "kronleiloes.com.br",
       "slug": "kronleiloes",
       "enviados": 135,
@@ -516,20 +559,6 @@
       "situacao_encerrado": 2,
       "saude": "bloqueado",
       "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "satoleiloes.com.br",
-      "slug": "satoleiloes",
-      "enviados": 135,
-      "imoveis_ativos_pbcv": 148,
-      "situacao_desconhecida": 9,
-      "a_venda": 137,
-      "a_venda_enviados": 133,
-      "suspensos_com_praca_futura": 2,
-      "suspensos_avisados": 2,
-      "saude": "ok",
-      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -543,28 +572,6 @@
       "suspensos_com_praca_futura": 1,
       "suspensos_avisados": 1,
       "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "webleiloes.com.br",
-      "slug": "webleiloes",
-      "enviados": 132,
-      "imoveis_ativos_pbcv": 132,
-      "a_venda": 132,
-      "a_venda_enviados": 132,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "albertomacedoleiloes.com.br",
-      "slug": "albertomacedoleiloes",
-      "enviados": 118,
-      "imoveis_ativos_pbcv": 134,
-      "a_venda": 134,
-      "a_venda_enviados": 118,
-      "saude": "quebrado",
       "completa": false,
       "linha_de_coleta": true
     },
@@ -606,18 +613,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "lancenoleilao.com.br",
-      "slug": "lancenoleilao",
-      "enviados": 94,
-      "imoveis_ativos_pbcv": 100,
-      "a_venda": 98,
-      "a_venda_enviados": 94,
-      "nao_visto_na_ultima_coleta": 2,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "rechleiloes.com.br",
       "slug": "rechleiloes",
       "enviados": 93,
@@ -642,12 +637,22 @@
     {
       "fonte": "freitasleiloeiro.com.br",
       "slug": "freitasleiloeiro",
-      "enviados": 90,
+      "enviados": 87,
       "imoveis_ativos_pbcv": 90,
       "a_venda": 87,
       "a_venda_enviados": 87,
-      "suspensos_com_praca_futura": 3,
-      "suspensos_avisados": 3,
+      "suspenso_sem_data_futura": 3,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "jeleiloes.com.br",
+      "slug": "jeleiloes",
+      "enviados": 83,
+      "imoveis_ativos_pbcv": 213,
+      "a_venda": 213,
+      "a_venda_enviados": 83,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -735,18 +740,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "alfaleiloes.com",
-      "slug": "alfaleiloes-com",
-      "enviados": 69,
-      "imoveis_ativos_pbcv": 106,
-      "nao_visto_na_ultima_coleta": 37,
-      "a_venda": 69,
-      "a_venda_enviados": 69,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "baldisseraleiloeiros.com.br",
       "slug": "baldisseraleiloeiros",
       "enviados": 69,
@@ -772,12 +765,34 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "alfaleiloes.com",
+      "slug": "alfaleiloes-com",
+      "enviados": 68,
+      "imoveis_ativos_pbcv": 68,
+      "a_venda": 68,
+      "a_venda_enviados": 68,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "leiloesgold.com.br",
       "slug": "leiloesgold",
       "enviados": 68,
       "imoveis_ativos_pbcv": 68,
       "a_venda": 68,
       "a_venda_enviados": 68,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "albertomacedoleiloes.com.br",
+      "slug": "albertomacedoleiloes",
+      "enviados": 66,
+      "imoveis_ativos_pbcv": 82,
+      "a_venda": 82,
+      "a_venda_enviados": 66,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -806,6 +821,18 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "mullerleiloes.com.br",
+      "slug": "mullerleiloes",
+      "enviados": 60,
+      "imoveis_ativos_pbcv": 80,
+      "a_venda": 60,
+      "a_venda_enviados": 60,
+      "situacao_desconhecida": 20,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "balbinoleiloes.com.br",
       "slug": "balbinoleiloes",
       "enviados": 57,
@@ -817,29 +844,39 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "globoleiloes.com.br",
-      "slug": "globoleiloes",
-      "enviados": 57,
-      "imoveis_ativos_pbcv": 61,
-      "a_venda": 57,
-      "a_venda_enviados": 57,
-      "nao_visto_na_ultima_coleta": 4,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "gilsonleiloes.com.br",
       "slug": "gilsonleiloes",
-      "enviados": 56,
+      "enviados": 57,
       "imoveis_ativos_pbcv": 57,
       "suspensos_com_praca_futura": 1,
       "suspensos_avisados": 1,
-      "nao_visto_na_ultima_coleta": 1,
-      "a_venda": 55,
-      "a_venda_enviados": 55,
-      "saude": "parcial",
-      "completa": false,
+      "a_venda": 56,
+      "a_venda_enviados": 56,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "globoleiloes.com.br",
+      "slug": "globoleiloes",
+      "enviados": 57,
+      "imoveis_ativos_pbcv": 57,
+      "a_venda": 57,
+      "a_venda_enviados": 57,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "danielleiloes.com.br",
+      "slug": "danielleiloes",
+      "enviados": 56,
+      "imoveis_ativos_pbcv": 591,
+      "situacao_desconhecida": 17,
+      "a_venda": 574,
+      "a_venda_enviados": 56,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -856,17 +893,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "lancecertoleiloes.com.br",
-      "slug": "lancecertoleiloes",
-      "enviados": 55,
-      "imoveis_ativos_pbcv": 57,
-      "a_venda": 57,
-      "a_venda_enviados": 55,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "lucasleiloeiro.com.br",
       "slug": "lucasleiloeiro",
       "enviados": 55,
@@ -879,37 +905,16 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "mullerleiloes.com.br",
-      "slug": "mullerleiloes",
-      "enviados": 55,
-      "imoveis_ativos_pbcv": 75,
-      "a_venda": 55,
-      "a_venda_enviados": 55,
-      "situacao_desconhecida": 20,
-      "saude": "ok",
-      "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "danielleiloes.com.br",
-      "slug": "danielleiloes",
-      "enviados": 52,
-      "imoveis_ativos_pbcv": 664,
-      "nao_visto_na_ultima_coleta": 77,
-      "situacao_desconhecida": 17,
-      "a_venda": 570,
-      "a_venda_enviados": 52,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "alexandrepedrosaleiloeiro.com.br",
-      "slug": "alexandrepedrosaleiloeiro",
-      "enviados": 51,
-      "imoveis_ativos_pbcv": 51,
-      "a_venda": 51,
-      "a_venda_enviados": 51,
+      "fonte": "vegasleiloes.com.br",
+      "slug": "vegasleiloes",
+      "enviados": 53,
+      "imoveis_ativos_pbcv": 55,
+      "a_venda": 50,
+      "a_venda_enviados": 50,
+      "situacao_desconhecida": 1,
+      "suspensos_com_praca_futura": 3,
+      "suspensos_avisados": 3,
+      "suspenso_sem_data_futura": 1,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -917,6 +922,17 @@
     {
       "fonte": "leiloariasmart.com.br",
       "slug": "leiloariasmart",
+      "enviados": 52,
+      "imoveis_ativos_pbcv": 52,
+      "a_venda": 52,
+      "a_venda_enviados": 52,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "alexandrepedrosaleiloeiro.com.br",
+      "slug": "alexandrepedrosaleiloeiro",
       "enviados": 51,
       "imoveis_ativos_pbcv": 51,
       "a_venda": 51,
@@ -937,34 +953,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "portalbayit.com.br",
-      "slug": "portalbayit",
-      "enviados": 51,
-      "imoveis_ativos_pbcv": 146,
-      "suspenso_sem_data_futura": 58,
-      "a_venda": 82,
-      "a_venda_enviados": 48,
-      "suspensos_com_praca_futura": 6,
-      "suspensos_avisados": 3,
-      "saude": "ok",
-      "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "vegasleiloes.com.br",
-      "slug": "vegasleiloes",
-      "enviados": 51,
-      "imoveis_ativos_pbcv": 52,
-      "a_venda": 48,
-      "a_venda_enviados": 48,
-      "situacao_desconhecida": 1,
-      "suspensos_com_praca_futura": 3,
-      "suspensos_avisados": 3,
-      "saude": "ok",
-      "completa": true,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "montenegroleiloes.com.br",
       "slug": "montenegroleiloes",
       "enviados": 49,
@@ -978,14 +966,27 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "lutheroleiloes.com.br",
-      "slug": "lutheroleiloes",
+      "fonte": "extrajustleiloes.com.br",
+      "slug": "extrajustleiloes",
       "enviados": 48,
-      "imoveis_ativos_pbcv": 49,
-      "a_venda": 49,
+      "imoveis_ativos_pbcv": 48,
+      "a_venda": 48,
       "a_venda_enviados": 48,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "portalbayit.com.br",
+      "slug": "portalbayit",
+      "enviados": 48,
+      "imoveis_ativos_pbcv": 146,
+      "suspenso_sem_data_futura": 62,
+      "a_venda": 82,
+      "a_venda_enviados": 48,
+      "suspensos_com_praca_futura": 2,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -1027,17 +1028,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "depaulaonline.com.br",
-      "slug": "depaulaonline",
-      "enviados": 46,
-      "imoveis_ativos_pbcv": 48,
-      "a_venda": 48,
-      "a_venda_enviados": 46,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "leiloesceruli.com.br",
       "slug": "leiloesceruli",
       "enviados": 46,
@@ -1045,28 +1035,6 @@
       "a_venda": 46,
       "a_venda_enviados": 46,
       "nao_visto_na_ultima_coleta": 23,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "peterlongo.leilao.br",
-      "slug": "peterlongo-leilao",
-      "enviados": 46,
-      "imoveis_ativos_pbcv": 59,
-      "a_venda": 59,
-      "a_venda_enviados": 46,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "peterlongoleiloes.com.br",
-      "slug": "peterlongoleiloes",
-      "enviados": 46,
-      "imoveis_ativos_pbcv": 59,
-      "a_venda": 59,
-      "a_venda_enviados": 46,
       "saude": "parcial",
       "completa": false,
       "linha_de_coleta": true
@@ -1107,6 +1075,28 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "peterlongo.leilao.br",
+      "slug": "peterlongo-leilao",
+      "enviados": 43,
+      "imoveis_ativos_pbcv": 57,
+      "a_venda": 57,
+      "a_venda_enviados": 43,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "peterlongoleiloes.com.br",
+      "slug": "peterlongoleiloes",
+      "enviados": 43,
+      "imoveis_ativos_pbcv": 57,
+      "a_venda": 57,
+      "a_venda_enviados": 43,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "saraivaleiloes.com.br",
       "slug": "saraivaleiloes",
       "enviados": 43,
@@ -1125,6 +1115,18 @@
       "nao_visto_na_ultima_coleta": 56,
       "a_venda": 44,
       "a_venda_enviados": 42,
+      "saude": "parcial",
+      "completa": false,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "lancecertoleiloes.com.br",
+      "slug": "lancecertoleiloes",
+      "enviados": 41,
+      "imoveis_ativos_pbcv": 57,
+      "a_venda": 41,
+      "a_venda_enviados": 41,
+      "nao_visto_na_ultima_coleta": 16,
       "saude": "parcial",
       "completa": false,
       "linha_de_coleta": true
@@ -1225,17 +1227,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "extrajustleiloes.com.br",
-      "slug": "extrajustleiloes",
-      "enviados": 37,
-      "imoveis_ativos_pbcv": 37,
-      "a_venda": 37,
-      "a_venda_enviados": 37,
-      "saude": "quebrado",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "pwleiloes.com.br",
       "slug": "pwleiloes",
       "enviados": 37,
@@ -1271,20 +1262,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "positivoleiloes.com.br",
-      "slug": "positivoleiloes",
-      "enviados": 34,
-      "imoveis_ativos_pbcv": 72,
-      "suspenso_sem_data_futura": 36,
-      "a_venda": 32,
-      "a_venda_enviados": 30,
-      "suspensos_com_praca_futura": 4,
-      "suspensos_avisados": 4,
-      "saude": "ok",
-      "completa": true,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "jacleiloes.com.br",
       "slug": "jacleiloes",
       "enviados": 33,
@@ -1296,14 +1273,28 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "gustavoleiloeiro.com.br",
-      "slug": "gustavoleiloeiro",
+      "fonte": "positivoleiloes.com.br",
+      "slug": "positivoleiloes",
+      "enviados": 33,
+      "imoveis_ativos_pbcv": 72,
+      "suspenso_sem_data_futura": 37,
+      "a_venda": 32,
+      "a_venda_enviados": 30,
+      "suspensos_com_praca_futura": 3,
+      "suspensos_avisados": 3,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "lutheroleiloes.com.br",
+      "slug": "lutheroleiloes",
       "enviados": 31,
-      "imoveis_ativos_pbcv": 31,
-      "a_venda": 31,
+      "imoveis_ativos_pbcv": 33,
+      "a_venda": 33,
       "a_venda_enviados": 31,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -1326,8 +1317,8 @@
       "imoveis_ativos_pbcv": 30,
       "a_venda": 30,
       "a_venda_enviados": 30,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -1410,17 +1401,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "luizlobatoleiloeiro.com.br",
-      "slug": "luizlobatoleiloeiro",
-      "enviados": 28,
-      "imoveis_ativos_pbcv": 33,
-      "a_venda": 33,
-      "a_venda_enviados": 28,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "cunhaleiloeiro.com.br",
       "slug": "cunhaleiloeiro",
       "enviados": 27,
@@ -1449,6 +1429,17 @@
       "imoveis_ativos_pbcv": 45,
       "a_venda": 45,
       "a_venda_enviados": 27,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "gustavoleiloeiro.com.br",
+      "slug": "gustavoleiloeiro",
+      "enviados": 26,
+      "imoveis_ativos_pbcv": 26,
+      "a_venda": 26,
+      "a_venda_enviados": 26,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -1550,12 +1541,12 @@
       "fonte": "grandesleiloes.com.br",
       "slug": "grandesleiloes",
       "enviados": 22,
-      "imoveis_ativos_pbcv": 66,
-      "a_venda": 44,
-      "nao_visto_na_ultima_coleta": 22,
+      "imoveis_ativos_pbcv": 42,
+      "a_venda": 40,
+      "situacao_encerrado": 2,
       "a_venda_enviados": 22,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -1592,20 +1583,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "alienajud.com.br",
-      "slug": "alienajud",
-      "enviados": 21,
-      "imoveis_ativos_pbcv": 177,
-      "suspenso_sem_data_futura": 154,
-      "a_venda": 22,
-      "a_venda_enviados": 20,
-      "suspensos_com_praca_futura": 1,
-      "suspensos_avisados": 1,
-      "saude": "ok",
-      "completa": true,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "andreluizleiloes.com.br",
       "slug": "andreluizleiloes",
       "enviados": 21,
@@ -1623,8 +1600,8 @@
       "imoveis_ativos_pbcv": 21,
       "a_venda": 21,
       "a_venda_enviados": 21,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -1636,6 +1613,31 @@
       "a_venda_enviados": 20,
       "suspensos_com_praca_futura": 1,
       "suspensos_avisados": 1,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "vmleiloes.com.br",
+      "slug": "vmleiloes",
+      "enviados": 21,
+      "imoveis_ativos_pbcv": 48,
+      "a_venda": 21,
+      "a_venda_enviados": 21,
+      "nao_visto_na_ultima_coleta": 26,
+      "suspenso_sem_data_futura": 1,
+      "saude": "parcial",
+      "completa": false,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "alienajud.com.br",
+      "slug": "alienajud",
+      "enviados": 20,
+      "imoveis_ativos_pbcv": 177,
+      "suspenso_sem_data_futura": 155,
+      "a_venda": 22,
+      "a_venda_enviados": 20,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -1683,20 +1685,6 @@
       "a_venda": 20,
       "a_venda_enviados": 20,
       "situacao_desconhecida": 1,
-      "saude": "ok",
-      "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "pecinileiloes.com.br",
-      "slug": "pecinileiloes",
-      "enviados": 20,
-      "imoveis_ativos_pbcv": 358,
-      "suspenso_sem_data_futura": 336,
-      "a_venda": 19,
-      "a_venda_enviados": 18,
-      "suspensos_com_praca_futura": 3,
-      "suspensos_avisados": 2,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -1759,6 +1747,31 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "luizlobatoleiloeiro.com.br",
+      "slug": "luizlobatoleiloeiro",
+      "enviados": 19,
+      "imoveis_ativos_pbcv": 22,
+      "a_venda": 22,
+      "a_venda_enviados": 19,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "pecinileiloes.com.br",
+      "slug": "pecinileiloes",
+      "enviados": 19,
+      "imoveis_ativos_pbcv": 358,
+      "suspenso_sem_data_futura": 337,
+      "a_venda": 19,
+      "a_venda_enviados": 18,
+      "suspensos_com_praca_futura": 2,
+      "suspensos_avisados": 1,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "silvaleiloes.com.br",
       "slug": "silvaleiloes",
       "enviados": 19,
@@ -1785,12 +1798,11 @@
       "fonte": "tonialleiloes.com.br",
       "slug": "tonialleiloes",
       "enviados": 19,
-      "imoveis_ativos_pbcv": 21,
+      "imoveis_ativos_pbcv": 20,
       "a_venda": 20,
       "a_venda_enviados": 19,
-      "situacao_encerrado": 1,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -1851,6 +1863,19 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "topoleiloes.com.br",
+      "slug": "topoleiloes",
+      "enviados": 18,
+      "imoveis_ativos_pbcv": 182,
+      "a_venda": 161,
+      "a_venda_enviados": 18,
+      "suspenso_sem_data_futura": 16,
+      "situacao_vendido": 5,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "vsleiloes.com",
       "slug": "vsleiloes-com",
       "enviados": 18,
@@ -1895,6 +1920,29 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "lanceja.com.br",
+      "slug": "lanceja",
+      "enviados": 17,
+      "imoveis_ativos_pbcv": 17,
+      "a_venda": 17,
+      "a_venda_enviados": 17,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "lancevip.com.br",
+      "slug": "lancevip",
+      "enviados": 17,
+      "imoveis_ativos_pbcv": 27,
+      "situacao_desconhecida": 2,
+      "a_venda": 25,
+      "a_venda_enviados": 17,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "leiloesjudiciaisbahia.com.br",
       "slug": "leiloesjudiciaisbahia",
       "enviados": 17,
@@ -1931,6 +1979,17 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "oleiloes.com.br",
+      "slug": "oleiloes",
+      "enviados": 17,
+      "imoveis_ativos_pbcv": 22,
+      "a_venda": 22,
+      "a_venda_enviados": 17,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "ricartleiloes.com.br",
       "slug": "ricartleiloes",
       "enviados": 17,
@@ -1939,19 +1998,6 @@
       "a_venda_enviados": 17,
       "saude": "ok",
       "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "vmleiloes.com.br",
-      "slug": "vmleiloes",
-      "enviados": 17,
-      "imoveis_ativos_pbcv": 44,
-      "nao_visto_na_ultima_coleta": 26,
-      "a_venda": 17,
-      "a_venda_enviados": 17,
-      "suspenso_sem_data_futura": 1,
-      "saude": "parcial",
-      "completa": false,
       "linha_de_coleta": true
     },
     {
@@ -1969,17 +2015,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "donizetteleiloes.leilao.br",
-      "slug": "donizetteleiloes-leilao",
-      "enviados": 16,
-      "imoveis_ativos_pbcv": 16,
-      "a_venda": 16,
-      "a_venda_enviados": 16,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "lancenow.com.br",
       "slug": "lancenow",
       "enviados": 16,
@@ -1988,6 +2023,17 @@
       "a_venda_enviados": 16,
       "saude": "quebrado",
       "completa": false,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "lecapeleiloes.com.br",
+      "slug": "lecapeleiloes",
+      "enviados": 16,
+      "imoveis_ativos_pbcv": 16,
+      "a_venda": 16,
+      "a_venda_enviados": 16,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -2029,17 +2075,6 @@
     {
       "fonte": "gpleiloes.com.br",
       "slug": "gpleiloes",
-      "enviados": 15,
-      "imoveis_ativos_pbcv": 15,
-      "a_venda": 15,
-      "a_venda_enviados": 15,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "lecapeleiloes.com.br",
-      "slug": "lecapeleiloes",
       "enviados": 15,
       "imoveis_ativos_pbcv": 15,
       "a_venda": 15,
@@ -2112,8 +2147,19 @@
       "imoveis_ativos_pbcv": 14,
       "a_venda": 14,
       "a_venda_enviados": 14,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "donizetteleiloes.leilao.br",
+      "slug": "donizetteleiloes-leilao",
+      "enviados": 14,
+      "imoveis_ativos_pbcv": 15,
+      "a_venda": 15,
+      "a_venda_enviados": 14,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -2176,18 +2222,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "fidalgoleiloes.com.br",
-      "slug": "fidalgoleiloes",
-      "enviados": 13,
-      "imoveis_ativos_pbcv": 1053,
-      "nao_visto_na_ultima_coleta": 1028,
-      "a_venda": 25,
-      "a_venda_enviados": 13,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "meirelesleiloes.com.br",
       "slug": "meirelesleiloes",
       "enviados": 13,
@@ -2207,20 +2241,6 @@
       "a_venda_enviados": 13,
       "saude": "ok",
       "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "topoleiloes.com.br",
-      "slug": "topoleiloes",
-      "enviados": 13,
-      "imoveis_ativos_pbcv": 51,
-      "a_venda": 13,
-      "a_venda_enviados": 13,
-      "nao_visto_na_ultima_coleta": 23,
-      "suspenso_sem_data_futura": 11,
-      "situacao_vendido": 4,
-      "saude": "parcial",
-      "completa": false,
       "linha_de_coleta": true
     },
     {
@@ -2368,18 +2388,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "oaleiloes.com.br",
-      "slug": "oaleiloes",
-      "enviados": 11,
-      "imoveis_ativos_pbcv": 24,
-      "a_venda": 14,
-      "a_venda_enviados": 11,
-      "nao_visto_na_ultima_coleta": 10,
-      "saude": "quebrado",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "patiorochaleiloes.com.br",
       "slug": "patiorochaleiloes",
       "enviados": 11,
@@ -2434,19 +2442,19 @@
       "imoveis_ativos_pbcv": 10,
       "a_venda": 10,
       "a_venda_enviados": 10,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
-      "fonte": "drleiloes.com.br",
-      "slug": "drleiloes",
+      "fonte": "buenoleiloes.com.br",
+      "slug": "buenoleiloes",
       "enviados": 10,
       "imoveis_ativos_pbcv": 10,
       "a_venda": 10,
       "a_venda_enviados": 10,
-      "saude": "quebrado",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -2483,26 +2491,14 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "lancevip.com.br",
-      "slug": "lancevip",
-      "enviados": 10,
-      "imoveis_ativos_pbcv": 29,
-      "a_venda": 29,
-      "a_venda_enviados": 10,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "leiloeirodian.com",
       "slug": "leiloeirodian-com",
       "enviados": 10,
-      "imoveis_ativos_pbcv": 12,
+      "imoveis_ativos_pbcv": 10,
       "a_venda": 10,
       "a_venda_enviados": 10,
-      "nao_visto_na_ultima_coleta": 2,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -2523,19 +2519,19 @@
       "imoveis_ativos_pbcv": 10,
       "a_venda": 10,
       "a_venda_enviados": 10,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
-      "fonte": "pbcastro.com.br",
-      "slug": "pbcastro",
+      "fonte": "oaleiloes.com.br",
+      "slug": "oaleiloes",
       "enviados": 10,
-      "imoveis_ativos_pbcv": 10,
-      "a_venda": 10,
+      "imoveis_ativos_pbcv": 13,
+      "a_venda": 13,
       "a_venda_enviados": 10,
-      "saude": "quebrado",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -2575,16 +2571,14 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "topleiloes.com.br",
-      "slug": "topleiloes",
+      "fonte": "tmleiloes.com.br",
+      "slug": "tmleiloes",
       "enviados": 10,
       "imoveis_ativos_pbcv": 10,
-      "a_venda": 8,
-      "a_venda_enviados": 8,
-      "suspensos_com_praca_futura": 2,
-      "suspensos_avisados": 2,
-      "saude": "parcial",
-      "completa": false,
+      "a_venda": 10,
+      "a_venda_enviados": 10,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -2681,17 +2675,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "pamelaleiloeira.com.br",
-      "slug": "pamelaleiloeira",
-      "enviados": 9,
-      "imoveis_ativos_pbcv": 13,
-      "a_venda": 13,
-      "a_venda_enviados": 9,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "rymerleiloes.com.br",
       "slug": "rymerleiloes",
       "enviados": 9,
@@ -2722,6 +2705,17 @@
       "a_venda": 13,
       "a_venda_enviados": 8,
       "suspensos_com_praca_futura": 1,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "arrematabem.com.br",
+      "slug": "arrematabem",
+      "enviados": 8,
+      "imoveis_ativos_pbcv": 19,
+      "a_venda": 19,
+      "a_venda_enviados": 8,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -2819,29 +2813,63 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "pamelaleiloeira.com.br",
+      "slug": "pamelaleiloeira",
+      "enviados": 8,
+      "imoveis_ativos_pbcv": 16,
+      "a_venda": 16,
+      "a_venda_enviados": 8,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "rodrigocostaleiloeiro.com.br",
       "slug": "rodrigocostaleiloeiro",
       "enviados": 8,
       "imoveis_ativos_pbcv": 16,
-      "a_venda": 11,
+      "a_venda": 10,
+      "nao_visto_na_ultima_coleta": 6,
       "a_venda_enviados": 8,
-      "nao_visto_na_ultima_coleta": 5,
       "saude": "parcial",
       "completa": false,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "topleiloes.com.br",
+      "slug": "topleiloes",
+      "enviados": 8,
+      "imoveis_ativos_pbcv": 8,
+      "a_venda": 7,
+      "a_venda_enviados": 7,
+      "suspensos_com_praca_futura": 1,
+      "suspensos_avisados": 1,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "vasconcelosleiloes.com.br",
+      "slug": "vasconcelosleiloes",
+      "enviados": 8,
+      "imoveis_ativos_pbcv": 8,
+      "a_venda": 8,
+      "a_venda_enviados": 8,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
       "fonte": "victordortaleiloes.com.br",
       "slug": "victordortaleiloes",
       "enviados": 8,
-      "imoveis_ativos_pbcv": 22,
+      "imoveis_ativos_pbcv": 17,
       "situacao_desconhecida": 7,
-      "nao_visto_na_ultima_coleta": 5,
       "a_venda": 8,
       "a_venda_enviados": 8,
       "situacao_encerrado": 2,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -2878,6 +2906,29 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "depaulaonline.com.br",
+      "slug": "depaulaonline",
+      "enviados": 7,
+      "imoveis_ativos_pbcv": 33,
+      "nao_visto_na_ultima_coleta": 23,
+      "a_venda": 10,
+      "a_venda_enviados": 7,
+      "saude": "parcial",
+      "completa": false,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "drleiloes.com.br",
+      "slug": "drleiloes",
+      "enviados": 7,
+      "imoveis_ativos_pbcv": 7,
+      "a_venda": 7,
+      "a_venda_enviados": 7,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "duxleiloes.com.br",
       "slug": "duxleiloes",
       "enviados": 7,
@@ -2889,26 +2940,14 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "fernandalimaleiloes.com.br",
-      "slug": "fernandalimaleiloes",
-      "enviados": 7,
-      "imoveis_ativos_pbcv": 10,
-      "a_venda": 10,
-      "a_venda_enviados": 7,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "flexleiloes.com.br",
       "slug": "flexleiloes",
       "enviados": 7,
-      "imoveis_ativos_pbcv": 9,
+      "imoveis_ativos_pbcv": 8,
       "a_venda": 8,
       "a_venda_enviados": 7,
-      "nao_visto_na_ultima_coleta": 1,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -2918,8 +2957,8 @@
       "imoveis_ativos_pbcv": 7,
       "a_venda": 7,
       "a_venda_enviados": 7,
-      "saude": "quebrado",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -2945,14 +2984,25 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "marcaleiloes.com.br",
+      "slug": "marcaleiloes",
+      "enviados": 7,
+      "imoveis_ativos_pbcv": 7,
+      "a_venda": 7,
+      "a_venda_enviados": 7,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "nordesteleiloes.com.br",
       "slug": "nordesteleiloes",
       "enviados": 7,
       "imoveis_ativos_pbcv": 7,
       "a_venda": 7,
       "a_venda_enviados": 7,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -3015,7 +3065,8 @@
       "fonte": "zagoleiloes.com.br",
       "slug": "zagoleiloes",
       "enviados": 7,
-      "imoveis_ativos_pbcv": 7,
+      "imoveis_ativos_pbcv": 8,
+      "situacao_desconhecida": 1,
       "a_venda": 6,
       "a_venda_enviados": 6,
       "suspensos_com_praca_futura": 1,
@@ -3037,18 +3088,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "arrematabem.com.br",
-      "slug": "arrematabem",
-      "enviados": 6,
-      "imoveis_ativos_pbcv": 39,
-      "nao_visto_na_ultima_coleta": 33,
-      "a_venda": 6,
-      "a_venda_enviados": 6,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "canaldeleiloes.net",
       "slug": "canaldeleiloes-net",
       "enviados": 6,
@@ -3066,8 +3105,8 @@
       "imoveis_ativos_pbcv": 7,
       "a_venda": 7,
       "a_venda_enviados": 6,
-      "saude": "quebrado",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -3078,41 +3117,6 @@
       "a_venda": 6,
       "a_venda_enviados": 6,
       "saude": "bloqueado",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "elydaluzramos.com.br",
-      "slug": "elydaluzramos",
-      "enviados": 6,
-      "imoveis_ativos_pbcv": 6,
-      "a_venda": 6,
-      "a_venda_enviados": 6,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "fabianoayuppleiloeiro.com.br",
-      "slug": "fabianoayuppleiloeiro",
-      "enviados": 6,
-      "imoveis_ativos_pbcv": 31,
-      "nao_visto_na_ultima_coleta": 9,
-      "a_venda": 22,
-      "a_venda_enviados": 6,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "flaviocostaleiloes.com.br",
-      "slug": "flaviocostaleiloes",
-      "enviados": 6,
-      "imoveis_ativos_pbcv": 45,
-      "nao_visto_na_ultima_coleta": 37,
-      "a_venda": 8,
-      "a_venda_enviados": 6,
-      "saude": "quebrado",
       "completa": false,
       "linha_de_coleta": true
     },
@@ -3165,6 +3169,17 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "kleiloes.com.br",
+      "slug": "kleiloes",
+      "enviados": 6,
+      "imoveis_ativos_pbcv": 61,
+      "a_venda": 61,
+      "a_venda_enviados": 6,
+      "saude": "parcial",
+      "completa": false,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "leiloeiros.lel.br",
       "slug": "leiloeiros-lel",
       "enviados": 6,
@@ -3173,17 +3188,6 @@
       "a_venda_enviados": 6,
       "saude": "ok",
       "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "leiloesfederal.com.br",
-      "slug": "leiloesfederal",
-      "enviados": 6,
-      "imoveis_ativos_pbcv": 8,
-      "a_venda": 8,
-      "a_venda_enviados": 6,
-      "saude": "quebrado",
-      "completa": false,
       "linha_de_coleta": true
     },
     {
@@ -3220,15 +3224,14 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "oleiloes.com.br",
-      "slug": "oleiloes",
+      "fonte": "pbcastro.com.br",
+      "slug": "pbcastro",
       "enviados": 6,
-      "imoveis_ativos_pbcv": 17,
-      "nao_visto_na_ultima_coleta": 11,
-      "a_venda": 6,
+      "imoveis_ativos_pbcv": 7,
+      "a_venda": 7,
       "a_venda_enviados": 6,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -3268,17 +3271,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "tmleiloes.com.br",
-      "slug": "tmleiloes",
-      "enviados": 6,
-      "imoveis_ativos_pbcv": 6,
-      "a_venda": 6,
-      "a_venda_enviados": 6,
-      "saude": "ok",
-      "completa": true,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "totalleiloes.com.br",
       "slug": "totalleiloes",
       "enviados": 6,
@@ -3286,18 +3278,6 @@
       "a_venda": 6,
       "a_venda_enviados": 6,
       "saude": "bloqueado",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "vasconcelosleiloes.com.br",
-      "slug": "vasconcelosleiloes",
-      "enviados": 6,
-      "imoveis_ativos_pbcv": 15,
-      "nao_visto_na_ultima_coleta": 9,
-      "a_venda": 6,
-      "a_venda_enviados": 6,
-      "saude": "parcial",
       "completa": false,
       "linha_de_coleta": true
     },
@@ -3318,13 +3298,23 @@
       "fonte": "3torresleiloes.com.br",
       "slug": "3torresleiloes",
       "enviados": 5,
-      "imoveis_ativos_pbcv": 7,
-      "nao_visto_na_ultima_coleta": 1,
+      "imoveis_ativos_pbcv": 6,
       "situacao_desconhecida": 1,
       "a_venda": 5,
       "a_venda_enviados": 5,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "alexandroleiloeiro.com.br",
+      "slug": "alexandroleiloeiro",
+      "enviados": 5,
+      "imoveis_ativos_pbcv": 7,
+      "a_venda": 7,
+      "a_venda_enviados": 5,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -3386,6 +3376,17 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "clebercardosoleiloes.com.br",
+      "slug": "clebercardosoleiloes",
+      "enviados": 5,
+      "imoveis_ativos_pbcv": 5,
+      "a_venda": 5,
+      "a_venda_enviados": 5,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "dbmleiloes.com.br",
       "slug": "dbmleiloes",
       "enviados": 5,
@@ -3408,14 +3409,14 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "ipcleiloes.com.br",
-      "slug": "ipcleiloes",
+      "fonte": "faroonline.com.br",
+      "slug": "faroonline",
       "enviados": 5,
-      "imoveis_ativos_pbcv": 5,
-      "a_venda": 5,
+      "imoveis_ativos_pbcv": 180,
+      "a_venda": 180,
       "a_venda_enviados": 5,
-      "saude": "quebrado",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -3427,18 +3428,6 @@
       "a_venda_enviados": 5,
       "saude": "ok",
       "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "leiloesja.com.br",
-      "slug": "leiloesja",
-      "enviados": 5,
-      "imoveis_ativos_pbcv": 7,
-      "nao_visto_na_ultima_coleta": 1,
-      "a_venda": 6,
-      "a_venda_enviados": 5,
-      "saude": "parcial",
-      "completa": false,
       "linha_de_coleta": true
     },
     {
@@ -3464,37 +3453,14 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "marcaleiloes.com.br",
-      "slug": "marcaleiloes",
-      "enviados": 5,
-      "imoveis_ativos_pbcv": 6,
-      "a_venda": 5,
-      "a_venda_enviados": 5,
-      "nao_visto_na_ultima_coleta": 1,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "marcotulioleiloes.com.br",
       "slug": "marcotulioleiloes",
       "enviados": 5,
-      "imoveis_ativos_pbcv": 5,
-      "a_venda": 5,
+      "imoveis_ativos_pbcv": 6,
+      "a_venda": 6,
       "a_venda_enviados": 5,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "mauromarcello.lel.br",
-      "slug": "mauromarcello-lel",
-      "enviados": 5,
-      "imoveis_ativos_pbcv": 9,
-      "a_venda": 9,
-      "a_venda_enviados": 5,
-      "saude": "quebrado",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -3541,8 +3507,8 @@
       "imoveis_ativos_pbcv": 5,
       "a_venda": 5,
       "a_venda_enviados": 5,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -3645,17 +3611,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "abaleiloes.com.br",
-      "slug": "abaleiloes",
-      "enviados": 4,
-      "imoveis_ativos_pbcv": 4,
-      "a_venda": 4,
-      "a_venda_enviados": 4,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "amleiloeiro.com.br",
       "slug": "amleiloeiro",
       "enviados": 4,
@@ -3693,12 +3648,23 @@
       "fonte": "capitalleiloes.com.br",
       "slug": "capitalleiloes",
       "enviados": 4,
-      "imoveis_ativos_pbcv": 8,
+      "imoveis_ativos_pbcv": 6,
       "a_venda": 6,
       "a_venda_enviados": 4,
-      "nao_visto_na_ultima_coleta": 2,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "cardosoleiloes.com.br",
+      "slug": "cardosoleiloes",
+      "enviados": 4,
+      "imoveis_ativos_pbcv": 5,
+      "situacao_desconhecida": 1,
+      "a_venda": 4,
+      "a_venda_enviados": 4,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -3725,17 +3691,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "clebercardosoleiloes.com.br",
-      "slug": "clebercardosoleiloes",
-      "enviados": 4,
-      "imoveis_ativos_pbcv": 5,
-      "a_venda": 5,
-      "a_venda_enviados": 4,
-      "saude": "quebrado",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "cravoleiloes.com.br",
       "slug": "cravoleiloes",
       "enviados": 4,
@@ -3748,25 +3703,13 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "dbsleiloes.com.br",
-      "slug": "dbsleiloes",
+      "fonte": "fernandalimaleiloes.com.br",
+      "slug": "fernandalimaleiloes",
       "enviados": 4,
-      "imoveis_ativos_pbcv": 4,
-      "a_venda": 3,
-      "a_venda_enviados": 3,
-      "suspensos_com_praca_futura": 1,
-      "suspensos_avisados": 1,
-      "saude": "ok",
-      "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "facanhaleiloes.com.br",
-      "slug": "facanhaleiloes",
-      "enviados": 4,
-      "imoveis_ativos_pbcv": 5,
-      "a_venda": 5,
+      "imoveis_ativos_pbcv": 11,
+      "a_venda": 7,
       "a_venda_enviados": 4,
+      "nao_visto_na_ultima_coleta": 4,
       "saude": "parcial",
       "completa": false,
       "linha_de_coleta": true
@@ -3820,7 +3763,8 @@
       "fonte": "lancetotal.com.br",
       "slug": "lancetotal",
       "enviados": 4,
-      "imoveis_ativos_pbcv": 4,
+      "imoveis_ativos_pbcv": 5,
+      "nao_visto_na_ultima_coleta": 1,
       "a_venda": 4,
       "a_venda_enviados": 4,
       "saude": "parcial",
@@ -3850,14 +3794,14 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "leiloesmonteiro.com.br",
-      "slug": "leiloesmonteiro",
+      "fonte": "leiloesfederal.com.br",
+      "slug": "leiloesfederal",
       "enviados": 4,
-      "imoveis_ativos_pbcv": 10,
-      "a_venda": 10,
+      "imoveis_ativos_pbcv": 7,
+      "a_venda": 7,
       "a_venda_enviados": 4,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -4012,17 +3956,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "alexandroleiloeiro.com.br",
-      "slug": "alexandroleiloeiro",
-      "enviados": 3,
-      "imoveis_ativos_pbcv": 7,
-      "a_venda": 7,
-      "a_venda_enviados": 3,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "apabrfleiloes.com.br",
       "slug": "apabrfleiloes",
       "enviados": 3,
@@ -4063,11 +3996,11 @@
       "fonte": "bigleilao.com.br",
       "slug": "bigleilao",
       "enviados": 3,
-      "imoveis_ativos_pbcv": 5,
-      "a_venda": 5,
+      "imoveis_ativos_pbcv": 4,
+      "a_venda": 4,
       "a_venda_enviados": 3,
-      "saude": "quebrado",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -4076,6 +4009,17 @@
       "enviados": 3,
       "imoveis_ativos_pbcv": 4,
       "a_venda": 4,
+      "a_venda_enviados": 3,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "bolsadeleiloes.com.br",
+      "slug": "bolsadeleiloes",
+      "enviados": 3,
+      "imoveis_ativos_pbcv": 3,
+      "a_venda": 3,
       "a_venda_enviados": 3,
       "saude": "ok",
       "completa": true,
@@ -4117,11 +4061,35 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "dbsleiloes.com.br",
+      "slug": "dbsleiloes",
+      "enviados": 3,
+      "imoveis_ativos_pbcv": 4,
+      "a_venda": 3,
+      "a_venda_enviados": 3,
+      "suspenso_sem_data_futura": 1,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "diegoleiloes.com.br",
       "slug": "diegoleiloes",
       "enviados": 3,
       "imoveis_ativos_pbcv": 3,
       "a_venda": 3,
+      "a_venda_enviados": 3,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "flaviocostaleiloes.com.br",
+      "slug": "flaviocostaleiloes",
+      "enviados": 3,
+      "imoveis_ativos_pbcv": 7,
+      "a_venda": 6,
+      "suspenso_sem_data_futura": 1,
       "a_venda_enviados": 3,
       "saude": "ok",
       "completa": true,
@@ -4151,6 +4119,17 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "gsleiloes.com.br",
+      "slug": "gsleiloes",
+      "enviados": 3,
+      "imoveis_ativos_pbcv": 3,
+      "a_venda": 3,
+      "a_venda_enviados": 3,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "hcleiloes.com.br",
       "slug": "hcleiloes",
       "enviados": 3,
@@ -4166,10 +4145,10 @@
       "slug": "insigneleiloes",
       "enviados": 3,
       "imoveis_ativos_pbcv": 12,
-      "suspenso_sem_data_futura": 5,
+      "suspenso_sem_data_futura": 6,
       "a_venda": 5,
       "a_venda_enviados": 3,
-      "suspensos_com_praca_futura": 2,
+      "suspensos_com_praca_futura": 1,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -4222,6 +4201,18 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "leiloesja.com.br",
+      "slug": "leiloesja",
+      "enviados": 3,
+      "imoveis_ativos_pbcv": 53,
+      "a_venda": 49,
+      "nao_visto_na_ultima_coleta": 4,
+      "a_venda_enviados": 3,
+      "saude": "parcial",
+      "completa": false,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "leiloesonlinems.com.br",
       "slug": "leiloesonlinems",
       "enviados": 3,
@@ -4231,17 +4222,6 @@
       "a_venda_enviados": 3,
       "saude": "ok",
       "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "liderleiloes.com.br",
-      "slug": "liderleiloes",
-      "enviados": 3,
-      "imoveis_ativos_pbcv": 3,
-      "a_venda": 3,
-      "a_venda_enviados": 3,
-      "saude": "parcial",
-      "completa": false,
       "linha_de_coleta": true
     },
     {
@@ -4307,12 +4287,11 @@
       "fonte": "sampaioleiloes.com.br",
       "slug": "sampaioleiloes",
       "enviados": 3,
-      "imoveis_ativos_pbcv": 4,
-      "nao_visto_na_ultima_coleta": 1,
+      "imoveis_ativos_pbcv": 3,
       "a_venda": 3,
       "a_venda_enviados": 3,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -4391,18 +4370,6 @@
       "a_venda_enviados": 2,
       "saude": "ok",
       "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "alvaroantonioleiloes.com.br",
-      "slug": "alvaroantonioleiloes",
-      "enviados": 2,
-      "imoveis_ativos_pbcv": 3,
-      "nao_visto_na_ultima_coleta": 1,
-      "a_venda": 2,
-      "a_venda_enviados": 2,
-      "saude": "parcial",
-      "completa": false,
       "linha_de_coleta": true
     },
     {
@@ -4508,29 +4475,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "bolsadeleiloes.com.br",
-      "slug": "bolsadeleiloes",
-      "enviados": 2,
-      "imoveis_ativos_pbcv": 2,
-      "a_venda": 2,
-      "a_venda_enviados": 2,
-      "saude": "quebrado",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "cardosoleiloes.com.br",
-      "slug": "cardosoleiloes",
-      "enviados": 2,
-      "imoveis_ativos_pbcv": 3,
-      "situacao_desconhecida": 1,
-      "a_venda": 2,
-      "a_venda_enviados": 2,
-      "saude": "ok",
-      "completa": true,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "casadeleiloes.com.br",
       "slug": "casadeleiloes",
       "enviados": 2,
@@ -4539,18 +4483,6 @@
       "a_venda_enviados": 2,
       "saude": "ok",
       "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "casaforteleiloes.com.br",
-      "slug": "casaforteleiloes",
-      "enviados": 2,
-      "imoveis_ativos_pbcv": 3,
-      "a_venda": 2,
-      "a_venda_enviados": 2,
-      "nao_visto_na_ultima_coleta": 1,
-      "saude": "parcial",
-      "completa": false,
       "linha_de_coleta": true
     },
     {
@@ -4599,8 +4531,20 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "fariasleiloes.com.br",
-      "slug": "fariasleiloes",
+      "fonte": "fabianoayuppleiloeiro.com.br",
+      "slug": "fabianoayuppleiloeiro",
+      "enviados": 2,
+      "imoveis_ativos_pbcv": 43,
+      "nao_visto_na_ultima_coleta": 24,
+      "a_venda": 19,
+      "a_venda_enviados": 2,
+      "saude": "parcial",
+      "completa": false,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "facanhaleiloes.com.br",
+      "slug": "facanhaleiloes",
       "enviados": 2,
       "imoveis_ativos_pbcv": 3,
       "a_venda": 3,
@@ -4610,14 +4554,14 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "faroonline.com.br",
-      "slug": "faroonline",
+      "fonte": "fariasleiloes.com.br",
+      "slug": "fariasleiloes",
       "enviados": 2,
-      "imoveis_ativos_pbcv": 187,
-      "a_venda": 187,
+      "imoveis_ativos_pbcv": 3,
+      "a_venda": 3,
       "a_venda_enviados": 2,
-      "saude": "quebrado",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -4660,8 +4604,8 @@
       "imoveis_ativos_pbcv": 2,
       "a_venda": 2,
       "a_venda_enviados": 2,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -4701,8 +4645,8 @@
       "fonte": "leilaooficialonline.com.br",
       "slug": "leilaooficialonline",
       "enviados": 2,
-      "imoveis_ativos_pbcv": 244,
-      "suspenso_sem_data_futura": 208,
+      "imoveis_ativos_pbcv": 246,
+      "suspenso_sem_data_futura": 210,
       "a_venda": 36,
       "a_venda_enviados": 2,
       "saude": "ok",
@@ -4755,14 +4699,36 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "leiloesmonteiro.com.br",
+      "slug": "leiloesmonteiro",
+      "enviados": 2,
+      "imoveis_ativos_pbcv": 17,
+      "a_venda": 17,
+      "a_venda_enviados": 2,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "leiloespb.com.br",
+      "slug": "leiloespb",
+      "enviados": 2,
+      "imoveis_ativos_pbcv": 10,
+      "a_venda": 10,
+      "a_venda_enviados": 2,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "leiloesuberlandia.com.br",
       "slug": "leiloesuberlandia",
       "enviados": 2,
-      "imoveis_ativos_pbcv": 11,
-      "a_venda": 11,
+      "imoveis_ativos_pbcv": 6,
+      "a_venda": 6,
       "a_venda_enviados": 2,
-      "saude": "quebrado",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -4794,8 +4760,8 @@
       "imoveis_ativos_pbcv": 2,
       "a_venda": 2,
       "a_venda_enviados": 2,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -4816,8 +4782,8 @@
       "imoveis_ativos_pbcv": 2,
       "a_venda": 2,
       "a_venda_enviados": 2,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -4976,8 +4942,8 @@
       "imoveis_ativos_pbcv": 2,
       "a_venda": 2,
       "a_venda_enviados": 2,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -5039,23 +5005,11 @@
       "fonte": "brunoniewinskileiloes.com.br",
       "slug": "brunoniewinskileiloes",
       "enviados": 1,
-      "imoveis_ativos_pbcv": 3,
-      "nao_visto_na_ultima_coleta": 2,
-      "a_venda": 1,
-      "a_venda_enviados": 1,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "buenoleiloes.com.br",
-      "slug": "buenoleiloes",
-      "enviados": 1,
       "imoveis_ativos_pbcv": 1,
       "a_venda": 1,
       "a_venda_enviados": 1,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -5076,8 +5030,8 @@
       "imoveis_ativos_pbcv": 2,
       "a_venda": 2,
       "a_venda_enviados": 1,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -5098,8 +5052,8 @@
       "imoveis_ativos_pbcv": 1,
       "a_venda": 1,
       "a_venda_enviados": 1,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -5109,8 +5063,8 @@
       "imoveis_ativos_pbcv": 2,
       "a_venda": 2,
       "a_venda_enviados": 1,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -5378,8 +5332,8 @@
       "imoveis_ativos_pbcv": 1,
       "a_venda": 1,
       "a_venda_enviados": 1,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -5389,8 +5343,19 @@
       "imoveis_ativos_pbcv": 1,
       "a_venda": 1,
       "a_venda_enviados": 1,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "ipcleiloes.com.br",
+      "slug": "ipcleiloes",
+      "enviados": 1,
+      "imoveis_ativos_pbcv": 1,
+      "a_venda": 1,
+      "a_venda_enviados": 1,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -5473,17 +5438,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "leiloespb.com.br",
-      "slug": "leiloespb",
-      "enviados": 1,
-      "imoveis_ativos_pbcv": 2,
-      "a_venda": 2,
-      "a_venda_enviados": 1,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": true
-    },
-    {
       "fonte": "lipinskileiloes.com.br",
       "slug": "lipinskileiloes",
       "enviados": 1,
@@ -5492,17 +5446,6 @@
       "a_venda_enviados": 1,
       "saude": "ok",
       "completa": true,
-      "linha_de_coleta": true
-    },
-    {
-      "fonte": "lucasignacioleiloes.com.br",
-      "slug": "lucasignacioleiloes",
-      "enviados": 1,
-      "imoveis_ativos_pbcv": 2,
-      "a_venda": 2,
-      "a_venda_enviados": 1,
-      "saude": "quebrado",
-      "completa": false,
       "linha_de_coleta": true
     },
     {
@@ -5535,6 +5478,17 @@
       "imoveis_ativos_pbcv": 1,
       "suspensos_com_praca_futura": 1,
       "suspensos_avisados": 1,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "mauromarcello.lel.br",
+      "slug": "mauromarcello-lel",
+      "enviados": 1,
+      "imoveis_ativos_pbcv": 13,
+      "a_venda": 13,
+      "a_venda_enviados": 1,
       "saude": "ok",
       "completa": true,
       "linha_de_coleta": true
@@ -5578,6 +5532,17 @@
       "enviados": 1,
       "imoveis_ativos_pbcv": 3,
       "a_venda": 3,
+      "a_venda_enviados": 1,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
+      "fonte": "mjleiloes.com.br",
+      "slug": "mjleiloes",
+      "enviados": 1,
+      "imoveis_ativos_pbcv": 1,
+      "a_venda": 1,
       "a_venda_enviados": 1,
       "saude": "ok",
       "completa": true,
@@ -5642,6 +5607,17 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "paulobrasilleiloes.com.br",
+      "slug": "paulobrasilleiloes",
+      "enviados": 1,
+      "imoveis_ativos_pbcv": 1,
+      "a_venda": 1,
+      "a_venda_enviados": 1,
+      "saude": "ok",
+      "completa": true,
+      "linha_de_coleta": true
+    },
+    {
       "fonte": "pedrocastroleiloes.com.br",
       "slug": "pedrocastroleiloes",
       "enviados": 1,
@@ -5682,8 +5658,8 @@
       "imoveis_ativos_pbcv": 1,
       "a_venda": 1,
       "a_venda_enviados": 1,
-      "saude": "parcial",
-      "completa": false,
+      "saude": "ok",
+      "completa": true,
       "linha_de_coleta": true
     },
     {
@@ -5833,6 +5809,16 @@
       "linha_de_coleta": true
     },
     {
+      "fonte": "abaleiloes.com.br",
+      "slug": "abaleiloes",
+      "enviados": 0,
+      "imoveis_ativos_pbcv": 4,
+      "a_venda": 4,
+      "saude": "ok",
+      "completa": false,
+      "linha_de_coleta": false
+    },
+    {
       "fonte": "agenciadeleiloes.com.br",
       "slug": "agenciadeleiloes",
       "enviados": 0,
@@ -5961,6 +5947,17 @@
       "enviados": 0,
       "imoveis_ativos_pbcv": 1,
       "a_venda": 1,
+      "saude": "ok",
+      "completa": false,
+      "linha_de_coleta": false
+    },
+    {
+      "fonte": "casaforteleiloes.com.br",
+      "slug": "casaforteleiloes",
+      "enviados": 0,
+      "imoveis_ativos_pbcv": 6,
+      "nao_visto_na_ultima_coleta": 3,
+      "a_venda": 3,
       "saude": "parcial",
       "completa": false,
       "linha_de_coleta": false
@@ -5969,9 +5966,9 @@
       "fonte": "dalaqualeiloes.com.br",
       "slug": "dalaqualeiloes",
       "enviados": 0,
-      "imoveis_ativos_pbcv": 2,
-      "a_venda": 2,
-      "saude": "parcial",
+      "imoveis_ativos_pbcv": 3,
+      "a_venda": 3,
+      "saude": "ok",
       "completa": false,
       "linha_de_coleta": false
     },
@@ -6043,17 +6040,7 @@
       "enviados": 0,
       "imoveis_ativos_pbcv": 1,
       "a_venda": 1,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": false
-    },
-    {
-      "fonte": "granadoleiloes.com.br",
-      "slug": "granadoleiloes",
-      "enviados": 0,
-      "imoveis_ativos_pbcv": 3,
-      "a_venda": 3,
-      "saude": "parcial",
+      "saude": "ok",
       "completa": false,
       "linha_de_coleta": false
     },
@@ -6071,10 +6058,9 @@
       "fonte": "jvleiloes.lel.br",
       "slug": "jvleiloes-lel",
       "enviados": 0,
-      "imoveis_ativos_pbcv": 33,
-      "situacao_desconhecida": 26,
-      "nao_visto_na_ultima_coleta": 7,
-      "saude": "parcial",
+      "imoveis_ativos_pbcv": 29,
+      "situacao_desconhecida": 29,
+      "saude": "ok",
       "completa": false,
       "linha_de_coleta": false
     },
@@ -6113,9 +6099,9 @@
       "fonte": "leiloesbrasilcassiano.com.br",
       "slug": "leiloesbrasilcassiano",
       "enviados": 0,
-      "imoveis_ativos_pbcv": 22,
-      "a_venda": 22,
-      "saude": "parcial",
+      "imoveis_ativos_pbcv": 2,
+      "a_venda": 2,
+      "saude": "ok",
       "completa": false,
       "linha_de_coleta": false
     },
@@ -6154,12 +6140,11 @@
       "slug": "lilianportugal",
       "enviados": 0,
       "imoveis_ativos_pbcv": 8,
-      "situacao_encerrado": 6,
+      "situacao_encerrado": 7,
       "suspenso_sem_data_futura": 1,
-      "a_venda": 1,
-      "saude": "quebrado",
+      "saude": "ok",
       "completa": false,
-      "linha_de_coleta": true
+      "linha_de_coleta": false
     },
     {
       "fonte": "lottermannleiloes.com.br",
@@ -6167,6 +6152,16 @@
       "enviados": 0,
       "imoveis_ativos_pbcv": 2,
       "situacao_desconhecida": 2,
+      "saude": "ok",
+      "completa": false,
+      "linha_de_coleta": false
+    },
+    {
+      "fonte": "lucasignacioleiloes.com.br",
+      "slug": "lucasignacioleiloes",
+      "enviados": 0,
+      "imoveis_ativos_pbcv": 2,
+      "suspensos_com_praca_futura": 2,
       "saude": "ok",
       "completa": false,
       "linha_de_coleta": false
@@ -6205,10 +6200,9 @@
       "fonte": "maraurzedoleilao.com.br",
       "slug": "maraurzedoleilao",
       "enviados": 0,
-      "imoveis_ativos_pbcv": 4,
-      "nao_visto_na_ultima_coleta": 2,
+      "imoveis_ativos_pbcv": 2,
       "situacao_encerrado": 2,
-      "saude": "parcial",
+      "saude": "ok",
       "completa": false,
       "linha_de_coleta": false
     },
@@ -6328,16 +6322,6 @@
       "linha_de_coleta": true
     },
     {
-      "fonte": "sanchesleiloes.com.br",
-      "slug": "sanchesleiloes",
-      "enviados": 0,
-      "imoveis_ativos_pbcv": 3,
-      "nao_visto_na_ultima_coleta": 3,
-      "saude": "parcial",
-      "completa": false,
-      "linha_de_coleta": false
-    },
-    {
       "fonte": "santacatarinaleiloes.com.br",
       "slug": "santacatarinaleiloes",
       "enviados": 0,
@@ -6414,7 +6398,7 @@
       "enviados": 0,
       "imoveis_ativos_pbcv": 1,
       "a_venda": 1,
-      "saude": "parcial",
+      "saude": "ok",
       "completa": false,
       "linha_de_coleta": false
     },
