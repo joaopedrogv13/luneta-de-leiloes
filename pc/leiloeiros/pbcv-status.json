@@ -1,0 +1,105 @@
+{
+ "formato": "pbcv-status/1",
+ "faixa": "diaria",
+ "status": "alerta",
+ "inicio": "2026-10-30T03:46:07",
+ "fim": "2026-10-30T04:56:44",
+ "duracao_s": 4237.4,
+ "passos": [
+  {
+   "n": 1,
+   "nome": "dependências",
+   "status": "ok",
+   "duracao_s": 2.9,
+   "contagem": {
+    "fontes_da_faixa": 97,
+    "avisos": 0
+   }
+  },
+  {
+   "n": 2,
+   "nome": "coleta",
+   "status": "ok",
+   "duracao_s": 3525.8,
+   "contagem": {
+    "fontes_coletadas": 69,
+    "por_status": {
+     "ok": 64,
+     "suspeita": 3,
+     "incompleta": 2
+    },
+    "lotes": 24184,
+    "lotes_antes_mesmas_fontes": 24854,
+    "lotes_agora_mesmas_fontes": 24184,
+    "quedas_acima_de_50pct": [
+     {
+      "fonte": "vincoleiloes.com.br",
+      "antes": 560,
+      "agora": 36
+     },
+     {
+      "fonte": "soleiloes.com.br",
+      "antes": 545,
+      "agora": 26
+     },
+     {
+      "fonte": "mnleilao.com.br",
+      "antes": 164,
+      "agora": 0
+     }
+    ],
+    "fontes_sem_coleta": 28,
+    "exemplos_sem_coleta": [
+     "alessandroteixeiraleiloes.com.br",
+     "alexandrepedrosaleiloeiro.com.br",
+     "amazonasleiloes.com.br",
+     "apiceleiloes.com.br",
+     "balbinoleiloes.com.br",
+     "bastonleiloes.leilao.br",
+     "bspleiloes.com.br",
+     "cargneluttileiloes.com.br",
+     "cunhaleiloeiro.com.br",
+     "destakleiloes.com.br"
+    ],
+    "incremental": true
+   }
+  },
+  {
+   "n": 3,
+   "nome": "geolocalização",
+   "status": "ok",
+   "duracao_s": 643.3,
+   "contagem": {
+    "geo_lote_antes": 145907,
+    "geo_lote_depois": 157967
+   }
+  },
+  {
+   "n": 4,
+   "nome": "exportação",
+   "status": "ok",
+   "duracao_s": 65.3,
+   "contagem": {
+    "imoveis_a_venda_no_arquivo": 24623,
+    "imoveis_a_venda": 27277,
+    "imoveis_ativos_no_pbcv": 35211,
+    "leiloeiros": 503
+   }
+  },
+  {
+   "n": 5,
+   "nome": "publicação",
+   "status": "rodando",
+   "duracao_s": null,
+   "contagem": null
+  }
+ ],
+ "alertas": [
+  "vincoleiloes.com.br: 560 -> 36 lotes",
+  "soleiloes.com.br: 545 -> 26 lotes",
+  "mnleilao.com.br: 164 -> 0 lotes",
+  "28 fonte(s) da faixa sem coleta registrada"
+ ],
+ "anterior_nao_terminou": null,
+ "proxima_esperada_em_horas": 24
+}
