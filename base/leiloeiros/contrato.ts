@@ -24,6 +24,18 @@ export const PREFIXO_FONTE = "ll_";
 /** Prefixo do id no site. */
 export const PREFIXO_SITE = "ll-";
 
+/**
+ * Valor simbólico: abaixo de R$ 1 (o "R$ 0,01" que alguns sites põem na 2ª praça "a definir"), o dinheiro conta como
+ * não informado. Sem isso, o lote ia ao site com lance de R$ 0, deságio de 100% e a tag "Deságio alto" (medido na
+ * carga do PBCV de 29/10/2026: 6 lotes com R$ 0,01).
+ */
+export const VALOR_SIMBOLICO = 1;
+
+/** O valor em reais, ou null quando a fonte não informa (null, ausente ou simbólico). */
+export function valorInformado(v: number | null | undefined): number | null {
+  return v === null || v === undefined || !(v >= VALOR_SIMBOLICO) ? null : v;
+}
+
 export const RE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const RE_LOTE = /^[a-z0-9]+$/;
 export const MAX_SLUG = 30;

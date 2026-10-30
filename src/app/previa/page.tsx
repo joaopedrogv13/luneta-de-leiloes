@@ -7,7 +7,7 @@ import { numero } from "@/lib/catalogo/rotulos";
 
 const TITLE = "Prévia interna com dados reais | Luneta de Leilões";
 const DESCRIPTION =
-  "Prévia interna da área do assinante com imóveis reais da Caixa e da Leilões Judiciais, classificação automática ainda não revisada.";
+  "Prévia interna da área do assinante com imóveis reais da Caixa, da Leilões Judiciais e dos sites dos leiloeiros, classificação automática ainda não revisada.";
 
 // Página interna: fora dos buscadores (noindex, nofollow em qualquer ambiente), fora do sitemap e sem link no menu.
 export const metadata: Metadata = {

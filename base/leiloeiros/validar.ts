@@ -21,7 +21,7 @@ import { tabelaPadrao, type TabelaMunicipios } from "../geo/municipios.ts";
 import { chaveNome } from "../geo/nomes.ts";
 import { instanteDe } from "../util/data.ts";
 import { mascararDocumentos, mascararNomes } from "../util/lgpd.ts";
-import { comitentePareceEmpresaOuOrgao, lerJsonl, separarId, slugValido, type LinhaColeta, type LinhaImovel } from "./contrato.ts";
+import { comitentePareceEmpresaOuOrgao, lerJsonl, separarId, slugValido, VALOR_SIMBOLICO, valorInformado, type LinhaColeta, type LinhaImovel } from "./contrato.ts";
 import { carregarEsquema, validarEsquema } from "./esquema.ts";
 import { agregar, medidaDaLinha, pracaEmVigor, type Agregado } from "./medidas.ts";
 
@@ -193,18 +193,26 @@ function coerenciaImovel(l: LinhaImovel, opcoes: OpcoesExame): Problema[] {
   // Situação, praça e lance
   const ativo = l.situacao === "ativo";
   const vigente = pracaEmVigor(l, agora);
-  const lance = l.lance_minimo ?? vigente?.valor_minimo ?? null;
+  const lance = valorInformado(l.lance_minimo) ?? valorInformado(vigente?.valor_minimo);
   if (ativo) {
     const t = vigente?.data ? instanteDe(vigente.data) : null;
     if (t !== null && t < agora.getTime() - UM_DIA) {
       aviso("situacao", `ativo, mas a praça em vigor (${ROTULO_PRACA(vigente!.numero)}) já passou: sai do site; o coletor precisa trazer a situação nova (vendido, encerrado, 2ª praça)`);
     }
-    if (lance === null || lance <= 0) aviso("lance_minimo", "sem lance mínimo (nem em lance_minimo nem na praça em vigor): o lote não aparece no site");
+    if (lance === null) aviso("lance_minimo", "sem lance mínimo (nem em lance_minimo nem na praça em vigor): o lote não aparece no site");
   } else if (l.pracas.some((x) => x.situacao === "aberta" || x.situacao === "futura")) {
     aviso("situacao", `situação ${l.situacao}, mas há praça marcada como futura ou aberta`);
   }
 
   // Valores
+  const simbolicos: [string, string, number | null | undefined][] = [
+    ["avaliacao", "avaliacao", l.avaliacao],
+    ["lance_minimo", "lance_minimo", l.lance_minimo],
+    ...l.pracas.map((p): [string, string, number | null] => ["pracas", `valor_minimo da ${ROTULO_PRACA(p.numero)}`, p.valor_minimo]),
+  ];
+  for (const [campo, rotulo, v] of simbolicos) {
+    if (typeof v === "number" && v > 0 && v < VALOR_SIMBOLICO) aviso(campo, `${rotulo} de R$ ${v}: valor simbólico ("a definir"); a Luneta trata como não informado. Mande null`);
+  }
   if (l.avaliacao === 0) aviso("avaliacao", "avaliação 0: mande null quando a fonte não informa");
   if (l.avaliacao !== null && l.avaliacao !== undefined && l.avaliacao > 0 && l.avaliacao < 1000) aviso("avaliacao", `avaliação de R$ ${l.avaliacao}: confira a unidade (reais, não milhares)`);
   if (l.avaliacao && lance && lance > 3 * l.avaliacao) aviso("lance_minimo", "lance mais de 3 vezes a avaliação: erro de digitação ou de unidade?");

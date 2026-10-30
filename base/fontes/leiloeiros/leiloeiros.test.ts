@@ -142,6 +142,27 @@ test("LGPD na importação: lote com CPF é recusado; endereço e comitente com 
   assert.deepEqual([normalizarLinha(m).extras?.x_codigo_interno, normalizarLinha(m).extras?.x_visitas], ["A-77", 10]);
 });
 
+test("valor simbólico (R$ 0,01 na 2ª praça 'a definir'): conta como não informado, com aviso no validador", () => {
+  const l = linhas().find((x) => x.id === "alfa-leiloes:48211")!;
+  const pracas = l.pracas as Array<Record<string, unknown>>;
+  pracas[1]!.valor_minimo = 0.01;
+  l.lance_atual = 0.01;
+  const i = normalizarLinha(l);
+  assert.equal(i.pracas?.[1]?.valor_minimo, null, "a 2ª praça fica sem valor, e não R$ 0");
+  assert.equal(i.pracas?.[0]?.valor_minimo, 520000);
+  assert.equal(i.extras?.lance_atual, undefined);
+  const avisos = examinarImovel(l, { tabela: null, agora: AGORA }).filter((p) => p.nivel === "aviso");
+  assert.ok(avisos.some((p) => p.campo === "pracas" && /2ª praça de R\$ 0\.01: valor simbólico/.test(p.mensagem)), JSON.stringify(avisos));
+  // no lance mínimo e na avaliação, também
+  const m = linhas().find((x) => x.id === "alfa-leiloes:48211")!;
+  m.lance_minimo = 0.5;
+  m.avaliacao = 0.01;
+  const j = normalizarLinha(m);
+  assert.equal(j.valor_avaliacao, null);
+  assert.notEqual(j.preco, 0.5, "o lance vem da praça em vigor, não do valor simbólico");
+  assert.equal(normalizado("alfa-leiloes:48211").pracas?.[1]?.valor_minimo, 312000, "valor de verdade não muda");
+});
+
 test("número do imóvel na Caixa: vai para extras.numero_caixa; fora do padrão de 13 dígitos, o lote é recusado", () => {
   const l = linhas().find((x) => x.id === "gama-leiloes:771")!;
   l.registro_imovel = { matricula: null, cartorio: null, inscricao_municipal: null, numero_caixa: "0000010119245" };

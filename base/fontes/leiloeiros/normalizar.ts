@@ -18,7 +18,7 @@ import { mascararDadosPessoais, mascararDocumentos } from "../../util/lgpd.ts";
 import { formatarMoedaBR } from "../../util/numero.ts";
 import { normalizarUf } from "../../util/uf.ts";
 import { colapsarEspacos, textoOuNulo } from "../../util/texto.ts";
-import { comitentePareceEmpresaOuOrgao, enderecoEmTexto, separarId, type DebitoLinha, type LinhaImovel } from "../../leiloeiros/contrato.ts";
+import { comitentePareceEmpresaOuOrgao, enderecoEmTexto, separarId, valorInformado, type DebitoLinha, type LinhaImovel } from "../../leiloeiros/contrato.ts";
 import { examinarImovel } from "../../leiloeiros/validar.ts";
 import { campoSemPessoa } from "../leiloesjudiciais/normalizar.ts";
 import { tabelaPadrao } from "../../geo/municipios.ts";
@@ -116,7 +116,7 @@ export function normalizarLinha(bruto: unknown): ImovelNormalizado {
 
   const pracas: Praca[] = [...l.pracas]
     .sort((a, b) => a.numero - b.numero)
-    .map((p) => ({ numero: p.numero as NumeroPraca, data: emUtc(p.data), valor_minimo: p.valor_minimo }));
+    .map((p) => ({ numero: p.numero as NumeroPraca, data: emUtc(p.data), valor_minimo: valorInformado(p.valor_minimo) }));
   // Praça em vigor: a que o coletor diz, senão a primeira marcada como futura ou aberta; sem isso, o núcleo
   // deduz pelas datas (a primeira que não passou).
   const pelaSituacao = [...l.pracas].sort((a, b) => a.numero - b.numero).find((p) => p.situacao === "aberta" || p.situacao === "futura");
@@ -175,8 +175,8 @@ export function normalizarLinha(bruto: unknown): ImovelNormalizado {
     numero_processo: l.processo ?? null,
     matricula: semDocumento(l.registro_imovel?.matricula),
     cartorio: semPessoa(l.registro_imovel?.cartorio),
-    valor_avaliacao: l.avaliacao ?? null,
-    preco: l.lance_minimo ?? undefined,
+    valor_avaliacao: valorInformado(l.avaliacao),
+    preco: valorInformado(l.lance_minimo) ?? undefined,
     praca_atual: declarada as NumeroPraca | undefined,
     pracas,
     fotos,
@@ -194,7 +194,7 @@ export function normalizarLinha(bruto: unknown): ImovelNormalizado {
       situacao: l.situacao,
       status_fonte: textoOuNulo(l.situacao_fonte),
       tipo_fonte: textoOuNulo(l.tipo_fonte),
-      lance_atual: l.lance_atual ?? null,
+      lance_atual: valorInformado(l.lance_atual),
       incremento: l.incremento ?? null,
       comissao_pct: l.comissao_pct ?? null,
       aceita_a_vista: pagamento.a_vista ?? null,

@@ -4,7 +4,8 @@
  * mostrar e como escrever. Imports relativos, sem "@/": o teste roda em Node puro.
  */
 import { MODALIDADE_ROTULO, normalizar, numero, OCUPACAO_ROTULO, PRACA_ROTULO, TIPO_ROTULO, UF_NOME } from "../../../lib/catalogo/rotulos";
-import type { ImovelDetalhe, Plano, ReferenciaM2 } from "../../../lib/catalogo/tipos";
+import type { ImovelDetalhe, Plano, ReferenciaM2, SobreConjunto } from "../../../lib/catalogo/tipos";
+import { periodoDaFonte, resumirFontes } from "../../../lib/catalogo/fontes-resumo";
 import type { ResultadoCompleto } from "../../../lib/simulador/completa";
 import { chaveAjustada } from "../../../lib/simulador/conta";
 import { pode } from "../../../lib/catalogo/planos";
@@ -234,6 +235,28 @@ export function dataHoraNumerica(ms: number): string {
 }
 
 /** "16/10/2026" de "2026-10-16" ou de um ISO com hora; null se não der para ler. */
+/**
+ * As fontes do PDF ("Caixa, 08/10/2026; Leilões Judiciais, 10/10/2026; 425 leiloeiros, 28/10/2026 a 29/10/2026"): os
+ * leiloeiros numa linha só (src/lib/catalogo/fontes-resumo.ts), senão eram ~500 nomes.
+ */
+export function fontesDoRelatorio(fontes: SobreConjunto["fontes"]): string {
+  return resumirFontes(fontes)
+    .map((f) => {
+      const periodo = periodoDaFonte(f, dataCurtaRel);
+      return `${f.nome}${periodo ? `, ${periodo}` : ""}`;
+    })
+    .join("; ");
+}
+
+/**
+ * O código do imóvel na fonte, para o PDF: sem o prefixo da Luneta ("caixa-1444419640129" → "1444419640129"). No
+ * leiloeiro (`ll-<slug>-<lote>`, base/leiloeiros/CONTRATO.md) o lote é o que vem depois do último hífen.
+ */
+export function codigoNaFonte(id: string): string {
+  if (id.startsWith("ll-")) return id.slice(id.lastIndexOf("-") + 1);
+  return id.replace(/^(caixa|lj)-/, "");
+}
+
 export function dataCurtaRel(iso: string | null | undefined): string | null {
   if (!iso) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
@@ -800,7 +823,7 @@ export function cssPaginas({ cabecalho, rodape }: { cabecalho: string; rodape: s
 /** Título do documento (vira o nome do arquivo ao salvar em PDF): "Relatório Luneta - Casa em São Gonçalo-RJ - 1444419640129". */
 export function tituloDocumento(i: Pick<ImovelDetalhe, "tipo" | "cidade" | "uf" | "id">): string {
   const tipo = i.tipo === "outro" ? "Imóvel" : TIPO_ROTULO[i.tipo];
-  const id = i.id.replace(/^(caixa|lj)-/, "");
+  const id = codigoNaFonte(i.id);
   return `Relatório Luneta - ${tipo} em ${i.cidade}-${i.uf} - ${id}`;
 }
 

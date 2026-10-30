@@ -25,7 +25,9 @@ import { BarraRelatorio } from "./BarraRelatorio";
 import {
   AVISO_SIMULADOR_REL,
   cssPaginas,
+  codigoNaFonte,
   dataCurtaRel,
+  fontesDoRelatorio,
   ehExemploRel,
   entradaDoImovel,
   ESCOPO_ROTULO,
@@ -89,7 +91,7 @@ export function Relatorio({
   const { endereco, lugar } = linhaLocal(i);
   const tipo = i.tipo === "outro" ? "Imóvel" : TIPO_ROTULO[i.tipo];
   const cabecalho = `${tipo} · ${i.cidade}/${i.uf}`;
-  const idFonte = i.id.replace(/^(caixa|lj)-/, "");
+  const idFonte = codigoNaFonte(i.id);
   const anuncio = i.links.find((l) => l.tipo === "anuncio")?.url ?? null;
   const foto = i.fotos[0] ?? i.foto;
   const capa = capaImovel(i);
@@ -227,9 +229,7 @@ export function Relatorio({
                         <>
                           Avaliação e lance de outros imóveis em leilão na base da Luneta
                           {pagina.sobre.geradoEm ? `, atualizada em ${dataCurtaRel(pagina.sobre.geradoEm)}` : ""}
-                          {pagina.sobre.fontes.length
-                            ? ` (${pagina.sobre.fontes.map((f) => `${f.nome}${f.geradoNaFonteEm ? `, ${dataCurtaRel(f.geradoNaFonteEm)}` : ""}`).join("; ")})`
-                            : ""}
+                          {pagina.sobre.fontes.length ? ` (${fontesDoRelatorio(pagina.sobre.fontes)})` : ""}
                           .
                         </>
                       )}

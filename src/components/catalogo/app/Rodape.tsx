@@ -2,20 +2,22 @@ import Link from "next/link";
 import { BACK_TO_SITE } from "@/components/assinante/shared";
 import { AVISO_CLASSIFICACAO } from "@/content/avisos";
 import { data, dataHora, numero, plural } from "@/lib/catalogo/rotulos";
+import { periodoDaFonte, resumirFontes, type FonteResumida } from "@/lib/catalogo/fontes-resumo";
 import type { SobreConjunto } from "@/lib/catalogo/tipos";
 import { CTA_VITRINE, fraseVitrine } from "@/lib/catalogo/vitrine-textos";
 
 export { AVISO_CLASSIFICACAO };
 
-/** "lista de 08/10/2026" (Caixa publica uma lista por dia) ou "dados de 11/10/2026". */
-function quandoDaFonte(f: SobreConjunto["fontes"][number]) {
-  if (!f.geradoNaFonteEm) return "data não informada pela fonte";
-  return `${f.id === "caixa_csv" ? "lista de" : "dados de"} ${data(f.geradoNaFonteEm)}`;
+/** "lista de 08/10/2026" (Caixa publica uma lista por dia), "dados de 11/10/2026" ou, nos leiloeiros, "dados de 28/10/2026 a 29/10/2026". */
+export function quandoDaFonte(f: Pick<FonteResumida, "id" | "geradoNaFonteEm" | "geradoAte">) {
+  const periodo = periodoDaFonte(f, data);
+  if (!periodo) return "data não informada pela fonte";
+  return `${f.id === "caixa_csv" ? "lista de" : "dados de"} ${periodo}`;
 }
 
-/** Texto da faixa da prévia, com as datas das fontes (completo no computador, curto no celular). */
+/** Texto da faixa da prévia, com as datas das fontes (completo no computador, curto no celular). Os leiloeiros vão numa linha só. */
 export function faixaDaPrevia(sobre: SobreConjunto) {
-  const fontes = sobre.fontes.map((f) => `${f.nome} (${quandoDaFonte(f)})`);
+  const fontes = resumirFontes(sobre.fontes).map((f) => `${f.nome} (${quandoDaFonte(f)})`);
   const juntas = fontes.length > 1 ? `${fontes.slice(0, -1).join(", ")} e ${fontes[fontes.length - 1]}` : (fontes[0] ?? "");
   return {
     completa: ["Prévia interna com dados reais", juntas, "classificação automática ainda não revisada", "selos desligados"].filter(Boolean).join(" · "),
@@ -74,7 +76,7 @@ export function RodapeCatalogo({
               {numero(total)} <span className="font-sans text-sm font-medium text-nevoa">imóveis ativos na base</span>
             </p>
             <ul className="mt-3 flex flex-col gap-1.5">
-              {sobre.fontes.map((f) => (
+              {resumirFontes(sobre.fontes).map((f) => (
                 <li key={f.id} className="flex flex-wrap items-baseline gap-x-2">
                   <span className="font-semibold text-luar">{f.nome}</span>
                   <span className="tabular-nums">{plural(f.total, "imóvel", "imóveis")}</span>
