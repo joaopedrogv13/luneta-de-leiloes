@@ -116,8 +116,11 @@ N = [
 ]
 N_RE = alt(N)
 # negativo "fraco": palavra que também é nome de lugar ou adjetivo comum em imóvel ("Lagoa do Carro", "Mercedes/PR",
-# "Quadra Fiat", "Fazenda Cabeça da Vaca", "antiga rua", "3 pisos"). Com positivo comum no título, não veta.
-N_FRACO = re.compile(r"^(antig[oa]s?|pisos|carros?|mercedes|fiat|vacas?|bois?|touros?|cavalos?|eguas?|bronze|cobre\s+espesso)$")
+# "Quadra Fiat", "Fazenda Cabeça da Vaca", "antiga rua", "3 pisos", "Bebedouro/SP"). Com positivo comum no título,
+# não veta. "bebedouro" é cidade de SP e bairro de Maceió ("CASA - Rua do Arame, nº 315, Bebedouro, Maceió/AL" saía como
+# não imóvel). A mesma regra está no núcleo do PBCV (core/regra_imovel.py, no luneta-base): mudou aqui, mude lá.
+N_FRACO = re.compile(r"^(antig[oa]s?|pisos|carros?|mercedes|fiat|vacas?|bois?|touros?|cavalos?|eguas?|bronze|cobre\s+espesso|"
+                     r"bebedouro)$")
 
 def classificar(titulo, categoria, descricao, tipo_bem) -> tuple[bool, str]:
     """(é imóvel, motivo). O motivo começa pelo passo que decidiu: teste, neg_titulo, forte_titulo, titulo_neg_fraco,
